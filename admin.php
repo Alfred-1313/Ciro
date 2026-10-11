@@ -13,7 +13,6 @@
 // keeps answering in the reader's language.
 $textbotlang = panel_texts();
 $textadmin = ["panel", "/panel", $textbotlang['Admin']['panelAdmin']];
-$text_panel_admin_login_template = sprintf($textbotlang['Admin']['report']['aboutBot'], $version);
 
 if (!in_array($from_id, $admin_ids))
     return;
@@ -4680,20 +4679,6 @@ if (!function_exists('miniapp_installed')) {
     function miniapp_installed()
     {
         return is_dir(miniapp_dir());
-    }
-    // its version, or '' when there is nothing to read. Absolute path: the old
-    // relative 'app/version' resolved against the web server's working
-    // directory rather than the bot's own.
-    function miniapp_version($textbotlang = null)
-    {
-        $f = miniapp_dir() . '/version';
-        if (!is_file($f) || !is_readable($f)) {
-            return is_array($textbotlang)
-                ? ($textbotlang['keyboard']['miniAppVersionMissing'] ?? '-')
-                : '-';
-        }
-        $v = trim((string) file_get_contents($f));
-        return $v !== '' ? $v : '-';
     }
     // the logo is only really set when the file is actually on disk - the flag
     // alone said "set" for a logo whose write had silently failed
@@ -9956,10 +9941,9 @@ if (in_array($text, $textadmin) || $datain == "admin") {    if ($datain == "admi
         deletemessage($from_id, $message_id);
     // The report group is optional: without one the panel opens all the same
     // and reports are simply not sent (⚙️ Settings > Bot reports sets it up).
-    $version_mini_app = miniapp_version($textbotlang);
     activecron();
-    $text_admin = sprintf($text_panel_admin_login_template, $version, $version_mini_app);
-    sendmessage($from_id, $text_admin, $keyboardadmin, 'HTML');
+    // the panel's welcome: how to use it, and the commands an admin can type
+    sendmessage($from_id, $textbotlang['Admin']['report']['aboutBot'], $keyboardadmin, 'HTML');
     // The mini app setup instructions used to be pushed here, as a second
     // message on every trip into the panel until the admin dismissed them.
     // They still live on the mini app's own screen, which is where someone
@@ -9967,9 +9951,7 @@ if (in_array($text, $textadmin) || $datain == "admin") {    if ($datain == "admi
     // below is kept so the dismiss button on any message already sent still
     // works.
 } elseif ($text == $textbotlang['Admin']['backAdminBtn']) {
-    $version_mini_app = miniapp_version($textbotlang);
-    $text_admin = sprintf($text_panel_admin_login_template, $version, $version_mini_app);
-    sendmessage($from_id, $text_admin, $keyboardadmin, 'HTML');
+    sendmessage($from_id, $textbotlang['Admin']['report']['aboutBot'], $keyboardadmin, 'HTML');
     step('home', $from_id);
     return;
 } elseif ($datain == "hide_mini_app_instruction") {
@@ -17552,8 +17534,9 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     update("user", "Processing_value", $userdata['idpanel'], "id", $from_id);
     step("home", $from_id);
 } elseif ($text == $textbotlang['keyboard']['botReport'] && $adminrulecheck['rule'] == "administrator") {
-    $textupdate = $textbotlang['Admin']['report']['botReportIntro'];
-    sendmessage($from_id, $textupdate, null, 'HTML');
+    // a problem or an idea: a word about it, and a red button to the bot's maker
+    $br_kb = json_encode(['inline_keyboard' => [[['text' => $textbotlang['Admin']['report']['botReportDevBtn'], 'url' => 'https://t.me/Alfred_13', 'style' => 'danger']]]]);
+    sendmessage($from_id, $textbotlang['Admin']['report']['botReportIntro'], $br_kb, 'HTML');
     step('home', $from_id);
 } elseif ($text == $textbotlang['keyboard']['panelFeatures']) {
     sendmessage($from_id, $textbotlang['Admin']['managepanel']['selectPanel'], $json_list_marzban_panel, 'HTML');

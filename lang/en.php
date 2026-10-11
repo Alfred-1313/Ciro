@@ -3181,28 +3181,47 @@ Current amount: %s',
 4- Deletion of inactive test services
 5 - Orders deleted by the user 
 6 - Orders whose time or volume has expired',
-                        'botReportIntro' => '💬 | Bot report
+                        'botReportIntro' => '📬 <b>Contact the bot\'s maker</b>
+➖➖➖➖➖➖➖➖➖➖
 
-🔹 | If you encounter a <b>bug or problem</b> in the bot\'s operation, please report it to us for review.
-➖➖➖➖➖➖➖➖➖➖➖
-🔹 | If you encounter a <b>serious bug</b> or abnormal behavior, report it faster so it can be fixed.
-➖➖➖➖➖➖➖➖➖➖➖
-🔹 | If you have a suggestion for <b>adding a new feature</b> or an idea to improve the bot\'s performance, we\'d be happy to hear it.
-➖➖➖➖➖➖➖➖➖➖➖
-🔹 | Also, if you need <b>guidance</b> or help, you can contact the support team via direct message.
+🐞 <b>Report a problem:</b> if something in the bot does not work right or you run into an error, send it to us so it can be checked and fixed as soon as possible.
 
-📩 | To send a report, suggestion, or request for guidance, leave a message in the <b>Mirza group</b>:
-<a href="https://t.me/mirzapanelgroup" rel="nofollow" target="_blank">Mirza Group</a>',
-                        'aboutBot' => '💎 | Version Bot: %s
-📌 | Version Mini App: 0.1.1
+💡 <b>Suggestions and ideas:</b> if you have an idea for a new feature or for making the bot better, we would be glad to hear it.
 
-<blockquote>🔹 | This bot is completely free and is developed by the Mirza team</blockquote>
+🤝 <b>Guidance:</b> we are also here for any question or help with using the bot.
 
-<blockquote>🔹 | Any sale or charging of money for this bot is considered a violation.</blockquote>
+📝 To get it handled faster, please write in your message exactly where and how the problem happened, and if you can, send a screenshot or the error text too.
 
-<blockquote>🔹 | If you see any sale or charging of money, please track and reclaim your money.</blockquote>
+👇 To talk directly, tap the button below.',
+                        'botReportDevBtn' => '💬 Bot maker\'s PV | @Alfred_13',
+                        'aboutBot' => '👨‍💼 <b>Admin panel</b>
+➖➖➖➖➖➖➖➖➖➖
 
-<blockquote>🐞 | If you encounter a bug or problem in the bot\'s operation, contact us via the **📬 Bot report** button in the admin panel.</blockquote>',
+📖 <b>How to use it</b>
+▫️ <b>📊 Bot statistics:</b> sales, income and number of users
+▫️ <b>✏️ Manage panel</b> and <b>🖥 Add panel:</b> the servers (panels) and their settings
+▫️ <b>👤 User management:</b> find and manage any user, user lists, broadcast messages and group top-up
+▫️ <b>🏬 Shop settings:</b> products and categories, gateways, discount codes and hourly accounts
+▫️ <b>🤙 Support section:</b> the support ID and departments
+▫️ <b>🛠 Panel features:</b> each panel\'s options
+▫️ <b>⚙️ General settings:</b> features, channels, report group, admins, backup, web panel and bot update
+▫️ <b>💵 Unconfirmed receipts:</b> card-to-card receipts waiting for approval
+▫️ <b>🎨 Customize bot messages:</b> the bot\'s texts and buttons, per language
+▫️ <b>📬 Bot report:</b> report a problem or suggestion to the bot\'s maker
+🔒 Some sections and commands are for full-access admins only.
+
+⌨️ <b>Admin commands</b>
+▫️ <code>/panel</code> — open this panel
+▫️ <code>/user 123456789</code> or <code>/user @username</code> — a user\'s management screen (<code>/id</code> does the same)
+▫️ <code>/config service-name</code> — find a service by its username or note
+▫️ <code>/extend service-name</code> — extend a service
+▫️ <code>/backup</code> — take a backup right now
+▫️ <code>/update</code> — the bot update screen
+▫️ <code>/token2</code> — a new API token and the API docs link (the old token stops working)
+
+🔁 <b>Inside some steps</b> (the bot tells you when)
+▫️ <code>/all</code> — all panels, when defining a product or a discount code
+▫️ <code>/finish</code> · <code>/remove</code> · <code>/end_hide</code> · <code>/end</code> — finish the selection and save',
                         'gatewayRow' => '
 📌 Gateway name: <code>%s</code>
  - Number of successful payments: <code>%s</code>
