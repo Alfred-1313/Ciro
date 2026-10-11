@@ -2028,6 +2028,26 @@ bots_registry_set_pma_port() {
     local tmp; tmp=$(mktemp)
     jq --arg d "$1" --arg p "$2" 'map(if .dir==$d then .pma_port=($p|tonumber) else . end)' \
         "$BOTS_REGISTRY" > "$tmp" && mv "$tmp" "$BOTS_REGISTRY"
+    config_set_pma_port "$1" "$2"
+}
+
+# config_set_pma_port DIR PORT - the bot's own copy of its phpMyAdmin port
+# ($pmaport in its config.php): ⚙️ تنظیمات عمومی → 🗃 phpMyAdmin builds its
+# login link with it, and the registry above lives in /root, out of the
+# bot's reach. Written before config.php's closing ?> - after it, PHP would
+# print the line instead of reading it.
+config_set_pma_port() {
+    local cfg="$1/config.php"
+    [ -f "$cfg" ] || return 0
+    if grep -q '^\$pmaport' "$cfg"; then
+        sed -i -E "s/^(\\\$pmaport[[:space:]]*=[[:space:]]*')[^']*'/\\1$2'/" "$cfg"
+    elif grep -q '^?>' "$cfg"; then
+        awk -v line="\$pmaport = '$2';" '!done && /^\?>/ {print line; done=1} {print}' "$cfg" > "$cfg.pma" \
+            && cat "$cfg.pma" > "$cfg"
+        rm -f "$cfg.pma"
+    else
+        printf "\$pmaport = '%s';\n" "$2" >> "$cfg"
+    fi
 }
 
 # pma_url DOMAIN PORT [PROTO]
@@ -3621,6 +3641,8 @@ function update_bot() {
     # ── 7. Apache: only fix what is actually missing ─────────
     if [ -n "$DOMAIN_NAME" ]; then
         _ensure_vhost "$DOMAIN_NAME" "$BOT_DIR"
+        # the bot's own copy of its phpMyAdmin port (🗃 phpMyAdmin's link)
+        config_set_pma_port "$BOT_DIR" "$(bots_registry_pma_port "$BOT_DIR")"
         # a certificate still set to renew in standalone mode never will
         ssl_renewal_ensure "$DOMAIN_NAME"
     fi

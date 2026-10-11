@@ -3755,6 +3755,13 @@ nowpayments.io
       'autoSetDone' => '✅ ریست خودکار تنظیم شد.',
       'autoOffDone' => '✅ ریست خودکار خاموش شد.',
     ),
+    // ⚙️ تنظیمات عمومی → 🗃 phpMyAdmin: this bot's own database login (each
+    // bot on a server has its own), hidden until tapped, and its address
+    'phpMyAdmin' => 
+    array (
+      'caption' => "🗃 <b>phpMyAdmin</b> · دیتابیس همین ربات\n\n<blockquote>👤 <b>یوزرنیم:</b> <tg-spoiler>{user}</tg-spoiler>\n🔑 <b>رمز:</b> <tg-spoiler>{pass}</tg-spoiler>\n🗄 <b>دیتابیس:</b> <code>{db}</code></blockquote>\n🌐 <b>آدرس:</b> <code>{url}</code>\n\n<i>روی یوزرنیم و رمز بزن تا دیده بشن؛ این اطلاعات رو به هیچ‌کس نده.</i>",
+      'loginBtn' => '🔐 ورود به phpMyAdmin',
+    ),
     'BackupSettings' => 
     array (
       'hubCaption' => "🗄 <b>تنظیمات بکاپ</b>\n\nربات هر چند ساعت یه‌بار، دو فایل جدا به گروه گزارش می‌فرسته: یکی خروجی دیتابیس، یکی زیپ کامل از فولدر کد ربات - هرکدوم رو می‌تونی جدا از هم رمزگذاری کنی تا اگه فایل بکاپ دست کسی افتاد، بدون رمز قابل باز شدن نباشه.\n\n🔐 رمز دیتابیس: <b>{dbStatus}</b>\n🔐 رمز فولدر ربات: <b>{botStatus}</b>\n\n📌 هر وقت بخوای می‌تونی با دستور /backup همین الان یه بکاپ دستی بگیری، بدون اینکه منتظر نوبت خودکارش بمونی.\n\n👇 چیکار کنیم؟",
@@ -8606,6 +8613,7 @@ nowpayments.io
     'setSupportId' => '👤 تنظیم آیدی پشتیبانی',
     'setTestAccountLimitAll' => '🎁 ریست اکانت تست',
     'backupSettingsBtn' => '🗄 تنظیمات بکاپ',
+    'phpMyAdminBtn' => '🗃 phpMyAdmin',
     'setThirdPrize' => '3️⃣ تنظیم جایزه نفر سوم',
     'settings' => '⚙️ تنظیمات',
     'settleDebt' => '💎 تسویه بدهی',

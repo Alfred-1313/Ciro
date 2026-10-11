@@ -433,7 +433,7 @@ $setting_panel = json_encode([
         [['text' => $textbotlang['keyboard']['optimizeBot']]],
         [['text' => $textbotlang['keyboard']['adminSection']]],
         [['text' => $textbotlang['keyboard']['setTestAccountLimitAll']]],
-        [['text' => $textbotlang['keyboard']['backupSettingsBtn']]],
+        [['text' => $textbotlang['keyboard']['backupSettingsBtn']], ['text' => $textbotlang['keyboard']['phpMyAdminBtn']]],
         [['text' => $textbotlang['keyboard']['agentMembershipFee']], ['text' => $textbotlang['keyboard']['qrBackground']]],
         [['text' => $textbotlang['keyboard']['reWebhookAgentBots']]],
         [['text' => $textbotlang['keyboard']['cronStatus']], ['text' => $textbotlang['keyboard']['updateBotBtn']]],

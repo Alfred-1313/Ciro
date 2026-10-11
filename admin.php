@@ -10181,6 +10181,22 @@ if (in_array($text, $textadmin) || $datain == "admin") {    if ($datain == "admi
     usertest_auto_reset_disable();
     list($ur_caption, $ur_kb) = usertest_reset_hub_payload($textbotlang);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['usertestReset']['autoOffDone'] . "\n\n" . $ur_caption, $ur_kb, 'HTML');
+} elseif ($text == $textbotlang['keyboard']['phpMyAdminBtn'] && $adminrulecheck['rule'] == "administrator") {
+    // 🗃 this bot's own phpMyAdmin (each bot on a server has its own): its
+    // database login from config.php, and its address - the bot's domain, on
+    // the port the installer gave phpMyAdmin ($pmaport, its menu 9), else on
+    // the bot's own
+    $pma_host = explode('/', (string) $domainhosts)[0];
+    [$pma_domain, $pma_botPort] = array_pad(explode(':', $pma_host, 2), 2, '443');
+    $pma_port = (isset($pmaport) && ctype_digit((string) $pmaport)) ? (string) $pmaport : $pma_botPort;
+    $pma_url = 'https://' . $pma_domain . ($pma_port === '443' ? '' : ':' . $pma_port) . '/phpmyadmin';
+    $pma_t = $textbotlang['Admin']['phpMyAdmin'];
+    sendmessage($from_id, strtr($pma_t['caption'], [
+        '{user}' => htmlspecialchars((string) $usernamedb),
+        '{pass}' => htmlspecialchars((string) $passworddb),
+        '{db}' => htmlspecialchars((string) $dbname),
+        '{url}' => htmlspecialchars($pma_url),
+    ]), json_encode(['inline_keyboard' => [[['text' => $pma_t['loginBtn'], 'url' => $pma_url, 'style' => 'danger']]]]), 'HTML');
 } elseif ($text == $textbotlang['keyboard']['backupSettingsBtn'] && $adminrulecheck['rule'] == "administrator") {
     list($bk_caption, $bk_kb) = backup_settings_hub_payload($textbotlang);
     sendmessage($from_id, $bk_caption, $bk_kb, 'HTML');
