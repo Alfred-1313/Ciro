@@ -2601,10 +2601,6 @@ function keyboard_list_text($lang, $groupFilter = null)
             }
             $keyboard_text['inline_keyboard'][] = [['text' => '⚙️ تنظیمات اکانت ساعتی', 'callback_data' => "paygsec:{$lang}", 'style' => 'primary']];
         }
-        if ($groupFilter === 'paygdeliver') {
-            // decides which of the two texts above the customer gets
-            $keyboard_text['inline_keyboard'][] = [['text' => '📌 نحوه‌ی نمایش کانفیگ', 'callback_data' => "cfgdeliv|list|{$lang}|h", 'style' => 'primary']];
-        }
         if ($groupFilter === 'topup') {
             // The card-to-card caption/button rows, moved here from
             // 🏬 تنظیمات فروشگاه → 🏦 بسته‌های شارژ → کارت به کارت. They keep

@@ -1299,32 +1299,6 @@ if (!function_exists('payg_rates_text')) {
         $rows[] = [['text' => $w['btnBack'], 'callback_data' => $onlyPanel ? 'buy' : 'buytype_payg', 'style' => 'danger']];
         return [$text, json_encode(['inline_keyboard' => $rows])];
     }
-    // the message a new one is delivered with (sendMessageService, kind payg)
-    function payg_created_text(array $svc, array $out, array $panel, $tx)
-    {
-        $w = $tx['users']['payg'];
-        $u = select("user", "*", "id", (string) $svc['user_id'], "select", ['cache' => false]);
-        $rates = payg_rates(payg_cfg($svc['lang']), payg_group_of($u));
-        $left = payg_wallet($svc['user_id'], $svc['currency']);
-        $sub = ($panel['sublink'] ?? '') === 'onsublink' ? (string) ($out['subscription_url'] ?? '') : '';
-        $links = '';
-        if (($panel['config'] ?? '') === 'onconfig' && is_array($out['configs'] ?? null)) {
-            foreach ($out['configs'] as $link) {
-                $links .= "\n" . $link;
-            }
-        }
-        return strtr($w['created'], [
-            '{username}' => '<code>' . htmlspecialchars($svc['username']) . '</code>',
-            '{location}' => htmlspecialchars((string) $panel['name_panel']),
-            '{rates}' => payg_rates_text($rates, $svc['currency'], $tx),
-            '{start}' => $svc['status'] === 'waiting' ? $w['startConnect'] : $w['startCreate'],
-            '{balance}' => money($left, $svc['currency']),
-            '{estimate}' => payg_estimate_text($rates, $left, $tx),
-            '{config}' => "<code>{$sub}</code>",
-            '{links}' => $links,
-            '{links2}' => $sub,
-        ]);
-    }
     // the service screen in «🛍 سرویس‌های من»: [text, keyboard]. $since: what
     // was taken since the owner last looked (🔄), null when not asked
     function payg_service_screen(array $svc, $tx, $panelData = null, $since = null)
@@ -1353,35 +1327,39 @@ if (!function_exists('payg_rates_text')) {
         if ($since !== null) {
             $text .= "\n\n" . strtr($w['sinceLast'], ['{amount}' => money(max(0, (float) $since), $svc['currency'])]);
         }
-        $rows = payg_service_rows($svc, $tx);
-        $rows[] = [['text' => $tx['users']['status']['backlist'], 'callback_data' => 'backorder', 'style' => 'danger']];
-        return [$text, json_encode(['inline_keyboard' => $rows])];
-    }
-    // the service screen's own buttons (🔄, link / config, ⏩, 🗑). The
-    // delivery message carries them too, minus link / config - it brings
-    // those itself
-    function payg_service_rows(array $svc, $tx, $withLinks = true)
-    {
-        $w = $tx['users']['payg'];
         $id = $svc['id_invoice'];
         $rows = [];
         if ($svc['status'] !== 'ended') {
-            $u = select("user", "*", "id", (string) $svc['user_id'], "select", ['cache' => false]);
             $rows[] = [['text' => $w['btnRefresh'], 'callback_data' => "paygref_{$id}", 'style' => 'primary']];
-            if ($withLinks) {
-                $rows[] = [
-                    ['text' => $tx['users']['status']['linksub'], 'callback_data' => "subscriptionurl_{$id}"],
-                    ['text' => $tx['users']['status']['config'], 'callback_data' => "config_{$id}"],
-                ];
-            }
-            if (payg_cfg($svc['lang'])['convert'] && in_array($svc['status'], ['active', 'waiting'], true) && payg_panel_products($svc['lang'], $svc['panel'], payg_group_of($u))) {
+            $rows[] = [
+                ['text' => $tx['users']['status']['linksub'], 'callback_data' => "subscriptionurl_{$id}"],
+                ['text' => $tx['users']['status']['config'], 'callback_data' => "config_{$id}"],
+            ];
+            if ($cfg['convert'] && in_array($svc['status'], ['active', 'waiting'], true) && payg_panel_products($svc['lang'], $svc['panel'], payg_group_of($u))) {
                 $rows[] = [['text' => $w['btnConvert'], 'callback_data' => "paygconv_{$id}", 'style' => 'success']];
             }
             $rows[] = [['text' => $w['btnDelete'], 'callback_data' => "paygdel_{$id}", 'style' => 'danger']];
         } else {
             $rows[] = [['text' => $w['btnRemoveFully'], 'callback_data' => "paygrm_{$id}", 'style' => 'danger']];
         }
-        return $rows;
+        $rows[] = [['text' => $tx['users']['status']['backlist'], 'callback_data' => 'backorder', 'style' => 'danger']];
+        return [$text, json_encode(['inline_keyboard' => $rows])];
+    }
+    // 💡 «نام کاربری دلخواه»'s ask: the purchase's own 🔴 cancel / 🟢 default
+    // pair (genbtn 'su': its looks, order and width, edited there), back to ⏱'s
+    // rates and ⏱'s own default name instead
+    function payg_username_kb($lang, $tx, $codePanel)
+    {
+        $cbs = [0 => 'buytype_payg', 1 => 'paygdef_' . $codePanel];
+        $buttons = [];
+        foreach (genbtn_defs('su', $tx) as $idx => $d) {
+            $ov = genbtn_override($lang, 'users.sell.selectUsernamePrompt', $idx);
+            if (!empty($ov['hidden']) && genbtn_hideable('su', $idx)) {
+                continue;
+            }
+            $buttons[$idx] = genbtn_render($d, $ov, $cbs[$idx] ?? $d['callback_data']);
+        }
+        return json_encode(['inline_keyboard' => genbtn_group_rows('su', $lang, $buttons, $tx)]);
     }
     // 🗑's question: [text, keyboard]
     function payg_delete_confirm(array $svc, $tx)
@@ -1607,7 +1585,7 @@ if (!function_exists('payg_admin_screen')) {
         $rows[] = [$btn($r['btnWarn'], "paygask:{$lang}:warn"), $btn(strtr($r['btnGrace'], ['{v}' => $grace]), "paygask:{$lang}:grace")];
         $rows[] = [$btn(strtr($r['btnConvert'], ['{v}' => $cfg['convert'] ? $r['convertOn'] : $r['convertOff']]), "paygtog:{$lang}:convert", $cfg['convert'] ? 'success' : 'danger')];
         $rows[] = [$btn(strtr($r['btnList'], ['{n}' => number_format($stats['open'])]), "payglist:{$lang}:1")];
-        $rows[] = [$btn($r['btnDelivery'], "cfgdeliv|list|{$lang}|h"), $btn($r['btnTexts'], "bt_group|{$lang}|payg")];
+        $rows[] = [$btn($r['btnTexts'], "bt_group|{$lang}|payg")];
         // opened from 🏬 تنظیمات فروشگاه's own keyboard: nothing inline to go back to
         $rows[] = [$btn($r['close'], 'paygclose', 'danger')];
         return [$text, json_encode(['inline_keyboard' => $rows])];

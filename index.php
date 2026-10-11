@@ -3655,8 +3655,7 @@ if ((string) $datain === '' && preg_match('/^paygname\|(.+)\|(\d+)$/', (string) 
     } elseif (!payg_name_ok($pg_try)) {
         // one message all along: the customer's try goes, the ask says why
         deletemessage($from_id, $message_id);
-        Editmessagetext($from_id, (int) $pg_nm[2], $textbotlang['users']['invalidusername'] . "\n\n" . $textbotlang['users']['payg']['askUsername'],
-            json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['payg']['btnBack'], 'callback_data' => 'buytype_payg', 'style' => 'danger']]]]));
+        Editmessagetext($from_id, (int) $pg_nm[2], $textbotlang['users']['invalidusername'] . "\n\n" . $textbotlang['users']['payg']['askUsername'], payg_username_kb($user['lang'] ?? 'fa', $textbotlang, $pg_nm[1]));
         return;
     } else {
         step('home', $from_id);
@@ -3669,7 +3668,17 @@ if ((string) $datain === '' && preg_match('/^paygname\|(.+)\|(\d+)$/', (string) 
         $message_id = (int) $pg_nm[2];
     }
 }
-// ✅ بساز: made, and delivered like a purchase (📌 نحوه‌ی نمایش کانفیگ's ⏱ kind)
+// 🟢 «پیش‌فرض» under the 💡 name's ask: made without one - ⏱'s own name
+// (payg_make_username falls back to payg_<id>_<n> when none is given)
+if (preg_match('/^paygdef_(.+)$/', (string) $datain, $pg_dm)) {
+    if (str_starts_with((string) $user['step'], 'paygname|')) {
+        step('home', $from_id);
+        $user['step'] = 'home';
+    }
+    $pg_typed = '';
+    $datain = 'paygmk_' . $pg_dm[1];
+}
+// ✅ بساز: made, and shown as its own service screen
 if (preg_match('/^paygmk_(.+)$/', (string) $datain, $pg_m)) {
     $pg_w = $textbotlang['users']['payg'];
     // 💡 «نام کاربری دلخواه»: the name is asked for first - once the wallet,
@@ -3699,20 +3708,22 @@ if (preg_match('/^paygmk_(.+)$/', (string) $datain, $pg_m)) {
         return;
     }
     if ($pg_ask) {
-        Editmessagetext($from_id, $message_id, $pg_w['askUsername'], json_encode(['inline_keyboard' => [[['text' => $pg_w['btnBack'], 'callback_data' => 'buytype_payg', 'style' => 'danger']]]]));
+        // the purchase's own question and its 🔴 / 🟢 buttons, marked ⏱ on top
+        Editmessagetext($from_id, $message_id, $pg_w['askUsername'], payg_username_kb($user['lang'] ?? 'fa', $textbotlang, $pg_m[1]));
         step("paygname|{$pg_m[1]}|{$message_id}", $from_id);
         return;
     }
-    deletemessage($from_id, $message_id);
     // a 🔐 sticker still up from the screens before goes with them
     sell_sticker_retire($from_id);
-    $pg_panel = $pg_res['panel'];
-    $pg_sub = ($pg_panel['sublink'] ?? '') === 'onsublink' ? (string) ($pg_res['out']['subscription_url'] ?? '') : '';
-    // one message: the delivery, with the service's own buttons (🔄 ⏩ 🗑 of its
-    // «🛍 سرویس‌های من» screen) under it from the start
+    // ONE message, in place of «⏳ در حال ساخت»: its own screen of «🛍 سرویس‌های
+    // من» - status, cost, rates, a QR of its link and every button
     $pg_new = payg_row($pg_res['id_invoice']);
-    sendMessageService($pg_panel, $pg_res['out']['configs'] ?? [], $pg_sub, $pg_res['username'], afterpay_help_kb($user['lang'] ?? 'fa', $textbotlang), payg_created_text($pg_res['svc'], $pg_res['out'], $pg_panel, $textbotlang), $pg_res['id_invoice'], $from_id, 'images.jpg', 'payg',
-        $pg_new !== null ? payg_service_rows($pg_new, $textbotlang, false) : []);
+    if ($pg_new === null) {
+        deletemessage($from_id, $message_id);
+        return;
+    }
+    [$pg_text, $pg_kb] = payg_service_screen($pg_new, $textbotlang);
+    svc_send_status_screen($from_id, $message_id, $pg_text, $pg_kb, (string) ($pg_res['out']['subscription_url'] ?? ''), true);
     return;
 }
 // the service's own buttons: 🔄 ⏩ 🗑 - each for its owner only (the check at

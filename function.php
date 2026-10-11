@@ -10678,7 +10678,7 @@ if (!function_exists('config_delivery_panel_reset')) {
     function config_delivery_panel_reset($codePanel, $kind = null, $lang = 'fa')
     {
         $view = config_delivery_view($lang);
-        $kinds = ($kind === null) ? ['purchase', 'usertest', 'affrw', 'payg'] : [$kind];
+        $kinds = ($kind === null) ? ['purchase', 'usertest', 'affrw'] : [$kind];
         foreach ($kinds as $k) {
             unset($view[$k][$codePanel], $view['qroff'][$k][$codePanel]);
         }
@@ -10692,7 +10692,7 @@ if (!function_exists('config_delivery_touched')) {
         if ($kind !== null) {
             return !empty($view[$kind]);
         }
-        return !empty($view['purchase']) || !empty($view['usertest']) || !empty($view['affrw']) || !empty($view['payg']);
+        return !empty($view['purchase']) || !empty($view['usertest']) || !empty($view['affrw']);
     }
 }
 if (!function_exists('config_delivery_mode_fa')) {
@@ -10710,10 +10710,6 @@ if (!function_exists('config_delivery_back_cb')) {
         if ($origin === 'r') {
             return "bt_group|{$lang}|referral";
         }
-        // ⏱ opened from the hourly account's own 🎨 group (its delivery sub-screen)
-        if ($origin === 'h') {
-            return "bt_group|{$lang}|paygdeliver";
-        }
         return ($origin === 'u')
             ? "bt_edit|{$lang}|users.usertest.selectUsernamePrompt"
             : "bt_group|{$lang}|buyflow";
@@ -10724,11 +10720,11 @@ if (!function_exists('config_delivery_origin_kind')) {
     // account, 'r' the 🎁 referral gift, anything else a purchase
     function config_delivery_origin_kind($origin)
     {
-        return ['u' => 'usertest', 'r' => 'affrw', 'h' => 'payg'][$origin] ?? 'purchase';
+        return ['u' => 'usertest', 'r' => 'affrw'][$origin] ?? 'purchase';
     }
     function config_delivery_kind_label($kind)
     {
-        return ['usertest' => 'اکانت تست', 'affrw' => 'هدیه‌ی دعوت', 'payg' => 'اکانت ساعتی'][$kind] ?? 'خرید';
+        return ['usertest' => 'اکانت تست', 'affrw' => 'هدیه‌ی دعوت'][$kind] ?? 'خرید';
     }
 }
 if (!function_exists('config_delivery_panels_payload')) {
@@ -10741,16 +10737,12 @@ if (!function_exists('config_delivery_panels_payload')) {
             $panels = [];
         }
         $info = "📌 <b>نحوه‌ی نمایش کانفیگ (هنگام {$kindLabel})</b>" . mainmenu_tab_note($lang) . "\n➖➖➖➖➖➖➖➖➖➖\n";
-        $info .= "تعیین می‌کنه وقتی کاربر " . (['usertest' => 'اکانت تست می‌گیره', 'affrw' => 'کانفیگ هدیه‌ی دعوت می‌گیره', 'payg' => 'اکانت ساعتی می‌سازه'][$kind] ?? 'سرویس می‌خره') . "، بعد از تحویل چی ببینه.\n";
+        $info .= "تعیین می‌کنه وقتی کاربر " . (['usertest' => 'اکانت تست می‌گیره', 'affrw' => 'کانفیگ هدیه‌ی دعوت می‌گیره'][$kind] ?? 'سرویس می‌خره') . "، بعد از تحویل چی ببینه.\n";
         $info .= "برای هر پنل و هر زبان جداست - کاربر، تنظیم زبان خودش رو می‌گیره.\n";
         if ($kind === 'affrw') {
             $rwPanel = affrw_panel(affrw_cfg($lang));
             $info .= "🎁 پنل کانفیگ هدیه‌ی این زبان: <b>" . ($rwPanel !== null ? htmlspecialchars((string) $rwPanel['name_panel'], ENT_QUOTES) : 'انتخاب نشده') . "</b> (🌐 وضعیت قابلیت‌ها ← 👥 طرح‌های زیرمجموعه‌گیری)\n";
             $info .= "📌 این تنظیمات برای لحظه‌ی تحویل کانفیگ هدیه‌ست؛ بعدش توی «🛍 سرویس‌های من» مثل سرویس‌های خریده‌شده نشون داده می‌شه.\n";
-        }
-        if ($kind === 'payg') {
-            $info .= "⏱ پنل‌هایی که ⏱ کنارشونه، پنل‌های اکانت ساعتیِ این زبانن (🏬 تنظیمات فروشگاه ← ⏱ اکانت ساعتی ← 🖥 انتخاب پنل‌ها).\n";
-            $info .= "📌 این تنظیمات برای لحظه‌ی تحویل اکانت ساعتیه؛ بعدش توی «🛍 سرویس‌های من» صفحه‌ی خودش رو داره.\n";
         }
         $info .= "➖➖➖➖➖➖➖➖➖➖\n";
         $info .= empty($panels) ? "⚠️ هنوز هیچ پنلی اضافه نشده." : "👇 اول پنل رو انتخاب کن:";
@@ -10761,9 +10753,6 @@ if (!function_exists('config_delivery_panels_payload')) {
             $label = "🖥 {$p['name_panel']}  •  حالت " . config_delivery_mode_fa($m);
             if ($kind === 'affrw' && (string) $code === affrw_cfg($lang)['panel']) {
                 $label .= '  •  🎁';
-            }
-            if ($kind === 'payg' && in_array((string) $code, payg_cfg($lang)['panels'], true)) {
-                $label .= '  •  ⏱';
             }
             $kb['inline_keyboard'][] = [['text' => $label, 'callback_data' => "cfgdeliv|p|{$lang}|{$code}|{$origin}", 'style' => 'primary']];
         }
@@ -10827,9 +10816,6 @@ if (!function_exists('config_delivery_panel_payload')) {
         } elseif ($kind === 'affrw') {
             $kb['inline_keyboard'][] = [['text' => '📝 پیام کامل (حالت ۱)', 'callback_data' => "cfgdeliv|msg|{$lang}|{$codePanel}|{$origin}|ar", 'style' => 'primary']];
             $kb['inline_keyboard'][] = [['text' => '📝 کپشن صفحه‌ی کانفیگ (حالت ۲)', 'callback_data' => "cfgdeliv|msg|{$lang}|{$codePanel}|{$origin}|cr", 'style' => 'primary']];
-        } elseif ($kind === 'payg') {
-            $kb['inline_keyboard'][] = [['text' => '📝 پیام کامل (حالت ۱)', 'callback_data' => "cfgdeliv|msg|{$lang}|{$codePanel}|{$origin}|ah", 'style' => 'primary']];
-            $kb['inline_keyboard'][] = [['text' => '📝 کپشن صفحه‌ی کانفیگ (حالت ۲)', 'callback_data' => "cfgdeliv|msg|{$lang}|{$codePanel}|{$origin}|ch", 'style' => 'primary']];
         } else {
             $kb['inline_keyboard'][] = [['text' => '📝 پیام کامل (حالت ۱)', 'callback_data' => "cfgdeliv|msg|{$lang}|{$codePanel}|{$origin}|at", 'style' => 'primary']];
             $kb['inline_keyboard'][] = [['text' => '📝 کپشن صفحه‌ی کانفیگ (حالت ۲)', 'callback_data' => "cfgdeliv|msg|{$lang}|{$codePanel}|{$origin}|ct", 'style' => 'primary']];
@@ -19965,7 +19951,7 @@ if (!function_exists('telegram_html_chunks')) {
         }));
     }
 }
-function sendMessageService($panel_info, $config, $sub_link, $username_service, $reply_markup, $caption, $invoice_id, $user_id = null, $image = 'images.jpg', $kind = 'purchase', array $own_rows = [])
+function sendMessageService($panel_info, $config, $sub_link, $username_service, $reply_markup, $caption, $invoice_id, $user_id = null, $image = 'images.jpg', $kind = 'purchase')
 {
     global $setting, $from_id, $textbotlang;
     $user_id = $user_id == null ? $from_id : $user_id;
@@ -19976,12 +19962,6 @@ function sendMessageService($panel_info, $config, $sub_link, $username_service, 
     $sms_lang = $sms_row['lang'] ?? 'fa';
     if (!mainmenu_btn_active($sms_lang, "text_help"))
         $reply_markup = null;
-    // the service's own buttons (⏱'s 🔄 ⏩ 🗑) - above the 📚 one, and kept
-    // whether or not that one is offered
-    if ($own_rows) {
-        $sms_rm = is_string($reply_markup) ? json_decode($reply_markup, true) : null;
-        $reply_markup = json_encode(['inline_keyboard' => array_merge($own_rows, is_array($sms_rm['inline_keyboard'] ?? null) ? $sms_rm['inline_keyboard'] : [])]);
-    }
     $configCount = is_array($config) ? count($config) : 0;
     // Mode 2 is the config page INSTEAD of the full message, not as well as it
     // (it used to send both, which read as "mode 1 is still on"). It needs the
@@ -19990,15 +19970,13 @@ function sendMessageService($panel_info, $config, $sub_link, $username_service, 
     // nothing. No QR either way in mode 2.
     if ($panel_info['config'] == "onconfig" && $configCount > 0
         && config_delivery_mode($kind, $panel_info['code_panel'] ?? null, $sms_lang) === "2") {
-        $cd_hintKey = ['usertest' => 'textbot.getConfigHintTest', 'affrw' => 'users.affiliates.rewardConfigHint', 'payg' => 'users.payg.configHint'][$kind] ?? 'textbot.getConfigHintBuy';
+        $cd_hintKey = ['usertest' => 'textbot.getConfigHintTest', 'affrw' => 'users.affiliates.rewardConfigHint'][$kind] ?? 'textbot.getConfigHintBuy';
         // an admin can be the one approving a 🎁 gift, so it is worded in the
-        // recipient's language rather than the reader's (⏱ the same: the cron
-        // and the panel never read in the customer's own)
-        $cd_hintText = bottext_resolve_key($cd_hintKey, in_array($kind, ['affrw', 'payg'], true) ? $sms_lang : null);
+        // recipient's language rather than the reader's
+        $cd_hintText = bottext_resolve_key($cd_hintKey, $kind === 'affrw' ? $sms_lang : null);
         // sendMessageService's own $kind is 'purchase'|'usertest' - keyboard_config()'s
         // is 'usertest'|'buy', so normalize rather than let 'purchase' silently
-        // fall through to the usertest column/button settings below. ⏱ shares
-        // the purchase's config buttons
+        // fall through to the usertest column/button settings below.
         $cc_kbKind = ['usertest' => 'usertest', 'affrw' => 'affrw'][$kind] ?? 'buy';
         $cd_kb = json_decode(keyboard_config($config, $invoice_id, false, $cc_kbKind, $sms_lang), true);
         // the 📚 tutorial button the full message carried comes along underneath

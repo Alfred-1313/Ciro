@@ -6739,24 +6739,24 @@ if (preg_match('/^cfgcolbtrw-(getfirst|namefirst)-([a-z]{2})$/', $datain, $cc_m)
     Editmessagetext($from_id, $message_id, $cc_info, $cc_kb, 'HTML');
     return;
 }
-if (preg_match('/^cfgdeliv\|msg\|([a-z]{2})\|([^|]+)\|([burh])\|(ap|at|cb|ct|ar|cr|ah|ch)$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
-    $cd_keyMap = ['ap' => 'textbot.afterPay', 'at' => 'textbot.afterText', 'cb' => 'textbot.getConfigHintBuy', 'ct' => 'textbot.getConfigHintTest', 'ar' => 'users.affiliates.rewardAfterPay', 'cr' => 'users.affiliates.rewardConfigHint', 'ah' => 'users.payg.created', 'ch' => 'users.payg.configHint'];
+if (preg_match('/^cfgdeliv\|msg\|([a-z]{2})\|([^|]+)\|([bur])\|(ap|at|cb|ct|ar|cr)$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
+    $cd_keyMap = ['ap' => 'textbot.afterPay', 'at' => 'textbot.afterText', 'cb' => 'textbot.getConfigHintBuy', 'ct' => 'textbot.getConfigHintTest', 'ar' => 'users.affiliates.rewardAfterPay', 'cr' => 'users.affiliates.rewardConfigHint'];
     $cd_back = "cfgdeliv|p|{$cd_m[1]}|{$cd_m[2]}|{$cd_m[3]}";
     list($cd_text, $cd_kb) = bottext_item_menu_payload($cd_keyMap[$cd_m[4]], $cd_m[1], $textbotlang, $cd_back);
     Editmessagetext($from_id, $message_id, $cd_text, $cd_kb, 'HTML');
     return;
 }
-if (preg_match('/^cfgdeliv\|list\|([a-z]{2})\|([burh])$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^cfgdeliv\|list\|([a-z]{2})\|([bur])$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
     list($cd_text, $cd_kb) = config_delivery_panels_payload($cd_m[1], $cd_m[2]);
     Editmessagetext($from_id, $message_id, $cd_text, $cd_kb, 'HTML');
     return;
 }
-if (preg_match('/^cfgdeliv\|p\|([a-z]{2})\|([^|]+)\|([burh])$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^cfgdeliv\|p\|([a-z]{2})\|([^|]+)\|([bur])$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
     list($cd_text, $cd_kb) = config_delivery_panel_payload($cd_m[1], $cd_m[2], $cd_m[3]);
     Editmessagetext($from_id, $message_id, $cd_text, $cd_kb, 'HTML');
     return;
 }
-if (preg_match('/^cfgdeliv\|set\|([a-z]{2})\|([^|]+)\|(purchase|usertest|affrw|payg)\|(1|2)\|([burh])$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^cfgdeliv\|set\|([a-z]{2})\|([^|]+)\|(purchase|usertest|affrw)\|(1|2)\|([bur])$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
     config_delivery_set_mode($cd_m[3], $cd_m[2], $cd_m[4], $cd_m[1]);
     list($cd_text, $cd_kb) = config_delivery_panel_payload($cd_m[1], $cd_m[2], $cd_m[5]);
     Editmessagetext($from_id, $message_id, $cd_text, $cd_kb, 'HTML');
@@ -6775,7 +6775,7 @@ if (preg_match('/^admperm\|(open|test|buy|affrw)\|([a-z]{2})$/', $datain, $ap_m)
     Editmessagetext($from_id, $message_id, $ap_text, $ap_kb, 'HTML');
     return;
 }
-if (preg_match('/^cfgdeliv\|qr\|([a-z]{2})\|([^|]+)\|(purchase|usertest|affrw|payg)\|([burh])$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^cfgdeliv\|qr\|([a-z]{2})\|([^|]+)\|(purchase|usertest|affrw)\|([bur])$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
     // mode 2 sends the config page only - there is no message for a QR to ride
     // on, so it cannot be switched on there (only off, if an old setting has it)
     if (config_delivery_mode($cd_m[3], $cd_m[2], $cd_m[1]) === '2' && !config_delivery_qr_on($cd_m[3], $cd_m[2], $cd_m[1])) {
@@ -6792,7 +6792,7 @@ if (preg_match('/^cfgdeliv\|qr\|([a-z]{2})\|([^|]+)\|(purchase|usertest|affrw|pa
     Editmessagetext($from_id, $message_id, $cd_text, $cd_kb, 'HTML');
     return;
 }
-if (preg_match('/^cfgdeliv\|rst\|([a-z]{2})\|([^|]+)\|(purchase|usertest|affrw|payg)\|([burh])$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^cfgdeliv\|rst\|([a-z]{2})\|([^|]+)\|(purchase|usertest|affrw)\|([bur])$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
     config_delivery_panel_reset($cd_m[2], $cd_m[3], $cd_m[1]);
     list($cd_text, $cd_kb) = config_delivery_panel_payload($cd_m[1], $cd_m[2], $cd_m[4]);
     // names the mode the reset actually restores - config_delivery_default_mode()
@@ -6801,7 +6801,7 @@ if (preg_match('/^cfgdeliv\|rst\|([a-z]{2})\|([^|]+)\|(purchase|usertest|affrw|p
     Editmessagetext($from_id, $message_id, "🔁 این پنل به حالت پیش‌فرض (حالت " . config_delivery_mode_fa(config_delivery_default_mode()) . "، QR کد روشن) برگشت.\n\n" . $cd_text, $cd_kb, 'HTML');
     return;
 }
-if (preg_match('/^cfgdeliv\|cfgcol\|([a-z]{2})\|([^|]+)\|([burh])$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^cfgdeliv\|cfgcol\|([a-z]{2})\|([^|]+)\|([bur])$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
     // the flow this screen belongs to: test account ('u'), 🎁 gift ('r') or purchase
     $cd_colKind = ['u' => 'usertest', 'r' => 'affrw'][$cd_m[3]] ?? 'buy';
     list($cd_text, $cd_kb) = config_col_order_payload($textbotlang, $cd_m[1], null, "cfgdeliv|p|{$cd_m[1]}|{$cd_m[2]}|{$cd_m[3]}", $cd_colKind === 'affrw' ? 'users.affiliates.rewardConfigHint' : null, $cd_colKind);
