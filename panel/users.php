@@ -19,7 +19,9 @@ $params = [];
 
 if ($search !== '') {
     $where[] = "(id LIKE ? OR COALESCE(username,'') LIKE ? OR COALESCE(namecustom,'') LIKE ? OR COALESCE(number,'') LIKE ?)";
-    $params = ["%$search%", "%$search%", "%$search%", "%$search%"];
+    // a @username is found without its @, the way it is kept
+    $like = '%' . ltrim($search, '@') . '%';
+    $params = [$like, $like, $like, $like];
 }
 
 if ($status !== '') {

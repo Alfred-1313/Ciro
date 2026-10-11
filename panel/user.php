@@ -34,6 +34,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             db_query($pdo, "UPDATE user SET agent = ? WHERE id = ?", [$newRole, $id]);
             flash('success', $textbotlang['panel']['userGroupChangedPrefix'] . user_role_label($newRole) . $textbotlang['panel']['userGroupChangedSuffix']);
         }
+    } elseif ($action === 'aff_block') {
+        // ⛔️ kept out of 💼 and/or 🎁 as an inviter - the bot's own switch
+        aff_block_set($id, 'c', !empty($_POST['block_c']));
+        aff_block_set($id, 'r', !empty($_POST['block_r']));
+        flash('success', $textbotlang['panel']['userAffBlockSaved']);
     }
 
     header("Location: user.php?id=$id");
@@ -91,6 +96,8 @@ $convRate = count($payments) > 0 ? round($paidCount / count($payments) * 100) : 
 
 $agent = $user['agent'] ?? 'f';
 $isBlocked = ($user['User_Status'] ?? '') === 'block';
+// ⛔️ the referral plans they are kept out of as an inviter
+$affBlock = ['c' => aff_blocked($id, 'c'), 'r' => aff_blocked($id, 'r')];
 // their Telegram name (kept by the bot since the referral reports), else the
 // name they gave
 $fullName = trim((string) ($user['first_name'] ?? ''));
@@ -231,6 +238,12 @@ include __DIR__ . '/inc/layout_head.php';
                         <span class="kv-val"><?= strtr($textbotlang['panel']['userAffrwValue'], ['{all}' => number_format($affrwAll), '{have}' => number_format($affrwLive)]) ?></span>
                     </div>
                 <?php endif; ?>
+                <?php if ($affBlock['c'] || $affBlock['r']): ?>
+                    <div class="kv">
+                        <span class="kv-key"><?= $textbotlang['panel']['userAffBlockState'] ?></span>
+                        <span class="kv-val" style="color:var(--no)">⛔️ <?= trim(($affBlock['c'] ? '💼 ' : '') . ($affBlock['r'] ? '🎁' : '')) ?></span>
+                    </div>
+                <?php endif; ?>
                 <?php if ((int) ($user['score'] ?? 0) > 0): ?>
                     <div class="kv">
                         <span class="kv-key"><?= $textbotlang['panel']['userColStatus'] ?></span>
@@ -272,6 +285,9 @@ include __DIR__ . '/inc/layout_head.php';
                 </button>
                 <button class="btn btn-ghost btn-sm" style="justify-content:center" onclick="openModal('roleModal')">
                     <?= icon('users', 13) ?> <?= $textbotlang['panel']['userColMethod'] ?>
+                </button>
+                <button class="btn btn-ghost btn-sm" style="justify-content:center" onclick="openModal('affBlockModal')">
+                    <?= $textbotlang['panel']['userAffBlockBtn'] ?>
                 </button>
                 <div style="height:1px;background:var(--bd);margin:2px 0"></div>
                 <?php if ($isBlocked): ?>
@@ -551,6 +567,30 @@ include __DIR__ . '/inc/layout_head.php';
             <div class="modal-foot">
                 <button type="submit" class="btn btn-primary"><?= icon('check', 13) ?> <?= $textbotlang['panel']['userDetailTrackingCode'] ?></button>
                 <button type="button" class="btn btn-ghost" onclick="closeModal('roleModal')"><?= $textbotlang['panel']['userDetailDescription'] ?></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-veil" id="affBlockModal">
+    <div class="modal">
+        <div class="modal-head">
+            <h3><?= $textbotlang['panel']['userAffBlockTitle'] ?></h3>
+            <button class="modal-x" onclick="closeModal('affBlockModal')"><?= icon('close', 14) ?></button>
+        </div>
+        <form method="POST">
+            <div class="modal-body">
+                <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+                <input type="hidden" name="action" value="aff_block">
+                <div class="field">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" name="block_c" value="1"<?= $affBlock['c'] ? ' checked' : '' ?>> <?= $textbotlang['panel']['userAffBlockC'] ?></label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" name="block_r" value="1"<?= $affBlock['r'] ? ' checked' : '' ?>> <?= $textbotlang['panel']['userAffBlockR'] ?></label>
+                    <span class="field-hint"><?= $textbotlang['panel']['userAffBlockHint'] ?></span>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button type="submit" class="btn btn-primary"><?= icon('check', 13) ?> <?= $textbotlang['panel']['userAffBlockSave'] ?></button>
+                <button type="button" class="btn btn-ghost" onclick="closeModal('affBlockModal')"><?= $textbotlang['panel']['userDetailDescription'] ?></button>
             </div>
         </form>
     </div>

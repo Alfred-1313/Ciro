@@ -989,7 +989,8 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         // 🎨 could not edit, in whatever language the request ran in.
         $dp_refId = ($Balance_id['affiliates'] != null && intval($Balance_id['affiliates']) != 0) ? $Balance_id['affiliates'] : null;
         $dp_refLang = $dp_refId !== null ? (select("user", "*", "id", $dp_refId, "select")['lang'] ?? 'fa') : 'fa';
-        if ($dp_refId !== null && aff_classic_on($dp_refLang) && feature_setting_value('aff_commission', $dp_refLang, $affiliatescommission['status_commission']) == "oncommission") {
+        // ...and none to a referrer ⛔️ kept out of 💼 (aff_blocked)
+        if ($dp_refId !== null && !aff_blocked($dp_refId, 'c') && aff_classic_on($dp_refLang) && feature_setting_value('aff_commission', $dp_refLang, $affiliatescommission['status_commission']) == "oncommission") {
             $dp_firstOnly = feature_setting_value('aff_firstbuy', $dp_refLang, $marzbanporsant_one_buy['porsant_one_buy']) == "on_buy_porsant";
             if (!$dp_firstOnly || $countinvoice <= 1) {
                 $dp_refTexts = payer_texts($dp_refId);
@@ -2070,8 +2071,33 @@ if (!function_exists('refv_cfg')) {
         if (!$done) {
             $done = true;
             addFieldToTable('user', 'aff_pending', null, 'VARCHAR(50) NULL');
+            // ⛔️ the plans an admin keeps this user out of as an inviter (aff_blocked)
+            addFieldToTable('user', 'aff_block', null, 'VARCHAR(4) NULL');
             affrw_ensure_table();
         }
+    }
+    // 👤 مدیریت کاربر ← 👥 ← ⛔️: $uid kept out of $plan ('c' 💼 / 'r' 🎁) as
+    // an INVITER - new invites through their link do not count for it, no
+    // commission or share of a join gift (💼), no free config (🎁), and 👥
+    // tells them it is closed. Invites counted before stay as they were.
+    function aff_blocked($uid, $plan)
+    {
+        refv_ensure_schema();
+        $u = select("user", "*", "id", (string) $uid, "select");
+        return is_array($u) && strpos((string) ($u['aff_block'] ?? ''), (string) $plan) !== false;
+    }
+    function aff_block_set($uid, $plan, $on)
+    {
+        refv_ensure_schema();
+        $u = select("user", "*", "id", (string) $uid, "select", ['cache' => false]);
+        $now = is_array($u) ? (string) ($u['aff_block'] ?? '') : '';
+        $set = [];
+        foreach (['c', 'r'] as $p) {
+            if ($p === $plan ? $on : strpos($now, $p) !== false) {
+                $set[] = $p;
+            }
+        }
+        update("user", "aff_block", $set ? implode('', $set) : null, "id", (string) $uid);
     }
     // asks the newcomer for the first thing still missing for the plans in
     // $plans - the phone first, then every channel of them not joined yet
@@ -2156,7 +2182,10 @@ if (!function_exists('refv_cfg')) {
         $inv = select("user", "*", "id", (string) $inviterId, "select");
         $tx = payer_texts($uid);
         $myLang = $userRow['lang'] ?? 'fa';
-        $welcome = aff_classic_on($myLang) ? 'welcomeInvited' : (affrw_live($myLang) !== null ? 'welcomeInvitedReward' : 'welcomeInvitedPlain');
+        // a plan the inviter is ⛔️ kept out of did not count this invite: its
+        // welcome (a join gift, a free config to earn) would promise nothing
+        $welcome = (aff_classic_on($myLang) && !aff_blocked($inviterId, 'c')) ? 'welcomeInvited'
+            : ((affrw_live($myLang) !== null && !aff_blocked($inviterId, 'r')) ? 'welcomeInvitedReward' : 'welcomeInvitedPlain');
         $invName = (is_array($inv) && !empty($inv['username']) && $inv['username'] !== 'none') ? '@' . $inv['username'] : (string) $inviterId;
         bottext_extras_key_hint("users.affiliates.{$welcome}");
         sendmessage($uid, strtr(text_fill_s($tx['users']['affiliates'][$welcome], (string) ($inv['username'] ?? '')), ['{inviter}' => htmlspecialchars($invName)]), $keyboard, 'html');
@@ -2183,7 +2212,9 @@ if (!function_exists('refv_cfg')) {
         }
         $left = [];
         foreach (['c', 'r'] as $plan) {
-            if (aff_counted($u, $plan)) {
+            // ⛔️ an inviter kept out of this plan: it does not count, and the
+            // newcomer is not asked for its phone / channels either
+            if (aff_counted($u, $plan) || aff_blocked($inviterId, $plan)) {
                 continue;
             }
             if (refv_missing($u, $inviterId, $plan)) {
@@ -18837,8 +18868,9 @@ if (!function_exists('affrw_cfg')) {
             return;
         }
         $row = affrw_row($uid);
-        // 🔁 چند بار lowered below what they have had: no more either
-        if (!affrw_counting($row) || affrw_used_up($row)) {
+        // 🔁 چند بار lowered below what they have had: no more either - nor for
+        // one ⛔️ kept out of 🎁 (aff_blocked)
+        if (!affrw_counting($row) || affrw_used_up($row) || aff_blocked($uid, 'r')) {
             return;
         }
         $count = affrw_count($uid, affrw_since($cfg, $row));
@@ -18886,6 +18918,11 @@ if (!function_exists('affrw_cfg')) {
             return null;
         }
         $a = $tx['users']['affiliates'];
+        // ⛔️ kept out of 🎁 by an admin: said so, instead of a page to earn one
+        if (aff_blocked($user['id'], 'r')) {
+            $key = 'rewardBlocked';
+            return $a['rewardBlocked'];
+        }
         $row = affrw_row($user['id']);
         if (affrw_used_up($row)) {
             $key = 'rewardLimitReached';

@@ -894,6 +894,7 @@ return array (
       'affcl_1' => array ('label' => '👋 خوش‌آمد به کاربر دعوت‌شده (با هدیه عضویت)', 'key' => 'users.affiliates.welcomeInvited', 'group' => 'referral'),
       'affcl_2' => array ('label' => '🎉 اعلان «زیرمجموعه‌ی جدید» به معرف (با پورسانت)', 'key' => 'users.affiliates.newReferralJoined', 'group' => 'referral'),
       'affcl_3' => array ('label' => '💰 اعلان «هدیه‌ی عضویت واریز شد» به معرف', 'key' => 'users.affiliates.joinedGift', 'group' => 'referral'),
+      'affcl_4' => array ('label' => '⛔️ پیام «این بخش برات بسته شده» (💼، کاربر مسدودشده)', 'key' => 'users.affiliates.classicBlocked', 'group' => 'referral'),
       'affnone_1' => array ('label' => '🚫 پیام «هیچ طرحی فعال نیست»', 'key' => 'users.affiliates.nothingActive', 'group' => 'referral', 'section' => 'referral_none'),
       'affcm_1' => array ('label' => '👋 خوش‌آمد به کاربر دعوت‌شده (وقتی هیچ طرحی روشن نیست)', 'key' => 'users.affiliates.welcomeInvitedPlain', 'group' => 'referral', 'section' => 'referral_common'),
       'affcm_2' => array ('label' => '🎉 اعلان «زیرمجموعه‌ی جدید» به معرف (وقتی هیچ طرحی روشن نیست)', 'key' => 'users.affiliates.newReferralJoinedPlain', 'group' => 'referral'),
@@ -910,6 +911,7 @@ return array (
       'affrw_6' => array ('label' => '📨 اعلان ارسال درخواست برای ادمین', 'key' => 'users.affiliates.rewardSentToAdmin', 'group' => 'referral'),
       'affrw_7' => array ('label' => '🎉 اعلان ساخته شدن کانفیگ رایگان', 'key' => 'users.affiliates.rewardGiven', 'group' => 'referral'),
       'affrw_25' => array ('label' => '🔒 پیام «سقف کانفیگ رایگانت پر شده» (وقتی به سقف 🔁 چند بار رسیده و 👥 رو می‌زنه)', 'key' => 'users.affiliates.rewardLimitReached', 'group' => 'referral'),
+      'affrw_26' => array ('label' => '⛔️ پیام «کانفیگ رایگان برات بسته شده» (🎁، کاربر مسدودشده)', 'key' => 'users.affiliates.rewardBlocked', 'group' => 'referral'),
       'affrw_8' => array ('label' => '❌ اعلان رد درخواست', 'key' => 'users.affiliates.rewardRejected', 'group' => 'referral'),
       'affrw_9' => array ('label' => '🏷 اسم سرویس (صفحه‌ی اطلاعات سرویس)', 'key' => 'users.affiliates.rewardServiceName', 'group' => 'referral'),
       'affrw_10' => array ('label' => '👋 خوش‌آمد به کاربر دعوت‌شده (کانفیگ رایگان)', 'key' => 'users.affiliates.welcomeInvitedReward', 'group' => 'referral'),
@@ -1781,6 +1783,17 @@ return array (
 
 ✅ کانفیگ‌هایی که گرفتی توی «🛍 سرویس های من» هست.
 🙏 ممنون که ربات رو به دوستات معرفی کردی!',
+      // ⛔️ kept out of a plan by an admin (aff_blocked): what 👥 says instead
+      'classicBlocked' => '<blockquote>💼 زیرمجموعه‌گیری و هدیه خوش‌آمد</blockquote>
+
+⛔️ این بخش برای حساب تو بسته شده؛ دعوت‌های جدیدت برای این بخش حساب نمی‌شن و پورسانت یا هدیه‌ای ازش بهت نمی‌رسه.
+
+اگه فکر می‌کنی اشتباه شده، با پشتیبانی در تماس باش.',
+      'rewardBlocked' => '<blockquote>🎁 کانفیگ رایگان</blockquote>
+
+⛔️ کانفیگ رایگان با دعوت برای حساب تو بسته شده؛ دعوت‌های جدیدت برای این بخش حساب نمی‌شن.
+
+اگه فکر می‌کنی اشتباه شده، با پشتیبانی در تماس باش.',
       'rewardSentToAdmin' => '🎉 دعوت‌هات به {need} نفر رسید!
 درخواست کانفیگ رایگانت برای ادمین فرستاده شد؛ بعد از تایید برات ساخته می‌شه.',
       'rewardGiven' => '🎁 تبریک! به خاطر دعوت {need} نفر، یه کانفیگ رایگان <b>{volume} گیگ · {days} روزه</b> برات ساخته شد 👇',
@@ -7116,6 +7129,30 @@ nowpayments.io
       'customizeBtn' => '🎨 شخصی‌سازی پیام‌ها و دکمه‌های این بخش',
       'assignBtn' => '🔗 واگذاری سرویس پنل به کاربر',
       'affrwResetBtn' => '🔄 صفر کردن دعوت‌های کانفیگ رایگان',
+      // 🔍 جستجو کاربر: a numeric id or a @username (um_resolve_user)
+      'searchPrompt' => '👤 آیدی عددی یا یوزرنیم کاربر را ارسال کنید (مثلاً <code>123456789</code> یا @username)',
+      // 👀 the user's screen: an index of sections, each with its own buttons (um_info_kb)
+      'secBalance' => '💰 موجودی و تخفیف',
+      'secServices' => '🛍 سرویس‌ها و سفارش‌ها',
+      'secAff' => '👥 زیرمجموعه‌گیری',
+      'secAccess' => '🔐 دسترسی و احراز',
+      'secAgent' => '🤖 نمایندگی',
+      'secBack' => '🔙 بازگشت',
+      'agentChangeType' => '🤖 تغییر نوع نماینده',
+      // ⛔️ مسدود از زیرمجموعه‌گیری (aff_blocked)
+      'affBlockBtn' => '⛔️ مسدود از زیرمجموعه‌گیری: {state}',
+      'affBlockStateNone' => 'ندارد',
+      'affBlockStateC' => '💼',
+      'affBlockStateR' => '🎁',
+      'affBlockStateBoth' => '💼 و 🎁',
+      'affBlockCaption' => "⛔️ <b>مسدود کردن از زیرمجموعه‌گیری</b>\n\n👤 کاربر: {user}\n\n💼 زیرمجموعه‌گیری و هدیه خوش‌آمد: {c}\n🎁 کانفیگ رایگان با دعوت: {r}\n\n📌 از بخشی که مسدوده چیزی نمی‌گیره: دعوت‌های جدیدش براش حساب نمی‌شن، 💼 پورسانت و سهم هدیه‌ی عضویت نمی‌گیره و 🎁 کانفیگ رایگان نمی‌گیره. توی «👥 زیرمجموعه‌گیری» هم بهش گفته می‌شه که بسته‌ست. دعوت‌هایی که قبلاً حساب شدن سر جاشون می‌مونن.\n\nروی هر بخش بزن تا مسدود یا آزاد بشه.",
+      'affBlockOn' => '⛔️ مسدود',
+      'affBlockOff' => '✅ آزاد',
+      'affBlockToggleC' => '💼 زیرمجموعه‌گیری و هدیه: {state}',
+      'affBlockToggleR' => '🎁 کانفیگ رایگان با دعوت: {state}',
+      'affBlockAll' => '⛔️ مسدود از هر دو',
+      'affBlockNoneBtn' => '✅ آزاد کردن از هر دو',
+      'affBlockClose' => '❌ بستن',
       'affrwResetDone' => '✅ دعوت‌های کانفیگ رایگان این کاربر صفر شد. از الان فقط کسایی حساب می‌شن که تازه عضو ربات می‌شن، و دوباره می‌تونه کانفیگ بگیره.',
       'assignPickPanel' => "🔗 <b>واگذاری سرویس پنل به کاربر</b>\n\nسرویسی که قبلاً مستقیم روی پنل ساختی و دستی دادی رو اینجا به حساب ربات کاربر اضافه کن: توی «🛍 سرویس های من» می‌بینتش، می‌تونه تمدیدش کنه و هشدارهای مصرفش هم براش میاد.\n\nمی‌تونی یه اکانت رو به یه نفر، چند نفر، یا همه‌ی کاربرهای یه زبان بدی (اکانت مشترک).\n\n1️⃣ پنل سرویس رو انتخاب کن 👇",
       'assignNoPanel' => '— هیچ پنلی ثبت نشده —',
@@ -9542,6 +9579,14 @@ nowpayments.io
     'userColVolume' => 'انقضای حساب',
     'userConfirmBlockUser' => 'مسدود کردن کاربر؟',
     'userConfirmUnblockUser' => 'رفع مسدودیت این کاربر؟',
+    'userAffBlockBtn' => '⛔️ مسدود از زیرمجموعه‌گیری',
+    'userAffBlockTitle' => '⛔️ مسدود کردن از زیرمجموعه‌گیری',
+    'userAffBlockC' => '💼 زیرمجموعه‌گیری و هدیه خوش‌آمد',
+    'userAffBlockR' => '🎁 کانفیگ رایگان با دعوت',
+    'userAffBlockHint' => 'از بخشی که تیک بخوره چیزی نمی‌گیره: دعوت‌های جدیدش حساب نمی‌شن، پورسانت و سهم هدیه یا کانفیگ رایگان نمی‌گیره و توی 👥 بهش گفته می‌شه بسته‌ست.',
+    'userAffBlockSave' => 'ذخیره',
+    'userAffBlockSaved' => 'مسدودی زیرمجموعه‌گیری ذخیره شد.',
+    'userAffBlockState' => 'مسدود از زیرمجموعه‌گیری',
     'userCustomNameLabel' => 'نرخ پرداخت',
     'userDetailAmount' => 'موجودی فعلی:',
     'userDetailDate' => 'انصراف',

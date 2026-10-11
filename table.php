@@ -1506,6 +1506,8 @@ addFieldToTable("user", "currency", "IRT", "VARCHAR(10)");
 addFieldToTable("user", "wallets", null, "TEXT NULL");
 // 🛡 the inviter a newcomer is still being verified for
 addFieldToTable("user", "aff_pending", null, "VARCHAR(50) NULL");
+// ⛔️ the referral plans an admin keeps this user out of as an inviter ('c' 💼, 'r' 🎁)
+addFieldToTable("user", "aff_block", null, "VARCHAR(4) NULL");
 addFieldToTable("Payment_report", "currency", null, "VARCHAR(10) NULL");
 addFieldToTable("invoice", "currency", null, "VARCHAR(10) NULL");
 addFieldToTable("setting", "wallet_migrated", "0", "VARCHAR(5)");

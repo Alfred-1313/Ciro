@@ -221,6 +221,131 @@ if (!function_exists('um_tab')) {
     {
         return $textbotlang['bottext']['langs'][$lang] ?? $lang;
     }
+    // 👤 جستجوی کاربر: a numeric id as before, or a @username (with or without
+    // the @ - the bot keeps each user's Telegram username). Anything else comes
+    // back as it was, for the caller's «not a user».
+    function um_resolve_user($input)
+    {
+        global $pdo;
+        $s = trim((string) $input);
+        if ($s === '' || preg_match('/^\d+$/', $s)) {
+            return $s;
+        }
+        $name = ltrim($s, '@');
+        if (!preg_match('/^[A-Za-z][A-Za-z0-9_]{2,31}$/', $name)) {
+            return $s;
+        }
+        $st = $pdo->prepare("SELECT id FROM user WHERE LOWER(username) = LOWER(?) LIMIT 1");
+        $st->execute([$name]);
+        $id = $st->fetchColumn();
+        return $id !== false ? (string) $id : $s;
+    }
+    // 👀 a user's screen: its 24 rows were too many to find anything in. 'main'
+    // is an index of sections; each section brings its own buttons and a 🔙 to
+    // it, under the same message (um_info_kb_edit). An on/off pair shows the
+    // one that applies now.
+    function um_info_kb($id, array $u, $section, $tx)
+    {
+        global $setting;
+        $k = $tx['keyboard'];
+        $m = $tx['Admin']['manageUser'];
+        $t = $tx['Admin']['UserMgmt'];
+        $b = fn($text, $cb, $style = 'primary') => ['text' => $text, 'callback_data' => $cb, 'style' => $style];
+        $sec = fn($text, $s) => $b($text, "umsc:{$s}:{$id}");
+        $agent = (string) ($u['agent'] ?? 'f');
+        if ($section === 'bal') {
+            $rows = [
+                [$b($m['addBalanceUser'], "addbalanceuser_{$id}", 'success'), $b($m['lowBalanceUser'], "lowbalanceuser_{$id}", 'danger')],
+                [$b($k['zeroBalance'], "zerobalance-{$id}", 'danger'), $b($k['discountPercent'], "Percentlow_{$id}")],
+                [$b($m['viewPaymentUser'], "viewpaymentuser_{$id}")],
+            ];
+        } elseif ($section === 'svc') {
+            $rows = [
+                [$b($m['viewOrderUser'], "vieworderuser_{$id}"), $b($k['addOrder'], "addordermanualـ{$id}", 'success')],
+                [$b($k['deactivateAccount'], "disableconfig-{$id}", 'danger'), $b($k['activateAccount'], "activeconfig-{$id}", 'success')],
+                [$b($k['transferAccount'], "transferaccount_{$id}"), $b($k['testAccountLimit'], "limitusertest_{$id}")],
+            ];
+            if (intval($setting['statuslimitchangeloc'] ?? 0) == 1) {
+                $rows[] = [$b($k['changeLocationLimit'], "changeloclimitbyuser_{$id}")];
+            }
+            $rows[] = [$b($k['cronMessageStatus'], "statuscronuser-{$id}")];
+        } elseif ($section === 'aff') {
+            $blk = (string) ($u['aff_block'] ?? '');
+            $c = strpos($blk, 'c') !== false;
+            $r = strpos($blk, 'r') !== false;
+            $state = $c && $r ? $t['affBlockStateBoth'] : ($c ? $t['affBlockStateC'] : ($r ? $t['affBlockStateR'] : $t['affBlockStateNone']));
+            $rows = [
+                [$b($k['userAffiliates'], "affiliates-{$id}")],
+                [$b(strtr($t['affBlockBtn'], ['{state}' => $state]), "umab:{$id}", ($c || $r) ? 'danger' : 'primary')],
+                [$b($t['affrwResetBtn'], "affrwzero_{$id}", 'danger')],
+                [$b($k['removeFromAffiliate'], "removeaffiliate-{$id}", 'danger'), $b($k['deleteUserAffiliates'], "removeaffiliateuser-{$id}", 'danger')],
+            ];
+        } elseif ($section === 'acc') {
+            $rows = [
+                [strtolower((string) ($u['User_Status'] ?? '')) === 'block'
+                    ? $b($m['unbanUserList'], "unbanuserr_{$id}", 'success') : $b($m['banUserList'], "banuserlist_{$id}", 'danger')],
+                [(string) ($u['verify'] ?? '0') === '1'
+                    ? $b($k['unauthUser'], "unverify-{$id}", 'danger') : $b($k['authenticateUser'], "verify_{$id}", 'success')],
+                [(string) ($u['cardpayment'] ?? '0') === '1'
+                    ? $b($k['deactivateCard'], "carduserhide-{$id}", 'danger') : $b($k['activateCard'], "showcarduser-{$id}", 'success')],
+                [$b($m['confirmNumber'], "confirmnumber_{$id}", 'success'), $b($k['verifyChannelMembership'], "confirmchannel-{$id}", 'success')],
+            ];
+        } elseif ($section === 'agent') {
+            if ($agent === 'f') {
+                $rows = [[$b($m['addagent'], "addagent_{$id}", 'success')]];
+            } else {
+                $rows = [[$b($t['agentChangeType'], "addagent_{$id}"), $b($m['removeagent'], "removeagent_{$id}", 'danger')]];
+                if ($agent === 'n2') {
+                    $rows[] = [$b($k['agentPurchaseCap'], "maxbuyagent_{$id}")];
+                }
+                $rows[] = [$b($k['activateSalesBot'], "createbot_{$id}", 'success'), $b($k['deleteSalesBot'], "removebotsell_{$id}", 'danger')];
+                $rows[] = [$b($k['baseVolumePrice'], "setvolumesrc_{$id}"), $b($k['baseTimePrice'], "settimepricesrc_{$id}")];
+                $rows[] = [$b($k['hidePanelForAgent'], "hidepanel_{$id}", 'danger'), $b($k['showHiddenPanels'], "removehide_{$id}", 'success')];
+                $rows[] = [$b($k['agentExpireTime'], "expireset_{$id}")];
+            }
+        } else {
+            $lang = in_array($u['lang'] ?? '', panel_langs(), true) ? $u['lang'] : 'fa';
+            return ['inline_keyboard' => [
+                [$b($k['refreshInfoAlt'], "updateinfouser_{$id}"), $b(strtr($t['langBtn'], ['{lang}' => um_lang_name($lang, $tx)]), "umsetlang_{$id}")],
+                [$sec($t['secBalance'], 'bal'), $sec($t['secServices'], 'svc')],
+                [$sec($t['secAff'], 'aff'), $sec($t['secAccess'], 'acc')],
+                [$sec($t['secAgent'], 'agent'), $b($k['sendMessageToUser'], "sendmessageuser_{$id}")],
+            ]];
+        }
+        $rows[] = [$b($t['secBack'], "umsc:main:{$id}", 'danger')];
+        return ['inline_keyboard' => $rows];
+    }
+    // ...one section of it on the message $mid, the text left as it is
+    function um_info_kb_edit($chat, $mid, $id, $section, $tx)
+    {
+        $u = select("user", "*", "id", (string) $id, "select", ['cache' => false]);
+        if (!is_array($u) || (int) $mid <= 0) {
+            return;
+        }
+        telegram('editMessageReplyMarkup', ['chat_id' => $chat, 'message_id' => $mid, 'reply_markup' => json_encode(um_info_kb($id, $u, $section, $tx))]);
+    }
+    // ⛔️ مسدود از زیرمجموعه‌گیری: a message of its own under the user's screen
+    // ($mid), whose 👥 row it keeps up to date
+    function um_affblock_payload($id, $tx, $mid)
+    {
+        $t = $tx['Admin']['UserMgmt'];
+        $u = select("user", "*", "id", (string) $id, "select", ['cache' => false]);
+        $c = aff_blocked($id, 'c');
+        $r = aff_blocked($id, 'r');
+        $st = fn($on) => $on ? $t['affBlockOn'] : $t['affBlockOff'];
+        $tg = is_array($u) ? (string) ($u['username'] ?? '') : '';
+        $who = (!in_array($tg, ['', 'none', 'NOT_USERNAME'], true) ? '@' . htmlspecialchars($tg) . ' ' : '') . "<code>{$id}</code>";
+        $text = strtr($t['affBlockCaption'], ['{user}' => $who, '{c}' => $st($c), '{r}' => $st($r)]);
+        $rows = [
+            [['text' => strtr($t['affBlockToggleC'], ['{state}' => $st($c)]), 'callback_data' => "umabt:c:{$id}:{$mid}", 'style' => $c ? 'danger' : 'success']],
+            [['text' => strtr($t['affBlockToggleR'], ['{state}' => $st($r)]), 'callback_data' => "umabt:r:{$id}:{$mid}", 'style' => $r ? 'danger' : 'success']],
+            [($c && $r)
+                ? ['text' => $t['affBlockNoneBtn'], 'callback_data' => "umabt:n:{$id}:{$mid}", 'style' => 'success']
+                : ['text' => $t['affBlockAll'], 'callback_data' => "umabt:b:{$id}:{$mid}", 'style' => 'danger']],
+            [['text' => $t['affBlockClose'], 'callback_data' => 'umabx', 'style' => 'danger']],
+        ];
+        return [$text, json_encode(['inline_keyboard' => $rows])];
+    }
     function um_hub_caption($lang, $textbotlang)
     {
         $t = $textbotlang['Admin']['UserMgmt'];
@@ -14525,8 +14650,28 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
             'parse_mode' => "HTML"
         ]);
     }
+} elseif (preg_match('/^umsc:(main|bal|svc|aff|acc|agent):(\d+)$/', $datain, $um_m)) {
+    // 👀 a section of the user's screen: only its buttons change
+    um_info_kb_edit($from_id, $message_id, $um_m[2], $um_m[1], $textbotlang);
+} elseif (preg_match('/^umab:(\d+)$/', $datain, $um_m)) {
+    [$um_t, $um_k] = um_affblock_payload($um_m[1], $textbotlang, $message_id);
+    sendmessage($from_id, $um_t, $um_k, 'HTML');
+} elseif (preg_match('/^umabt:([crbn]):(\d+):(\d+)$/', $datain, $um_m)) {
+    // one plan on / off, or both at once ('b' block, 'n' none)
+    $um_id = $um_m[2];
+    if ($um_m[1] === 'c' || $um_m[1] === 'r') {
+        aff_block_set($um_id, $um_m[1], !aff_blocked($um_id, $um_m[1]));
+    } else {
+        aff_block_set($um_id, 'c', $um_m[1] === 'b');
+        aff_block_set($um_id, 'r', $um_m[1] === 'b');
+    }
+    [$um_t, $um_k] = um_affblock_payload($um_id, $textbotlang, $um_m[3]);
+    Editmessagetext($from_id, $message_id, $um_t, $um_k);
+    um_info_kb_edit($from_id, (int) $um_m[3], $um_id, 'aff', $textbotlang);
+} elseif ($datain === 'umabx') {
+    deletemessage($from_id, $message_id);
 } elseif ($datain == "searchuser") {
-    sendmessage($from_id, $textbotlang['Admin']['manageUser']['getIdUserUnblock'], $backadmin, 'HTML');
+    sendmessage($from_id, $textbotlang['Admin']['UserMgmt']['searchPrompt'], $backadmin, 'HTML');
     step('show_info', $from_id);
 } elseif ($user['step'] == "show_info" || preg_match('/manageuser_(\w+)/', $datain, $dataget) || preg_match('/updateinfouser_(\w+)/', $datain, $dataget) || strpos($text, "/user ") !== false || strpos($text, "/id ") !== false) {
     if ($user['step'] == "show_info") {
@@ -14538,6 +14683,8 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     } else {
         $id_user = $dataget[1];
     }
+    // a @username finds them too, not only the numeric id
+    $id_user = um_resolve_user($id_user);
     if (!in_array($id_user, $users_ids)) {
         sendmessage($from_id, $textbotlang['Admin']['notUser'], null, 'HTML');
         return;
@@ -14572,58 +14719,8 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     ][$user['roll_Status']];
     if ($subbuyuser['SUM(price_product)'] == null)
         $subbuyuser['SUM(price_product)'] = 0;
-    $keyboardmanage = [
-        'inline_keyboard' => [
-            [['text' => $textbotlang['keyboard']['refreshInfoAlt'], 'callback_data' => "updateinfouser_" . $id_user, 'style' => 'primary'],],
-            [['text' => strtr($textbotlang['Admin']['UserMgmt']['langBtn'], ['{lang}' => um_lang_name(in_array($user['lang'] ?? '', panel_langs(), true) ? $user['lang'] : 'fa', $textbotlang)]), 'callback_data' => "umsetlang_" . $id_user, 'style' => 'primary']],
-            [['text' => $textbotlang['Admin']['manageUser']['addBalanceUser'], 'callback_data' => "addbalanceuser_" . $id_user, 'style' => 'success'], ['text' => $textbotlang['Admin']['manageUser']['lowBalanceUser'], 'callback_data' => "lowbalanceuser_" . $id_user, 'style' => 'danger'],],
-            [['text' => $textbotlang['Admin']['manageUser']['banUserList'], 'callback_data' => "banuserlist_" . $id_user, 'style' => 'danger'], ['text' => $textbotlang['Admin']['manageUser']['unbanUserList'], 'callback_data' => "unbanuserr_" . $id_user, 'style' => 'success']],
-            [['text' => $textbotlang['Admin']['manageUser']['addagent'], 'callback_data' => "addagent_" . $id_user, 'style' => 'success'], ['text' => $textbotlang['Admin']['manageUser']['removeagent'], 'callback_data' => "removeagent_" . $id_user, 'style' => 'danger']],
-            [['text' => $textbotlang['Admin']['manageUser']['confirmNumber'], 'callback_data' => "confirmnumber_" . $id_user, 'style' => 'success']],
-            [['text' => $textbotlang['keyboard']['discountPercent'], 'callback_data' => "Percentlow_" . $id_user, 'style' => 'primary'], ['text' => $textbotlang['keyboard']['sendMessageToUser'], 'callback_data' => "sendmessageuser_" . $id_user, 'style' => 'primary']],
-            [['text' => $textbotlang['Admin']['manageUser']['viewOrderUser'], 'callback_data' => "vieworderuser_" . $id_user, 'style' => 'primary']],
-            [['text' => $textbotlang['keyboard']['userAffiliates'], 'callback_data' => "affiliates-" . $id_user, 'style' => 'primary']],
-            [['text' => $textbotlang['Admin']['UserMgmt']['affrwResetBtn'], 'callback_data' => "affrwzero_" . $id_user, 'style' => 'danger']],
-            [['text' => $textbotlang['keyboard']['removeFromAffiliate'], 'callback_data' => "removeaffiliate-" . $id_user, 'style' => 'danger'], ['text' => $textbotlang['keyboard']['deleteUserAffiliates'], 'callback_data' => "removeaffiliateuser-" . $id_user, 'style' => 'danger']],
-            [['text' => $textbotlang['keyboard']['activateCard'], 'callback_data' => "showcarduser-" . $id_user, 'style' => 'success']],
-            [['text' => $textbotlang['keyboard']['authenticateUser'], 'callback_data' => "verify_" . $id_user, 'style' => 'success'], ['text' => $textbotlang['keyboard']['unauthUser'], 'callback_data' => "unverify-" . $id_user, 'style' => 'danger']],
-            [['text' => $textbotlang['keyboard']['deactivateCard'], 'callback_data' => "carduserhide-" . $id_user, 'style' => 'danger']],
-            [['text' => $textbotlang['keyboard']['addOrder'], 'callback_data' => "addordermanualـ" . $id_user, 'style' => 'success'], ['text' => $textbotlang['keyboard']['testAccountLimit'], 'callback_data' => "limitusertest_" . $id_user, 'style' => 'primary']],
-            [['text' => $textbotlang['Admin']['manageUser']['viewPaymentUser'], 'callback_data' => "viewpaymentuser_" . $id_user, 'style' => 'primary'], ['text' => $textbotlang['keyboard']['transferAccount'], 'callback_data' => "transferaccount_" . $id_user, 'style' => 'primary']],
-            [['text' => $textbotlang['keyboard']['deactivateAccount'], 'callback_data' => "disableconfig-" . $id_user, 'style' => 'danger'], ['text' => $textbotlang['keyboard']['activateAccount'], 'callback_data' => "activeconfig-" . $id_user, 'style' => 'success']],
-            [['text' => $textbotlang['keyboard']['verifyChannelMembership'], 'callback_data' => "confirmchannel-" . $id_user, 'style' => 'success'], ['text' => $textbotlang['keyboard']['zeroBalance'], 'callback_data' => "zerobalance-" . $id_user, 'style' => 'danger']],
-            [['text' => $textbotlang['keyboard']['cronMessageStatus'], 'callback_data' => "statuscronuser-" . $id_user, 'style' => 'primary']],
-        ]
-    ];
-    if ($user['agent'] == "n2")
-        $keyboardmanage['inline_keyboard'][] = [['text' => $textbotlang['keyboard']['agentPurchaseCap'], 'callback_data' => "maxbuyagent_" . $id_user, 'style' => 'primary']];
-    if ($user['agent'] != "f") {
-        $keyboardmanage['inline_keyboard'][] = [
-            ['text' => $textbotlang['keyboard']['activateSalesBot'], 'callback_data' => "createbot_" . $id_user, 'style' => 'success'],
-            ['text' => $textbotlang['keyboard']['deleteSalesBot'], 'callback_data' => "removebotsell_" . $id_user, 'style' => 'danger']
-        ];
-    }
-    if ($user['agent'] != "f") {
-        $keyboardmanage['inline_keyboard'][] = [
-            ['text' => $textbotlang['keyboard']['baseVolumePrice'], 'callback_data' => "setvolumesrc_" . $id_user, 'style' => 'primary'],
-            ['text' => $textbotlang['keyboard']['baseTimePrice'], 'callback_data' => "settimepricesrc_" . $id_user, 'style' => 'primary']
-        ];
-        $keyboardmanage['inline_keyboard'][] = [
-            ['text' => $textbotlang['keyboard']['hidePanelForAgent'], 'callback_data' => "hidepanel_" . $id_user, 'style' => 'danger'],
-        ];
-        $keyboardmanage['inline_keyboard'][] = [
-            ['text' => $textbotlang['keyboard']['showHiddenPanels'], 'callback_data' => "removehide_" . $id_user, 'style' => 'success'],
-        ];
-        $keyboardmanage['inline_keyboard'][] = [
-            ['text' => $textbotlang['keyboard']['agentExpireTime'], 'callback_data' => "expireset_" . $id_user, 'style' => 'primary'],
-        ];
-    }
-    if (intval($setting['statuslimitchangeloc']) == 1) {
-        $keyboardmanage['inline_keyboard'][] = [
-            ['text' => $textbotlang['keyboard']['changeLocationLimit'], 'callback_data' => "changeloclimitbyuser_" . $id_user, 'style' => 'primary']
-        ];
-    }
-    $keyboardmanage = json_encode($keyboardmanage, JSON_UNESCAPED_UNICODE);
+    // an index of sections now - each opens its own buttons (um_info_kb)
+    $keyboardmanage = json_encode(um_info_kb($id_user, $user, 'main', $textbotlang), JSON_UNESCAPED_UNICODE);
     // the wallet the user is on, and any other one with money waiting in it -
     // each in its own currency, never added together
     $ui_cur = currency_for_user($user);
@@ -15640,6 +15737,9 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     $userdata = select("user", "*", "id", $iduser, "select");
     if ($userdata['User_Status'] == "block") {
         sendmessage($from_id, $textbotlang['Admin']['manageUser']['blockedUser'], null, 'HTML');
+        if (strpos($datain, 'banuserlist_') === 0) {
+            um_info_kb_edit($from_id, $message_id, $iduser, 'acc', $textbotlang);
+        }
         return;
     }
     $Response = json_encode([
@@ -15683,12 +15783,14 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     $iduser = $dataget[1];
     update("user", "verify", "1", "id", $iduser);
     sendmessage($from_id, $textbotlang['Admin']['manageUser']['verifiedSuccess'], null, 'HTML');
+    um_info_kb_edit($from_id, $message_id, $iduser, 'acc', $textbotlang);
     bottext_extras_key_hint('users.account.verifiedByAdmin');
     sendmessage($iduser, payer_texts($iduser)['users']['account']['verifiedByAdmin'], null, 'HTML');
 } elseif (preg_match('/unverify-(\w+)/', $datain, $dataget)) {
     $iduser = $dataget[1];
     update("user", "verify", "0", "id", $iduser);
     sendmessage($from_id, $textbotlang['Admin']['manageUser']['unverifiedSuccess'], null, 'HTML');
+    um_info_kb_edit($from_id, $message_id, $iduser, 'acc', $textbotlang);
 
 
 } elseif (preg_match('/unbanuserr_(\w+)/', $datain, $dataget)) {
@@ -15696,6 +15798,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     $userdata = select("user", "*", "id", $iduser, "select");
     if ($userdata['User_Status'] == "Active") {
         sendmessage($from_id, $textbotlang['Admin']['manageUser']['userNotBlock'], null, 'HTML');
+        um_info_kb_edit($from_id, $message_id, $iduser, 'acc', $textbotlang);
         return;
     }
     $textblok = sprintf($textbotlang['Admin']['reportgroup']['userUnblocked'], $iduser, $from_id);
@@ -15717,6 +15820,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     }
     update("user", "User_Status", "Active", "id", $iduser);
     update("user", "description_blocking", " ", "id", $iduser);
+    um_info_kb_edit($from_id, $message_id, $iduser, 'acc', $textbotlang);
     sendmessage($from_id, $textbotlang['Admin']['manageUser']['userUnblocked'], $keyboardadmin, 'HTML');
     bottext_extras_key_hint('users.block.unblockedNotice');
     sendmessage($iduser, payer_texts($iduser)['users']['block']['unblockedNotice'], null, 'HTML');
@@ -16199,6 +16303,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     $stmt = $pdo->prepare("DELETE FROM Requestagent WHERE id = :mp7");
     $stmt->execute([':mp7' => $id_user]);
     step('home', $from_id);
+    um_info_kb_edit($from_id, $message_id, $id_user, 'agent', $textbotlang);
 } elseif (preg_match('/addagent_(\w+)/', $datain, $dataget)) {
     $id_user = $dataget[1];
     update("user", "Processing_value", $id_user, "id", $from_id);
@@ -17063,10 +17168,12 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     sendmessage($id_user, payer_texts($id_user)['users']['Balance']['cardEnabledNotice'], null, 'HTML');
     sendmessage($from_id, $textbotlang['Admin']['card']['enabled'], null, 'HTML');
     update("user", "cardpayment", "1", "id", $id_user);
+    um_info_kb_edit($from_id, $message_id, $id_user, 'acc', $textbotlang);
 } elseif (preg_match('/carduserhide-(.*)/', $datain, $dataget)) {
     $id_user = $dataget[1];
     sendmessage($from_id, $textbotlang['Admin']['card']['disabled'], null, 'HTML');
     update("user", "cardpayment", "0", "id", $id_user);
+    um_info_kb_edit($from_id, $message_id, $id_user, 'acc', $textbotlang);
 } elseif ($text == $textbotlang['keyboard']['deleteCardNumber'] && $adminrulecheck['rule'] == "administrator") {
     sendmessage($from_id, $textbotlang['Admin']['card']['askDelete'], $list_card_remove, 'HTML');
     step('getcardremove', $from_id);

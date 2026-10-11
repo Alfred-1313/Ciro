@@ -5146,7 +5146,8 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     $aff_reflang = ($user['affiliates'] != null && intval($user['affiliates']) != 0)
         ? (select("user", "*", "id", $user['affiliates'], "select")['lang'] ?? 'fa')
         : 'fa';
-    if (aff_classic_on($aff_reflang) && feature_setting_value('aff_commission', $aff_reflang, $affiliatescommission['status_commission']) == "oncommission" && ($user['affiliates'] != null && intval($user['affiliates']) != 0)) {
+    // ...and none to a referrer ⛔️ kept out of 💼 (aff_blocked)
+    if (aff_classic_on($aff_reflang) && feature_setting_value('aff_commission', $aff_reflang, $affiliatescommission['status_commission']) == "oncommission" && ($user['affiliates'] != null && intval($user['affiliates']) != 0) && !aff_blocked($user['affiliates'], 'c')) {
         if (feature_setting_value('aff_firstbuy', $aff_reflang, $marzbanporsant_one_buy['porsant_one_buy']) == "on_buy_porsant") {
             if ($countinvoice == 1) {
                 $result = ($priceproduct * feature_setting_value('aff_percent', $aff_reflang, $setting['affiliatespercentage'])) / 100;
@@ -6646,9 +6647,13 @@ if (preg_match('/^sendresidcart-(.*)/', $datain, $dataget)) {
     // banner, percentages and gift amounts are all per-language now (🌐 وضعیت
     // قابلیت‌ها (هر زبان) -> ⚙️ تنظیمات), falling back to the shared value
     $aff_lang = $user['lang'] ?? 'fa';
-    // 1️⃣ 💼 زیرمجموعه‌گیری و هدیه خوش‌آمد - its banner and page, when on
+    // 1️⃣ 💼 زیرمجموعه‌گیری و هدیه خوش‌آمد - its banner and page, when on; for
+    // one ⛔️ kept out of it (👤 مدیریت کاربر), a message saying so instead
     $aff_classic = aff_classic_on($aff_lang);
-    if ($aff_classic) {
+    if ($aff_classic && aff_blocked($from_id, 'c')) {
+        bottext_extras_key_hint('users.affiliates.classicBlocked');
+        sendmessage($from_id, $textbotlang['users']['affiliates']['classicBlocked'], null, 'HTML');
+    } elseif ($aff_classic) {
         list($aff_banner_text, $aff_banner_media) = feature_aff_banner($aff_lang, $affiliates);
         $textaffiliates = "{$aff_banner_text}\n\n🔗 https://t.me/$usernamebot?start=$from_id";
         if (strlen($aff_banner_media) >= 5) {
@@ -6699,7 +6704,8 @@ if (preg_match('/^sendresidcart-(.*)/', $datain, $dataget)) {
         sendmessage($from_id, $affrw_text, (affrw_row($from_id)['status'] ?? '') === 'naming' ? affrw_name_kb($textbotlang) : null, 'HTML');
         // 🛡 دسترسی ادمین: an admin with no limit gets the config right here,
         // every tap - no invites, nobody's approval - until 🔁 چند بار is used up
-        if (affrw_admin_free($from_id)) {
+        // (not while ⛔️ kept out of 🎁)
+        if (affrw_admin_free($from_id) && !aff_blocked($from_id, 'r')) {
             affrw_admin_give($from_id);
         }
     }
@@ -6732,13 +6738,18 @@ if (preg_match('/^sendresidcart-(.*)/', $datain, $dataget)) {
     $price_gift_Start = select("affiliates", "*", null, null, "select");
     $price_gift_Start = ((float) feature_setting_value('aff_giftamount', $user['lang'] ?? 'fa', $price_gift_Start['price_Discount'])) / 2;
     $useraffiliates = select("user", "*", 'id', $reagent['reagent'], "select");
-    $Balance_add_regent = wallet_credit($reagent['reagent'], $price_gift_Start, currency_for_user($user));
+    // an inviter ⛔️ kept out of 💼 since gets no share of it - the newcomer
+    // still gets theirs; the report shows the inviter's wallet unchanged
+    $aff_regentBlocked = aff_blocked($reagent['reagent'], 'c');
+    $Balance_add_regent = $aff_regentBlocked ? wallet_amount_text($useraffiliates) : wallet_credit($reagent['reagent'], $price_gift_Start, currency_for_user($user));
     $Balance_add_user = $user['Balance'] + $price_gift_Start;
     balance_add($from_id, $price_gift_Start);
     $addbalancediscount = money($price_gift_Start, currency_for_user($user));
     // to the inviter, in their own language
-    bottext_extras_key_hint('users.affiliates.joinedGift');
-    sendmessage($reagent['reagent'], payer_texts($reagent['reagent'])['users']['affiliates']['joinedGift'], null, 'html');
+    if (!$aff_regentBlocked) {
+        bottext_extras_key_hint('users.affiliates.joinedGift');
+        sendmessage($reagent['reagent'], payer_texts($reagent['reagent'])['users']['affiliates']['joinedGift'], null, 'html');
+    }
     sendmessage($from_id, $textbotlang['users']['affiliates']['joinGiftActivated'], null, 'html');
     $report_join_gift = sprintf($textbotlang['Admin']['reportgroup']['membershipGiftPaid'], $from_id, $username, $reagent['reagent'], wallet_amount_text($user), $Balance_add_user, wallet_amount_text($useraffiliates), $Balance_add_regent);
     if (strlen($setting['Channel_Report']) > 0) {

@@ -1013,6 +1013,16 @@ and get a free <b>{volume} GB · {days}-day</b> subscription!
 
 ✅ The configs you got are in «🛍 My services».
 🙏 Thanks for introducing the bot to your friends!',
+                        'classicBlocked' => '<blockquote>💼 Referrals and welcome gift</blockquote>
+
+⛔️ This section is closed for your account: your new invites do not count for it, and no commission or gift comes to you from it.
+
+If you think this is a mistake, contact support.',
+                        'rewardBlocked' => '<blockquote>🎁 Free config</blockquote>
+
+⛔️ The invite free config is closed for your account: your new invites do not count for it.
+
+If you think this is a mistake, contact support.',
                         'rewardSentToAdmin' => '🎉 Your invites reached {need}!
 Your free config request was sent to the admin; it will be created once approved.',
                         'rewardGiven' => '🎁 Congratulations! For inviting {need} people, a free <b>{volume} GB · {days}-day</b> config was created for you 👇',
@@ -5886,6 +5896,14 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'userColVolume' => 'Account expiry',
                 'userConfirmBlockUser' => 'Block the user?',
                 'userConfirmUnblockUser' => 'Unblock this user?',
+                'userAffBlockBtn' => '⛔️ Block from referrals',
+                'userAffBlockTitle' => '⛔️ Block from referrals',
+                'userAffBlockC' => '💼 Referrals and welcome gift',
+                'userAffBlockR' => '🎁 Free config by invite',
+                'userAffBlockHint' => 'A ticked section gives them nothing: their new invites do not count, no commission or gift share or free config, and 👥 tells them it is closed.',
+                'userAffBlockSave' => 'Save',
+                'userAffBlockSaved' => 'Referral block saved.',
+                'userAffBlockState' => 'Blocked from referrals',
                 'userCustomNameLabel' => 'Payment rate',
                 'userDetailAmount' => 'Current balance:',
                 'userDetailDate' => 'Cancel',
