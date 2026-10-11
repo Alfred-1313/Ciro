@@ -3182,46 +3182,42 @@ Current amount: %s',
 5 - Orders deleted by the user 
 6 - Orders whose time or volume has expired',
                         'botReportIntro' => '📬 <b>Contact the bot\'s maker</b>
-➖➖➖➖➖➖➖➖➖➖
 
-🐞 <b>Report a problem:</b> if something in the bot does not work right or you run into an error, send it to us so it can be checked and fixed as soon as possible.
+<blockquote>🐞 <b>Report a problem:</b> <i>if something in the bot does not work right or you run into an error, send it to us so it can be checked and fixed quickly.</i>
 
-💡 <b>Suggestions and ideas:</b> if you have an idea for a new feature or for making the bot better, we would be glad to hear it.
+💡 <b>Suggestions and ideas:</b> <i>if you have an idea for a new feature or for making the bot better, we would be glad to hear it.</i>
 
-🤝 <b>Guidance:</b> we are also here for any question or help with using the bot.
+🤝 <b>Guidance:</b> <i>we are also here for any question or help with using the bot.</i></blockquote>
 
-📝 To get it handled faster, please write in your message exactly where and how the problem happened, and if you can, send a screenshot or the error text too.
+📝 <i>To get it handled faster, write where and how the problem happened, and if you can, send a screenshot or the error text too.</i>
 
-👇 To talk directly, tap the button below.',
+👇 <b>To talk directly, tap the button below.</b>',
                         'botReportDevBtn' => '💬 Bot maker\'s PV | @Alfred_13',
                         'aboutBot' => '👨‍💼 <b>Admin panel</b>
-➖➖➖➖➖➖➖➖➖➖
 
-📖 <b>How to use it</b>
-▫️ <b>📊 Bot statistics:</b> sales, income and number of users
-▫️ <b>✏️ Manage panel</b> and <b>🖥 Add panel:</b> the servers (panels) and their settings
-▫️ <b>👤 User management:</b> find and manage any user, user lists, broadcast messages and group top-up
-▫️ <b>🏬 Shop settings:</b> products and categories, gateways, discount codes and hourly accounts
-▫️ <b>🤙 Support section:</b> the support ID and departments
-▫️ <b>🛠 Panel features:</b> each panel\'s options
-▫️ <b>⚙️ General settings:</b> features, channels, report group, admins, backup, web panel and bot update
-▫️ <b>💵 Unconfirmed receipts:</b> card-to-card receipts waiting for approval
-▫️ <b>🎨 Customize bot messages:</b> the bot\'s texts and buttons, per language
-▫️ <b>📬 Bot report:</b> report a problem or suggestion to the bot\'s maker
-🔒 Some sections and commands are for full-access admins only.
+📖 <b>The panel\'s sections</b>
+<blockquote>📊 <b>Bot statistics:</b> <i>sales, income and users</i>
+✏️ <b>Manage panel:</b> <i>the servers and their settings</i>
+🖥 <b>Add panel:</b> <i>connect a new server</i>
+👤 <b>User management:</b> <i>search, user lists and broadcast messages</i>
+🏬 <b>Shop settings:</b> <i>products, gateways, discount codes and hourly accounts</i>
+🤙 <b>Support section:</b> <i>the support ID and departments</i>
+🛠 <b>Panel features:</b> <i>each server\'s options</i>
+⚙️ <b>General settings:</b> <i>channels, reports, admins, backup and update</i>
+💵 <b>Unconfirmed receipts:</b> <i>card-to-card payments waiting for approval</i>
+🎨 <b>Customize bot messages:</b> <i>texts and buttons, per language</i>
+📬 <b>Bot report:</b> <i>a problem or suggestion to the bot\'s maker</i></blockquote>
 
-⌨️ <b>Admin commands</b>
-▫️ <code>/panel</code> — open this panel
-▫️ <code>/user 123456789</code> or <code>/user @username</code> — a user\'s management screen (<code>/id</code> does the same)
-▫️ <code>/config service-name</code> — find a service by its username or note
-▫️ <code>/extend service-name</code> — extend a service
-▫️ <code>/backup</code> — take a backup right now
-▫️ <code>/update</code> — the bot update screen
-▫️ <code>/token2</code> — a new API token and the API docs link (the old token stops working)
-
-🔁 <b>Inside some steps</b> (the bot tells you when)
-▫️ <code>/all</code> — all panels, when defining a product or a discount code
-▫️ <code>/finish</code> · <code>/remove</code> · <code>/end_hide</code> · <code>/end</code> — finish the selection and save',
+⌨️ <b>Quick commands</b>
+<blockquote>🏠 <b>Open the panel:</b> ‎<code>/panel</code>
+👤 <b>User by ID:</b> ‎<code>/user 123456789</code>
+👤 <b>User by username:</b> ‎<code>/user @username</code>
+🔎 <b>Find a service:</b> ‎<code>/config service_name</code>
+⏳ <b>Extend a service:</b> ‎<code>/extend service_name</code>
+💾 <b>Backup now:</b> ‎<code>/backup</code>
+🔄 <b>Update the bot:</b> ‎<code>/update</code></blockquote>
+💡 <i>Tap a command to copy it; change the number or name and send it.</i>
+🔒 <i>Some sections and commands are for full-access admins only.</i>',
                         'gatewayRow' => '
 📌 Gateway name: <code>%s</code>
  - Number of successful payments: <code>%s</code>

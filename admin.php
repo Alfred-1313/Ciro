@@ -21219,7 +21219,7 @@ if ($datain == "linkappsetting") {
     savedata("clear", "id_user", $id_user);
     sendmessage($from_id, $textbotlang['Admin']['managepanel']['askHidePanelsAgent'], $json_list_marzban_panel, 'HTML');
     step("getpanelhidebotsaz", $from_id);
-} elseif ($text == "/finish") {
+} elseif ($text == "/finish" && $user['step'] == "getpanelhidebotsaz") {
     sendmessage($from_id, $textbotlang['Admin']['managepanel']['panelsHidden'], $keyboardadmin, 'HTML');
     step("home", $from_id);
 } elseif ($user['step'] == "getpanelhidebotsaz") {
@@ -21252,7 +21252,7 @@ if ($datain == "linkappsetting") {
     $list_hide_panel = json_encode($list_hide_panel);
     sendmessage($from_id, $textbotlang['Admin']['managepanel']['askShowPanelsAgent'], $list_hide_panel, 'HTML');
     step("getremovehidepanel", $from_id);
-} elseif ($text == "/remove") {
+} elseif ($text == "/remove" && $user['step'] == "getremovehidepanel") {
     sendmessage($from_id, $textbotlang['Admin']['managepanel']['panelsShown'], $keyboardadmin, 'HTML');
     step("home", $from_id);
 } elseif ($user['step'] == "getremovehidepanel") {
@@ -21553,7 +21553,7 @@ if ($datain == "linkappsetting") {
     }
     sendmessage($from_id, $textbotlang['Admin']['managepanel']['askHidePanelProduct'], $json_list_marzban_panel, 'HTML');
     step('getlistpanel', $from_id);
-} elseif ($text == "/end_hide") {
+} elseif ($text == "/end_hide" && $user['step'] == "getlistpanel") {
     sendmessage($from_id, $textbotlang['Admin']['managepanel']['panelsHiddenProduct'], $shopkeyboard, 'HTML');
     step("home", $from_id);
 } elseif ($user['step'] == "getlistpanel") {
