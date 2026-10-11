@@ -718,7 +718,9 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     $keyboardlists = [
         'inline_keyboard' => [],
     ];
-    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :from_id AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY time_sell DESC LIMIT :start_index, :items_per_page");
+    // ⏱ hourly services first, above every other (invoice.payg, payg_ensure_schema)
+    payg_ensure_schema();
+    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :from_id AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY payg = 1 DESC, time_sell DESC LIMIT :start_index, :items_per_page");
     $stmt->bindParam(':from_id', $from_id, PDO::PARAM_STR);
     $stmt->bindParam(':start_index', $start_index, PDO::PARAM_INT);
     $stmt->bindParam(':items_per_page', $items_per_page, PDO::PARAM_INT);
@@ -737,11 +739,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             if ($row != null)
                 $data = " | {$row['note']}";
             $keyboardlists['inline_keyboard'][] = [
-                [
-                    'text' => (affrw_list_label($row, $textbotlang) ?? $row['username']) . $data,
-                    'callback_data' => "product_" . $row['id_invoice'],
-                    'style' => 'primary'
-                ],
+                myservices_row_btn($row, $textbotlang, $user['lang'] ?? 'fa', $data),
             ];
         }
     } else {
@@ -755,11 +753,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
                 continue;
             }
             $keyboardlists['inline_keyboard'][] = [
-                [
-                    'text' => affrw_list_label($row, $textbotlang) ?? $row['username'],
-                    'callback_data' => "product_" . $row['id_invoice'],
-                    'style' => 'primary'
-                ],
+                myservices_row_btn($row, $textbotlang, $user['lang'] ?? 'fa'),
             ];
         }
     }
@@ -959,7 +953,9 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     $keyboardlists = [
         'inline_keyboard' => [],
     ];
-    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :from_id AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY time_sell DESC LIMIT :start_index, :items_per_page");
+    // ⏱ hourly services first, above every other (invoice.payg, payg_ensure_schema)
+    payg_ensure_schema();
+    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :from_id AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY payg = 1 DESC, time_sell DESC LIMIT :start_index, :items_per_page");
     $stmt->bindParam(':from_id', $from_id, PDO::PARAM_STR);
     $stmt->bindParam(':start_index', $start_index, PDO::PARAM_INT);
     $stmt->bindParam(':items_per_page', $items_per_page, PDO::PARAM_INT);
@@ -978,11 +974,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             if ($row != null)
                 $data = " | {$row['note']}";
             $keyboardlists['inline_keyboard'][] = [
-                [
-                    'text' => (affrw_list_label($row, $textbotlang) ?? $row['username']) . $data,
-                    'callback_data' => "product_" . $row['id_invoice'],
-                    'style' => 'primary'
-                ],
+                myservices_row_btn($row, $textbotlang, $user['lang'] ?? 'fa', $data),
             ];
         }
     } else {
@@ -996,11 +988,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
                 continue;
             }
             $keyboardlists['inline_keyboard'][] = [
-                [
-                    'text' => affrw_list_label($row, $textbotlang) ?? $row['username'],
-                    'callback_data' => "product_" . $row['id_invoice'],
-                    'style' => 'primary'
-                ],
+                myservices_row_btn($row, $textbotlang, $user['lang'] ?? 'fa'),
             ];
         }
     }
@@ -1038,7 +1026,9 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     $keyboardlists = [
         'inline_keyboard' => [],
     ];
-    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :from_id AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY time_sell DESC LIMIT :start_index, :items_per_page");
+    // ⏱ hourly services first, above every other (invoice.payg, payg_ensure_schema)
+    payg_ensure_schema();
+    $stmt = $pdo->prepare("SELECT * FROM invoice WHERE id_user = :from_id AND (status = 'active' OR status = 'end_of_time'  OR status = 'end_of_volume' OR status = 'sendedwarn' OR status = 'send_on_hold') ORDER BY payg = 1 DESC, time_sell DESC LIMIT :start_index, :items_per_page");
     $stmt->bindParam(':from_id', $from_id, PDO::PARAM_STR);
     $stmt->bindParam(':start_index', $start_index, PDO::PARAM_INT);
     $stmt->bindParam(':items_per_page', $items_per_page, PDO::PARAM_INT);
@@ -1057,11 +1047,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             if ($row != null)
                 $data = " | {$row['note']}";
             $keyboardlists['inline_keyboard'][] = [
-                [
-                    'text' => (affrw_list_label($row, $textbotlang) ?? $row['username']) . $data,
-                    'callback_data' => "product_" . $row['id_invoice'],
-                    'style' => 'primary'
-                ],
+                myservices_row_btn($row, $textbotlang, $user['lang'] ?? 'fa', $data),
             ];
         }
     } else {
@@ -1075,11 +1061,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
                 continue;
             }
             $keyboardlists['inline_keyboard'][] = [
-                [
-                    'text' => affrw_list_label($row, $textbotlang) ?? $row['username'],
-                    'callback_data' => "product_" . $row['id_invoice'],
-                    'style' => 'primary'
-                ],
+                myservices_row_btn($row, $textbotlang, $user['lang'] ?? 'fa'),
             ];
         }
     }
@@ -1254,21 +1236,13 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
                 if ($row != null)
                     $data = " | {$row['note']}";
                 $keyboardlists['inline_keyboard'][] = [
-                    [
-                        'text' => (affrw_list_label($row, $textbotlang) ?? $row['username']) . $data,
-                        'callback_data' => "product_" . $row['id_invoice'],
-                        'style' => 'primary'
-                    ],
+                    myservices_row_btn($row, $textbotlang, $user['lang'] ?? 'fa', $data),
                 ];
             }
         } else {
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 $keyboardlists['inline_keyboard'][] = [
-                    [
-                        'text' => affrw_list_label($row, $textbotlang) ?? $row['username'],
-                        'callback_data' => "product_" . $row['id_invoice'],
-                        'style' => 'primary'
-                    ],
+                    myservices_row_btn($row, $textbotlang, $user['lang'] ?? 'fa'),
                 ];
             }
         }
@@ -3729,6 +3703,15 @@ if (preg_match('/^paygmk_(.+)$/', (string) $datain, $pg_m)) {
     $pg_panel = $pg_res['panel'];
     $pg_sub = ($pg_panel['sublink'] ?? '') === 'onsublink' ? (string) ($pg_res['out']['subscription_url'] ?? '') : '';
     sendMessageService($pg_panel, $pg_res['out']['configs'] ?? [], $pg_sub, $pg_res['username'], afterpay_help_kb($user['lang'] ?? 'fa', $textbotlang), payg_created_text($pg_res['svc'], $pg_res['out'], $pg_panel, $textbotlang), $pg_res['id_invoice'], $from_id, 'images.jpg', 'payg');
+    // ...and right under it, its screen of «🛍 سرویس‌های من» with its buttons
+    // (🔄 ⏩ 🗑), so they are at hand from the start - the delivery itself stays
+    $pg_new = payg_row($pg_res['id_invoice']);
+    if ($pg_new !== null) {
+        [$pg_text, $pg_kb] = payg_service_screen($pg_new, $textbotlang);
+        // sent the way «🛍 سرویس‌های من» sends it (a QR photo when it has a
+        // link), so its 🔄 edits it just like there
+        svc_send_status_screen($from_id, 0, $pg_text, $pg_kb, (string) ($pg_res['out']['subscription_url'] ?? ''), true);
+    }
     return;
 }
 // the service's own buttons: 🔄 ⏩ 🗑 - each for its owner only (the check at

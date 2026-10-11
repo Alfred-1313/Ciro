@@ -630,13 +630,41 @@ if (!function_exists('payg_row')) {
             update("setting", "numbercount", intval($s['numbercount'] ?? 0) + 1);
         }
     }
-    // «🛍 سرویس‌های من»'s button for an hourly service; null for any other
-    function payg_list_label($row, $tx)
+    // «🛍 سرویس‌های من»'s button for an hourly service: not its account name but
+    // «⏱ اشتراک ساعتی» (numbered when there are more), red - name, colour and
+    // emoji per tab in 🎨 (genbtn 'pl'). null for any other service
+    function payg_list_button($row, $tx, $lang, $suffix = '')
     {
+        global $pdo;
+        static $ids = [];
         if (!is_array($row) || (int) ($row['payg'] ?? 0) !== 1) {
             return null;
         }
-        return strtr($tx['users']['payg']['listLabel'], ['{username}' => (string) $row['username']]);
+        $def = genbtn_defs('pl', $tx)[0];
+        $btn = genbtn_render($def, genbtn_override($lang, 'users.payg.listLabel', 0), 'product_' . $row['id_invoice']);
+        if (strpos($btn['text'], '{username}') !== false) {
+            $btn['text'] = str_replace('{username}', (string) $row['username'], $btn['text']);
+        } else {
+            $uid = (string) $row['id_user'];
+            if (!isset($ids[$uid])) {
+                $st = $pdo->prepare("SELECT id_invoice FROM invoice WHERE id_user = ? AND payg = 1 AND Status IN ('active', 'end_of_time', 'end_of_volume', 'sendedwarn', 'send_on_hold') ORDER BY CAST(time_sell AS UNSIGNED)");
+                $st->execute([$uid]);
+                $ids[$uid] = array_map('strval', $st->fetchAll(PDO::FETCH_COLUMN));
+            }
+            $n = array_search((string) $row['id_invoice'], $ids[$uid], true);
+            if (count($ids[$uid]) > 1 && $n !== false) {
+                $btn['text'] .= ' ' . ($n + 1);
+            }
+        }
+        $btn['text'] .= $suffix;
+        return $btn;
+    }
+    // the same button's words, for a list that draws its own rows (🔄 تمدید)
+    function payg_list_label($row, $tx)
+    {
+        global $user;
+        $btn = payg_list_button($row, $tx, (string) ($user['lang'] ?? 'fa'));
+        return $btn === null ? null : $btn['text'];
     }
     // the service buttons an hourly service has no use for - renewals and
     // extras would be overwritten by the next minute's caps, a hand-made on/off

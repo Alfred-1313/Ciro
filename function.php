@@ -2456,9 +2456,14 @@ if (!function_exists('lang_tab_texts')) {
     // tabs: load the file, fill anything missing from fa, apply the admin's
     // saved text overrides for that language. Cached per language because a
     // screen usually needs it more than once per render.
-    function lang_tab_texts($lang)
+    function lang_tab_texts($lang, $fresh = false)
     {
         static $cache = [];
+        // $fresh: this request just changed a text in 🎨 - read the tab again,
+        // or the screen after the change still quotes the old one
+        if ($fresh) {
+            $cache = [];
+        }
         if (isset($cache[$lang])) {
             return $cache[$lang];
         }
@@ -12407,6 +12412,8 @@ if (!function_exists('genbtn_alias_map')) {
             'b4' => 'bottext.bcHelpBtn',
             'b5' => 'bottext.bcAffBtn',
             'b6' => 'bottext.bcTopupBtn',
+            // ⏱ an hourly service's row in 🛍 سرویس‌های من - a button of its own
+            'pl' => 'users.payg.listLabel',
         ];
     }
 }
@@ -12430,7 +12437,8 @@ if (!function_exists('genbtn_alias_to_key')) {
     {
         // their render sites (keyboard.php) never read 'hidden', and hiding
         // «پذیرش قوانین» would strand a customer on the rules screen
-        if ($alias === 'sp' || $alias === 'ar' || $alias === 'ma' || preg_match('/^b[1-6]$/', (string) $alias)) {
+        // ⏱'s row is the only way into an hourly service: never hidden
+        if ($alias === 'sp' || $alias === 'ar' || $alias === 'ma' || $alias === 'pl' || preg_match('/^b[1-6]$/', (string) $alias)) {
             return false;
         }
         $key = genbtn_alias_to_key($alias);
@@ -12604,6 +12612,11 @@ if (!function_exists('genbtn_defs')) {
         }
         if ($alias === 'sl') {
             return [0 => ['name' => '🔗 دکمه اشتراک‌گذاری لینک', 'text' => $textbotlang['keyboard']['shareLink'], 'style' => '', 'callback_data' => 'none', 'note' => 'این دکمه لینکه و تلگرام برای دکمه‌ی لینک رنگ و ایموجی نمی‌پذیره - فقط متنش قابل تغییره.']];
+        }
+        if ($alias === 'pl') {
+            // the real callback (product_<id>) is filled in by payg_list_button()
+            return [0 => ['name' => '⏱ دکمه‌ی اشتراک ساعتی (لیست «🛍 سرویس‌های من»)', 'text' => $textbotlang['users']['payg']['listLabel'], 'style' => 'danger', 'callback_data' => 'none',
+                'note' => 'هر اشتراک ساعتی مشتری با همین دکمه، بالای همه‌ی سرویس‌هاش توی «🛍 سرویس‌های من» میاد. اگه بیشتر از یکی داشته باشه شماره می‌خوره (۱، ۲، ...). {username} توی اسم = نام کاربری همون سرویس. وقتی به ماهانه تبدیل بشه، دکمه‌ش مثل بقیه‌ی سرویس‌ها با نام سرویس و آبی می‌شه.']];
         }
         return [];
     }
@@ -17636,6 +17649,8 @@ if (!function_exists('bt_button')) {
             'bottext.bcHelpBtn',
             'bottext.bcAffBtn',
             'bottext.bcTopupBtn',
+            // ⏱ an hourly service's row in 🛍 سرویس‌های من (genbtn 'pl')
+            'users.payg.listLabel',
         ];
     }
     // label-only override, for buttons that may render on a reply keyboard
@@ -17675,6 +17690,7 @@ if (!function_exists('bt_button')) {
             'bottext.bcHelpBtn' => 'usermgmt',
             'bottext.bcAffBtn' => 'usermgmt',
             'bottext.bcTopupBtn' => 'usermgmt',
+            'users.payg.listLabel' => 'paygsvc',
         ];
         $group = $groups[$key] ?? '';
         return $group !== '' ? "bt_group|{$lang}|{$group}" : "btact|back|{$lang}";
@@ -18466,6 +18482,16 @@ if (!function_exists('affrw_cfg')) {
         }
         affrw_ensure_table();
         $pdo->prepare("UPDATE invoice SET affrw = 2 WHERE username = ? AND Service_location = ? AND affrw = 1")->execute([(string) $username, (string) $panelName]);
+    }
+    // one service's row in 🛍 سرویس‌های من: ⏱'s own button for an hourly one
+    // (red, its own name), otherwise the account name - or 🎁's label - in blue
+    function myservices_row_btn($row, $tx, $lang, $suffix = '')
+    {
+        $pg = function_exists('payg_list_button') ? payg_list_button($row, $tx, $lang, $suffix) : null;
+        if ($pg !== null) {
+            return $pg;
+        }
+        return ['text' => (affrw_list_label($row, $tx) ?? $row['username']) . $suffix, 'callback_data' => 'product_' . $row['id_invoice'], 'style' => 'primary'];
     }
     // 🛍 سرویس های من: a free config not renewed yet is «🎁 رفرال» (numbered
     // when there are more); null for anything else - its account name then

@@ -1387,7 +1387,11 @@ if (!function_exists('bottext_item_menu_payload')) {
             // it lives in 🔋 پیام‌های هشدار و اتمام سرویس
             $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "volpct|hub|{$bt_lang}", 'style' => 'danger']];
         }
-        $kb['inline_keyboard'][] = [['text' => '🔙 برگشت به لیست', 'callback_data' => "btact|back|{$bt_lang}", 'style' => 'danger']];
+        // ⏱'s items: «🔙 بازگشت به منوی قبل» only - a second 🔙 to the top of
+        // 🎨 sat right under it and was the one that got tapped
+        if (!isset($textbotlang['bottext']['paygSubs'][$bt_item_group])) {
+            $kb['inline_keyboard'][] = [['text' => '🔙 برگشت به لیست', 'callback_data' => "btact|back|{$bt_lang}", 'style' => 'danger']];
+        }
         $kb['inline_keyboard'][] = [['text' => '❌ بستن', 'callback_data' => 'bt_close', 'style' => 'danger']];
         return [$info, json_encode($kb)];
     }
@@ -8384,6 +8388,8 @@ if (preg_match('/^btact\|rsttext\|([a-z]{2})\|(.+)$/', $datain, $btm) && $adminr
     update("setting", "text_edit", empty($bt_map) ? null : json_encode($bt_map, JSON_UNESCAPED_UNICODE), null, null);
     step('home', $from_id);
     $textbotlang = panel_texts();
+    // the screen below quotes the text: read the tab again, without the old one
+    lang_tab_texts($btm[1], true);
     list($btm_text, $btm_kb) = bottext_item_menu_payload($btm[2], $btm[1], $textbotlang);
     Editmessagetext($from_id, $message_id, $textbotlang['bottext']['msg_reset_done'] . "\n\n" . $btm_text, $btm_kb, 'HTML');
     return;
@@ -8395,6 +8401,7 @@ if (preg_match('/^btact\|rstall\|([a-z]{2})\|(.+)$/', $datain, $btm) && $adminru
     bottext_reset_keys([$btm[2]], $btm[1]);
     step('home', $from_id);
     $textbotlang = panel_texts();
+    lang_tab_texts($btm[1], true);
     list($btm_text, $btm_kb) = bottext_item_menu_payload($btm[2], $btm[1], $textbotlang);
     Editmessagetext($from_id, $message_id, "🔁 همه تنظیمات این پیام به پیش‌فرض برگشت.\n\n" . $btm_text, $btm_kb, 'HTML');
     return;
@@ -8719,7 +8726,7 @@ if (preg_match('/^gbtn\|[a-z]+\|([a-z]{2})\|([a-z]{2})(\|.*)?$/', $datain, $gb_m
     Editmessagetext($from_id, $message_id, $gb_text, $gb_kb, 'HTML');
     return;
 }
-if (preg_match('/^gbtntxt-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|he|td|hb|hv|ab|ut|sp|ar|mg|sl|lc)-([0-9])(?:-(u))?$/', (string) $user['step'], $gb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^gbtntxt-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|he|td|hb|hv|ab|ut|sp|ar|mg|sl|lc|pl)-([0-9])(?:-(u))?$/', (string) $user['step'], $gb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $gb_key = genbtn_alias_to_key($gb_m[2]);
     $gb_newtext = trim((string) $text);
     if ($gb_newtext !== '0' && ($gb_newtext === '' || mb_strlen($gb_newtext) > 64)) {
@@ -8740,7 +8747,7 @@ if (preg_match('/^gbtntxt-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|
     }
     return;
 }
-if (preg_match('/^gbtnemo-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|he|td|hb|hv|ab|ut|ar|mg|lc)-([0-9])(?:-(u))?$/', (string) $user['step'], $gb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^gbtnemo-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|he|td|hb|hv|ab|ut|ar|mg|lc|pl)-([0-9])(?:-(u))?$/', (string) $user['step'], $gb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $gb_key = genbtn_alias_to_key($gb_m[2]);
     $gb_idx = (int) $gb_m[3];
     $gb_icon_id = '';
@@ -22582,7 +22589,10 @@ if ($datain == "linkappsetting") {
     update("setting", "text_edit", empty($bt_map) ? null : json_encode($bt_map, JSON_UNESCAPED_UNICODE), null, null);
     step('home', $from_id);
     $textbotlang = panel_texts();
-    list($bt_home, $bt_kb) = keyboard_list_text($bt_lang);
+    // back on the screen the text was edited from, its 🔙 to the menu before
+    // it - not the top of 🎨, which made «back» look broken - quoting the new text
+    lang_tab_texts($bt_lang, true);
+    list($bt_home, $bt_kb) = bottext_item_menu_payload($bt_key, $bt_lang, $textbotlang);
     $bt_done_msg = ($bt_reset ? $textbotlang['bottext']['msg_reset_done'] : $textbotlang['bottext']['msg_saved']) . "\n\n" . $bt_home;
     if ($message_id) {
         deletemessage($from_id, $message_id);
