@@ -20,6 +20,17 @@ $keys = array_values(array_filter(gateway_all_keys(), fn($k) => gateway_applicab
 $fields = gw_field_registry();
 $moneyErr = sprintf($t['prodPriceInvalid'], $curRow['title'] ?? $cur, (int) ($curRow['decimals'] ?? 0));
 
+// 👥 card-to-card for all of this language's users at once (the bot's 👥
+// کارت‌به‌کارت کاربرها does the same): a link the browser asks about first
+if (isset($_GET['card_all'])) {
+    csrf_check_get();
+    if (in_array((string) $_GET['card_all'], ['on', 'off', 'offf'], true)) {
+        flash('success', sprintf($t['gwCardAllDone'], card_access_apply($lang, (string) $_GET['card_all'])));
+    }
+    header('Location: gateways.php?' . http_build_query(['lang' => $lang]) . '#gw-card');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check_post();
     $key = (string) ($_POST['gw'] ?? '');
@@ -89,6 +100,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $err = $t['gwCardSmsLock'];
                 }
                 $writes[] = fn() => gw_pay_override_set('timeauto_not_verify', $lang, (string) (int) $mins);
+            }
+            // 🤖 on with no time would confirm nothing: 20 minutes, as in the bot
+            if (($_POST['cl']['autoconfirmcart'] ?? '') === '1' && (int) $mins <= 0 && !$smsOn) {
+                $writes[] = fn() => gw_pay_override_set('timeauto_not_verify', $lang, '20');
+            }
+            // 👥 🆕 what a new user of this language starts with
+            $wantNew = ($_POST['cl_new'] ?? '') === '1';
+            if ($wantNew !== (card_new_default($lang) === '1')) {
+                $writes[] = fn() => gw_pay_override_set('showcard', $lang, $wantNew ? '1' : '0');
+            }
+            // 🚫 this language's users in the list, one id a line
+            $excNew = [];
+            $excBad = [];
+            foreach (preg_split('/\s+/u', trim((string) ($_POST['cl_exc'] ?? ''))) as $excId) {
+                if ($excId === '') {
+                    continue;
+                }
+                $excRow = db_fetch($pdo, "SELECT id, lang FROM user WHERE id = ?", [$excId]);
+                $excLang = ($excRow && in_array($excRow['lang'] ?? '', panel_langs(), true)) ? $excRow['lang'] : 'fa';
+                if (!$excRow || $excLang !== $lang) {
+                    $excBad[] = $excId;
+                    continue;
+                }
+                $excNew[] = (string) $excRow['id'];
+            }
+            if ($excBad) {
+                $err = sprintf($t['gwCardExcBad'], htmlspecialchars(implode(', ', $excBad)));
+            }
+            $excNew = array_values(array_unique($excNew));
+            $excOld = array_map('strval', array_keys(card_exc_members($lang)));
+            sort($excNew);
+            sort($excOld);
+            if ($excNew !== $excOld) {
+                $writes[] = fn() => card_exc_set_lang($lang, $excNew);
             }
             $help = gw_pay_override_has('helpcart', $lang) ? json_decode((string) pay_value('helpcart', $lang, ''), true) : null;
             $helpNew = trim(str_replace("\r\n", "\n", (string) ($_POST['cl_help'] ?? '')));
@@ -265,6 +310,17 @@ $chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="hidden" 
       <div class="set-row"><div><div class="set-label"><?= $t['gwCardHelp'] ?></div><div class="set-hint"><?= $t['gwCardHelpHint'] ?><?= is_array($help) && in_array($help['type'] ?? '', ['photo', 'video'], true) ? '<br>' . sprintf($t['gwCardHelpMedia'], $help['type'] === 'photo' ? '🖼' : '🎬') : '' ?></div></div>
         <div class="set-ctl"><textarea class="textarea" name="cl_help" rows="3" dir="auto"><?= htmlspecialchars((string) ($help['text'] ?? '')) ?></textarea>
           <?php if ($help !== null): ?><label class="lang-chip" style="margin-top:6px"><input type="checkbox" name="cl_help_shared" value="1"> <?= $t['gwCardHelpShared'] ?></label><?php endif; ?></div></div>
+      <?php [$accOn, $accOff] = card_access_counts($lang); ?>
+      <div class="set-row"><div><div class="set-label"><?= $t['gwCardAccess'] ?></div><div class="set-hint"><?= sprintf($t['gwCardAccessHint'], $accOn, $accOff) ?></div></div>
+        <div class="set-ctl lang-chips"><?= $chk('cl_new', card_new_default($lang) === '1', $t['gwCardNewUsers']) ?></div></div>
+      <div class="set-row"><div><div class="set-label"><?= $t['gwCardAll'] ?></div><div class="set-hint"><?= $t['gwCardAllHint'] ?></div></div>
+        <div class="set-ctl" style="display:flex;flex-wrap:wrap;gap:6px">
+          <?php foreach (['on' => 'gwCardAllOn', 'off' => 'gwCardAllOff', 'offf' => 'gwCardAllOffAgents'] as $op => $lbl): ?>
+            <a class="btn btn-ghost btn-sm" href="gateways.php?<?= http_build_query(['lang' => $lang, 'card_all' => $op, '_csrf' => csrf_token()]) ?>" data-confirm="<?= htmlspecialchars(sprintf($t['gwCardAllConfirm_' . $op], card_access_target_count($lang, $op), web_langs()[$lang])) ?>"><?= $t[$lbl] ?></a>
+          <?php endforeach; ?>
+        </div></div>
+      <div class="set-row"><div><div class="set-label"><?= $t['gwCardExc'] ?></div><div class="set-hint"><?= $t['gwCardExcHint'] ?></div></div>
+        <div class="set-ctl"><textarea class="textarea" name="cl_exc" rows="3" dir="ltr" placeholder="123456789"><?= htmlspecialchars(implode("\n", array_keys(card_exc_members($lang)))) ?></textarea></div></div>
     <?php endif; ?>
     <?php if ($key === 'ton'): $memo = topup_memo_config($lang, 'ton'); ?>
       <div class="set-row"><div><div class="set-label">🏷 <?= $t['gwTonPrefix'] ?></div><div class="set-hint"><?= $t['gwTonPrefixHint'] ?></div></div>

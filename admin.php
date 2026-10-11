@@ -3398,127 +3398,140 @@ if (!function_exists('sms_forward_guide_payload')) {
     }
 }
 if (!function_exists('card_legacy_settings_payload')) {
-    // Replaces the old "🔑 تنظیمات فنی درگاه (مشترک بین همه زبان‌ها)" entry
-    // (the $CartManage ReplyKeyboardMarkup in keyboard.php - still intact,
-    // still reachable from admin.php:13673 and used as the "return here"
-    // keyboard by ~15 unrelated flows, just no longer duplicated here) with a
-    // styled inline screen split into per-language overrides (group 1, via
-    // the same pay_value()/gw_pay_override_set() every other per-language
-    // gateway field already uses) and true bot-wide switches (group 2,
-    // unchanged in meaning - just one button instead of two, or reachable by
-    // tap instead of exact reply-keyboard text match).
+    // 🔧 تنظیمات فنی درگاه (card-to-card): every row is this language's own
+    // (pay_value() / gw_pay_override_set()), its state in the button's text
+    // and in the caption's quote; 👥 and 🚫 open screens of their own.
+    // «🤖 تایید رسید بدون بررسی» and «⏳ زمان تایید خودکار» had to be on
+    // together to do anything - one switch now (on = with a time), locked
+    // while SMS Forward confirms from the bank's own SMS.
     function card_legacy_settings_payload($lang, $textbotlang)
     {
+        $smsFwdOn = card_sms_forward_on();
+        $fields = card_legacy_toggle_fields();
         $kb = ['inline_keyboard' => []];
-        $kb['inline_keyboard'][] = [['text' => bt_section_meta('card_legacy_perlang')['label'], 'callback_data' => 'bt_sep|card_legacy_perlang']];
-        // Both blind auto-confirms are locked while SMS Forward is on - that
-        // feature confirms from a real bank SMS, these confirm on a timer
-        // regardless of whether money arrived. Locked rows keep a 🔒 and route
-        // to a no-op callback that explains why, same pattern as the
-        // random-amount switch on the gateway screen.
-        $smsFwdOn = (select("setting", "smsForwardEnabled", null, null, "select")['smsForwardEnabled'] ?? '0') === '1';
-        // no green-for-customised anywhere on this screen (see
-        // card_legacy_settings_caption() for the blockquote report instead) -
-        // every actionable row here is plain blue; ✅/count in the text is
-        // what carries state now.
-        foreach (card_legacy_toggle_fields() as $field => $def) {
-            $on = pay_value($field, $lang, $def['off']) === $def['on'];
-            $locked = ($field === 'autoconfirmcart' && $smsFwdOn);
-            $kb['inline_keyboard'][] = [[
-                'text' => ($on ? '✅ ' : '') . $def['label'] . ($locked ? ' 🔒' : ''),
-                'callback_data' => $locked ? "cardlegacylocked:{$lang}" : "cardlegacytoggle:{$lang}:{$field}",
-                'style' => 'primary',
-            ]];
+        foreach (['Cartstatuspv', 'checkpaycartfirst'] as $field) {
+            $on = pay_value($field, $lang, $fields[$field]['off']) === $fields[$field]['on'];
+            $kb['inline_keyboard'][] = [['text' => $fields[$field]['label'] . ': ' . ($on ? '✅' : '❌'), 'callback_data' => "cardlegacytoggle:{$lang}:{$field}", 'style' => 'primary']];
         }
-        // 0 minutes means "off" - the value prompt itself only accepts 1+, so
-        // this sentinel can only ever be set by the toggle below.
-        $timeVal = intval(pay_value('timeauto_not_verify', $lang, '0'));
-        $timeOn = ($timeVal > 0);
+        $autoMin = card_auto_confirm_minutes($lang);
         $kb['inline_keyboard'][] = [[
-            'text' => ($timeOn ? '✅ ' : '') . '⏳ زمان تایید خودکار' . ($timeOn ? " — {$timeVal} دقیقه" : '') . ($smsFwdOn ? ' 🔒' : ''),
-            'callback_data' => $smsFwdOn ? "cardlegacylocked:{$lang}" : "cardlegacytimetoggle:{$lang}",
+            'text' => '🤖 تایید خودکار رسید: ' . ($autoMin > 0 ? "✅ بعد از {$autoMin} دقیقه" : '❌') . ($smsFwdOn ? ' 🔒' : ''),
+            'callback_data' => $smsFwdOn ? "cardlegacylocked:{$lang}" : "cardlegacyauto:{$lang}",
             'style' => 'primary',
         ]];
-        if ($timeOn && !$smsFwdOn) {
-            $kb['inline_keyboard'][] = [[
-                'text' => "✏️ تغییر زمان تایید خودکار",
-                'callback_data' => "cardlegacytime:{$lang}",
-                'style' => 'primary',
-            ]];
+        if ($autoMin > 0 && !$smsFwdOn) {
+            $kb['inline_keyboard'][] = [['text' => '✏️ تغییر زمان تایید خودکار', 'callback_data' => "cardlegacytime:{$lang}", 'style' => 'primary']];
         }
-        $helpOwn = gw_pay_override_has('helpcart', $lang);
-        $helpVal = pay_value('helpcart', $lang, '2');
-        $helpShown = ($helpVal == '2') ? 'تنظیم نشده' : 'تنظیم شده';
-        $kb['inline_keyboard'][] = [[
-            'text' => "📚 آموزش کارت‌به‌کارت — {$helpShown}",
-            'callback_data' => "cardlegacyhelp:{$lang}",
-            'style' => 'primary',
-        ]];
-        if ($helpOwn) {
-            $kb['inline_keyboard'][] = [[
-                'text' => '↩️ برگشت به آموزش سراسری',
-                'callback_data' => "cardlegacyhelpclear:{$lang}",
-                'style' => 'danger',
-            ]];
+        $kb['inline_keyboard'][] = [['text' => '📚 آموزش کارت‌به‌کارت: ' . (pay_value('helpcart', $lang, '2') != '2' ? '✅ تنظیم شده' : '❌ تنظیم نشده'), 'callback_data' => "cardlegacyhelp:{$lang}", 'style' => 'primary']];
+        if (gw_pay_override_has('helpcart', $lang)) {
+            $kb['inline_keyboard'][] = [['text' => '↩️ برگشت به آموزش پیش‌فرض', 'callback_data' => "cardlegacyhelpclear:{$lang}", 'style' => 'danger']];
         }
-        $kb['inline_keyboard'][] = [['text' => bt_section_meta('card_legacy_global')['label'], 'callback_data' => 'bt_sep|card_legacy_global']];
-        $showcardOn = (select("setting", "showcard", null, null, "select")['showcard'] ?? '1') === '1';
-        $kb['inline_keyboard'][] = [[
-            'text' => ($showcardOn ? '✅ ' : '') . '💰 نمایش شماره کارت به کاربران',
-            'callback_data' => "cardlegacyshowcard:{$lang}",
-            'style' => 'primary',
-        ]];
-        $excList = json_decode((string) (select("PaySetting", "ValuePay", "NamePay", "Exception_auto_cart", "select")['ValuePay'] ?? '{}'), true);
-        $excCount = is_array($excList) ? count($excList) : 0;
-        $kb['inline_keyboard'][] = [[
-            'text' => "🚫 استثناء کاربران از تایید خودکار ({$excCount} نفر)",
-            'callback_data' => "cardlegacyexc:{$lang}",
-            'style' => 'primary',
-        ]];
-        $kb['inline_keyboard'][] = [['text' => '♻️ نمایش گروهی شماره کارت', 'callback_data' => "cardlegacygroup:{$lang}", 'style' => 'primary']];
-        $kb['inline_keyboard'][] = [['text' => '📄 خروجی افراد شماره کارت فعال', 'callback_data' => "cardlegacyexport:{$lang}", 'style' => 'primary']];
-        if (card_legacy_has_any_override($lang) || !$showcardOn || $excCount > 0) {
-            $kb['inline_keyboard'][] = [['text' => '🔁 ریست به پیش‌فرض', 'callback_data' => "cardlegacyreset:{$lang}", 'style' => 'danger']];
+        $kb['inline_keyboard'][] = [['text' => '👥 کارت‌به‌کارت کاربرها ›', 'callback_data' => "cardacc:{$lang}", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [['text' => '🚫 استثنا از تایید خودکار ›', 'callback_data' => "cardlegacyexc:{$lang}", 'style' => 'primary']];
+        if (card_legacy_has_any_override($lang)) {
+            $kb['inline_keyboard'][] = [['text' => '🔁 برگرداندن به پیش‌فرض', 'callback_data' => "cardlegacyresetask:{$lang}", 'style' => 'danger']];
         }
-        $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => "gwset:{$lang}:card", 'style' => 'danger']];
-        $kb['inline_keyboard'][] = [['text' => $textbotlang['bottext']['btn_close'], 'callback_data' => "cardlegacyclose:{$lang}", 'style' => 'danger']];
+        $kb['inline_keyboard'][] = [
+            ['text' => '🔙 بازگشت', 'callback_data' => "gwset:{$lang}:card", 'style' => 'danger'],
+            ['text' => $textbotlang['bottext']['btn_close'], 'callback_data' => "cardlegacyclose:{$lang}", 'style' => 'danger'],
+        ];
         return json_encode($kb);
     }
 }
 if (!function_exists('card_legacy_settings_caption')) {
-    // Replaces the green buttons this screen used to have: every switch that is
-    // currently ON (plus anything else set away from its default) is listed
-    // here as a blockquote report instead, so state is readable without
-    // colour-coding the buttons.
     function card_legacy_settings_caption($lang)
     {
-        $report = [];
-        foreach (card_legacy_toggle_fields() as $field => $def) {
-            if (pay_value($field, $lang, $def['off']) === $def['on']) {
-                $report[] = "• {$def['label']}: روشن" . (gw_pay_override_has($field, $lang) ? ' (اختصاصی این زبان)' : '');
+        global $textbotlang;
+        $fields = card_legacy_toggle_fields();
+        $state = fn($field) => pay_value($field, $lang, $fields[$field]['off']) === $fields[$field]['on'] ? '✅' : '❌';
+        $autoMin = card_auto_confirm_minutes($lang);
+        [$accOn, $accOff] = card_access_counts($lang);
+        $cap = "🔧 <b>تنظیمات فنی درگاه</b> · 💳 کارت‌به‌کارت\n🌐 زبان: <b>" . um_lang_name($lang, $textbotlang) . "</b>\n\n"
+            . '<blockquote><b>' . $fields['Cartstatuspv']['label'] . ':</b> ' . $state('Cartstatuspv') . "\n"
+            . '<b>' . $fields['checkpaycartfirst']['label'] . ':</b> ' . $state('checkpaycartfirst') . "\n"
+            . '<b>🤖 تایید خودکار رسید:</b> ' . ($autoMin > 0 ? "✅ بعد از <b>{$autoMin}</b> دقیقه" : '❌') . "\n"
+            . '<b>📚 آموزش کارت‌به‌کارت:</b> ' . (pay_value('helpcart', $lang, '2') != '2' ? '✅ تنظیم شده' : '❌ تنظیم نشده') . "\n"
+            . "<b>👥 کارت‌به‌کارت کاربرها:</b> ✅ <b>{$accOn}</b> · ❌ <b>{$accOff}</b>\n"
+            . '<b>🚫 استثنا از تایید خودکار:</b> <b>' . count(card_exc_members($lang)) . "</b> نفر</blockquote>\n";
+        if (card_sms_forward_on()) {
+            $cap .= "🔒 <i>چون SMS Forward روشنه، تایید خودکار رسید قفله.</i>\n";
+        }
+        return $cap . '<i>همه‌ی این تنظیمات فقط برای کاربرهای همین زبانه.</i>';
+    }
+}
+if (!function_exists('card_access_payload')) {
+    function card_access_caption($lang)
+    {
+        global $textbotlang;
+        [$on, $off] = card_access_counts($lang);
+        return "👥 <b>کارت‌به‌کارت کاربرها</b>\n🌐 زبان: <b>" . um_lang_name($lang, $textbotlang) . "</b>\n\n"
+            . "<blockquote>✅ <b>فعال:</b> <b>{$on}</b> نفر\n❌ <b>غیرفعال:</b> <b>{$off}</b> نفر\n"
+            . '🆕 <b>کاربرهای جدید:</b> ' . (card_new_default($lang) === '1' ? '✅ فعال' : '❌ غیرفعال') . "</blockquote>\n"
+            . '<i>کاربری که غیرفعاله، موقع پرداخت دکمه‌ی کارت‌به‌کارت رو نمی‌بینه.</i>';
+    }
+    function card_access_payload($lang, $textbotlang)
+    {
+        $kb = ['inline_keyboard' => []];
+        // a tab per language, when the bot has more than one
+        if (count(panel_langs()) > 1) {
+            $tabs = [];
+            foreach (panel_langs() as $l) {
+                $tabs[] = ['text' => ($l === $lang ? '✅ ' : '') . um_lang_name($l, $textbotlang), 'callback_data' => "cardacc:{$l}"];
             }
+            $kb['inline_keyboard'][] = $tabs;
         }
-        $timeVal = intval(pay_value('timeauto_not_verify', $lang, '0'));
-        if ($timeVal > 0) {
-            $report[] = "• ⏳ زمان تایید خودکار: روشن - {$timeVal} دقیقه" . (gw_pay_override_has('timeauto_not_verify', $lang) ? ' (اختصاصی این زبان)' : '');
+        $kb['inline_keyboard'][] = [['text' => '🆕 کاربرهای جدید: ' . (card_new_default($lang) === '1' ? '✅ فعال' : '❌ غیرفعال'), 'callback_data' => "cardaccnew:{$lang}", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [
+            ['text' => '✅ فعال برای همه', 'callback_data' => "cardaccask:{$lang}:on", 'style' => 'success'],
+            ['text' => '❌ غیرفعال برای همه', 'callback_data' => "cardaccask:{$lang}:off", 'style' => 'danger'],
+        ];
+        $kb['inline_keyboard'][] = [['text' => '❌ غیرفعال بجز نماینده‌ها', 'callback_data' => "cardaccask:{$lang}:offf", 'style' => 'danger']];
+        $kb['inline_keyboard'][] = [['text' => '➕ فعال کردن چند کاربر با آیدی', 'callback_data' => "cardlegacygroup:{$lang}", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [['text' => '📄 خروجی لیست فعال‌ها', 'callback_data' => "cardlegacyexport:{$lang}", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => "cardlegacy:{$lang}", 'style' => 'danger']];
+        return json_encode($kb);
+    }
+    // ⚠️ asked once more before a change for all of them: how many it changes
+    function card_access_confirm($lang, $op, $textbotlang)
+    {
+        $n = card_access_target_count($lang, $op);
+        $what = [
+            'on' => '✅ <b>فعال</b> می‌شه',
+            'off' => '❌ <b>غیرفعال</b> می‌شه',
+            'offf' => '❌ <b>غیرفعال</b> می‌شه (نماینده‌ها دست نمی‌خورن)',
+        ][$op];
+        $cap = "⚠️ <b>مطمئنی؟</b>\n\n<blockquote>کارت‌به‌کارت برای <b>{$n}</b> کاربرِ <b>" . um_lang_name($lang, $textbotlang) . "</b> {$what}.</blockquote>\n"
+            . '<i>کاربرهای زبان‌های دیگه تغییری نمی‌کنن.</i>';
+        $kb = ['inline_keyboard' => [
+            [['text' => '✅ بله، اعمال کن', 'callback_data' => "cardaccdo:{$lang}:{$op}", 'style' => 'success']],
+            [['text' => '❌ انصراف', 'callback_data' => "cardacc:{$lang}", 'style' => 'danger']],
+        ]];
+        return [$cap, json_encode($kb), $n];
+    }
+    function card_exc_caption($lang)
+    {
+        global $textbotlang;
+        $members = card_exc_members($lang);
+        $lines = [];
+        foreach (array_slice($members, 0, 50, true) as $id => $uname) {
+            $lines[] = "▫️ <code>{$id}</code>" . (!in_array((string) $uname, ['', 'none', 'NOT_USERNAME'], true) ? ' · @' . htmlspecialchars((string) $uname) : '');
         }
-        if (pay_value('helpcart', $lang, '2') != '2') {
-            $report[] = '• 📚 آموزش کارت‌به‌کارت: تنظیم شده' . (gw_pay_override_has('helpcart', $lang) ? ' (اختصاصی این زبان)' : '');
+        if (count($members) > 50) {
+            $lines[] = '… و <b>' . (count($members) - 50) . '</b> نفر دیگه';
         }
-        $showcardOn = (select("setting", "showcard", null, null, "select")['showcard'] ?? '1') === '1';
-        if (!$showcardOn) {
-            $report[] = '• 💰 نمایش شماره کارت: خاموش (سراسری)';
-        }
-        $excList = json_decode((string) (select("PaySetting", "ValuePay", "NamePay", "Exception_auto_cart", "select")['ValuePay'] ?? '{}'), true);
-        $excCount = is_array($excList) ? count($excList) : 0;
-        if ($excCount > 0) {
-            $report[] = "• 🚫 استثناء کاربران از تایید خودکار: {$excCount} نفر (سراسری)";
-        }
-        $cap = '🔧 <b>تنظیمات فنی درگاه</b>';
-        if (!empty($report)) {
-            $cap .= "\n\n<blockquote>📝 گزارش موارد تغییریافته:\n" . implode("\n", $report) . '</blockquote>';
-        }
-        return $cap;
+        return "🚫 <b>استثنا از تایید خودکار</b>\n🌐 زبان: <b>" . um_lang_name($lang, $textbotlang) . "</b>\n\n"
+            . '<blockquote>' . ($lines ? implode("\n", $lines) : 'هیچ کاربری توی لیست نیست.') . "</blockquote>\n"
+            . '<i>رسیدهای این کاربرها هیچ‌وقت خودکار تایید نمی‌شن؛ همیشه ادمین بررسی می‌کنه.</i>';
+    }
+    function card_exc_payload($lang)
+    {
+        return json_encode(['inline_keyboard' => [
+            [
+                ['text' => '➕ افزودن کاربر', 'callback_data' => "cardlegacyexcadd:{$lang}", 'style' => 'primary'],
+                ['text' => '➖ حذف کاربر', 'callback_data' => "cardlegacyexcrm:{$lang}", 'style' => 'primary'],
+            ],
+            [['text' => '🔙 بازگشت', 'callback_data' => "cardlegacy:{$lang}", 'style' => 'danger']],
+        ]]);
     }
 }
 if (!function_exists('card_invoice_btnstyle_hub_payload')) {
@@ -12234,6 +12247,57 @@ elseif ($datain == "systemsms") {
     Editmessagetext($from_id, $message_id, $sfw_info, $sfw_kb, 'HTML');
 } elseif (preg_match('/^cardlegacy:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
     Editmessagetext($from_id, $message_id, card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
+} elseif (preg_match('/^cardlegacyauto:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
+    // 🤖 one switch for the two it took: on = 🤖 + a time (20 minutes unless
+    // one was set before), off = 🤖 off (its time kept for next time)
+    if (card_sms_forward_on()) {
+        telegram('answerCallbackQuery', [
+            'callback_query_id' => $callback_query_id,
+            'text' => '🔒 چون SMS Forward روشنه، تایید خودکار رسید قابل روشن کردن نیست. اول SMS Forward رو خاموش کنید.',
+            'show_alert' => true,
+        ]);
+        return;
+    }
+    if (card_auto_confirm_minutes($cl_m[1]) > 0) {
+        gw_pay_override_set('autoconfirmcart', $cl_m[1], 'offauto');
+    } else {
+        gw_pay_override_set('autoconfirmcart', $cl_m[1], 'onauto');
+        if (intval(pay_value('timeauto_not_verify', $cl_m[1], '0')) <= 0) {
+            gw_pay_override_set('timeauto_not_verify', $cl_m[1], '20');
+        }
+    }
+    Editmessagetext($from_id, $message_id, card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
+} elseif (preg_match('/^cardacc:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
+    Editmessagetext($from_id, $message_id, card_access_caption($cl_m[1]), card_access_payload($cl_m[1], $textbotlang), 'HTML');
+} elseif (preg_match('/^cardaccnew:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
+    // 🆕 what a new user of this language starts with (given on their first
+    // language pick - setlang: in index.php)
+    gw_pay_override_set('showcard', $cl_m[1], card_new_default($cl_m[1]) === '1' ? '0' : '1');
+    Editmessagetext($from_id, $message_id, card_access_caption($cl_m[1]), card_access_payload($cl_m[1], $textbotlang), 'HTML');
+} elseif (preg_match('/^cardaccask:([a-z]{2}):(on|off|offf)$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
+    [$cl_cap, $cl_kb, $cl_n] = card_access_confirm($cl_m[1], $cl_m[2], $textbotlang);
+    if ($cl_n === 0) {
+        telegram('answerCallbackQuery', [
+            'callback_query_id' => $callback_query_id,
+            'text' => '✅ همه‌ی کاربرهای این زبان همین الان همین‌طورن؛ چیزی برای تغییر نیست.',
+            'show_alert' => true,
+        ]);
+        return;
+    }
+    Editmessagetext($from_id, $message_id, $cl_cap, $cl_kb, 'HTML');
+} elseif (preg_match('/^cardaccdo:([a-z]{2}):(on|off|offf)$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
+    $cl_n = card_access_apply($cl_m[1], $cl_m[2]);
+    telegram('answerCallbackQuery', [
+        'callback_query_id' => $callback_query_id,
+        'text' => "✅ برای {$cl_n} کاربر اعمال شد.",
+        'show_alert' => true,
+    ]);
+    Editmessagetext($from_id, $message_id, card_access_caption($cl_m[1]), card_access_payload($cl_m[1], $textbotlang), 'HTML');
+} elseif (preg_match('/^cardlegacyresetask:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
+    Editmessagetext($from_id, $message_id, "⚠️ <b>مطمئنی؟</b>\n\n<blockquote>همه‌ی تنظیمات این صفحه برای <b>" . um_lang_name($cl_m[1], $textbotlang) . "</b> به پیش‌فرض برمی‌گرده.</blockquote>\n<i>شماره کارت‌ها، کاربرها و لیست استثنا دست نمی‌خورن.</i>", json_encode(['inline_keyboard' => [
+        [['text' => '✅ بله، برگردون', 'callback_data' => "cardlegacyreset:{$cl_m[1]}", 'style' => 'success']],
+        [['text' => '❌ انصراف', 'callback_data' => "cardlegacy:{$cl_m[1]}", 'style' => 'danger']],
+    ]]), 'HTML');
 } elseif (preg_match('/^cardlegacytoggle:([a-z]{2}):(\w+)$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
     $cl_fields = card_legacy_toggle_fields();
     if (!isset($cl_fields[$cl_m[2]])) {
@@ -12286,7 +12350,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     deletemessage($from_id, $message_id);
     sendmessage($from_id, $textbotlang['bottext']['msg_closed'], null, 'HTML');
 } elseif (preg_match('/^cardlegacytime:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
-    $cl_prompt = sendmessage($from_id, sprintf($textbotlang['Admin']['Payment']['askAutoConfirmMinutes'], pay_value('timeauto_not_verify', $cl_m[1], '0')), null, 'HTML');
+    $cl_prompt = sendmessage($from_id, "⏳ <b>زمان تایید خودکار رسید</b>\n\n<blockquote>رسید بعد از چند دقیقه خودکار تایید بشه؟ فقط عدد بفرست، مثلاً <code>20</code>.</blockquote>\nالان: <b>" . card_auto_confirm_minutes($cl_m[1]) . "</b> دقیقه", null, 'HTML');
     $cl_promptId = (int) ($cl_prompt['result']['message_id'] ?? 0);
     step("cardlegacytime:{$cl_m[1]}:{$message_id}:{$cl_promptId}", $from_id);
 } elseif (preg_match('/^cardlegacytime:([a-z]{2}):([0-9]+):([0-9]+)$/', (string) $user['step'], $cl_m) && $datain == '') {
@@ -12323,150 +12387,95 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     gw_pay_override_set('helpcart', $cl_m[1], '');
     Editmessagetext($from_id, $message_id, card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
 } elseif (preg_match('/^cardlegacyshowcard:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
-    $cl_showcardOn = (select("setting", "showcard", null, null, "select")['showcard'] ?? '1') === '1';
-    if ($cl_showcardOn) {
-        // turning off needs a scope choice (all users / non-agent only /
-        // just the setting) - same prompt+logic as the old disableShowCard
-        // handler, just carrying this screen's message_id through so it can
-        // be restored afterwards instead of landing in $CartManage.
-        $cl_prompt = sendmessage($from_id, $textbotlang['Admin']['Status']['applyScope'], null, 'HTML');
-        $cl_promptId = (int) ($cl_prompt['result']['message_id'] ?? 0);
-        step("cardlegacyshowcardoff:{$cl_m[1]}:{$message_id}:{$cl_promptId}", $from_id);
-    } else {
-        update("user", "cardpayment", "1");
-        update("setting", "showcard", "1");
-        Editmessagetext($from_id, $message_id, card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
-    }
-} elseif (preg_match('/^cardlegacyshowcardoff:([a-z]{2}):([0-9]+):([0-9]+)$/', (string) $user['step'], $cl_m) && $datain == '') {
-    if (!ctype_digit(trim((string) $text))) {
-        sendmessage($from_id, $textbotlang['common']['invalidInput'], null, 'HTML');
-        return;
-    }
-    if (intval($text) == 1) {
-        update("user", "cardpayment", "0");
-        update("setting", "showcard", "0");
-    } elseif (intval($text) == 2) {
-        update("user", "cardpayment", "0", "agent", "f");
-        update("setting", "showcard", "0");
-    } else {
-        update("setting", "showcard", "0");
-    }
-    step('home', $from_id);
-    deletemessage($from_id, $message_id);
-    deletemessage($from_id, (int) $cl_m[3]);
-    Editmessagetext($from_id, (int) $cl_m[2], card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
+    // the old «💰 نمایش شماره کارت به کاربران» switch (an older message): a
+    // screen of its own now, 👥 کارت‌به‌کارت کاربرها
+    Editmessagetext($from_id, $message_id, card_access_caption($cl_m[1]), card_access_payload($cl_m[1], $textbotlang), 'HTML');
 } elseif (preg_match('/^cardlegacyexc:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
-    $cl_excKb = json_encode(['inline_keyboard' => [
-        [['text' => '➕ افزودن کاربر', 'callback_data' => "cardlegacyexcadd:{$cl_m[1]}", 'style' => 'primary']],
-        [['text' => '➖ حذف کاربر', 'callback_data' => "cardlegacyexcrm:{$cl_m[1]}", 'style' => 'primary']],
-        [['text' => '📋 نمایش لیست', 'callback_data' => "cardlegacyexclist:{$cl_m[1]}", 'style' => 'primary']],
-        [['text' => '🔙 بازگشت', 'callback_data' => "cardlegacy:{$cl_m[1]}", 'style' => 'danger']],
-    ]]);
-    Editmessagetext($from_id, $message_id, '🚫 <b>استثناء کاربران از تایید خودکار</b>', $cl_excKb, 'HTML');
-} elseif (preg_match('/^cardlegacyexcadd:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
-    $cl_prompt = sendmessage($from_id, $textbotlang['Admin']['Payment']['askExcludeUserId'], null, 'HTML');
+    Editmessagetext($from_id, $message_id, card_exc_caption($cl_m[1]), card_exc_payload($cl_m[1]), 'HTML');
+} elseif (preg_match('/^cardlegacyexc(add|rm):([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
+    $cl_prompt = sendmessage($from_id, ($cl_m[1] === 'add' ? '➕ <b>افزودن به لیست استثنا</b>' : '➖ <b>حذف از لیست استثنا</b>') . "\n\n<blockquote>آیدی عددی یا یوزرنیم کاربر رو بفرست، مثلاً <code>123456789</code> یا @username</blockquote>", null, 'HTML');
     $cl_promptId = (int) ($cl_prompt['result']['message_id'] ?? 0);
-    step("cardlegacyexcadd:{$cl_m[1]}:{$message_id}:{$cl_promptId}", $from_id);
-} elseif (preg_match('/^cardlegacyexcadd:([a-z]{2}):([0-9]+):([0-9]+)$/', (string) $user['step'], $cl_m) && $datain == '') {
-    $cl_uid = trim((string) $text);
-    if (!in_array($cl_uid, $users_ids)) {
-        sendmessage($from_id, $textbotlang['Admin']['Payment']['userNotFound'], null, 'HTML');
+    step("cardlegacyexc{$cl_m[1]}:{$cl_m[2]}:{$message_id}:{$cl_promptId}", $from_id);
+} elseif (preg_match('/^cardlegacyexc(add|rm):([a-z]{2}):([0-9]+):([0-9]+)$/', (string) $user['step'], $cl_m) && $datain == '') {
+    // a user of this language only - this screen's list is its own users
+    $cl_uid = um_resolve_user(trim((string) $text));
+    $cl_u = in_array($cl_uid, $users_ids) ? select("user", "*", "id", $cl_uid, "select") : false;
+    if (!is_array($cl_u)) {
+        sendmessage($from_id, '❌ <b>کاربری با این آیدی پیدا نشد.</b>', null, 'HTML');
         return;
     }
-    $cl_list = select("PaySetting", "ValuePay", "NamePay", "Exception_auto_cart", "select")['ValuePay'];
-    $cl_list = is_string($cl_list) ? json_decode($cl_list, true) : [];
-    if (!is_array($cl_list)) {
-        $cl_list = [];
-    }
-    if (in_array($cl_uid, $cl_list)) {
-        sendmessage($from_id, $textbotlang['Admin']['Payment']['userAlreadyExcluded'], null, 'HTML');
+    $cl_ulang = in_array($cl_u['lang'] ?? '', panel_langs(), true) ? $cl_u['lang'] : 'fa';
+    if ($cl_ulang !== $cl_m[2]) {
+        sendmessage($from_id, '⚠️ این کاربر برای زبان <b>' . um_lang_name($cl_ulang, $textbotlang) . '</b> هست؛ از صفحه‌ی همون زبان تغییرش بده.', null, 'HTML');
         return;
     }
-    $cl_list[] = $cl_uid;
+    $cl_list = card_exc_list();
+    $cl_in = in_array((string) $cl_u['id'], $cl_list, true);
+    if ($cl_m[1] === 'add' ? $cl_in : !$cl_in) {
+        sendmessage($from_id, $cl_in ? 'ℹ️ این کاربر از قبل توی لیسته.' : 'ℹ️ این کاربر توی لیست نیست.', null, 'HTML');
+        return;
+    }
+    $cl_list = $cl_m[1] === 'add' ? array_merge($cl_list, [(string) $cl_u['id']]) : array_diff($cl_list, [(string) $cl_u['id']]);
     update("PaySetting", "ValuePay", json_encode(array_values($cl_list)), "NamePay", "Exception_auto_cart");
     step('home', $from_id);
     deletemessage($from_id, $message_id);
-    deletemessage($from_id, (int) $cl_m[3]);
-    Editmessagetext($from_id, (int) $cl_m[2], card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
-} elseif (preg_match('/^cardlegacyexcrm:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
-    $cl_prompt = sendmessage($from_id, $textbotlang['Admin']['Payment']['askRemoveExcludeId'], null, 'HTML');
-    $cl_promptId = (int) ($cl_prompt['result']['message_id'] ?? 0);
-    step("cardlegacyexcrm:{$cl_m[1]}:{$message_id}:{$cl_promptId}", $from_id);
-} elseif (preg_match('/^cardlegacyexcrm:([a-z]{2}):([0-9]+):([0-9]+)$/', (string) $user['step'], $cl_m) && $datain == '') {
-    $cl_uid = trim((string) $text);
-    if (!in_array($cl_uid, $users_ids)) {
-        sendmessage($from_id, $textbotlang['Admin']['Payment']['userNotFound'], null, 'HTML');
-        return;
-    }
-    $cl_list = select("PaySetting", "ValuePay", "NamePay", "Exception_auto_cart", "select")['ValuePay'];
-    $cl_list = is_string($cl_list) ? json_decode($cl_list, true) : [];
-    if (!is_array($cl_list) || !in_array($cl_uid, $cl_list)) {
-        sendmessage($from_id, $textbotlang['Admin']['Payment']['userNotExcluded'], null, 'HTML');
-        return;
-    }
-    $cl_list = array_values(array_diff($cl_list, [$cl_uid]));
-    update("PaySetting", "ValuePay", json_encode($cl_list), "NamePay", "Exception_auto_cart");
-    step('home', $from_id);
-    deletemessage($from_id, $message_id);
-    deletemessage($from_id, (int) $cl_m[3]);
-    Editmessagetext($from_id, (int) $cl_m[2], card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
+    deletemessage($from_id, (int) $cl_m[4]);
+    Editmessagetext($from_id, (int) $cl_m[3], card_exc_caption($cl_m[2]), card_exc_payload($cl_m[2]), 'HTML');
 } elseif (preg_match('/^cardlegacyexclist:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
-    $cl_list = select("PaySetting", "ValuePay", "NamePay", "Exception_auto_cart", "select")['ValuePay'];
-    $cl_list = is_string($cl_list) ? json_decode($cl_list, true) : [];
-    $cl_text = (is_array($cl_list) && count($cl_list) > 0) ? implode("\n", $cl_list) : $textbotlang['Admin']['Payment']['excludeListEmpty'];
-    telegram('answerCallbackQuery', [
-        'callback_query_id' => $callback_query_id,
-        'text' => mb_substr($cl_text, 0, 200),
-        'show_alert' => true,
-    ]);
+    // an older message's «📋 نمایش لیست»: the list is on the screen itself now
+    Editmessagetext($from_id, $message_id, card_exc_caption($cl_m[1]), card_exc_payload($cl_m[1]), 'HTML');
 } elseif (preg_match('/^cardlegacygroup:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
-    $cl_prompt = sendmessage($from_id, $textbotlang['Admin']['card']['askUserIds'], null, 'HTML');
+    $cl_prompt = sendmessage($from_id, "➕ <b>فعال کردن کارت‌به‌کارت برای چند کاربر</b>\n\n<blockquote>آیدی عددی کاربرها رو بفرست، هر کدوم توی یه خط:\n<code>123456789</code>\n<code>987654321</code></blockquote>\n<i>فقط کاربرهای " . um_lang_name($cl_m[1], $textbotlang) . " فعال می‌شن.</i>", null, 'HTML');
     $cl_promptId = (int) ($cl_prompt['result']['message_id'] ?? 0);
     step("cardlegacygroup:{$cl_m[1]}:{$message_id}:{$cl_promptId}", $from_id);
 } elseif (preg_match('/^cardlegacygroup:([a-z]{2}):([0-9]+):([0-9]+)$/', (string) $user['step'], $cl_m) && $datain == '') {
-    $cl_list = explode("\n", (string) $text);
-    foreach ($cl_list as $cl_uid) {
-        $cl_uid = trim($cl_uid);
-        if (!in_array($cl_uid, $users_ids)) {
+    // this language's users only, like everything on 👥's screen
+    $cl_done = 0;
+    $cl_skipped = [];
+    foreach (preg_split('/\s+/', trim((string) $text)) as $cl_uid) {
+        if ($cl_uid === '') {
+            continue;
+        }
+        $cl_u = in_array($cl_uid, $users_ids) ? select("user", "*", "id", $cl_uid, "select") : false;
+        $cl_ulang = is_array($cl_u) && in_array($cl_u['lang'] ?? '', panel_langs(), true) ? $cl_u['lang'] : 'fa';
+        if (!is_array($cl_u) || $cl_ulang !== $cl_m[1]) {
+            $cl_skipped[] = $cl_uid;
             continue;
         }
         update("user", "cardpayment", "1", "id", $cl_uid);
+        $cl_done++;
     }
     step('home', $from_id);
     deletemessage($from_id, $message_id);
     deletemessage($from_id, (int) $cl_m[3]);
-    Editmessagetext($from_id, (int) $cl_m[2], card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
+    Editmessagetext($from_id, (int) $cl_m[2], card_access_caption($cl_m[1]), card_access_payload($cl_m[1], $textbotlang), 'HTML');
+    sendmessage($from_id, "✅ کارت‌به‌کارت برای <b>{$cl_done}</b> کاربر فعال شد." . ($cl_skipped ? "\n\n⚠️ پیدا نشد یا زبانش فرق داشت:\n<code>" . htmlspecialchars(implode("\n", array_slice($cl_skipped, 0, 30))) . "</code>" : ''), null, 'HTML');
 } elseif (preg_match('/^cardlegacyexport:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
-    $cl_listusers = select("user", "id", "cardpayment", "1", "fetchAll");
-    if (!$cl_listusers) {
+    [$cl_w, $cl_p] = user_lang_where($cl_m[1]);
+    $cl_st = $pdo->prepare("SELECT id FROM user WHERE cardpayment = '1' AND {$cl_w}");
+    $cl_st->execute($cl_p);
+    $cl_ids = $cl_st->fetchAll(PDO::FETCH_COLUMN);
+    if (!$cl_ids) {
         telegram('answerCallbackQuery', [
             'callback_query_id' => $callback_query_id,
-            'text' => $textbotlang['Admin']['card']['noUsersEnabled'],
+            'text' => 'ℹ️ برای هیچ کاربری از این زبان کارت‌به‌کارت فعال نیست.',
             'show_alert' => true,
         ]);
-    } else {
-        $cl_filename = 'cartlist.txt';
-        if (file_exists($cl_filename)) {
-            unlink($cl_filename);
-        }
-        foreach ($cl_listusers as $cl_u) {
-            file_put_contents($cl_filename, $cl_u['id'] . "\n", FILE_APPEND);
-        }
-        sendDocument($from_id, $cl_filename, $textbotlang['Admin']['card']['enabledUserList']);
-        unlink($cl_filename);
+        return;
     }
+    $cl_filename = "cartlist_{$cl_m[1]}.txt";
+    file_put_contents($cl_filename, implode("\n", $cl_ids) . "\n");
+    sendDocument($from_id, $cl_filename, '📄 کاربرهای فعالِ کارت‌به‌کارت — ' . um_lang_name($cl_m[1], $textbotlang) . ': ' . count($cl_ids) . ' نفر');
+    unlink($cl_filename);
 } elseif (preg_match('/^cardlegacyreset:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
-    // never touches card numbers - this screen has no notion of them at all
-    foreach (array_keys(card_legacy_toggle_fields()) as $cl_f) {
+    // this language's settings only - card numbers, the users' card access
+    // and the 🚫 list stay as they are
+    foreach (['Cartstatuspv', 'checkpaycartfirst', 'autoconfirmcart', 'timeauto_not_verify', 'helpcart', 'showcard'] as $cl_f) {
         gw_pay_override_set($cl_f, $cl_m[1], '');
     }
-    gw_pay_override_set('timeauto_not_verify', $cl_m[1], '');
-    gw_pay_override_set('helpcart', $cl_m[1], '');
-    update("setting", "showcard", "1");
-    update("PaySetting", "ValuePay", "{}", "NamePay", "Exception_auto_cart");
     telegram('answerCallbackQuery', [
         'callback_query_id' => $callback_query_id,
-        'text' => '✅ به پیش‌فرض برگشت (شماره کارت‌ها دست‌نخورده موندن).',
+        'text' => '✅ تنظیمات این زبان به پیش‌فرض برگشت.',
         'show_alert' => true,
     ]);
     Editmessagetext($from_id, $message_id, card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
@@ -16942,28 +16951,13 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     }
     sendmessage($from_id, $textbotlang['Admin']['Help']['descUpdated'], $helpedit, 'HTML');
     step('home', $from_id);
-} elseif ($text == $textbotlang['keyboard']['disableShowCard']) {
-    sendmessage($from_id, $textbotlang['Admin']['Status']['applyScope'], null, 'HTML');
-    step('showcardallusers', $from_id);
-} elseif ($user['step'] == "showcardallusers") {
-    if (!ctype_digit($text)) {
-        sendmessage($from_id, $textbotlang['common']['invalidInput'], $backadmin, 'HTML');
-        return;
-    }
-    sendmessage($from_id, $textbotlang['Admin']['SettingnowPayment']['disableShowCardStatus'], null, 'HTML');
-    if (intval($text) == "1") {
-        update("user", "cardpayment", "0");
-        update("setting", "showcard", "0");
-    } elseif (intval($text) == 2) {
-        update("user", "cardpayment", "0", "agent", "f");
-        update("setting", "showcard", "0");
-    } else {
-        update("setting", "showcard", "0");
-    }
-} elseif ($text == $textbotlang['keyboard']['enableShowCard']) {
-    sendmessage($from_id, $textbotlang['Admin']['SettingnowPayment']['activeShowCardStatus'], null, 'HTML');
-    update("user", "cardpayment", "1");
-    update("setting", "showcard", "1");
+} elseif (in_array($text, [$textbotlang['keyboard']['cardAccess'], $textbotlang['keyboard']['disableShowCard'], $textbotlang['keyboard']['enableShowCard'], $textbotlang['keyboard']['groupShowCard'], $textbotlang['keyboard']['exportActiveCardUsers']], true) && $adminrulecheck['rule'] == "administrator") {
+    // 💳 کارت‌به‌کارت's old keyboard: one «👥 کارت‌به‌کارت کاربرها» now (its
+    // four buttons changed every language's users at once, two of them
+    // without asking) - the same screen 🔧 تنظیمات فنی درگاه opens, Persian
+    // tab first (the others a tap away on it); an older keyboard's four
+    // labels open it too
+    sendmessage($from_id, card_access_caption('fa'), card_access_payload('fa', $textbotlang), 'HTML');
 } elseif ($text == $textbotlang['keyboard']['renewalMethod'] && $adminrulecheck['rule'] == "administrator") {
     sendmessage($from_id, $textbotlang['users']['selectoption'], $Methodextend, 'HTML');
     step('updateextendmethod', $from_id);
@@ -21381,32 +21375,6 @@ if ($datain == "linkappsetting") {
     $timestamp = time() + (intval(value: $text) * 86400);
     update("user", "expire", $timestamp, "id", $userdate['id_user']);
     sendmessage($from_id, $textbotlang['Admin']['agent']['expirySaved'], $keyboardadmin, 'HTML');
-} elseif ($text == $textbotlang['keyboard']['groupShowCard']) {
-    sendmessage($from_id, $textbotlang['Admin']['card']['askUserIds'], $backadmin, 'HTML');
-    step("getlistidcart", $from_id);
-} elseif ($user['step'] == "getlistidcart") {
-    $list = explode("\n", $text);
-    foreach ($list as $id_user) {
-        if (!in_array($id_user, $users_ids)) {
-            sendmessage($from_id, sprintf($textbotlang['Admin']['manageUser']['notFoundById'], $id_user), $backadmin, 'HTML');
-            continue;
-        }
-        update("user", "cardpayment", "1", "id", $id_user);
-    }
-    sendmessage($from_id, $textbotlang['Admin']['card']['enabledForUsers'], $CartManage, 'HTML');
-    step("home", $from_id);
-} elseif ($text == $textbotlang['keyboard']['exportActiveCardUsers']) {
-    $listusers = select("user", "id", "cardpayment", "1", "fetchAll");
-    if (!$listusers) {
-        sendmessage($from_id, $textbotlang['Admin']['card']['noUsersEnabled'], $CartManage, 'HTML');
-        return;
-    }
-    $filename = 'cartlist.txt';
-    foreach ($listusers as $id_user) {
-        file_put_contents($filename, $id_user['id'] . "\n", FILE_APPEND);
-    }
-    sendDocument($from_id, $filename, $textbotlang['Admin']['card']['enabledUserList']);
-    unlink($filename);
 } elseif ($text == $textbotlang['keyboard']['firstPurchaseCommission'] && $adminrulecheck['rule'] == "administrator") {
     $marzbanporsant_one_buy = select("affiliates", "*", null, null, "select");
     $keyboardDiscountaffiliates = json_encode([

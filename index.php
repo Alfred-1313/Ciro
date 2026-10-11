@@ -118,7 +118,9 @@ if ($from_id != 0) {
     $stmt->bindParam(':from_id', $from_id);
     $stmt->bindParam(':limit_usertest_all', $setting['limit_usertest_all']);
     $stmt->bindParam(':username', $username);
-    $stmt->bindParam(':showcard', $setting['showcard']);
+    // 👥 a new user has no language yet: card-to-card as Persian gives one
+    $newCardDefault = card_new_default('fa');
+    $stmt->bindParam(':showcard', $newCardDefault);
     $stmt->bindParam(':date', $date);
     $stmt->bindParam(':verifycode', $valueverify);
     $stmt->bindParam(':codeInvitation', $randomString);
@@ -7637,9 +7639,17 @@ if (isset($update['message']['successful_payment'])) {
 
 } elseif (preg_match('/^setlang:(fa|en|ru|zh|tk)$/', $datain, $dataget)) {
     $lang = $dataget[1];
+    // 👥 someone who joined today and still has what their language gave a
+    // new user: what the language they pick gives one (🆕 کاربرهای جدید).
+    // Anyone older, or changed by an admin since, keeps their own.
+    $sl_prevLang = in_array($user['lang'] ?? '', panel_langs(), true) ? $user['lang'] : 'fa';
+    $sl_cardFollow = (time() - (int) ($user['register'] ?? 0)) < 86400 && (string) ($user['cardpayment'] ?? '') === card_new_default($sl_prevLang);
     // the wallet follows the language: tomans stay with Persian, dollars
     // with English, each waiting for the user to come back
     $ws_conv = wallet_switch_lang($from_id, $lang);
+    if ($sl_cardFollow && $lang !== $sl_prevLang) {
+        update("user", "cardpayment", card_new_default($lang), "id", $from_id);
+    }
     clearSelectCache();
     // $users was read at the top of keyboard.php, before this switch happened,
     // so it still carries the OLD language - and build_main_keyboard() below

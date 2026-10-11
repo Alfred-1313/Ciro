@@ -3309,8 +3309,99 @@ if (!function_exists('card_legacy_toggle_fields')) {
         return [
             'Cartstatuspv' => ['on' => 'oncardpv', 'off' => 'offcardpv', 'label' => '💳 پرداخت مستقیم در پیوی'],
             'checkpaycartfirst' => ['on' => 'onpayverify', 'off' => 'offpayverify', 'label' => '🔒 نمایش کارت پس از اولین پرداخت'],
-            'autoconfirmcart' => ['on' => 'onauto', 'off' => 'offauto', 'label' => '🤖 تایید رسید بدون بررسی'],
+            'autoconfirmcart' => ['on' => 'onauto', 'off' => 'offauto', 'label' => '🤖 تایید خودکار رسید'],
         ];
+    }
+}
+if (!function_exists('card_new_default')) {
+    // 👥 whether a new user of $lang starts with card-to-card ('1') or not:
+    // that language's own «🆕 کاربرهای جدید», else the bot-wide
+    // setting.showcard. A new user has no language yet: they get Persian's
+    // (index.php), and their own on their first language pick (setlang:).
+    function card_new_default($lang)
+    {
+        $global = (string) (select("setting", "showcard", null, null, "select")['showcard'] ?? '1');
+        return (string) pay_value('showcard', $lang, $global) === '1' ? '1' : '0';
+    }
+}
+if (!function_exists('card_access_counts')) {
+    function card_sms_forward_on()
+    {
+        return (select("setting", "smsForwardEnabled", null, null, "select")['smsForwardEnabled'] ?? '0') === '1';
+    }
+    // what croncard.php needs to confirm a receipt by itself: 🤖 on AND a
+    // time - the minutes, or 0 when it would not happen
+    function card_auto_confirm_minutes($lang)
+    {
+        if (pay_value('autoconfirmcart', $lang, 'offauto') !== 'onauto') {
+            return 0;
+        }
+        return max(0, intval(pay_value('timeauto_not_verify', $lang, '0')));
+    }
+    // 👥 کارت‌به‌کارت کاربرها («نمایش شماره کارت به کاربران» was): this
+    // language's users who see the card-to-card button (user.cardpayment = 1)
+    // and who do not
+    function card_access_counts($lang)
+    {
+        global $pdo;
+        [$w, $p] = user_lang_where($lang);
+        $st = $pdo->prepare("SELECT COUNT(*) AS n, COALESCE(SUM(cardpayment = '1'), 0) AS on_n FROM user WHERE {$w}");
+        $st->execute($p);
+        $r = $st->fetch(PDO::FETCH_ASSOC) ?: [];
+        $on = (int) ($r['on_n'] ?? 0);
+        return [$on, (int) ($r['n'] ?? 0) - $on];
+    }
+    // a change for all of them - 'on', 'off', 'offf' (all but the agents):
+    // the users it actually changes
+    function card_access_where($lang, $op)
+    {
+        [$w, $p] = user_lang_where($lang);
+        $val = $op === 'on' ? '1' : '0';
+        return [$w . ($op === 'offf' ? " AND agent = 'f'" : '') . ' AND cardpayment <> ?', array_merge($p, [$val]), $val];
+    }
+    function card_access_target_count($lang, $op)
+    {
+        global $pdo;
+        [$w, $p] = card_access_where($lang, $op);
+        $st = $pdo->prepare("SELECT COUNT(*) FROM user WHERE {$w}");
+        $st->execute($p);
+        return (int) $st->fetchColumn();
+    }
+    function card_access_apply($lang, $op)
+    {
+        global $pdo;
+        [$w, $p, $val] = card_access_where($lang, $op);
+        $st = $pdo->prepare("UPDATE user SET cardpayment = ? WHERE {$w}");
+        $st->execute(array_merge([$val], $p));
+        clearSelectCache('user');
+        return $st->rowCount();
+    }
+    // 🚫 one list of user ids (PaySetting Exception_auto_cart), checked by
+    // croncard.php for whoever pays; each language's screen shows and edits
+    // its own users in it
+    function card_exc_list()
+    {
+        $l = json_decode((string) (select("PaySetting", "ValuePay", "NamePay", "Exception_auto_cart", "select")['ValuePay'] ?? '[]'), true);
+        return is_array($l) ? array_values(array_map('strval', $l)) : [];
+    }
+    function card_exc_members($lang)
+    {
+        global $pdo;
+        $ids = card_exc_list();
+        if (!$ids) {
+            return [];
+        }
+        [$w, $p] = user_lang_where($lang);
+        $st = $pdo->prepare("SELECT id, username FROM user WHERE id IN (" . implode(',', array_fill(0, count($ids), '?')) . ") AND {$w}");
+        $st->execute(array_merge($ids, $p));
+        return $st->fetchAll(PDO::FETCH_KEY_PAIR);
+    }
+    // 🚫 this language's users in the list replaced by $ids; the other
+    // languages' users in it stay
+    function card_exc_set_lang($lang, array $ids)
+    {
+        $keep = array_diff(card_exc_list(), array_map('strval', array_keys(card_exc_members($lang))));
+        update("PaySetting", "ValuePay", json_encode(array_values(array_unique(array_merge($keep, array_map('strval', $ids))))), "NamePay", "Exception_auto_cart");
     }
 }
 if (!function_exists('card_legacy_has_any_override')) {
@@ -3326,7 +3417,7 @@ if (!function_exists('card_legacy_has_any_override')) {
                 return true;
             }
         }
-        return gw_pay_override_has('timeauto_not_verify', $lang) || gw_pay_override_has('helpcart', $lang);
+        return gw_pay_override_has('timeauto_not_verify', $lang) || gw_pay_override_has('helpcart', $lang) || gw_pay_override_has('showcard', $lang);
     }
 }
 if (!function_exists('gw_lang_has_any_override')) {
@@ -12199,14 +12290,6 @@ if (!function_exists('bt_section_meta')) {
             'topupdisc_auto_actions' => [
                 'label' => '⚙️ عملیات',
                 'alert' => 'دکمه‌های بالاتر تنظیمات این تخفیفن. دو دکمه‌ی پایین فوری اجرا می‌شن: یکی فقط سهمیه‌ی استفاده‌شده‌ی کاربرها رو صفر می‌کنه (تنظیمات دست‌نخورده می‌مونه)، یکی همه‌چیز (تنظیمات) رو به پیش‌فرض برمی‌گردونه.',
-            ],
-            'card_legacy_perlang' => [
-                'label' => '🌍 مخصوص همین زبان',
-                'alert' => 'این تنظیمات فقط روی همین زبون اثر می‌ذارن - هر زبون می‌تونه مقدار جدای خودش رو داشته باشه؛ تا وقتی برای یه زبون تنظیم نکنید، همون مقدار سراسری (پیش‌فرض) رو ازش استفاده می‌کنه.',
-            ],
-            'card_legacy_global' => [
-                'label' => '🌐 سراسری (همه زبان‌ها)',
-                'alert' => 'این‌ها بین همه‌ی زبون‌ها مشترکن - تغییرشون روی کل ربات اثر می‌ذاره، نه فقط یه زبون خاص.',
             ],
             'home_general' => [
                 'label' => '💬 پیام‌های عمومی ربات',
