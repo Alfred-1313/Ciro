@@ -2717,6 +2717,9 @@ function keyboard_list_text($lang, $groupFilter = null)
         // ready-made submenus below, so its item list stays empty
         'home_purchase' => [],
         'home_usertest' => ['users.usertest.selectUsernamePrompt'],
+        // ⏱ اکانت ساعتی: a heading of its own under the test account, its one
+        // row (the ⏱ group) drawn below
+        'home_payg' => [],
         // two screens that had nothing of their own here: the account page's
         // caption and close button used to fall through to the ungrouped
         // leftovers at the bottom, and the tutorial section had no row at all
@@ -2774,9 +2777,19 @@ function keyboard_list_text($lang, $groupFilter = null)
                 }
                 $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupServicesLabel'], 'callback_data' => "bt_group|$lang|myservices", 'style' => 'primary']];
             }
-            // ⏱ اکانت ساعتی: a way of buying (its settings are in 🏬 تنظیمات
-            // فروشگاه), so its messages sit with the purchase's. They live on
-            // its sub-screens (bottext.paygSubs), so the row answers for those
+            // 💰 افزایش موجودی gets its own divider + entry directly under the
+            // services row: its messages used to sit inside 🛒 مراحل خرید even
+            // though topping the wallet up is a separate journey from buying a
+            // service, which made that group a mixed bag.
+            if (!empty($bt_grouped['topup'])) {
+                $keyboard_text['inline_keyboard'][] = [['text' => bt_section_meta('home_topup')['label'], 'callback_data' => 'bt_sep|home_topup']];
+                $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupTopupLabel'], 'callback_data' => "bt_group|$lang|topup", 'style' => 'primary']];
+            }
+        }
+        if ($bt_sec_key === 'home_payg') {
+            // ⏱ اکانت ساعتی's one row (its settings are in 🏬 تنظیمات فروشگاه).
+            // Its messages live on its sub-screens (bottext.paygSubs), so the
+            // row answers for those
             $bt_pg_items = [];
             foreach (array_keys($textbotlang['bottext']['paygSubs'] ?? []) as $bt_sub) {
                 $bt_pg_items = array_merge($bt_pg_items, $bt_grouped[$bt_sub] ?? []);
@@ -2791,14 +2804,6 @@ function keyboard_list_text($lang, $groupFilter = null)
                     }
                 }
                 $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupPaygLabel'], 'callback_data' => "bt_group|$lang|payg", 'style' => $bt_pg_custom ? 'success' : 'primary']];
-            }
-            // 💰 افزایش موجودی gets its own divider + entry directly under the
-            // services row: its messages used to sit inside 🛒 مراحل خرید even
-            // though topping the wallet up is a separate journey from buying a
-            // service, which made that group a mixed bag.
-            if (!empty($bt_grouped['topup'])) {
-                $keyboard_text['inline_keyboard'][] = [['text' => bt_section_meta('home_topup')['label'], 'callback_data' => 'bt_sep|home_topup']];
-                $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupTopupLabel'], 'callback_data' => "bt_group|$lang|topup", 'style' => 'primary']];
             }
         }
         // 👤 حساب کاربری and 📚 آموزش: one row each into their own submenu,
