@@ -1345,21 +1345,21 @@ if (!function_exists('payg_rates_text')) {
         $rows[] = [['text' => $tx['users']['status']['backlist'], 'callback_data' => 'backorder', 'style' => 'danger']];
         return [$text, json_encode(['inline_keyboard' => $rows])];
     }
-    // 💡 «نام کاربری دلخواه»'s ask: the purchase's own 🔴 cancel / 🟢 default
-    // pair (genbtn 'su': its looks, order and width, edited there), back to ⏱'s
-    // rates and ⏱'s own default name instead
+    // 💡 «نام کاربری دلخواه»'s ask: a 🔴 cancel / 🟢 default pair like the
+    // purchase's, but ⏱'s own (genbtn 'pu', edited on its 🎨 item) - back to
+    // ⏱'s rates, and ⏱'s own default name
     function payg_username_kb($lang, $tx, $codePanel)
     {
         $cbs = [0 => 'buytype_payg', 1 => 'paygdef_' . $codePanel];
         $buttons = [];
-        foreach (genbtn_defs('su', $tx) as $idx => $d) {
-            $ov = genbtn_override($lang, 'users.sell.selectUsernamePrompt', $idx);
-            if (!empty($ov['hidden']) && genbtn_hideable('su', $idx)) {
+        foreach (genbtn_defs('pu', $tx) as $idx => $d) {
+            $ov = genbtn_override($lang, 'users.payg.askUsername', $idx);
+            if (!empty($ov['hidden']) && genbtn_hideable('pu', $idx)) {
                 continue;
             }
             $buttons[$idx] = genbtn_render($d, $ov, $cbs[$idx] ?? $d['callback_data']);
         }
-        return json_encode(['inline_keyboard' => genbtn_group_rows('su', $lang, $buttons, $tx)]);
+        return json_encode(['inline_keyboard' => genbtn_group_rows('pu', $lang, $buttons, $tx)]);
     }
     // 🗑's question: [text, keyboard]
     function payg_delete_confirm(array $svc, $tx)

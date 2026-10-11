@@ -12400,6 +12400,8 @@ if (!function_exists('genbtn_alias_map')) {
             'b6' => 'bottext.bcTopupBtn',
             // ⏱ an hourly service's row in 🛍 سرویس‌های من - a button of its own
             'pl' => 'users.payg.listLabel',
+            // ⏱'s 💡 name question: its own 🔴 / 🟢 pair, apart from the purchase's 'su'
+            'pu' => 'users.payg.askUsername',
         ];
     }
 }
@@ -12433,7 +12435,7 @@ if (!function_exists('genbtn_alias_to_key')) {
         }
         // sc: close, quick search and back can go; next/previous stay - without
         // them the services past page one could not be reached at all
-        $extras = ['ab' => [0], 'ut' => [0], 'rw' => [0], 'bc' => [0], 'ns' => [0], 'te' => [0], 'sc' => [0, 2], 'hb' => [0], 'hv' => [0], 'td' => [0, 1], 'su' => [1]];
+        $extras = ['ab' => [0], 'ut' => [0], 'rw' => [0], 'bc' => [0], 'ns' => [0], 'te' => [0], 'sc' => [0, 2], 'hb' => [0], 'hv' => [0], 'td' => [0, 1], 'su' => [1], 'pu' => [1]];
         return in_array((int) $idx, $extras[$alias] ?? [], true);
     }
 }
@@ -12458,6 +12460,13 @@ if (!function_exists('genbtn_defs')) {
             return [
                 0 => ['name' => '🔴 دکمه انصراف', 'text' => $textbotlang['keyboard']['cancelUsernameBtn'], 'style' => 'danger', 'callback_data' => 'ucancel'],
                 1 => ['name' => '🟢 دکمه استفاده از پیش‌فرض', 'text' => $textbotlang['keyboard']['useDefaultUsernameBtn'], 'style' => 'success', 'callback_data' => 'usedefaultname'],
+            ];
+        }
+        if ($alias === 'pu') {
+            // the 🟢 one's real callback names the panel: payg_username_kb() gives it
+            return [
+                0 => ['name' => '🔴 دکمه انصراف', 'text' => $textbotlang['keyboard']['cancelUsernameBtn'], 'style' => 'danger', 'callback_data' => 'buytype_payg'],
+                1 => ['name' => '🟢 دکمه استفاده از پیش‌فرض', 'text' => $textbotlang['keyboard']['useDefaultUsernameBtn'], 'style' => 'success', 'callback_data' => 'none'],
             ];
         }
         if ($alias === 'cf') {
@@ -13124,7 +13133,7 @@ if (!function_exists('genbtn_hub_payload')) {
 
     function genbtn_group_title($alias, $textbotlang)
     {
-        $titles = ['su' => '🔘 دکمه‌های نام‌گذاری سرویس', 'cf' => '🔘 دکمه‌های تأیید خرید', 'ns' => '🔘 دکمه‌ی نداشتن سرویس فعال', 'te' => '🔘 دکمه‌ی پیام اتمام اکانت تست', 'sc' => '🔘 دکمه‌های لیست سرویس‌ها (سرویس‌های من)', 'bc' => '🔘 دکمه‌ی تهیه اشتراک (شارژ کیف پول)', 'rn' => '🔘 دکمه‌های فاکتور تمدید سرویس', 'cl' => '🔘 دکمه‌های تغییر لینک اتصال', 'td' => '🔘 دکمه‌های کد تخفیف شارژ', 'hb' => '🔘 دکمه‌ی بازگشت به دسته‌بندی آموزش', 'hv' => '🔘 دکمه‌ی بازگشت (زیر محتوای آموزش)', 'ab' => '📚 دکمه‌ی مشاهده آموزش (پیام بعد از خرید)', 'ut' => '📚 دکمه‌ی مشاهده آموزش (اکانت تست)', 'rw' => '📚 دکمه‌ی مشاهده آموزش (کانفیگ هدیه‌ی دعوت)', 'lc' => '📌 دکمه‌ی عضویت مجدد (پیام خروج از کانال)', 'ma' => '↩️ دکمه‌ی پاسخ به پیام ادمین'];
+        $titles = ['su' => '🔘 دکمه‌های نام‌گذاری سرویس', 'pu' => '🔘 دکمه‌های نام‌گذاری اکانت ساعتی', 'cf' => '🔘 دکمه‌های تأیید خرید', 'ns' => '🔘 دکمه‌ی نداشتن سرویس فعال', 'te' => '🔘 دکمه‌ی پیام اتمام اکانت تست', 'sc' => '🔘 دکمه‌های لیست سرویس‌ها (سرویس‌های من)', 'bc' => '🔘 دکمه‌ی تهیه اشتراک (شارژ کیف پول)', 'rn' => '🔘 دکمه‌های فاکتور تمدید سرویس', 'cl' => '🔘 دکمه‌های تغییر لینک اتصال', 'td' => '🔘 دکمه‌های کد تخفیف شارژ', 'hb' => '🔘 دکمه‌ی بازگشت به دسته‌بندی آموزش', 'hv' => '🔘 دکمه‌ی بازگشت (زیر محتوای آموزش)', 'ab' => '📚 دکمه‌ی مشاهده آموزش (پیام بعد از خرید)', 'ut' => '📚 دکمه‌ی مشاهده آموزش (اکانت تست)', 'rw' => '📚 دکمه‌ی مشاهده آموزش (کانفیگ هدیه‌ی دعوت)', 'lc' => '📌 دکمه‌ی عضویت مجدد (پیام خروج از کانال)', 'ma' => '↩️ دکمه‌ی پاسخ به پیام ادمین'];
         if (isset($titles[$alias])) {
             return $titles[$alias];
         }
@@ -13136,6 +13145,7 @@ if (!function_exists('genbtn_hub_payload')) {
     {
         $notes = [
             'su' => 'این ۲ دکمه، زیر پیام انتخاب نام سرویس (مرحله‌ی خرید) به کاربر نشون داده می‌شن.',
+            'pu' => 'این ۲ دکمه، زیر سؤال نام کاربری اکانت ساعتی میان (وقتی «💡 روش ساخت نام کاربری» دلخواه باشه): 🔴 برمی‌گرده به صفحه‌ی تعرفه، 🟢 با اسم پیش‌فرض اکانت ساعتی می‌سازه. جدا از دکمه‌های نام‌گذاری خرید معمولی‌ان.',
             'cf' => 'این ۲ دکمه، زیر صفحه‌ی تأیید نهایی خرید نشون داده می‌شن - هر سه حالت (عادی/تخفیف‌دار/حجم دلخواه) از این یکی استفاده می‌کنن، پس ویرایششون روی هر سه اثر می‌ذاره.',
             'ns' => 'این ۱ دکمه، زیر پیامِ «سرویس فعالی ندارید» (وقتی 🛍 سرویس‌های من خالیه) به کاربر نشون داده می‌شه.',
             'te' => 'این ۱ دکمه، زیر پیامِ «اکانت تست شما به پایان رسید» به کاربر نشون داده می‌شه (همون پیامی که کرون موقع تموم‌شدن اعتبار اکانت تست می‌فرسته). رنگ، ایموجی و مخفی بودنش برای همه‌ی زبان‌ها یکیه؛ فقط متنش مال هر زبانه.',
@@ -13167,7 +13177,7 @@ if (!function_exists('genbtn_hub_payload')) {
             return bt_btnitem_back_cb($key, $lang);
         }
         // 'cf' points at textbot.preInvoice (the normal-purchase تأیید خرید)
-        $backKeyMap = ['su' => 'users.sell.selectUsernamePrompt', 'cf' => 'textbot.preInvoice', 'ns' => 'users.sell.service_not_available', 'te' => 'textbot.testExpired', 'sc' => 'users.sell.service_sell', 'bc' => 'users.Balance.chargeSuccess', 'rn' => 'users.extend.invoiceCreated', 'cl' => 'users.changeLink.warnchange', 'td' => 'users.Balance.topupDiscPrompt', 'hb' => 'users.help.listCaption', 'hv' => 'users.help.categoryCaption', 'ab' => 'textbot.afterPay', 'ut' => 'textbot.afterText', 'rw' => 'users.affiliates.rewardAfterPay', 'lc' => 'users.channel.left_channel', 'ma' => 'users.support.messageFromAdminAlt'];
+        $backKeyMap = ['su' => 'users.sell.selectUsernamePrompt', 'pu' => 'users.payg.askUsername', 'cf' => 'textbot.preInvoice', 'ns' => 'users.sell.service_not_available', 'te' => 'textbot.testExpired', 'sc' => 'users.sell.service_sell', 'bc' => 'users.Balance.chargeSuccess', 'rn' => 'users.extend.invoiceCreated', 'cl' => 'users.changeLink.warnchange', 'td' => 'users.Balance.topupDiscPrompt', 'hb' => 'users.help.listCaption', 'hv' => 'users.help.categoryCaption', 'ab' => 'textbot.afterPay', 'ut' => 'textbot.afterText', 'rw' => 'users.affiliates.rewardAfterPay', 'lc' => 'users.channel.left_channel', 'ma' => 'users.support.messageFromAdminAlt'];
         $backKey = ($origin === 'u') ? 'users.usertest.selectUsernamePrompt' : ($backKeyMap[$alias] ?? 'users.sell.selectUsernamePrompt');
         return "bt_edit|{$lang}|{$backKey}";
     }
@@ -13178,7 +13188,7 @@ if (!function_exists('genbtn_hub_payload')) {
     // different screens) have none.
     function genbtn_layout_default($alias)
     {
-        return ['su' => 'half', 'cf' => 'half', 'cl' => 'full'][$alias] ?? null;
+        return ['su' => 'half', 'pu' => 'half', 'cf' => 'half', 'cl' => 'full'][$alias] ?? null;
     }
     // {order: [idx...], width: {idx: half|full}} - what is stored, over the
     // defaults; a group without layout gets its buttons in index order
