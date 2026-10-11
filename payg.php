@@ -1353,23 +1353,35 @@ if (!function_exists('payg_rates_text')) {
         if ($since !== null) {
             $text .= "\n\n" . strtr($w['sinceLast'], ['{amount}' => money(max(0, (float) $since), $svc['currency'])]);
         }
+        $rows = payg_service_rows($svc, $tx);
+        $rows[] = [['text' => $tx['users']['status']['backlist'], 'callback_data' => 'backorder', 'style' => 'danger']];
+        return [$text, json_encode(['inline_keyboard' => $rows])];
+    }
+    // the service screen's own buttons (🔄, link / config, ⏩, 🗑). The
+    // delivery message carries them too, minus link / config - it brings
+    // those itself
+    function payg_service_rows(array $svc, $tx, $withLinks = true)
+    {
+        $w = $tx['users']['payg'];
         $id = $svc['id_invoice'];
         $rows = [];
         if ($svc['status'] !== 'ended') {
+            $u = select("user", "*", "id", (string) $svc['user_id'], "select", ['cache' => false]);
             $rows[] = [['text' => $w['btnRefresh'], 'callback_data' => "paygref_{$id}", 'style' => 'primary']];
-            $rows[] = [
-                ['text' => $tx['users']['status']['linksub'], 'callback_data' => "subscriptionurl_{$id}"],
-                ['text' => $tx['users']['status']['config'], 'callback_data' => "config_{$id}"],
-            ];
-            if ($cfg['convert'] && in_array($svc['status'], ['active', 'waiting'], true) && payg_panel_products($svc['lang'], $svc['panel'], payg_group_of($u))) {
+            if ($withLinks) {
+                $rows[] = [
+                    ['text' => $tx['users']['status']['linksub'], 'callback_data' => "subscriptionurl_{$id}"],
+                    ['text' => $tx['users']['status']['config'], 'callback_data' => "config_{$id}"],
+                ];
+            }
+            if (payg_cfg($svc['lang'])['convert'] && in_array($svc['status'], ['active', 'waiting'], true) && payg_panel_products($svc['lang'], $svc['panel'], payg_group_of($u))) {
                 $rows[] = [['text' => $w['btnConvert'], 'callback_data' => "paygconv_{$id}", 'style' => 'success']];
             }
             $rows[] = [['text' => $w['btnDelete'], 'callback_data' => "paygdel_{$id}", 'style' => 'danger']];
         } else {
             $rows[] = [['text' => $w['btnRemoveFully'], 'callback_data' => "paygrm_{$id}", 'style' => 'danger']];
         }
-        $rows[] = [['text' => $tx['users']['status']['backlist'], 'callback_data' => 'backorder', 'style' => 'danger']];
-        return [$text, json_encode(['inline_keyboard' => $rows])];
+        return $rows;
     }
     // 🗑's question: [text, keyboard]
     function payg_delete_confirm(array $svc, $tx)

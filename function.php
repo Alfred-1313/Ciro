@@ -19965,7 +19965,7 @@ if (!function_exists('telegram_html_chunks')) {
         }));
     }
 }
-function sendMessageService($panel_info, $config, $sub_link, $username_service, $reply_markup, $caption, $invoice_id, $user_id = null, $image = 'images.jpg', $kind = 'purchase')
+function sendMessageService($panel_info, $config, $sub_link, $username_service, $reply_markup, $caption, $invoice_id, $user_id = null, $image = 'images.jpg', $kind = 'purchase', array $own_rows = [])
 {
     global $setting, $from_id, $textbotlang;
     $user_id = $user_id == null ? $from_id : $user_id;
@@ -19976,6 +19976,12 @@ function sendMessageService($panel_info, $config, $sub_link, $username_service, 
     $sms_lang = $sms_row['lang'] ?? 'fa';
     if (!mainmenu_btn_active($sms_lang, "text_help"))
         $reply_markup = null;
+    // the service's own buttons (⏱'s 🔄 ⏩ 🗑) - above the 📚 one, and kept
+    // whether or not that one is offered
+    if ($own_rows) {
+        $sms_rm = is_string($reply_markup) ? json_decode($reply_markup, true) : null;
+        $reply_markup = json_encode(['inline_keyboard' => array_merge($own_rows, is_array($sms_rm['inline_keyboard'] ?? null) ? $sms_rm['inline_keyboard'] : [])]);
+    }
     $configCount = is_array($config) ? count($config) : 0;
     // Mode 2 is the config page INSTEAD of the full message, not as well as it
     // (it used to send both, which read as "mode 1 is still on"). It needs the

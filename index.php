@@ -3653,12 +3653,18 @@ if ((string) $datain === '' && preg_match('/^paygname\|(.+)\|(\d+)$/', (string) 
         step('home', $from_id);
         $user['step'] = 'home';
     } elseif (!payg_name_ok($pg_try)) {
-        sendmessage($from_id, $textbotlang['users']['invalidusername'], null, 'HTML');
+        // one message all along: the customer's try goes, the ask says why
+        deletemessage($from_id, $message_id);
+        Editmessagetext($from_id, (int) $pg_nm[2], $textbotlang['users']['invalidusername'] . "\n\n" . $textbotlang['users']['payg']['askUsername'],
+            json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['payg']['btnBack'], 'callback_data' => 'buytype_payg', 'style' => 'danger']]]]));
         return;
     } else {
         step('home', $from_id);
         $user['step'] = 'home';
         $pg_typed = strtolower($pg_try);
+        // the customer's own message with the name goes; the ask turns into
+        // «⏳ در حال ساخت» below and is gone once it is made
+        deletemessage($from_id, $message_id);
         $datain = 'paygmk_' . $pg_nm[1];
         $message_id = (int) $pg_nm[2];
     }
@@ -3702,16 +3708,11 @@ if (preg_match('/^paygmk_(.+)$/', (string) $datain, $pg_m)) {
     sell_sticker_retire($from_id);
     $pg_panel = $pg_res['panel'];
     $pg_sub = ($pg_panel['sublink'] ?? '') === 'onsublink' ? (string) ($pg_res['out']['subscription_url'] ?? '') : '';
-    sendMessageService($pg_panel, $pg_res['out']['configs'] ?? [], $pg_sub, $pg_res['username'], afterpay_help_kb($user['lang'] ?? 'fa', $textbotlang), payg_created_text($pg_res['svc'], $pg_res['out'], $pg_panel, $textbotlang), $pg_res['id_invoice'], $from_id, 'images.jpg', 'payg');
-    // ...and right under it, its screen of «🛍 سرویس‌های من» with its buttons
-    // (🔄 ⏩ 🗑), so they are at hand from the start - the delivery itself stays
+    // one message: the delivery, with the service's own buttons (🔄 ⏩ 🗑 of its
+    // «🛍 سرویس‌های من» screen) under it from the start
     $pg_new = payg_row($pg_res['id_invoice']);
-    if ($pg_new !== null) {
-        [$pg_text, $pg_kb] = payg_service_screen($pg_new, $textbotlang);
-        // sent the way «🛍 سرویس‌های من» sends it (a QR photo when it has a
-        // link), so its 🔄 edits it just like there
-        svc_send_status_screen($from_id, 0, $pg_text, $pg_kb, (string) ($pg_res['out']['subscription_url'] ?? ''), true);
-    }
+    sendMessageService($pg_panel, $pg_res['out']['configs'] ?? [], $pg_sub, $pg_res['username'], afterpay_help_kb($user['lang'] ?? 'fa', $textbotlang), payg_created_text($pg_res['svc'], $pg_res['out'], $pg_panel, $textbotlang), $pg_res['id_invoice'], $from_id, 'images.jpg', 'payg',
+        $pg_new !== null ? payg_service_rows($pg_new, $textbotlang, false) : []);
     return;
 }
 // the service's own buttons: 🔄 ⏩ 🗑 - each for its owner only (the check at
