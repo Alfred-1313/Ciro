@@ -1616,6 +1616,15 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         if (count($tempArray) > 0) {
             $keyboardsetting['inline_keyboard'][] = $tempArray;
         }
+        // 🌐 ورود به سابسکریپشن: the subscription page in the browser, on top
+        // in a row of its own (statusbtn 'subweb') - where the panel gives an
+        // address for one (ibsng / mikrotik keep a password in that field)
+        $sb_sub = (string) ($DataUserOut['subscription_url'] ?? '');
+        if (strpos($sb_sub, 'http') === 0 && !in_array($marzban['type'], ['ibsng', 'mikrotik'], true) && !statusbtn_is_hidden($sb_lang, 'subweb')) {
+            $sb_web = statusbtn_render($sb_lang, 'subweb', $textbotlang);
+            $sb_web['url'] = $sb_sub;
+            array_unshift($keyboardsetting['inline_keyboard'], [$sb_web]);
+        }
         $keyboardsetting['inline_keyboard'][] = [['text' => $textbotlang['users']['status']['backlist'], 'callback_data' => 'backorder', 'style' => 'danger']];
         $keyboardsetting = json_encode($keyboardsetting);
         if ($DataUserOut['sub_updated_at'] !== null) {
@@ -3724,7 +3733,7 @@ if (preg_match('/^paygmk_(.+)$/', (string) $datain, $pg_m)) {
         deletemessage($from_id, $message_id);
         return;
     }
-    [$pg_text, $pg_kb] = payg_service_screen($pg_new, $textbotlang);
+    [$pg_text, $pg_kb] = payg_service_screen($pg_new, $textbotlang, null, null, (string) ($pg_res['out']['subscription_url'] ?? ''));
     svc_send_status_screen($from_id, $message_id, $pg_text, $pg_kb, (string) ($pg_res['out']['subscription_url'] ?? ''), true);
     return;
 }

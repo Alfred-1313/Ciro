@@ -1300,8 +1300,9 @@ if (!function_exists('payg_rates_text')) {
         return [$text, json_encode(['inline_keyboard' => $rows])];
     }
     // the service screen in «🛍 سرویس‌های من»: [text, keyboard]. $since: what
-    // was taken since the owner last looked (🔄), null when not asked
-    function payg_service_screen(array $svc, $tx, $panelData = null, $since = null)
+    // was taken since the owner last looked (🔄), null when not asked. $subUrl:
+    // its subscription page, when $panelData (the panel's answer) has none
+    function payg_service_screen(array $svc, $tx, $panelData = null, $since = null, $subUrl = null)
     {
         $w = $tx['users']['payg'];
         $u = select("user", "*", "id", (string) $svc['user_id'], "select", ['cache' => false]);
@@ -1330,14 +1331,21 @@ if (!function_exists('payg_rates_text')) {
         $id = $svc['id_invoice'];
         $rows = [];
         if ($svc['status'] !== 'ended') {
-            $rows[] = [['text' => $w['btnRefresh'], 'callback_data' => "paygref_{$id}", 'style' => 'primary']];
-            $rows[] = [
-                ['text' => $tx['users']['status']['linksub'], 'callback_data' => "subscriptionurl_{$id}"],
-                ['text' => $tx['users']['status']['config'], 'callback_data' => "config_{$id}"],
-            ];
-            if ($cfg['convert'] && in_array($svc['status'], ['active', 'waiting'], true) && payg_panel_products($svc['lang'], $svc['panel'], payg_group_of($u))) {
-                $rows[] = [['text' => $w['btnConvert'], 'callback_data' => "paygconv_{$id}", 'style' => 'success']];
+            // 🌐 its subscription page in the browser, a row of its own on top;
+            // the rest two to a row, 🗑 alone - away from a stray tap
+            $sub = (string) ($subUrl ?? (is_array($panelData) && is_array($panelData['data'] ?? null) ? ($panelData['data']['subscription_url'] ?? '') : ''));
+            if (strpos($sub, 'http') === 0) {
+                $rows[] = [['text' => $w['btnSubWeb'], 'url' => $sub, 'style' => 'success']];
             }
+            $rows[] = [
+                ['text' => $w['btnRefresh'], 'callback_data' => "paygref_{$id}", 'style' => 'primary'],
+                ['text' => $tx['users']['status']['linksub'], 'callback_data' => "subscriptionurl_{$id}"],
+            ];
+            $pair = [['text' => $tx['users']['status']['config'], 'callback_data' => "config_{$id}"]];
+            if ($cfg['convert'] && in_array($svc['status'], ['active', 'waiting'], true) && payg_panel_products($svc['lang'], $svc['panel'], payg_group_of($u))) {
+                $pair[] = ['text' => $w['btnConvert'], 'callback_data' => "paygconv_{$id}", 'style' => 'success'];
+            }
+            $rows[] = $pair;
             $rows[] = [['text' => $w['btnDelete'], 'callback_data' => "paygdel_{$id}", 'style' => 'danger']];
         } else {
             $rows[] = [['text' => $w['btnRemoveFully'], 'callback_data' => "paygrm_{$id}", 'style' => 'danger']];

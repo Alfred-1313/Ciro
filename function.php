@@ -10245,6 +10245,11 @@ if (!function_exists('statusbtn_defs')) {
     function statusbtn_defs($textbotlang)
     {
         return [
+            // 🌐 the subscription page in the browser (a url button): always a
+            // row of its own on top of the screen, so the reorder list
+            // (statusbtn_layout_payload) leaves it out - its name, colour,
+            // emoji and 🚫 are edited like the rest
+            'subweb' => ['name' => '🌐 ورود به سابسکریپشن', 'text' => $textbotlang['users']['status']['subWebBtn'] ?? '🌐 ورود به سابسکریپشن', 'style' => 'success'],
             'updateinfo' => ['name' => '♻️ بروزرسانی اطلاعات', 'text' => $textbotlang['keyboard']['refreshInfo'], 'style' => 'primary'],
             'linksub' => ['name' => '🔗 لینک اشتراک', 'text' => $textbotlang['users']['status']['linksub'], 'style' => 'primary'],
             'config' => ['name' => '🔰 دریافت کانفیگ', 'text' => $textbotlang['users']['status']['config'], 'style' => 'primary'],
@@ -10585,10 +10590,11 @@ if (!function_exists('statusbtn_layout_payload')) {
     function statusbtn_layout_payload($lang, $textbotlang, $selectedIdx = null)
     {
         // only the service screen's own buttons can be reordered here - the
-        // گزارش مصرف sub-screen's rows are edited elsewhere in this same tool
+        // گزارش مصرف sub-screen's rows are edited elsewhere in this same tool,
+        // and 🌐 سابسکریپشن always has the top row to itself
         $orderedKeys = array_values(array_filter(
             statusbtn_ordered_keys($lang, $textbotlang),
-            fn($k) => strpos($k, 'ur_') !== 0
+            fn($k) => strpos($k, 'ur_') !== 0 && $k !== 'subweb'
         ));
         $kb = ['inline_keyboard' => []];
         foreach ($orderedKeys as $idx => $key) {
