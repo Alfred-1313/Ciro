@@ -1337,11 +1337,11 @@ if (!function_exists('payg_rates_text')) {
             $rows = subapp_entry_rows('h', (string) (is_array($u) && !empty($u['lang']) ? $u['lang'] : $svc['lang']), $tx, $sub, $id);
             $rows[] = [
                 ['text' => $w['btnRefresh'], 'callback_data' => "paygref_{$id}", 'style' => 'primary'],
-                ['text' => $tx['users']['status']['linksub'], 'callback_data' => "subscriptionurl_{$id}"],
+                ['text' => $tx['users']['status']['linksub'], 'callback_data' => "subscriptionurl_{$id}", 'style' => 'primary'],
             ];
-            $pair = [['text' => $tx['users']['status']['config'], 'callback_data' => "config_{$id}"]];
+            $pair = [['text' => $tx['users']['status']['config'], 'callback_data' => "config_{$id}", 'style' => 'primary']];
             if ($cfg['convert'] && in_array($svc['status'], ['active', 'waiting'], true) && payg_panel_products($svc['lang'], $svc['panel'], payg_group_of($u))) {
-                $pair[] = ['text' => $w['btnConvert'], 'callback_data' => "paygconv_{$id}", 'style' => 'success'];
+                $pair[] = ['text' => $w['btnConvert'], 'callback_data' => "paygconv_{$id}", 'style' => 'primary'];
             }
             $rows[] = $pair;
             $rows[] = [['text' => $w['btnDelete'], 'callback_data' => "paygdel_{$id}", 'style' => 'danger']];

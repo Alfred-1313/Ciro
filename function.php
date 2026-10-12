@@ -12574,9 +12574,11 @@ if (!function_exists('genbtn_alias_to_key')) {
         }
         // sc: close, quick search and back can go; next/previous stay - without
         // them the services past page one could not be reached at all
-        // k*: an app the shop's customers do not use can go, and ↪️ like any back
-        $extras = ['ab' => [0], 'ut' => [0], 'rw' => [0], 'bc' => [0], 'ns' => [0], 'te' => [0], 'sc' => [0, 2], 'hb' => [0], 'hv' => [0], 'td' => [0, 1], 'su' => [1], 'pu' => [1],
-            'kb' => [0, 1, 2, 3, 4, 5], 'kt' => [0, 1, 2, 3, 4, 5], 'kr' => [0, 1, 2, 3, 4, 5], 'kh' => [0, 1, 2, 3, 4, 5]];
+        // k*: an app the shop's customers do not use can go, and 🔙 like any back
+        if (preg_match('/^k[btrh]$/', (string) $alias)) {
+            return isset(subapp_apps()[(int) $idx]) || (int) $idx === subapp_back_idx();
+        }
+        $extras = ['ab' => [0], 'ut' => [0], 'rw' => [0], 'bc' => [0], 'ns' => [0], 'te' => [0], 'sc' => [0, 2], 'hb' => [0], 'hv' => [0], 'td' => [0, 1], 'su' => [1], 'pu' => [1]];
         return in_array((int) $idx, $extras[$alias] ?? [], true);
     }
 }
@@ -12760,20 +12762,20 @@ if (!function_exists('genbtn_defs')) {
                 // 🌐 a link to the subscription page and 📲 the app list -
                 // subapp_entry_rows() gives each its real address
                 return [
-                    0 => ['name' => '🌐 دکمه‌ی ورود به سابسکریپشن (توی مرورگر باز می‌شه)', 'text' => $sa['entry' . subapp_kind_suffix($sm[2])], 'style' => 'success', 'callback_data' => 'none'],
+                    0 => ['name' => '🌐 دکمه‌ی ورود به سابسکریپشن (توی مرورگر باز می‌شه)', 'text' => $sa['entry' . subapp_kind_suffix($sm[2])], 'style' => 'primary', 'callback_data' => 'none'],
                     1 => ['name' => '📲 دکمه‌ی افزودن به برنامه (لیست برنامه‌ها)', 'text' => $sa['appsBtn'], 'style' => 'primary', 'callback_data' => 'none'],
                 ];
             }
             // the apps in subapp_apps()' order, each a link to subapp.php
-            // (subapp_list_screen() fills it in), and ↪️ back to the service
-            return [
-                0 => ['name' => '🤖 v2rayNG (اندروید)', 'text' => $sa['appV2rayng'], 'style' => 'primary', 'callback_data' => 'none'],
-                1 => ['name' => '📱 Hiddify (اندروید و آیفون)', 'text' => $sa['appHiddify'], 'style' => 'primary', 'callback_data' => 'none'],
-                2 => ['name' => '🍏 v2Box (آیفون)', 'text' => $sa['appV2box'], 'style' => 'primary', 'callback_data' => 'none'],
-                3 => ['name' => '🍏 Streisand (آیفون)', 'text' => $sa['appStreisand'], 'style' => 'primary', 'callback_data' => 'none'],
-                4 => ['name' => '📱 Happ (اندروید و آیفون)', 'text' => $sa['appHapp'], 'style' => 'primary', 'callback_data' => 'none'],
-                5 => ['name' => '↪️ دکمه‌ی بازگشت به صفحه‌ی سرویس', 'text' => $textbotlang['users']['status']['backinfo'], 'style' => 'danger', 'callback_data' => 'none'],
-            ];
+            // (subapp_list_screen() fills it in), then 🔙 back to the service -
+            // last on the screen whatever its number (the default order is
+            // this array's)
+            $defs = [];
+            foreach (subapp_apps() as $i => $app) {
+                $defs[$i] = ['name' => $app['name'], 'text' => $sa[$app['text']], 'style' => 'primary', 'callback_data' => 'none'];
+            }
+            $defs[subapp_back_idx()] = ['name' => '🔙 دکمه‌ی بازگشت به منوی قبلی (صفحه‌ی سرویس)', 'text' => $sa['backBtn'], 'style' => 'danger', 'callback_data' => 'none'];
+            return $defs;
         }
         return [];
     }
@@ -13122,17 +13124,26 @@ if (!function_exists('subapp_kind')) {
     {
         return ['b' => 'خرید', 't' => 'اکانت تست', 'r' => 'کانفیگ هدیه‌ی دعوت', 'h' => 'اشتراک ساعتی'][$kind] ?? 'خرید';
     }
-    // the list's apps, in its buttons' order (genbtn k* 0-4): the id its link
-    // carries, and where to get it on each kind of phone ('' = not there)
+    // the list's apps in its buttons' order - each one's genbtn k* number,
+    // the id its link carries, its button's text (users.subapps.*), and where
+    // to get it on each kind of phone ('' = not there). 5 is the list's 🔙
+    // (subapp_back_idx), so an app added later takes the next free number and
+    // every button keeps the look its admin gave it
     function subapp_apps()
     {
         return [
-            0 => ['id' => 'v2rayng', 'name' => 'v2rayNG', 'android' => 'https://play.google.com/store/apps/details?id=com.v2ray.ang', 'ios' => '', 'other' => 'https://github.com/2dust/v2rayNG/releases/latest'],
-            1 => ['id' => 'hiddify', 'name' => 'Hiddify', 'android' => 'https://play.google.com/store/apps/details?id=app.hiddify.com', 'ios' => 'https://apps.apple.com/app/id6596777532', 'other' => 'https://github.com/hiddify/hiddify-app/releases/latest'],
-            2 => ['id' => 'v2box', 'name' => 'v2Box', 'android' => '', 'ios' => 'https://apps.apple.com/app/id6446814690', 'other' => 'https://apps.apple.com/app/id6446814690'],
-            3 => ['id' => 'streisand', 'name' => 'Streisand', 'android' => '', 'ios' => 'https://apps.apple.com/app/id6450534064', 'other' => 'https://apps.apple.com/app/id6450534064'],
-            4 => ['id' => 'happ', 'name' => 'Happ', 'android' => 'https://play.google.com/store/apps/details?id=com.happproxy', 'ios' => 'https://apps.apple.com/app/id6504287215', 'other' => 'https://www.happ.su/'],
+            0 => ['id' => 'v2rayng', 'name' => 'v2rayNG', 'text' => 'appV2rayng', 'android' => 'https://github.com/2dust/v2rayNG/releases/latest', 'ios' => '', 'other' => 'https://github.com/2dust/v2rayNG/releases/latest'],
+            1 => ['id' => 'hiddify', 'name' => 'Hiddify', 'text' => 'appHiddify', 'android' => 'https://play.google.com/store/apps/details?id=app.hiddify.com', 'ios' => 'https://apps.apple.com/app/id6596777532', 'other' => 'https://github.com/hiddify/hiddify-app/releases/latest'],
+            2 => ['id' => 'v2box', 'name' => 'v2Box', 'text' => 'appV2box', 'android' => 'https://play.google.com/store/apps/details?id=dev.hexasoftware.v2box', 'ios' => 'https://apps.apple.com/app/id6446814690', 'other' => 'https://apps.apple.com/app/id6446814690'],
+            3 => ['id' => 'streisand', 'name' => 'Streisand', 'text' => 'appStreisand', 'android' => '', 'ios' => 'https://apps.apple.com/app/id6450534064', 'other' => 'https://apps.apple.com/app/id6450534064'],
+            4 => ['id' => 'happ', 'name' => 'Happ', 'text' => 'appHapp', 'android' => 'https://play.google.com/store/apps/details?id=com.happproxy', 'ios' => 'https://apps.apple.com/app/id6504287215', 'other' => 'https://www.happ.su/'],
+            6 => ['id' => 'karing', 'name' => 'Karing', 'text' => 'appKaring', 'android' => 'https://karing.app/download', 'ios' => 'https://apps.apple.com/app/id6472431552', 'other' => 'https://karing.app/download'],
         ];
+    }
+    // the list's 🔙 بازگشت به منوی قبلی (genbtn k*)
+    function subapp_back_idx()
+    {
+        return 5;
     }
     // the address that opens the app with the subscription added
     function subapp_deep_link($appId, $sub, $name)
@@ -13145,6 +13156,7 @@ if (!function_exists('subapp_kind')) {
             'v2box' => "v2box://install-sub?url={$enc}&name={$n}",
             'streisand' => "streisand://import/{$sub}#{$n}",
             'happ' => "happ://add/{$sub}",
+            'karing' => "karing://install-config?url={$enc}&name={$n}",
         ];
         return $links[$appId] ?? '';
     }
@@ -13166,7 +13178,7 @@ if (!function_exists('subapp_kind')) {
     {
         $key = genbtn_alias_to_key('k' . $kind);
         foreach (genbtn_defs('k' . $kind, $tx) as $idx => $d) {
-            if ($idx < count(subapp_apps()) && !genbtn_is_hidden($d, genbtn_override($lang, $key, $idx))) {
+            if (isset(subapp_apps()[$idx]) && !genbtn_is_hidden($d, genbtn_override($lang, $key, $idx))) {
                 return true;
             }
         }
@@ -13466,7 +13478,7 @@ if (!function_exists('genbtn_hub_payload')) {
             $where = ['b' => 'هر سرویس خریداری‌شده', 't' => 'هر اکانت تست', 'r' => 'هر کانفیگ هدیه‌ی دعوت (تا وقتی تمدید نشده)', 'h' => 'هر اشتراک ساعتی'][$sm[2]];
             return $sm[1] === 'g'
                 ? "این ۲ دکمه بالای صفحه‌ی {$where} توی «🛍 سرویس‌های من» میان: 🌐 صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه، 📲 صفحه‌ی سرویس رو برمی‌داره و لیست برنامه‌ها رو میاره. فقط وقتی پنل برای سابسکریپشن آدرس بده دیده می‌شن. کنار هم یا زیر هم بودنشون و مخفی کردن هرکدوم: 📐 چیدمان."
-                : "این دکمه‌ها زیر لیست برنامه‌های {$where} میان (بعد از زدن 📲): هر برنامه یه صفحه باز می‌کنه که همون برنامه رو با سابسکریپشن باز می‌کنه و اگه نصب نباشه، لینک دانلودش رو داره؛ ↪️ برمی‌گردونه به صفحه‌ی سرویس. برنامه‌ای که مشتری‌هات ندارن رو از 📐 چیدمان مخفی کن؛ اگه همه مخفی باشن، 📲 هم دیگه نشون داده نمی‌شه.";
+                : "این دکمه‌ها زیر لیست برنامه‌های {$where} میان (بعد از زدن 📲): هر برنامه یه صفحه باز می‌کنه که همون برنامه رو با سابسکریپشن باز می‌کنه و اگه نصب نباشه، لینک دانلودش رو داره؛ 🔙 برمی‌گردونه به صفحه‌ی سرویس. برنامه‌ای که مشتری‌هات ندارن رو از 📐 چیدمان مخفی کن؛ اگه همه مخفی باشن، 📲 هم دیگه نشون داده نمی‌شه.";
         }
         $defs = genbtn_defs($alias, $textbotlang);
         return (string) ($defs[0]['note'] ?? '');
@@ -13502,10 +13514,10 @@ if (!function_exists('genbtn_hub_payload')) {
             'kb' => 'half', 'kt' => 'half', 'kr' => 'half', 'kh' => 'half'][$alias] ?? null;
     }
     // one button's width with nothing stored: its group's - except the app
-    // list's ↪️ بازگشت, a row of its own under the apps two to a row
+    // list's 🔙 بازگشت, a row of its own under the apps two to a row
     function genbtn_layout_default_width($alias, $idx)
     {
-        if (preg_match('/^k[btrh]$/', (string) $alias) && (string) $idx === '5') {
+        if (preg_match('/^k[btrh]$/', (string) $alias) && (int) $idx === subapp_back_idx()) {
             return 'full';
         }
         return genbtn_layout_default($alias);
