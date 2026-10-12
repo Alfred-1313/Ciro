@@ -2401,7 +2401,9 @@ function keyboard_list_text($lang, $groupFilter = null)
         // second row here would make their back button ambiguous
         'bottext.langPickerCaption',
         // opened from inside 📯 پیام عضویت اجباری کانال, whose back it uses
-        'users.channel.left_channel'];
+        'users.channel.left_channel',
+        // the test account's 🌐 / 📲 and its app list: inside 🔑 تنظیم اکانت تست
+        'users.subapps.entryTest', 'users.subapps.listTest'];
     $bt_can_react_keys = bt_react_keys();
     $bt_list_setting = select("setting", "*", null, null, "select");
     $bt_list_edit = json_decode((string) ($bt_list_setting['text_edit'] ?? ''), true);

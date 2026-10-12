@@ -25,7 +25,7 @@ return array (
     'paygSubs' => array (
       'paygbuy' => array ('label' => '🛒 مراحل خرید', 'caption' => "🛒 <b>اکانت ساعتی — مراحل خرید</b>\n\nچیزهایی که مشتری از «🔐 خرید اشتراک» تا لحظه‌ی ساختن می‌بینه، به همین ترتیب: انتخاب «معمولی یا ساعتی»، انتخاب لوکیشن، صفحه‌ی تعرفه و دکمه‌ی ساختن.\n\n🔙 دکمه‌ی «بازگشت» همه‌ی صفحه‌های اکانت ساعتی همینه.\n\n✍️ دکمه‌های 🔴 / 🟢 زیر سؤال نام کاربری مال خود اکانت ساعتی‌ان (جدا از خرید معمولی)؛ از «✍️ سؤال نام کاربری و دکمه‌هاش» همین‌جا عوض می‌شن.\n\nزبان فعلی: <b>{lang}</b>"),
       'paygfail' => array ('label' => '⛔️ وقتی ساخته نمی‌شه', 'caption' => "⛔️ <b>اکانت ساعتی — وقتی ساخته نمی‌شه</b>\n\nپیام‌هایی که به‌جای ساختن سرویس میان: خاموش بودن، نبودن لوکیشن، کم بودن موجودی، رسیدن به سقف تعداد، پر بودن لوکیشن و خطای ساخت.\n\nزبان فعلی: <b>{lang}</b>"),
-      'paygsvc' => array ('label' => '📊 صفحه‌ی سرویس', 'caption' => "📊 <b>اکانت ساعتی — صفحه‌ی سرویس</b>\n\nصفحه‌ای که مشتری توی «🛍 سرویس‌های من» با زدن اکانت ساعتی‌ش می‌بینه: خود صفحه، وضعیت‌ها، اسم‌ها، دکمه‌ها و پاپ‌آپ‌ها.\n\n✅ همین صفحه، لحظه‌ی ساخته شدن هم برای مشتری فرستاده می‌شه (به‌جای پیام تحویل).\n\n🔴 دکمه‌ی «⏱ اشتراک ساعتی» همونیه که توی لیست «🛍 سرویس‌های من» بالای همه میاد؛ اسم، رنگ و ایموجیش همین‌جا عوض می‌شه.\n\nزبان فعلی: <b>{lang}</b>"),
+      'paygsvc' => array ('label' => '📊 صفحه‌ی سرویس', 'caption' => "📊 <b>اکانت ساعتی — صفحه‌ی سرویس</b>\n\nصفحه‌ای که مشتری توی «🛍 سرویس‌های من» با زدن اکانت ساعتی‌ش می‌بینه: خود صفحه، وضعیت‌ها، اسم‌ها، دکمه‌ها و پاپ‌آپ‌ها.\n\n✅ همین صفحه، لحظه‌ی ساخته شدن هم برای مشتری فرستاده می‌شه (به‌جای پیام تحویل).\n\n🔴 دکمه‌ی «⏱ اشتراک ساعتی» همونیه که توی لیست «🛍 سرویس‌های من» بالای همه میاد؛ اسم، رنگ و ایموجیش همین‌جا عوض می‌شه.\n\n🌐 / 📲 بالای همین صفحه (ورود به سابسکریپشن و افزودن به برنامه) و لیست برنامه‌هاش، آخر همین‌جان - جدا از خرید، تست و هدیه.\n\nزبان فعلی: <b>{lang}</b>"),
       'paygrate' => array ('label' => '💵 خط‌های تعرفه، تخمین و زمان', 'caption' => "💵 <b>اکانت ساعتی — خط‌های تعرفه، تخمین و زمان</b>\n\nتیکه‌هایی که خودشون پیام نیستن و توی صفحه‌ی تعرفه، پیام تحویل، صفحه‌ی سرویس و اعلان‌ها جاگذاری می‌شن: خط‌های قیمت، خط شروع حساب، خط «حدوداً چقدر دیگه» و کلمه‌هایی مثل «روز» و «ساعت».\n\n📌 «برای ۱» و «برای بیشتر از ۱» توی فارسی یکی‌ان؛ برای زبانی مثل انگلیسی فرق دارن (day / days).\n\nزبان فعلی: <b>{lang}</b>"),
       'paygdel' => array ('label' => '🗑 حذف', 'caption' => "🗑 <b>اکانت ساعتی — حذف</b>\n\nوقتی مشتری خودش اکانت ساعتی‌ش رو حذف می‌کنه. کدوم سؤال بیاد (از پنل پاک بشه یا غیرفعال بمونه) به «🗑 حذف توسط کاربر» توی ⚙️ تنظیمات بستگی داره.\n\nدکمه‌ی «❌ نه، برگرد» با بخش «⏩ تبدیل به ماهانه» مشترکه.\n\nزبان فعلی: <b>{lang}</b>"),
       'paygconv' => array ('label' => '⏩ تبدیل به ماهانه', 'caption' => "⏩ <b>اکانت ساعتی — تبدیل به ماهانه</b>\n\nوقتی مشتری اکانت ساعتی رو به یه بسته‌ی ماهانه تبدیل می‌کنه: انتخاب بسته، سؤال «مطمئنی؟» و پیام‌های بعدش.\n\nدکمه‌ی «❌ نه، برگرد» توی بخش «🗑 حذف» هست.\n\nزبان فعلی: <b>{lang}</b>"),
@@ -446,6 +446,58 @@ return array (
         'group' => 'myservices',
         'section' => 'myservices_linksub',
       ),
+      // 🌐 / 📲 on top of a bought service's screen and the app list 📲
+      // opens; a test account, a 🎁 gift config and ⏱ have their own
+      // (subapp_kind). The popup and the page an app opens through are one
+      // for all four, so they are here only
+      array (
+        'label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (خرید)',
+        'key' => 'users.subapps.entryBuy',
+        'group' => 'myservices',
+        'section' => 'subapps',
+      ),
+      array (
+        'label' => '📲 لیست برنامه‌ها + دکمه‌هاش (خرید)',
+        'key' => 'users.subapps.listBuy',
+        'group' => 'myservices',
+        'section' => 'subapps',
+      ),
+      array (
+        'label' => '⚠️ پاپ‌آپ «لینک سابسکریپشن در دسترس نیست» (هر ۴ بخش)',
+        'key' => 'users.subapps.noLink',
+        'group' => 'myservices',
+        'section' => 'subapps',
+      ),
+      array (
+        'label' => '⏳ خط «داره ... باز می‌شه»',
+        'key' => 'users.subapps.pageOpening',
+        'group' => 'myservices',
+        'section' => 'subapps_page',
+      ),
+      array (
+        'label' => '📲 دکمه‌ی «باز کردن ...»',
+        'key' => 'users.subapps.pageButton',
+        'group' => 'myservices',
+        'section' => 'subapps_page',
+      ),
+      array (
+        'label' => '💡 راهنمای «اگه باز نشد»',
+        'key' => 'users.subapps.pageHint',
+        'group' => 'myservices',
+        'section' => 'subapps_page',
+      ),
+      array (
+        'label' => '⬇️ دکمه‌ی «دانلود ...»',
+        'key' => 'users.subapps.pageDownload',
+        'group' => 'myservices',
+        'section' => 'subapps_page',
+      ),
+      array (
+        'label' => '⛔️ «این لینک دیگه کار نمی‌کنه»',
+        'key' => 'users.subapps.pageError',
+        'group' => 'myservices',
+        'section' => 'subapps_page',
+      ),
       array (
         'label' => '⏳ پیام «در حال ساخت لینک پرداخت»',
         'key' => 'users.Balance.linkpayments',
@@ -527,6 +579,18 @@ return array (
       array (
         'label' => '🎯 پیام انتخاب پنل (اکانت تست)',
         'key' => 'textbot.selectLocationTest',
+      ),
+      // a test account's 🌐 / 📲 and its app list - no group either: their
+      // rows are inside 🔑 تنظیم اکانت تست
+      'test_subentry' =>
+      array (
+        'label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (اکانت تست)',
+        'key' => 'users.subapps.entryTest',
+      ),
+      'test_sublist' =>
+      array (
+        'label' => '📲 لیست برنامه‌ها + دکمه‌هاش (اکانت تست)',
+        'key' => 'users.subapps.listTest',
       ),
       // reached from 🌐 تنظیمات تغییر زبان کاربر, which owns everything about
       // the picker; no 'group' so they get no second entry point of their own
@@ -929,6 +993,8 @@ return array (
       'affrw_21' => array ('label' => '☑️ خط وضعیت: منتظر انتخاب نام', 'key' => 'users.affiliates.rewardStatusNaming', 'group' => 'referral'),
       'affrw_22' => array ('label' => '🔄 پیام «این سرویس تمدید نمی‌شه»', 'key' => 'users.affiliates.rewardNoRenew', 'group' => 'referral'),
       'affrw_23' => array ('label' => '🗑 اعلان پاک شدن کانفیگ تمام‌شده', 'key' => 'users.affiliates.rewardDeleted', 'group' => 'referral'),
+      'affrw_27' => array ('label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (کانفیگ هدیه)', 'key' => 'users.subapps.entryRef', 'group' => 'referral', 'section' => 'subapps'),
+      'affrw_28' => array ('label' => '📲 لیست برنامه‌ها + دکمه‌هاش (کانفیگ هدیه)', 'key' => 'users.subapps.listRef', 'group' => 'referral', 'section' => 'subapps'),
       // ---- ⏱ اکانت ساعتی (payg.php) - 'live': the row shows the button as this tab has it ----
       // ⏱'s 🎨 screen is an index (bottext.paygSubs): each 'group' is one sub-screen
       'payg_1' => array ('label' => '🔐 صفحه‌ی «معمولی یا ساعتی؟»', 'key' => 'users.payg.typeChoice', 'group' => 'paygbuy'),
@@ -955,13 +1021,14 @@ return array (
       'payg_25' => array ('label' => '🔄 خط «از آخرین باری که سر زدی ... کم شده»', 'key' => 'users.payg.sinceLast', 'group' => 'paygsvc'),
       'payg_41' => array ('label' => 'دکمه‌ی اشتراک ساعتی توی «🛍 سرویس‌های من»', 'key' => 'users.payg.listLabel', 'group' => 'paygsvc'),
       'payg_40' => array ('label' => '🏷 اسم محصول (توی فاکتور و گزارش‌ها)', 'key' => 'users.payg.serviceName', 'group' => 'paygsvc'),
-      'payg_72' => array ('label' => 'دکمه‌ی ورود به سابسکریپشن (بالای صفحه، صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه)', 'key' => 'users.payg.btnSubWeb', 'group' => 'paygsvc', 'live' => true),
       'payg_42' => array ('label' => 'دکمه‌ی بارگذاری مجدد', 'key' => 'users.payg.btnRefresh', 'group' => 'paygsvc', 'live' => true),
       'payg_43' => array ('label' => 'دکمه‌ی تبدیل به ماهانه', 'key' => 'users.payg.btnConvert', 'group' => 'paygsvc', 'live' => true),
       'payg_44' => array ('label' => 'دکمه‌ی حذف', 'key' => 'users.payg.btnDelete', 'group' => 'paygsvc', 'live' => true),
       'payg_45' => array ('label' => 'دکمه‌ی حذف کامل (سرویس غیرفعال‌شده)', 'key' => 'users.payg.btnRemoveFully', 'group' => 'paygsvc', 'live' => true),
       'payg_46' => array ('label' => '❌ پاپ‌آپ «این سرویس دیگه فعال نیست»', 'key' => 'users.payg.notActive', 'group' => 'paygsvc'),
       'payg_47' => array ('label' => '⏱ پاپ‌آپ «این گزینه برای اشتراک ساعتی نیست»', 'key' => 'users.payg.notAllowed', 'group' => 'paygsvc'),
+      'payg_72' => array ('label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه', 'key' => 'users.subapps.entryPayg', 'group' => 'paygsvc', 'section' => 'subapps'),
+      'payg_73' => array ('label' => '📲 لیست برنامه‌ها + دکمه‌هاش', 'key' => 'users.subapps.listPayg', 'group' => 'paygsvc', 'section' => 'subapps'),
       'payg_26' => array ('label' => '⏱ خط قیمت هر ساعت', 'key' => 'users.payg.rateHour', 'group' => 'paygrate'),
       'payg_27' => array ('label' => '⏱ خط قیمت هر دقیقه', 'key' => 'users.payg.rateMinute', 'group' => 'paygrate'),
       'payg_28' => array ('label' => '⏱ خط وقتی زمان هزینه نداره', 'key' => 'users.payg.rateTimeFree', 'group' => 'paygrate'),
@@ -2405,7 +2472,6 @@ n2  = نماینده با قابلیت های بیشتر',
       'lastTraffic' => 'حجم کل سرویس :',
       'limited' => '🚫 پایان حجم',
       'linksub' => '🔗 لینک اشتراک',
-      'subWebBtn' => '🌐 ورود به سابسکریپشن',
       'linksubCaption' => '🔗 لینک اشتراک
 
 <code>{link}</code>',
@@ -2643,6 +2709,33 @@ n2  = نماینده با قابلیت های بیشتر',
 
 برای استفاده از نام پیش‌فرض، دکمهٔ سبز را بزنید؛ برای انصراف و بازگشت به منو، دکمهٔ قرمز.',
     ),
+    // 🌐 ورود به سابسکریپشن + 📲 افزودن به برنامه, on top of a service's
+    // screen in 🛍 سرویس‌های من, and the app list 📲 opens - one of each per
+    // kind of service (subapp_kind); page*: the web page an app opens
+    // through (subapp.php), one for all four
+    'subapps' =>
+    array (
+      'entryBuy' => '🌐 ورود به سابسکریپشن',
+      'entryTest' => '🌐 ورود به سابسکریپشن',
+      'entryRef' => '🌐 ورود به سابسکریپشن',
+      'entryPayg' => '🌐 ورود به سابسکریپشن',
+      'appsBtn' => '📲 افزودن به برنامه',
+      'listBuy' => "📲 <b>افزودن سرویس به برنامه</b>\n➖➖➖➖➖➖➖➖➖➖\n👤 نام سرویس: <code>{username}</code>\n\n<blockquote>برنامه‌ای که روی گوشیت نصبه رو انتخاب کن؛ باز می‌شه و سابسکریپشن خودش بهش اضافه می‌شه.</blockquote>\n<i>🤖 اندروید  ·  🍏 آیفون  ·  📱 هر دو</i>",
+      'listTest' => "📲 <b>افزودن اکانت تست به برنامه</b>\n➖➖➖➖➖➖➖➖➖➖\n👤 نام سرویس: <code>{username}</code>\n\n<blockquote>برنامه‌ای که روی گوشیت نصبه رو انتخاب کن؛ باز می‌شه و سابسکریپشن خودش بهش اضافه می‌شه.</blockquote>\n<i>🤖 اندروید  ·  🍏 آیفون  ·  📱 هر دو</i>",
+      'listRef' => "📲 <b>افزودن کانفیگ هدیه به برنامه</b>\n➖➖➖➖➖➖➖➖➖➖\n👤 نام سرویس: <code>{username}</code>\n\n<blockquote>برنامه‌ای که روی گوشیت نصبه رو انتخاب کن؛ باز می‌شه و سابسکریپشن خودش بهش اضافه می‌شه.</blockquote>\n<i>🤖 اندروید  ·  🍏 آیفون  ·  📱 هر دو</i>",
+      'listPayg' => "📲 <b>افزودن اشتراک ساعتی به برنامه</b>\n➖➖➖➖➖➖➖➖➖➖\n👤 نام سرویس: <code>{username}</code>\n\n<blockquote>برنامه‌ای که روی گوشیت نصبه رو انتخاب کن؛ باز می‌شه و سابسکریپشن خودش بهش اضافه می‌شه.</blockquote>\n<i>🤖 اندروید  ·  🍏 آیفون  ·  📱 هر دو</i>",
+      'appV2rayng' => '🤖 v2rayNG',
+      'appHiddify' => '📱 Hiddify',
+      'appV2box' => '🍏 v2Box',
+      'appStreisand' => '🍏 Streisand',
+      'appHapp' => '📱 Happ',
+      'noLink' => '⚠️ لینک سابسکریپشن این سرویس الان در دسترس نیست.',
+      'pageOpening' => '⏳ داره {app} باز می‌شه…',
+      'pageButton' => '📲 باز کردن {app}',
+      'pageHint' => 'اگه باز نشد، {app} روی گوشیت نصب نیست؛ از دکمه‌ی پایین نصبش کن و دوباره دکمه‌ی بالا رو بزن.',
+      'pageDownload' => '⬇️ دانلود {app}',
+      'pageError' => '⛔️ این لینک دیگه کار نمی‌کنه؛ سرویست رو دوباره از توی ربات باز کن.',
+    ),
     // ⏱ اکانت ساعتی (payg.php): everything its customer reads
     'payg' =>
     array (
@@ -2688,7 +2781,6 @@ n2  = نماینده با قابلیت های بیشتر',
       'statusEnded' => '🗑 حذف‌شده (غیرفعال)',
       'notStarted' => 'هنوز شروع نشده',
       'sinceLast' => '🔄 از آخرین باری که سر زدی: {amount} کم شده.',
-      'btnSubWeb' => '🌐 ورود به سابسکریپشن',
       'btnRefresh' => '🔄 بارگذاری مجدد',
       'btnConvert' => '⏩ تبدیل به ماهانه',
       'btnDelete' => '🗑 حذف',

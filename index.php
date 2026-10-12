@@ -1616,14 +1616,12 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         if (count($tempArray) > 0) {
             $keyboardsetting['inline_keyboard'][] = $tempArray;
         }
-        // 🌐 ورود به سابسکریپشن: the subscription page in the browser, on top
-        // in a row of its own (statusbtn 'subweb') - where the panel gives an
-        // address for one (ibsng / mikrotik keep a password in that field)
-        $sb_sub = (string) ($DataUserOut['subscription_url'] ?? '');
-        if (strpos($sb_sub, 'http') === 0 && !in_array($marzban['type'], ['ibsng', 'mikrotik'], true) && !statusbtn_is_hidden($sb_lang, 'subweb')) {
-            $sb_web = statusbtn_render($sb_lang, 'subweb', $textbotlang);
-            $sb_web['url'] = $sb_sub;
-            array_unshift($keyboardsetting['inline_keyboard'], [$sb_web]);
+        // 🌐 ورود به سابسکریپشن + 📲 افزودن به برنامه on top: this kind of
+        // service's own pair (subapp_kind - خرید / اکانت تست / 🎁), where the
+        // panel gives the subscription an address (ibsng / mikrotik keep a
+        // password in that field)
+        if (!in_array($marzban['type'], ['ibsng', 'mikrotik'], true)) {
+            array_splice($keyboardsetting['inline_keyboard'], 0, 0, subapp_entry_rows(subapp_kind($nameloc), $sb_lang, $textbotlang, (string) ($DataUserOut['subscription_url'] ?? ''), $nameloc['id_invoice']));
         }
         $keyboardsetting['inline_keyboard'][] = [['text' => $textbotlang['users']['status']['backlist'], 'callback_data' => 'backorder', 'style' => 'danger']];
         $keyboardsetting = json_encode($keyboardsetting);
@@ -1684,6 +1682,21 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         svc_send_status_screen($from_id, $message_id, $textinfo, $keyboardsetting, $svc_sub_url, !$svc_refresh_in_place);
     }
     step('home', $from_id);
+    return;
+} elseif (preg_match('/^subapps_([A-Za-z0-9]+)$/', $datain, $dataget)) {
+    // 📲 افزودن به برنامه: the service's screen goes and its kind's app list
+    // comes - each app a link to subapp.php, which opens it with the
+    // subscription; ↪️ brings the service's screen back
+    $nameloc = select("invoice", "*", "id_invoice", $dataget[1], "select");
+    if (!is_array($nameloc) || !in_array($nameloc['Status'], ['active', 'end_of_time', 'end_of_volume', 'sendedwarn', 'send_on_hold'], true)) {
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $textbotlang['users']['subapps']['noLink'], 'show_alert' => true]);
+        return;
+    }
+    $sa_kind = subapp_kind($nameloc);
+    [$sa_text, $sa_kb] = subapp_list_screen($sa_kind, $user['lang'] ?? 'fa', $textbotlang, $nameloc);
+    deletemessage($from_id, $message_id);
+    bottext_extras_key_hint(genbtn_alias_to_key('k' . $sa_kind));
+    sendmessage($from_id, $sa_text, $sa_kb, 'HTML');
     return;
 } elseif (preg_match('/subscriptionurl_(\w+)/', $datain, $dataget) || strpos($text, "/sub ") !== false) {
     if (!empty($text) && $text[0] == "/") {
