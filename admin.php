@@ -8692,8 +8692,9 @@ if (preg_match('/^btact\|bbtnpos\|([a-z]{2})\|(left|right)$/', $datain, $btm) &&
 //----------------[  button group hub (gbs|), like «🎨 ظاهر دکمه‌های پنل»  ]----------------
 // One hub per group (genbtn_hub_payload) with the four tools. Every op checks
 // the alias, the button index and the language again, and colour/emoji ops are
-// not reachable for the label-only buttons (genbtn_text_only()).
-if (preg_match('/^gbs\|(hub|lay|layp|layc|lays|layw|layr|col|colp|emo|emop|emos|emod|emor|ren|renp|renr|hide|rstall)\|([a-z]{2})\|([a-z]{2})((?:\|[0-9])*)(\|u)?$/', $datain, $gs_m) && $adminrulecheck['rule'] == "administrator") {
+// not reachable for the label-only buttons (genbtn_text_only()). An alias is
+// two letters, or a letter and a digit (the broadcast buttons, b1-b6).
+if (preg_match('/^gbs\|(hub|lay|layp|layc|lays|layw|layr|col|colp|emo|emop|emos|emod|emor|ren|renp|renr|hide|rstall)\|([a-z]{2})\|([a-z][a-z0-9])((?:\|[0-9])*)(\|u)?$/', $datain, $gs_m) && $adminrulecheck['rule'] == "administrator") {
     $gs_op = $gs_m[1];
     $gs_lang = $gs_m[2];
     $gs_alias = $gs_m[3];
@@ -8876,7 +8877,7 @@ if (preg_match('/^gbtn\|[a-z]+\|([a-z]{2})\|([a-z]{2})(\|.*)?$/', $datain, $gb_m
     Editmessagetext($from_id, $message_id, $gb_text, $gb_kb, 'HTML');
     return;
 }
-if (preg_match('/^gbtntxt-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|he|td|hb|hv|ab|ut|sp|ar|mg|sl|lc|pl|pu|gb|gt|gr|gh|kb|kt|kr|kh)-([0-9])(?:-(u))?$/', (string) $user['step'], $gb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^gbtntxt-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|he|td|hb|hv|ab|ut|sp|ar|mg|sl|lc|pl|pu|gb|gt|gr|gh|kb|kt|kr|kh|rw|ma|b[1-6])-([0-9])(?:-(u))?$/', (string) $user['step'], $gb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $gb_key = genbtn_alias_to_key($gb_m[2]);
     $gb_newtext = trim((string) $text);
     if ($gb_newtext !== '0' && ($gb_newtext === '' || mb_strlen($gb_newtext) > 64)) {
@@ -8897,7 +8898,7 @@ if (preg_match('/^gbtntxt-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|
     }
     return;
 }
-if (preg_match('/^gbtnemo-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|he|td|hb|hv|ab|ut|ar|mg|lc|pl|pu|gb|gt|gr|gh|kb|kt|kr|kh)-([0-9])(?:-(u))?$/', (string) $user['step'], $gb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^gbtnemo-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|he|td|hb|hv|ab|ut|ar|mg|lc|pl|pu|gb|gt|gr|gh|kb|kt|kr|kh|rw|ma|b[1-6])-([0-9])(?:-(u))?$/', (string) $user['step'], $gb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $gb_key = genbtn_alias_to_key($gb_m[2]);
     $gb_idx = (int) $gb_m[3];
     $gb_icon_id = '';
