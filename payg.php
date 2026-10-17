@@ -5,7 +5,7 @@
 // panel's ⏱ page), every price per user group.
 //
 // Money: cronbot/payg.php runs every minute and takes what the time (and the
-// traffic, read from the panel every two minutes) has cost since the last
+// traffic, read from the panel every minute) has cost since the last
 // run - never before it has passed, never below zero. What is smaller than the
 // wallet's smallest coin is carried to the next run, so a minute of a
 // 10,000-toman hour is 166.67 and the hour is 10,000 exactly.
@@ -770,9 +770,12 @@ if (!function_exists('payg_panel_set')) {
     // traffic, or the owner's other hourly services on the same wallet), and
     // the panel passes each change on to all of its nodes as an «update
     // user» - once a minute that kept every node busy. The cron stops the
-    // service itself when the wallet runs out; the panel's own expiry and
-    // volume are only for when the bot is down.
-    function payg_sync_caps(array $svc, array $rates, $avail, $used, $force = false)
+    // service itself when the wallet runs out; the panel's own expiry is only
+    // for when the bot is down, but its volume is also what stops a service
+    // between two readings - so a lower volume goes out at once when the
+    // wallet could run out within ten minutes. $pace: bytes a second since
+    // the last reading.
+    function payg_sync_caps(array $svc, array $rates, $avail, $used, $force = false, $pace = 0.0)
     {
         // nothing priced at all (an admin's slip): the panel keeps what it has
         if ($rates['ps'] === null && $rates['pb'] === null) {
@@ -787,11 +790,18 @@ if (!function_exists('payg_panel_set')) {
         // 0 is «none» to a panel: from none to a date or back is always sent
         $up = ($expire === 0) !== ($oldExpire === 0) || $expire - $oldExpire > 120;
         $down = $expire !== 0 && $oldExpire !== 0 && $oldExpire - $expire > 120;
+        $soon = false;
         if ($rates['pb'] !== null) {
             $up = $up || $oldLimit === 0 || $limit - $oldLimit > 10485760;
-            $down = $down || ($oldLimit !== 0 && $oldLimit - $limit > 10485760);
+            $lower = $oldLimit !== 0 && $oldLimit - $limit > 10485760;
+            $down = $down || $lower;
+            // how fast the wallet goes, in bytes a second: this service's
+            // traffic, and the rest (its clock, the owner's other services) as
+            // much as the panel's volume fell behind since it was last told
+            $drain = (float) $pace + ($oldLimit - $limit) / max(60, $now - (int) ($svc['cap_at'] ?? 0));
+            $soon = $lower && $drain > 0 && $limit - (int) $used <= $drain * 600;
         }
-        if (!$force && !$up && !($down && $now - (int) ($svc['cap_at'] ?? 0) >= 1800)) {
+        if (!$force && !$up && !$soon && !($down && $now - (int) ($svc['cap_at'] ?? 0) >= 1800)) {
             return $svc;
         }
         $panel = select("marzban_panel", "*", "name_panel", $svc['panel'], "select");
@@ -1191,10 +1201,14 @@ if (!function_exists('payg_tick')) {
                 }
                 return;
             }
-            // active: the volume every two minutes when it is priced, and
-            // every ten to notice a service deleted on the panel by hand
+            // active: the volume at every run when it is priced - what a
+            // service uses between two readings is billed late, and lost when
+            // the wallet cannot pay it (50 s, so a run that starts a moment
+            // early still reads it) - and every ten minutes to notice a
+            // service deleted on the panel by hand
             $used = null;
-            if ($now - (int) $svc['polled_at'] >= ($rates['pb'] !== null ? 120 : 600)) {
+            $pace = 0.0;
+            if ($now - (int) $svc['polled_at'] >= ($rates['pb'] !== null ? 50 : 600)) {
                 $d = payg_panel_data($panel, $svc['username']);
                 payg_set($svc['id_invoice'], ['polled_at' => $now]);
                 if ($d['ok'] && $d['gone']) {
@@ -1204,6 +1218,8 @@ if (!function_exists('payg_tick')) {
                 }
                 if ($d['ok']) {
                     $used = $d['used'];
+                    // bytes a second since the last reading (payg_sync_caps)
+                    $pace = max(0, $used - (int) $svc['billed_bytes']) / max(60, $now - (int) $svc['polled_at']);
                 }
             }
             $r = payg_bill($svc, $used);
@@ -1213,7 +1229,7 @@ if (!function_exists('payg_tick')) {
                 return;
             }
             payg_warn($svc, $cfg, $rates, $r['left']);
-            payg_sync_caps($svc, $rates, $r['left'], $used ?? (int) $svc['billed_bytes']);
+            payg_sync_caps($svc, $rates, $r['left'], $used ?? (int) $svc['billed_bytes'], false, $pace);
         });
     }
     // ⚠️ the wallet went under one of the admin's amounts: told once per
