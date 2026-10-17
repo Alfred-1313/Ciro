@@ -11,9 +11,12 @@
 // 10,000-toman hour is 166.67 and the hour is 10,000 exactly.
 //
 // Panel: the service's own expiry and volume there are set to what the wallet
-// still covers (raised at once, lowered at most every half hour - every change
-// reaches all of the panel's nodes), so even with the bot down nobody uses
-// much more than they have.
+// still covers - counted together with the owner's other hourly services on
+// the same wallet, and the volume after the clocks until the panel is told
+// again - so while the cron runs nobody gets past their wallet. With the bot
+// down each of the two still stops at the wallet on its own (time and traffic
+// together can then go past it). Every change reaches all of the panel's
+// nodes, so it is not sent every minute for nothing (payg_sync_caps).
 // When the wallet runs out the service is switched off; after the admin's
 // grace period it is deleted, unless the wallet was topped up in between.
 //
@@ -53,6 +56,7 @@ if (!function_exists('payg_ensure_schema')) {
             cap_limit BIGINT NOT NULL DEFAULT 0,
             cap_at INT NOT NULL DEFAULT 0,
             polled_at INT NOT NULL DEFAULT 0,
+            pace DOUBLE NOT NULL DEFAULT 0,
             KEY payg_user (user_id),
             KEY payg_status (status))
             ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci");
@@ -91,6 +95,15 @@ if (!function_exists('payg_ensure_schema')) {
             }
         } catch (Exception $e) {
             error_log('payg cap_at column: ' . $e->getMessage());
+        }
+        // payg_service.pace: bytes a second at the last reading (payg_sync_caps)
+        try {
+            $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payg_service' AND COLUMN_NAME = 'pace'")->fetchColumn();
+            if (!$has) {
+                $pdo->exec("ALTER TABLE payg_service ADD pace DOUBLE NOT NULL DEFAULT 0 AFTER polled_at");
+            }
+        } catch (Exception $e) {
+            error_log('payg pace column: ' . $e->getMessage());
         }
     }
 }
@@ -377,6 +390,24 @@ if (!function_exists('payg_money')) {
             $n += 1048576 * $rates['pb'];
         }
         return max($n, payg_minor($cur));
+    }
+    // the same for all of $uid's running hourly services in $cur together -
+    // they draw on one wallet, so it must keep all of them going for a minute
+    function payg_need_running($uid, $cur)
+    {
+        global $pdo;
+        $st = $pdo->prepare("SELECT lang FROM payg_service WHERE user_id = ? AND currency = ? AND status = 'active'");
+        $st->execute([(string) $uid, (string) $cur]);
+        $langs = $st->fetchAll(PDO::FETCH_COLUMN);
+        if (!$langs) {
+            return 0.0;
+        }
+        $group = payg_group_of(select("user", "*", "id", (string) $uid, "select"));
+        $n = 0.0;
+        foreach ($langs as $lang) {
+            $n += payg_need(payg_rates(payg_cfg($lang), $group), $cur);
+        }
+        return $n;
     }
     // a price, also one below the currency's own coin: a dollar price can be
     // $0.0015 a minute, so up to four decimals; a toman one smaller than a
@@ -763,45 +794,94 @@ if (!function_exists('payg_panel_set')) {
         }
         return [$expire, $limit];
     }
-    // tells the panel what the wallet covers now: right away when that went up
-    // (a top-up, another purchase), or the panel would stop a service that is
-    // still paid for; at most every half hour when it went down. It goes down
-    // every minute whenever the wallet pays for more than this one clock (its
-    // traffic, or the owner's other hourly services on the same wallet), and
-    // the panel passes each change on to all of its nodes as an «update
-    // user» - once a minute that kept every node busy. The cron stops the
-    // service itself when the wallet runs out; the panel's own expiry is only
-    // for when the bot is down, but its volume is also what stops a service
-    // between two readings - so a lower volume goes out at once when the
-    // wallet could run out within ten minutes. $pace: bytes a second since
-    // the last reading.
+    // tells the panel what the wallet still covers for this service. The
+    // owner's other running hourly services in the same currency draw on the
+    // same wallet, so they are counted together:
+    //  - expiry: when the wallet runs out with all of their clocks running
+    //    (each its own whole wallet would let them all run on it at once while
+    //    the bot is down);
+    //  - volume: what the wallet covers after the clocks until the panel is
+    //    told again - half an hour, a minute near the end - so the panel never
+    //    lets a service run past the wallet between two readings; near the end
+    //    (ten minutes of everyone's traffic, forty of the clocks) it is shared
+    //    between the services by how fast each one goes.
+    // Up goes out at once (a top-up, a service gone), or the panel would stop a
+    // service that is paid for. Down goes out every half hour, every minute
+    // near the end, and at once when the panel lets a service past the wallet
+    // (money spent elsewhere, a new service): every change is an «update user»
+    // on every node of the panel - once a minute for nothing kept them busy.
+    // $pace: bytes a second since the last reading.
     function payg_sync_caps(array $svc, array $rates, $avail, $used, $force = false, $pace = 0.0)
     {
+        global $pdo;
         // nothing priced at all (an admin's slip): the panel keeps what it has
         if ($rates['ps'] === null && $rates['pb'] === null) {
             return $svc;
         }
         $now = time();
-        // what is owed but not taken yet (less than the smallest coin) is spent
-        // already - counted in, the clock crept up between two charges
-        [$expire, $limit] = payg_caps($rates, max(0, (float) $avail - (float) ($svc['carry'] ?? 0)), $used, $now);
+        $id = (string) $svc['id_invoice'];
+        $used = (int) $used;
+        // spent already: what is owed but not taken yet (less than the smallest
+        // coin - counted in, the clock crept up between two charges), and what
+        // the others used since their last bill
+        $net = (float) $avail - (float) ($svc['carry'] ?? 0);
+        $clocks = (float) ($rates['ps'] ?? 0);
+        $paces = [$id => max(0.0, (float) $pace)];
+        $starved = [$id => (int) $svc['cap_limit'] > 0 && $used >= (int) $svc['cap_limit'] - 1048576];
+        $st = $pdo->prepare("SELECT * FROM payg_service WHERE user_id = ? AND currency = ? AND status = 'active' AND id_invoice <> ?");
+        $st->execute([(string) $svc['user_id'], (string) $svc['currency'], $id]);
+        $others = $st->fetchAll(PDO::FETCH_ASSOC);
+        $group = $others ? payg_group_of(select("user", "*", "id", (string) $svc['user_id'], "select")) : 'f';
+        foreach ($others as $o) {
+            $or = payg_rates(payg_cfg($o['lang']), $group);
+            $op = max(0.0, (float) ($o['pace'] ?? 0));
+            $net -= (float) $o['carry'] + max(0, $now - (int) $o['billed_until']) * (float) ($or['ps'] ?? 0);
+            $clocks += (float) ($or['ps'] ?? 0);
+            if ($or['pb'] !== null) {
+                $net -= $op * max(0, $now - (int) $o['polled_at']) * $or['pb'];
+                $paces[(string) $o['id_invoice']] = $op;
+                $starved[(string) $o['id_invoice']] = (int) $o['cap_limit'] > 0 && (int) $o['billed_bytes'] >= (int) $o['cap_limit'] - 1048576;
+            }
+        }
+        $net = max(0.0, $net);
+        $expire = $rates['ps'] !== null ? $now + (int) floor($net / $clocks) : 0;
+        $limit = 0;
+        $near = false;
+        $room = 0.0;
+        if ($rates['pb'] !== null) {
+            // bytes the wallet covers; the clocks in this service's bytes a second
+            $room = $net / $rates['pb'];
+            $tick = $clocks / $rates['pb'];
+            $near = $room <= array_sum($paces) * 600 + $tick * 2400;
+            $free = max(0.0, $room - $tick * ($near ? 60 : 1800));
+            if ($near && count($paces) > 1) {
+                // each its part, by pace: one that hit its volume counts as the
+                // fastest, a quiet one as a megabyte a minute (so it can start)
+                $top = max($paces);
+                $w = [];
+                foreach ($paces as $k => $p) {
+                    $w[$k] = max($starved[$k] ? $top : $p, 1048576 / 60);
+                }
+                $free *= $w[$id] / array_sum($w);
+            }
+            // 0 is «no limit» to a panel - an empty wallet must stop it instead
+            $limit = max($used + (int) floor($free), $used, 1);
+        }
         $oldExpire = (int) $svc['cap_expire'];
         $oldLimit = (int) $svc['cap_limit'];
         // 0 is «none» to a panel: from none to a date or back is always sent
         $up = ($expire === 0) !== ($oldExpire === 0) || $expire - $oldExpire > 120;
         $down = $expire !== 0 && $oldExpire !== 0 && $oldExpire - $expire > 120;
-        $soon = false;
+        // the panel's expiry far past the wallet's
+        $past = $expire !== 0 && $oldExpire !== 0 && $oldExpire - $now > 1.5 * max(60, $expire - $now) + 120;
         if ($rates['pb'] !== null) {
             $up = $up || $oldLimit === 0 || $limit - $oldLimit > 10485760;
-            $lower = $oldLimit !== 0 && $oldLimit - $limit > 10485760;
-            $down = $down || $lower;
-            // how fast the wallet goes, in bytes a second: this service's
-            // traffic, and the rest (its clock, the owner's other services) as
-            // much as the panel's volume fell behind since it was last told
-            $drain = (float) $pace + ($oldLimit - $limit) / max(60, $now - (int) ($svc['cap_at'] ?? 0));
-            $soon = $lower && $drain > 0 && $limit - (int) $used <= $drain * 600;
+            $down = $down || ($oldLimit !== 0 && $oldLimit - $limit > 10485760);
+            // the panel lets it use more than the whole wallet covers now
+            $past = $past || ($oldLimit !== 0 && $oldLimit - $used > $room + 10485760);
         }
-        if (!$force && !$up && !$soon && !($down && $now - (int) ($svc['cap_at'] ?? 0) >= 1800)) {
+        $due = $now - (int) ($svc['cap_at'] ?? 0) >= ($near ? 60 : 1800);
+        if (!$force && !$up && !$past && !($down && $due)) {
             return $svc;
         }
         $panel = select("marzban_panel", "*", "name_panel", $svc['panel'], "select");
@@ -850,7 +930,7 @@ if (!function_exists('payg_create')) {
         $rates = payg_rates($cfg, payg_group_of($u));
         $cur = currency_for_lang($lang);
         $have = payg_wallet($uid, $cur);
-        $need = max($cfg['minbal'], payg_need($rates, $cur));
+        $need = max($cfg['minbal'], payg_need_running($uid, $cur) + payg_need($rates, $cur));
         if ($have + 1e-9 < $need) {
             return ['error' => 'lowbal', 'need' => $need, 'have' => $have, 'cur' => $cur];
         }
@@ -975,7 +1055,7 @@ if (!function_exists('payg_bill')) {
             $pdo->prepare("INSERT INTO payg_charge (id_invoice, user_id, lang, currency, hour_at, amount, seconds, bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE amount = amount + VALUES(amount), seconds = seconds + VALUES(seconds), bytes = bytes + VALUES(bytes)")
                 ->execute([$svc['id_invoice'], $svc['user_id'], $svc['lang'], $svc['currency'], (int) (floor($now / 3600) * 3600), $taken, $seconds, $bytes]);
         }
-        return ['taken' => $taken, 'exhausted' => $short || $left + 1e-9 < payg_need($rates, $svc['currency']), 'left' => $left];
+        return ['taken' => $taken, 'exhausted' => $short || $left + 1e-9 < payg_need_running($svc['user_id'], $svc['currency']), 'left' => $left];
     }
     // settles what is owed up to now (with the panel's latest volume) -
     // before a 🗑, a ⏩ and on 🔄. 'data' is what the panel said.
@@ -1183,7 +1263,7 @@ if (!function_exists('payg_tick')) {
             }
             if ($svc['status'] === 'stopped') {
                 $have = payg_wallet($svc['user_id'], $svc['currency']);
-                if ($have + 1e-9 >= max($cfg['minbal'], payg_need($rates, $svc['currency']))) {
+                if ($have + 1e-9 >= max($cfg['minbal'], payg_need_running($svc['user_id'], $svc['currency']) + payg_need($rates, $svc['currency']))) {
                     payg_resume($svc);
                     return;
                 }
@@ -1218,8 +1298,10 @@ if (!function_exists('payg_tick')) {
                 }
                 if ($d['ok']) {
                     $used = $d['used'];
-                    // bytes a second since the last reading (payg_sync_caps)
-                    $pace = max(0, $used - (int) $svc['billed_bytes']) / max(60, $now - (int) $svc['polled_at']);
+                    // bytes a second since the last reading - kept, the owner's
+                    // other services share the wallet by it (payg_sync_caps)
+                    $pace = max(0, $used - (int) $svc['billed_bytes']) / max(30, $now - (int) $svc['polled_at']);
+                    payg_set($svc['id_invoice'], ['pace' => $pace]);
                 }
             }
             $r = payg_bill($svc, $used);
@@ -1337,7 +1419,7 @@ if (!function_exists('payg_rates_text')) {
             '{rates}' => payg_rates_text($rates, $cur, $tx),
             '{start}' => $cfg['start'] === 'connect' ? $w['startConnect'] : $w['startCreate'],
             '{balance}' => money($left, $cur),
-            '{need}' => money(max($cfg['minbal'], payg_need($rates, $cur)), $cur),
+            '{need}' => money(max($cfg['minbal'], payg_need_running($userRow['id'], $cur) + payg_need($rates, $cur)), $cur),
             '{estimate}' => payg_estimate_text($rates, $left, $tx),
         ]);
         $rows = [[['text' => $w['btnCreate'], 'callback_data' => 'paygmk_' . $panel['code_panel'], 'style' => 'success']]];
