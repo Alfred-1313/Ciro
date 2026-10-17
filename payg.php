@@ -11,7 +11,9 @@
 // 10,000-toman hour is 166.67 and the hour is 10,000 exactly.
 //
 // Panel: the service's own expiry and volume there are set to what the wallet
-// still covers, so even with the bot down nobody uses more than they have.
+// still covers (raised at once, lowered at most every half hour - every change
+// reaches all of the panel's nodes), so even with the bot down nobody uses
+// much more than they have.
 // When the wallet runs out the service is switched off; after the admin's
 // grace period it is deleted, unless the wallet was topped up in between.
 //
@@ -49,6 +51,7 @@ if (!function_exists('payg_ensure_schema')) {
             warned VARCHAR(200) NOT NULL DEFAULT '',
             cap_expire INT NOT NULL DEFAULT 0,
             cap_limit BIGINT NOT NULL DEFAULT 0,
+            cap_at INT NOT NULL DEFAULT 0,
             polled_at INT NOT NULL DEFAULT 0,
             KEY payg_user (user_id),
             KEY payg_status (status))
@@ -79,6 +82,15 @@ if (!function_exists('payg_ensure_schema')) {
             }
         } catch (Exception $e) {
             error_log('payg column: ' . $e->getMessage());
+        }
+        // payg_service.cap_at: when the panel was last told (payg_sync_caps)
+        try {
+            $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payg_service' AND COLUMN_NAME = 'cap_at'")->fetchColumn();
+            if (!$has) {
+                $pdo->exec("ALTER TABLE payg_service ADD cap_at INT NOT NULL DEFAULT 0 AFTER cap_limit");
+            }
+        } catch (Exception $e) {
+            error_log('payg cap_at column: ' . $e->getMessage());
         }
     }
 }
@@ -751,26 +763,43 @@ if (!function_exists('payg_panel_set')) {
         }
         return [$expire, $limit];
     }
-    // tells the panel what the wallet covers now, when that has moved (a
-    // top-up, another purchase) - not every minute, since a charge moves the
-    // wallet and the clock by the same amount
+    // tells the panel what the wallet covers now: right away when that went up
+    // (a top-up, another purchase), or the panel would stop a service that is
+    // still paid for; at most every half hour when it went down. It goes down
+    // every minute whenever the wallet pays for more than this one clock (its
+    // traffic, or the owner's other hourly services on the same wallet), and
+    // the panel passes each change on to all of its nodes as an «update
+    // user» - once a minute that kept every node busy. The cron stops the
+    // service itself when the wallet runs out; the panel's own expiry and
+    // volume are only for when the bot is down.
     function payg_sync_caps(array $svc, array $rates, $avail, $used, $force = false)
     {
         // nothing priced at all (an admin's slip): the panel keeps what it has
         if ($rates['ps'] === null && $rates['pb'] === null) {
             return $svc;
         }
-        [$expire, $limit] = payg_caps($rates, $avail, $used, time());
-        $moved = abs($expire - (int) $svc['cap_expire']) > 120
-            || ($rates['pb'] !== null && abs($limit - (int) $svc['cap_limit']) > 10485760);
-        if (!$force && !$moved) {
+        $now = time();
+        // what is owed but not taken yet (less than the smallest coin) is spent
+        // already - counted in, the clock crept up between two charges
+        [$expire, $limit] = payg_caps($rates, max(0, (float) $avail - (float) ($svc['carry'] ?? 0)), $used, $now);
+        $oldExpire = (int) $svc['cap_expire'];
+        $oldLimit = (int) $svc['cap_limit'];
+        // 0 is «none» to a panel: from none to a date or back is always sent
+        $up = ($expire === 0) !== ($oldExpire === 0) || $expire - $oldExpire > 120;
+        $down = $expire !== 0 && $oldExpire !== 0 && $oldExpire - $expire > 120;
+        if ($rates['pb'] !== null) {
+            $up = $up || $oldLimit === 0 || $limit - $oldLimit > 10485760;
+            $down = $down || ($oldLimit !== 0 && $oldLimit - $limit > 10485760);
+        }
+        if (!$force && !$up && !($down && $now - (int) ($svc['cap_at'] ?? 0) >= 1800)) {
             return $svc;
         }
         $panel = select("marzban_panel", "*", "name_panel", $svc['panel'], "select");
         if (payg_panel_set($panel, $svc['username'], $expire, $limit, true)) {
-            payg_set($svc['id_invoice'], ['cap_expire' => $expire, 'cap_limit' => $limit]);
+            payg_set($svc['id_invoice'], ['cap_expire' => $expire, 'cap_limit' => $limit, 'cap_at' => $now]);
             $svc['cap_expire'] = $expire;
             $svc['cap_limit'] = $limit;
+            $svc['cap_at'] = $now;
         }
         return $svc;
     }
