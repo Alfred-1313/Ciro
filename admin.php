@@ -7030,7 +7030,7 @@ if (preg_match('/^statusbtn\|text\|([a-z]{2})\|([^|]+)$/', $datain, $sb_m) && $a
     $sb_kb = json_encode(['inline_keyboard' => [
         [['text' => '❌ انصراف', 'callback_data' => "statusbtn|cat|{$sb_m[1]}|text"]],
     ]]);
-    Editmessagetext($from_id, $message_id, "✏️ متن جدید دکمه رو بفرست ✍️", $sb_kb, 'HTML');
+    Editmessagetext($from_id, $message_id, "✏️ متن جدید دکمه رو بفرست ✍️\n\n💎 اگه اول اسم یه ایموجی پریمیوم بذاری، همون ایموجی پریمیوم دکمه می‌شه.", $sb_kb, 'HTML');
     return;
 }
 if (preg_match('/^statusbtn\|style\|([a-z]{2})\|([^|]+)\|(primary|success|danger)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
@@ -7194,7 +7194,7 @@ if (preg_match('/^gbtst\|(set|del|cancel)\|([a-z]{2})\|([a-z0-9]{2})$/', $datain
     if ($ts_m[1] === 'set') {
         savedata("clear", "bt_msgid", $message_id);
         step("gbtstwait:{$ts_m[2]}:{$ts_m[3]}", $from_id);
-        Editmessagetext($from_id, $message_id, "🖼 استیکری که وقتی کاربر این دکمه رو می‌زنه براش فرستاده بشه رو بفرست (معمولی یا پریمیوم) 🎁\n\nبرای انصراف، از دکمه‌ی پایین استفاده کن 👇", json_encode(['inline_keyboard' => [
+        Editmessagetext($from_id, $message_id, "🖼 استیکری که وقتی کاربر این دکمه رو می‌زنه براش فرستاده بشه رو بفرست (معمولی یا پریمیوم) - یا یه ایموجی پریمیوم تنها 🎁\n\nبرای انصراف، از دکمه‌ی پایین استفاده کن 👇", json_encode(['inline_keyboard' => [
             [['text' => '❌ انصراف', 'callback_data' => "gbtst|cancel|{$ts_m[2]}|{$ts_m[3]}", 'style' => 'danger']],
         ]]), 'HTML');
         return;
@@ -7212,9 +7212,9 @@ if (preg_match('/^gbtst\|(set|del|cancel)\|([a-z]{2})\|([a-z0-9]{2})$/', $datain
 }
 if (preg_match('/^gbtstwait:([a-z]{2}):([a-z0-9]{2})$/', (string) $user['step'], $ts_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $ts_key = genbtn_alias_to_key($ts_m[2]);
-    $ts_file = $update['message']['sticker']['file_id'] ?? '';
+    $ts_file = sticker_value_from_update($update);
     if ($ts_key === null || $ts_file === '') {
-        sendmessage($from_id, "⚠️ لطفاً یه استیکر بفرست (هر نوع استیکری قابل قبوله) 😅", $btpromptcancel, 'HTML');
+        sendmessage($from_id, "⚠️ لطفاً یه استیکر بفرست، یا یه ایموجی پریمیوم تنها 😅", $btpromptcancel, 'HTML');
         return;
     }
     genbtn_set_tap_sticker($ts_m[1], $ts_key, $ts_file);
@@ -7239,7 +7239,7 @@ if (preg_match('/^clst2set:([a-z]{2}):([a-z]{2})$/', $datain, $cs_m) && $adminru
     $cs_kb = json_encode(['inline_keyboard' => [
         [['text' => '❌ انصراف', 'callback_data' => "clst2cancel:{$cs_m[1]}:{$cs_m[2]}"]],
     ]]);
-    Editmessagetext($from_id, $message_id, "🖼 استیکر جدید رو بفرست (هر نوع استیکری، معمولی یا پریمیوم) 🎁\n\nبرای انصراف، از دکمه‌ی پایین استفاده کن 👇", $cs_kb, 'HTML');
+    Editmessagetext($from_id, $message_id, "🖼 استیکر جدید رو بفرست (هر نوع استیکری، معمولی یا پریمیوم) - یا یه ایموجی پریمیوم تنها 🎁\n\nبرای انصراف، از دکمه‌ی پایین استفاده کن 👇", $cs_kb, 'HTML');
     return;
 }
 if (preg_match('/^clst2time:([a-z]{2}):([a-z]{2})$/', $datain, $cs_m) && $adminrulecheck['rule'] == "administrator") {
@@ -7267,9 +7267,9 @@ if (preg_match('/^clst2cancel:([a-z]{2}):([a-z]{2})$/', $datain, $cs_m) && $admi
 }
 if (preg_match('/^closestickerwait2:([a-z]{2}):([a-z]{2})$/', (string) $user['step'], $cs_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $cs_key = close_sticker_alias_to_key($cs_m[2]);
-    $cs_fileid = $update['message']['sticker']['file_id'] ?? '';
+    $cs_fileid = sticker_value_from_update($update);
     if ($cs_key === null || $cs_fileid === '') {
-        sendmessage($from_id, "⚠️ لطفاً یه استیکر بفرست (هر نوع استیکری قابل قبوله) 😅", $btpromptcancel, 'HTML');
+        sendmessage($from_id, "⚠️ لطفاً یه استیکر بفرست، یا یه ایموجی پریمیوم تنها 😅", $btpromptcancel, 'HTML');
         return;
     }
     close_sticker_save($cs_key, ['file_id' => $cs_fileid], $cs_m[1]);
@@ -7426,14 +7426,14 @@ if (preg_match('/^btnsticker-([a-z]{2})-(\d+)-(\d+)$/', $datain, $es_match) && $
     step("setsticker-{$es_match[1]}-{$es_match[2]}-{$es_match[3]}", $from_id);
     $es_btn = mainmenu_layout_get($es_match[1])['keyboard'][(int) $es_match[2]][(int) $es_match[3]] ?? [];
     $es_hasDefault = (mainmenu_default_stickers()[$es_btn['text'] ?? ''] ?? '') !== '';
-    sendmessage($from_id, "✨ استیکر پریمیوم برای <b>{$es_name}</b> رو بفرست 🎁" . mainmenu_tab_note($es_match[1]) . "\n\n" . ($es_hasDefault ? "(این دکمه یه استیکر پیش‌فرض داره؛ برای برگشت به همون، عدد 0 رو بفرست)" : "(برای حذف استیکر فعلی، عدد 0 رو بفرست)"), $btpromptcancel, 'HTML');
+    sendmessage($from_id, "✨ استیکر پریمیوم برای <b>{$es_name}</b> رو بفرست - یا یه ایموجی پریمیوم تنها 🎁" . mainmenu_tab_note($es_match[1]) . "\n\n" . ($es_hasDefault ? "(این دکمه یه استیکر پیش‌فرض داره؛ برای برگشت به همون، عدد 0 رو بفرست)" : "(برای حذف استیکر فعلی، عدد 0 رو بفرست)"), $btpromptcancel, 'HTML');
     return;
 }
 if (preg_match('/^setsticker-([a-z]{2})-(\d+)-(\d+)$/', $user['step'], $es_match) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $es_lang = $es_match[1];
     $es_r = intval($es_match[2]);
     $es_c = intval($es_match[3]);
-    $es_fileid = $update['message']['sticker']['file_id'] ?? '';
+    $es_fileid = sticker_value_from_update($update);
     $es_layout = mainmenu_layout_get($es_lang);
     if (is_array($es_layout) && isset($es_layout['keyboard'][$es_r][$es_c])) {
         if ($text == '0') {
@@ -7457,7 +7457,7 @@ if (preg_match('/^setsticker-([a-z]{2})-(\d+)-(\d+)$/', $user['step'], $es_match
             mainmenu_layout_save($es_lang, $es_layout);
             $es_msg = "✅ استیکر ذخیره شد! حالا کاربر که این دکمه رو بزنه، اول این استیکر براش ارسال می‌شه ✨";
         } else {
-            sendmessage($from_id, "⚠️ لطفاً یه استیکر بفرست (ترجیحاً استیکر پریمیوم) 😅", $btpromptcancel, 'HTML');
+            sendmessage($from_id, "⚠️ لطفاً یه استیکر بفرست، یا یه ایموجی پریمیوم تنها 😅", $btpromptcancel, 'HTML');
             return;
         }
     } else {
@@ -8291,7 +8291,7 @@ if (preg_match('/^chnrentext-(?:([a-z]{2})-)?(\d+)$/', $datain, $rt_m) && $admin
     $rt_row = select("channels", "*", "id", $rt_id, "select");
     $rt_name = is_array($rt_row) ? channel_button_name(channel_row_for_lang($rt_row, $rt_lang)) : '';
     step("setchnrename-{$rt_lang}-{$rt_id}", $from_id);
-    sendmessage($from_id, "✏️ نام جدید برای <b>{$rt_name}</b> رو بفرست ✍️" . mainmenu_tab_note($rt_lang) . "\n\n(برای برگشت به نام اصلی، عدد 0 رو بفرست)", $btpromptcancel, 'HTML');
+    sendmessage($from_id, "✏️ نام جدید برای <b>{$rt_name}</b> رو بفرست ✍️" . mainmenu_tab_note($rt_lang) . "\n\n(برای برگشت به نام اصلی، عدد 0 رو بفرست)\n\n💎 اگه اول اسم یه ایموجی پریمیوم بذاری، همون ایموجی پریمیوم دکمه می‌شه.", $btpromptcancel, 'HTML');
     return;
 }
 if (preg_match('/^setchnrename-(?:([a-z]{2})-)?(\d+)$/', (string) $user['step'], $rt_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
@@ -8300,8 +8300,12 @@ if (preg_match('/^setchnrename-(?:([a-z]{2})-)?(\d+)$/', (string) $user['step'],
     if ($text == '0') {
         channel_btn_set($rt_lang, $rt_id, "custom_text", null);
         $rt_msg = "✅ نام دکمه به پیش‌فرض برگشت.";
-    } elseif (!empty($text)) {
-        channel_btn_set($rt_lang, $rt_id, "custom_text", trim((string) $text));
+    } elseif (!empty($text) && ($rt_nm = button_name_from_update($text, $update))[0] !== '') {
+        channel_btn_set($rt_lang, $rt_id, "custom_text", $rt_nm[0]);
+        if ($rt_nm[1] !== '') {
+            channel_btn_set($rt_lang, $rt_id, "icon_emoji", $rt_nm[1]);
+            channel_btn_set($rt_lang, $rt_id, "emoji", null);
+        }
         $rt_msg = "✅ نام دکمه تغییر کرد!";
     } else {
         sendmessage($from_id, "⚠️ لطفاً نام جدید رو به صورت متن بفرست 😅", $btpromptcancel, 'HTML');
@@ -8497,7 +8501,7 @@ if (preg_match('/^btact\|sticker\|([a-z]{2})\|(.+)$/', $datain, $btm) && $adminr
         [['text' => '🗑 حذف استیکر', 'callback_data' => "btact|delst|{$btm[1]}|{$btm[2]}"]],
         [['text' => '❌ انصراف', 'callback_data' => "btact|cancel|{$btm[1]}|{$btm[2]}"]],
     ]]);
-    $bt_stickerPrompt = "🖼 یه استیکر بفرست (هر نوع استیکری، معمولی یا پریمیوم) 🎁\n\n";
+    $bt_stickerPrompt = "🖼 یه استیکر بفرست (هر نوع استیکری، معمولی یا پریمیوم) - یا یه ایموجی پریمیوم تنها 🎁\n\n";
     $bt_stickerPrompt .= "از این به بعد، هر وقت ربات این پیام رو بفرسته، اول همین استیکر ارسال می" . "\u{200C}" . "شه.\n\n";
     $bt_stickerPrompt .= "برای حذف یا انصراف، از دکمه" . "\u{200C}" . "های پایین استفاده کن 👇";
     Editmessagetext($from_id, $message_id, $bt_stickerPrompt, $bt_kb, 'HTML');
@@ -8604,7 +8608,7 @@ if (preg_match('/^btact\|bbtntext\|([a-z]{2})$/', $datain, $btm) && $adminrulech
     $bb_cancel_kb = json_encode(['inline_keyboard' => [
         [['text' => '❌ انصراف', 'callback_data' => "btact|bbtn|{$btm[1]}"]],
     ]]);
-    $bb_prompt = "✏️ متن جدید رو بفرست ✍️\n\n🗑 برای برگشت به متن پیش‌فرض، دکمه ریست رو بزن";
+    $bb_prompt = "✏️ متن جدید رو بفرست ✍️\n\n🗑 برای برگشت به متن پیش‌فرض، دکمه ریست رو بزن\n\n💎 اگه اول اسم یه ایموجی پریمیوم بذاری، همون ایموجی پریمیوم دکمه می‌شه.";
     $bb_prompt .= "\n\n📌 راهنمای فرمت\u{200C}بندی\n";
     $bb_prompt .= "به\u{200C}جای X متن دلخواه خودتان را بگذارید:\n\n";
     $bb_prompt .= "🔹 استایل متن\n";
@@ -8767,7 +8771,7 @@ if (preg_match('/^gbs\|(hub|lay|layp|layc|lays|layw|layr|col|colp|emo|emop|emos|
         step(($gs_isEmo ? 'gbtnemo-' : 'gbtntxt-') . "{$gs_lang}-{$gs_alias}-{$gs_idx[0]}" . ($gs_origin === 'u' ? '-u' : ''), $from_id);
         $gs_prompt = $gs_isEmo
             ? sprintf($gs_h['askEmojiForItem'], $gs_name)
-            : sprintf($textbotlang['Admin']['BtnStyle']['askRenameForItem'], $gs_name) . "\n\n⚠️ متن باید بین ۱ تا ۶۴ حرف باشه.";
+            : sprintf($textbotlang['Admin']['BtnStyle']['askRenameForItem'], $gs_name) . "\n\n⚠️ متن باید بین ۱ تا ۶۴ حرف باشه." . (genbtn_text_only($gs_alias) ? '' : "\n\n💎 اگه اول اسم یه ایموجی پریمیوم بذاری، همون ایموجی پریمیوم دکمه می‌شه.");
         $gs_kb = json_encode(['inline_keyboard' => [
             [['text' => '❌ انصراف', 'callback_data' => 'gbs|' . ($gs_isEmo ? 'emo' : 'ren') . "|{$gs_lang}|{$gs_alias}{$gs_sfx}", 'style' => 'danger']],
         ]]);
@@ -8879,13 +8883,18 @@ if (preg_match('/^gbtn\|[a-z]+\|([a-z]{2})\|([a-z]{2})(\|.*)?$/', $datain, $gb_m
 }
 if (preg_match('/^gbtntxt-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|he|td|hb|hv|ab|ut|sp|ar|mg|sl|lc|pl|pu|gb|gt|gr|gh|kb|kt|kr|kh|rw|ma|b[1-6])-([0-9])(?:-(u))?$/', (string) $user['step'], $gb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $gb_key = genbtn_alias_to_key($gb_m[2]);
-    $gb_newtext = trim((string) $text);
+    // a label-only button (reply keyboard, link) shows no premium emoji: the
+    // name stays as it was sent
+    [$gb_newtext, $gb_icon] = genbtn_text_only($gb_m[2]) ? [trim((string) $text), ''] : button_name_from_update($text, $update);
     if ($gb_newtext !== '0' && ($gb_newtext === '' || mb_strlen($gb_newtext) > 64)) {
         sendmessage($from_id, "⚠️ متن باید بین ۱ تا ۶۴ حرف باشه 😅", null, 'HTML');
         return;
     }
     // "0" brings back the default text
     genbtn_set_text($gb_m[1], $gb_key, (int) $gb_m[3], $gb_newtext === '0' ? '' : $gb_newtext);
+    if ($gb_icon !== '') {
+        genbtn_set_style($gb_m[1], $gb_key, (int) $gb_m[3], null, null, $gb_icon);
+    }
     step('home', $from_id);
     $gb_msgid = intval(json_decode((string) ($user['Processing_value'] ?? ''), true)['bt_msgid'] ?? 0);
     $gb_caption = $textbotlang['Admin']['BtnStyle']['renameSaved'] . "\n\n<b>" . genbtn_group_title($gb_m[2], $textbotlang) . "</b>\n\n" . $textbotlang['Admin']['BtnStyle']['renameCaption'];
@@ -8956,7 +8965,7 @@ if (preg_match('/^btact\|bbtnrst\|([a-z]{2})$/', $datain, $btm) && $adminruleche
 }
 if (preg_match('/^btbbtntext-([a-z]{2})$/', (string) $user['step'], $btm) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $bb_lang = $btm[1];
-    $bb_newtext = trim((string) $text);
+    [$bb_newtext, $bb_icon] = button_name_from_update($text, $update);
     if ($bb_newtext === '') {
         sendmessage($from_id, "⚠️ لطفاً یه متن بفرست 😅", $btpromptcancel, 'HTML');
         return;
@@ -8967,6 +8976,10 @@ if (preg_match('/^btbbtntext-([a-z]{2})$/', (string) $user['step'], $btm) && $da
         $bb_be = [];
     }
     $bb_be[$bb_lang]['users.Balance.insufficientBalanceSimple'][0]['text'] = $bb_newtext;
+    if ($bb_icon !== '') {
+        $bb_be[$bb_lang]['users.Balance.insufficientBalanceSimple'][0]['icon_emoji'] = $bb_icon;
+        unset($bb_be[$bb_lang]['users.Balance.insufficientBalanceSimple'][0]['emoji']);
+    }
     update("setting", "button_edit", json_encode($bb_be, JSON_UNESCAPED_UNICODE), null, null);
     step('home', $from_id);
     list($bb_text, $bb_kb) = balancebtn_payload($bb_lang, $textbotlang);
@@ -9085,7 +9098,7 @@ if (preg_match('/^volpct\|text\|([a-z]{2})\|(\d+)$/', $datain, $vp_m) && $adminr
     $vp_prompt .= "🔹 لینک\n";
     $vp_prompt .= "• لینک: <code>&lt;a href=\"آدرس\"&gt;X&lt;/a&gt;</code>";
     $vp_prompt .= "\n\n🔹 ایموجی پریمیوم\n";
-    $vp_prompt .= "• به خاطر محدودیت تلگرام، ایموجی پریمیوم رو فقط ابتدای متن (سمت راست برای فارسی) بفرست";
+    $vp_prompt .= "• هر جای متن می‌تونی ایموجی پریمیوم بذاری؛ همون‌جا که فرستادی می‌مونه";
     $vp_prompt .= "\n\n🔹 اطلاعات کاربر و بسته\n";
     $vp_prompt .= "• نام اکانت (یوزرنیم سرویس): <code>{username}</code>\n";
     $vp_prompt .= "• درصد مصرف شده: <code>{usedpercent}</code>\n";
@@ -9111,7 +9124,7 @@ if (preg_match('/^volpct\|btntext\|([a-z]{2})\|(\d+)$/', $datain, $vp_m) && $adm
     $vp_kb = json_encode(['inline_keyboard' => [
         [['text' => '❌ انصراف', 'callback_data' => "volpct|open|{$vp_m[1]}|{$vp_m[2]}"]],
     ]]);
-    Editmessagetext($from_id, $message_id, "✏️ متن جدید دکمه رو بفرست ✍️", $vp_kb, 'HTML');
+    Editmessagetext($from_id, $message_id, "✏️ متن جدید دکمه رو بفرست ✍️\n\n💎 اگه اول اسم یه ایموجی پریمیوم بذاری، همون ایموجی پریمیوم دکمه می‌شه.", $vp_kb, 'HTML');
     return;
 }
 if (preg_match('/^volpct\|sticker\|([a-z]{2})\|(\d+)$/', $datain, $vp_m) && $adminrulecheck['rule'] == "administrator") {
@@ -9120,7 +9133,7 @@ if (preg_match('/^volpct\|sticker\|([a-z]{2})\|(\d+)$/', $datain, $vp_m) && $adm
     $vp_kb = json_encode(['inline_keyboard' => [
         [['text' => '❌ انصراف', 'callback_data' => "volpct|open|{$vp_m[1]}|{$vp_m[2]}"]],
     ]]);
-    Editmessagetext($from_id, $message_id, "🖼 یه استیکر بفرست (هر نوع استیکری قابل قبوله) 😅", $vp_kb, 'HTML');
+    Editmessagetext($from_id, $message_id, "🖼 یه استیکر بفرست (هر نوع استیکری، معمولی یا پریمیوم) - یا یه ایموجی پریمیوم تنها 🎁", $vp_kb, 'HTML');
     return;
 }
 if (preg_match('/^volpct\|style\|([a-z]{2})\|(\d+)\|(primary|success|danger)$/', $datain, $vp_m) && $adminrulecheck['rule'] == "administrator") {
@@ -9302,9 +9315,9 @@ if (preg_match('/^btact\|btnsrstall\|([a-z]{2})$/', $datain, $btm) && $adminrule
 if (preg_match('/^btsticker-([a-z]{2})-(.+)$/', (string) $user['step'], $btm) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $bt_lang = $btm[1];
     $bt_key = $btm[2];
-    $bt_fileid = $update['message']['sticker']['file_id'] ?? '';
+    $bt_fileid = sticker_value_from_update($update);
     if ($bt_fileid === '') {
-        sendmessage($from_id, "⚠️ لطفاً یه استیکر بفرست (هر نوع استیکری قابل قبوله) 😅", $btpromptcancel, 'HTML');
+        sendmessage($from_id, "⚠️ لطفاً یه استیکر بفرست، یا یه ایموجی پریمیوم تنها 😅", $btpromptcancel, 'HTML');
         return;
     }
     $bt_setting = select("setting", "*", null, null, "select");
@@ -9402,12 +9415,15 @@ if (preg_match('/^btbtntext-([a-z]{2})-([01])$/', (string) $user['step'], $btm) 
 if (preg_match('/^statusbtntxt-([a-z]{2})-(.+)$/', (string) $user['step'], $sb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $sb_lang = $sb_m[1];
     $sb_key = $sb_m[2];
-    $sb_newtext = trim((string) $text);
+    [$sb_newtext, $sb_icon] = button_name_from_update($text, $update);
     if ($sb_newtext === '' || mb_strlen($sb_newtext) > 64) {
         sendmessage($from_id, "⚠️ متن باید بین ۱ تا ۶۴ حرف باشه 😅", $btpromptcancel, 'HTML');
         return;
     }
     statusbtn_set_field($sb_lang, $sb_key, 'text', $sb_newtext);
+    if ($sb_icon !== '') {
+        statusbtn_set_field($sb_lang, $sb_key, 'emojiIcon', $sb_icon);
+    }
     step('home', $from_id);
     list($sb_text, $sb_kb) = statusbtn_cat_payload($sb_lang, 'text', $textbotlang);
     $sb_msgid = intval(json_decode((string) ($user['Processing_value'] ?? ''), true)['bt_msgid'] ?? 0);
@@ -9819,7 +9835,8 @@ if (preg_match('/^volpcttxt-pct-([a-z]{2})-(\d+)$/', (string) $user['step'], $vp
 if (preg_match('/^volpcttxt-cap-([a-z]{2})-(\d+)$/', (string) $user['step'], $vp_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $vp_lang = $vp_m[1];
     $vp_index = (int) $vp_m[2];
-    $vp_newtext = trim((string) $text);
+    // its premium emoji kept as <tg-emoji>, like every other caption editor
+    $vp_newtext = topup_caption_text_from_update($text, $update);
     if ($vp_newtext === '') {
         sendmessage($from_id, "⚠️ لطفاً یه متن بفرست 😅", $btpromptcancel, 'HTML');
         return;
@@ -9840,12 +9857,15 @@ if (preg_match('/^volpcttxt-cap-([a-z]{2})-(\d+)$/', (string) $user['step'], $vp
 if (preg_match('/^volpcttxt-btn-([a-z]{2})-(\d+)$/', (string) $user['step'], $vp_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $vp_lang = $vp_m[1];
     $vp_index = (int) $vp_m[2];
-    $vp_newtext = trim((string) $text);
+    [$vp_newtext, $vp_icon] = button_name_from_update($text, $update);
     if ($vp_newtext === '') {
         sendmessage($from_id, "⚠️ لطفاً یه متن بفرست 😅", $btpromptcancel, 'HTML');
         return;
     }
     volumepct_tier_set_btnlabel($vp_index, $vp_lang, $vp_newtext);
+    if ($vp_icon !== '') {
+        volumepct_tier_set_style($vp_index, null, null, $vp_icon);
+    }
     step('home', $from_id);
     list($vp_text, $vp_kb) = volumepct_tier_detail_payload($vp_index, $vp_lang, $textbotlang);
     $vp_msgid = intval(json_decode((string) ($user['Processing_value'] ?? ''), true)['bt_msgid'] ?? 0);
@@ -9861,9 +9881,9 @@ if (preg_match('/^volpcttxt-btn-([a-z]{2})-(\d+)$/', (string) $user['step'], $vp
 if (preg_match('/^volpctstk-([a-z]{2})-(\d+)$/', (string) $user['step'], $vp_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $vp_lang = $vp_m[1];
     $vp_index = (int) $vp_m[2];
-    $vp_fileid = $update['message']['sticker']['file_id'] ?? '';
+    $vp_fileid = sticker_value_from_update($update);
     if ($vp_fileid === '') {
-        sendmessage($from_id, "⚠️ لطفاً یه استیکر بفرست (هر نوع استیکری قابل قبوله) 😅", $btpromptcancel, 'HTML');
+        sendmessage($from_id, "⚠️ لطفاً یه استیکر بفرست، یا یه ایموجی پریمیوم تنها 😅", $btpromptcancel, 'HTML');
         return;
     }
     volumepct_tier_set_sticker($vp_index, $vp_lang, $vp_fileid);

@@ -107,7 +107,7 @@ for ($i = 0; $i < 20; $i++) {
         }
     } elseif ($info['type'] == "forwardmessage") {
         if ($bm_fwdSticker !== '') {
-            telegram('sendSticker', ['chat_id' => $iduser->id, 'sticker' => $bm_fwdSticker]);
+            sticker_value_send($iduser->id, $bm_fwdSticker);
         }
         $meesage = forwardMessage($info['id_admin'], $info['message'], $iduser->id);
         if ($meesage['ok'] and $info['pingmessage'] == "yes") {

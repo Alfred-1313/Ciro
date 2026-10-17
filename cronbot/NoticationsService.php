@@ -246,7 +246,7 @@ class ServiceMonitor
         $keyboard = affrw_renew_blocked($invoice) ? null : volumepct_tier_kb($tierIndex, $lang, $t, $invoice['id_invoice']);
         $sticker = volumepct_tier_sticker($tierIndex, $lang);
         if ($sticker !== '') {
-            telegram('sendSticker', ['chat_id' => $invoice['id_user'], 'sticker' => $sticker], $invoice['bottype']);
+            sticker_value_send($invoice['id_user'], $sticker, $invoice['bottype']);
         }
         sendmessage($invoice['id_user'], $caption, $keyboard, 'HTML', $invoice['bottype']);
         update("invoice", "notifctions", json_encode($notif), "id_invoice", $invoice['id_invoice']);

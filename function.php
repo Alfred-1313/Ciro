@@ -5162,6 +5162,57 @@ if (!function_exists('topup_caption_text_from_update')) {
         return trim((string) $text);
     }
 }
+if (!function_exists('sticker_value_from_update')) {
+    // What a 🎨 sticker prompt takes: a sticker of any kind (a premium pack's
+    // included) - its file_id - or one premium emoji on its own, which Telegram
+    // shows big and animated like a sticker: kept as its <tg-emoji> tag (a
+    // file_id never holds a '<'). '' for anything else.
+    function sticker_value_from_update($update)
+    {
+        $msg = $update['message'] ?? [];
+        $fileId = (string) ($msg['sticker']['file_id'] ?? '');
+        if ($fileId !== '') {
+            return $fileId;
+        }
+        $ents = array_values(array_filter((array) ($msg['entities'] ?? []), function ($e) {
+            return ($e['type'] ?? '') === 'custom_emoji' && !empty($e['custom_emoji_id']);
+        }));
+        if (count($ents) !== 1) {
+            return '';
+        }
+        $html = premium_emoji_html_from_entities((string) ($msg['text'] ?? ''), $ents);
+        return preg_match('#^<tg-emoji emoji-id="[^"]+">[^<]+</tg-emoji>$#u', $html) ? $html : '';
+    }
+    // sends what sticker_value_from_update() kept: the sticker, or the premium
+    // emoji as a message of its own (telegram() re-sends it with the plain
+    // emoji where this bot may not show premium ones). Telegram's answer.
+    function sticker_value_send($chatId, $value, $botToken = null)
+    {
+        $value = (string) $value;
+        if (strpos($value, '<tg-emoji') === 0) {
+            return telegram('sendMessage', ['chat_id' => $chatId, 'text' => $value, 'parse_mode' => 'HTML'], $botToken);
+        }
+        return telegram('sendSticker', ['chat_id' => $chatId, 'sticker' => $value], $botToken);
+    }
+}
+if (!function_exists('button_name_from_update')) {
+    // A button's new name as the admin sent it. A premium emoji cannot sit
+    // inside a button's text, so one at its very start becomes the button's
+    // premium emoji: [the name without it, its id or ''].
+    function button_name_from_update($text, $update)
+    {
+        $msg = $update['message'] ?? [];
+        $raw = (string) ($msg['text'] ?? $text);
+        foreach ((array) ($msg['entities'] ?? []) as $e) {
+            if (($e['type'] ?? '') === 'custom_emoji' && !empty($e['custom_emoji_id']) && (int) ($e['offset'] ?? -1) === 0) {
+                $u16 = mb_convert_encoding($raw, 'UTF-16LE', 'UTF-8');
+                $rest = mb_convert_encoding(substr($u16, (int) $e['length'] * 2), 'UTF-8', 'UTF-16LE');
+                return [trim($rest), (string) $e['custom_emoji_id']];
+            }
+        }
+        return [trim((string) $text), ''];
+    }
+}
 if (!function_exists('topup_range_caption_map')) {
     // ---- the "❌ حداقل مبلغ واریزی ..." notice, worded per gateway ----
     // {lang: {gatewayKey: text}}, same shape and contract as
@@ -17103,8 +17154,10 @@ if (!function_exists('volumepct_tier_detail_payload')) {
         $meta = volumepct_kind_meta($kind);
         $defaultCaption = volumepct_tier_default_text($tabTexts, $kind);
         $title = $meta['single'] ? $meta['title'] : sprintf($meta['title'], $pct);
+        // the caption as the customer gets it - its premium emoji and its
+        // formatting rendered, not shown as tags
         $quote = function ($s) {
-            return "<blockquote>" . htmlspecialchars((string) $s, ENT_QUOTES) . "</blockquote>\n";
+            return "<blockquote>" . str_replace(['<blockquote>', '</blockquote>'], '', (string) $s) . "</blockquote>\n";
         };
         $info = "{$meta['icon']} <b>{$title}</b>" . mainmenu_tab_note($lang) . "\n➖➖➖➖➖➖➖➖➖➖\n";
         $info .= "✏️ کپشن: " . ($hasCustomText ? "سفارشی ✅" : "پیش‌فرض") . "\n";
@@ -18250,10 +18303,7 @@ if (!function_exists('close_sticker_play')) {
             }
             return;
         }
-        $res = telegram('sendSticker', [
-            'chat_id' => $chat_id,
-            'sticker' => $cs['file_id'],
-        ]);
+        $res = sticker_value_send($chat_id, $cs['file_id']);
         $stickerMid = (int) ($res['result']['message_id'] ?? 0);
         sleep($cs['duration']);
         foreach ($alsoDelete as $mid) {

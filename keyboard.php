@@ -3004,7 +3004,7 @@ if (!empty($bcb_tap) && function_exists('genbtn_tap_sticker') && function_exists
     $bcb_key = genbtn_alias_to_key($bcb_tap);
     $bcb_file = $bcb_key !== null ? genbtn_tap_sticker(in_array($users['lang'] ?? '', panel_langs(), true) ? $users['lang'] : 'fa', $bcb_key) : '';
     if ($bcb_file !== '') {
-        $bcb_res = telegram('sendSticker', ['chat_id' => $from_id, 'sticker' => $bcb_file]);
+        $bcb_res = sticker_value_send($from_id, $bcb_file);
         $bcb_sent = true;
         // the screen it opens can take it away with its own ❌ بستن
         $bcb_msId = (int) ($bcb_res['result']['message_id'] ?? 0);
@@ -3072,10 +3072,7 @@ if ($sticker_btn_key !== null && !$st_wait && !empty($keyboardRows) && function_
             // its own sticker, or the one it ships with (mainmenu_default_stickers)
             $st_file = is_array($st_btn) ? mainmenu_btn_sticker($st_btn) : '';
             if (is_array($st_btn) && ($st_btn['text'] ?? '') === $sticker_btn_key && $st_file !== '') {
-                $st_sent = telegram('sendSticker', [
-                    'chat_id' => $from_id,
-                    'sticker' => $st_file,
-                ]);
+                $st_sent = sticker_value_send($from_id, $st_file);
                 // stashed so the location_ handler in index.php can delete this
                 // sticker once a panel is picked and the next screen replaces the
                 // panel list - only for the buy button, never other main-menu ones

@@ -324,10 +324,7 @@ if (!function_exists('bottext_send_extras')) {
             }
         }
         if ($bts_extras['sticker'] !== '') {
-            $bts_res = telegram('sendSticker', [
-                'chat_id' => $chat_id,
-                'sticker' => $bts_extras['sticker'],
-            ], $bot_token);
+            $bts_res = sticker_value_send($chat_id, $bts_extras['sticker'], $bot_token);
             return (int) ($bts_res['result']['message_id'] ?? 0);
         }
         return 0;
