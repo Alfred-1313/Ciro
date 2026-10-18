@@ -21345,18 +21345,17 @@ if ($datain == "linkappsetting") {
     // 🏬 تنظیمات فروشگاه ← 🎁 حجم یا زمان گروهی (bulkgift.php) - 👤 مدیریت
     // کاربر's old 🎁 button opens it too. Fresh settings every time it opens.
     step('home', $from_id);
-    $bg_job = bulkgift_active_job();
-    if ($bg_job !== null) {
-        // one run at a time: the one going on, with its 🚫 لغو
+    // what is going on already, each with its 🚫 لغو - a campaign and one
+    // other run can go side by side, so the screen opens anyway
+    foreach (bulkgift_active_jobs() as $bg_job) {
         [$bg_text, $bg_kb] = bulkgift_progress_payload($bg_job);
-        sendmessage($from_id, $textbotlang['Admin']['BulkGift']['busy'] . "\n\n" . $bg_text, $bg_kb, 'HTML');
-        return;
+        sendmessage($from_id, $bg_text, $bg_kb, 'HTML');
     }
     $bg_p = bulkgift_params([]);
     bulkgift_draft_save($from_id, $bg_p);
     [$bg_text, $bg_kb] = bulkgift_hub_payload($bg_p);
     sendmessage($from_id, $bg_text, $bg_kb, 'HTML');
-} elseif (preg_match('/^bgh(?::(k|m|s|l|p|b|a):([a-z0-9]+))?$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^bgh(?::(k|m|s|l|p|b|a|t):([a-z0-9_]+))?$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
     // one setting changed - or 🔙 from a question, or ✏️ تغییر تنظیمات - and
     // the screen again
     step('home', $from_id);
@@ -21395,7 +21394,7 @@ if ($datain == "linkappsetting") {
         if ($bg_val === 'all') {
             $bg_p['buy'] = 'all';
             $bg_p['buyn'] = 0;
-        } elseif (in_array($bg_val, ['days', 'months', 'hours'], true)) {
+        } elseif (in_array($bg_val, ['lasth', 'days', 'months', 'hours', 'next'], true)) {
             // how many first - it is set once that is known
             savedata("clear", "bg_buy", $bg_val);
             step('bgh_buyn', $from_id);
@@ -21404,8 +21403,17 @@ if ($datain == "linkappsetting") {
             Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
             return;
         }
+    } elseif ($bg_key === 't' && in_array($bg_val, bulkgift_statuses(), true)) {
+        // one state on or off - at least one has to stay
+        $bg_on = array_values(array_diff($bg_p['statuses'], [$bg_val]));
+        if (in_array($bg_val, $bg_p['statuses'], true) && !$bg_on) {
+            telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => strip_tags($bg_t['noStatus']), 'show_alert' => true]);
+            return;
+        }
+        $bg_p['statuses'] = in_array($bg_val, $bg_p['statuses'], true) ? $bg_on : array_merge($bg_p['statuses'], [$bg_val]);
     } elseif ($bg_key === 'a') {
-        $bg_p['active'] = $bg_val === '1';
+        // a screen from before the states could be picked one by one
+        $bg_p['statuses'] = $bg_val === '1' ? bulkgift_default_statuses() : bulkgift_statuses();
     }
     bulkgift_draft_save($from_id, $bg_p);
     [$bg_text, $bg_kb] = bulkgift_hub_payload(bulkgift_draft($from_id));
@@ -21430,12 +21438,12 @@ if ($datain == "linkappsetting") {
         $bg_p['value'] = $bg_v;
     } else {
         $bg_n = bulkgift_parse_count((string) $text);
-        if ($bg_n === null) {
-            sendmessage($from_id, $bg_t['badCount'], null, 'HTML');
+        $bg_buy = (string) (json_decode((string) $user['Processing_value'], true)['bg_buy'] ?? '');
+        if ($bg_n === null || ($bg_buy === 'next' && $bg_n > bulkgift_max_next_hours())) {
+            sendmessage($from_id, $bg_buy === 'next' ? $bg_t['badNext'] : $bg_t['badCount'], null, 'HTML');
             return;
         }
-        $bg_buy = (string) (json_decode((string) $user['Processing_value'], true)['bg_buy'] ?? '');
-        if (in_array($bg_buy, ['days', 'months', 'hours'], true)) {
+        if (in_array($bg_buy, ['lasth', 'days', 'months', 'hours', 'next'], true)) {
             $bg_p['buy'] = $bg_buy;
             $bg_p['buyn'] = $bg_n;
         }
@@ -21481,7 +21489,10 @@ if ($datain == "linkappsetting") {
     // 🚀 ادامه: the settings once more, with what they find
     $bg_t = $textbotlang['Admin']['BulkGift'];
     $bg_p = bulkgift_draft($from_id);
-    $bg_why = $bg_p['value'] === null ? $bg_t['noValue'] : (bulkgift_active_job() !== null ? $bg_t['busy'] : (!bulkgift_panels_of($bg_p) ? $bg_t['noPanels'] : null));
+    $bg_live = bulkgift_is_live($bg_p);
+    $bg_why = $bg_p['value'] === null ? $bg_t['noValue']
+        : (bulkgift_active_job($bg_live) !== null ? ($bg_live ? $bg_t['busyLive'] : $bg_t['busy'])
+        : (!bulkgift_panels_of($bg_p) ? $bg_t['noPanels'] : null));
     if ($bg_why !== null) {
         telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => mb_substr(strip_tags($bg_why), 0, 195), 'show_alert' => true]);
         return;

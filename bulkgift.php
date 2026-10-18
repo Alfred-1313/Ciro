@@ -15,7 +15,13 @@
 //
 // ⏱ hourly accounts get nothing - their volume and time are what their
 // wallet pays for - and the admin's report lists them; 🧪 test accounts and
-// ♾ unlimited ones are left out the same way.
+// ♾ unlimited ones are left out the same way. An account that has not been
+// started yet (on hold) gets its time on its length and stays on hold.
+//
+// 🔜 «از الان تا چند ساعت دیگه» makes a run a purchase campaign instead: it
+// starts empty and, until its time is up, takes in every new service sold in
+// the bot - a purchase confirmed later (card-to-card) still counts for a day
+// after the end. One campaign and one other run can go on side by side.
 //
 // Required by function.php, so every entry point (bot, crons, web panel) has it.
 
@@ -47,8 +53,19 @@ if (!function_exists('bulkgift_ensure_schema')) {
             started_at INT NOT NULL DEFAULT 0,
             finished_at INT NOT NULL DEFAULT 0,
             shown_at INT NOT NULL DEFAULT 0,
+            shown_hash VARCHAR(40) NOT NULL DEFAULT '',
             KEY bulk_gift_state (state))
             ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci");
+        // shown_hash came after the first version: the progress text last shown,
+        // so the same one is not sent again every round
+        try {
+            $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bulk_gift_job' AND COLUMN_NAME = 'shown_hash'")->fetchColumn();
+            if (!$has) {
+                $pdo->exec("ALTER TABLE bulk_gift_job ADD shown_hash VARCHAR(40) NOT NULL DEFAULT '' AFTER shown_at");
+            }
+        } catch (Exception $e) {
+            error_log('bulk gift shown_hash column: ' . $e->getMessage());
+        }
         // ukey: the account (panel + username) - one row per account per run
         $pdo->query("CREATE TABLE IF NOT EXISTS bulk_gift_item (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -106,16 +123,40 @@ if (!function_exists('bulkgift_params')) {
             '٫' => '.',
         ]));
     }
+    // the states an account can be in, in the order the screens show them:
+    // 🟢 active, ⏸ not started yet, 📦 volume used up, ⏰ time over, 🚫 disabled
+    function bulkgift_statuses()
+    {
+        return ['active', 'on_hold', 'limited', 'expired', 'disabled'];
+    }
+    // what is picked when nothing says otherwise: every subscription still
+    // going, started or not
+    function bulkgift_default_statuses()
+    {
+        return ['active', 'on_hold'];
+    }
+    // the longest 🔜 campaign, in hours (30 days)
+    function bulkgift_max_next_hours()
+    {
+        return 720;
+    }
+    // 🔜 a purchase campaign rather than one run over what is there now
+    function bulkgift_is_live(array $p)
+    {
+        return $p['buy'] === 'next';
+    }
     // A run's settings from anything - a draft, a job's row, a web form:
-    //   kind    volume | time
-    //   mode    fixed (value: GB, or whole days) | total | left (value: percent)
-    //   scope   bot (the bot's own services) | panel (every account on the panels)
-    //   lang    all | a language - the bot's users of that language (scope bot)
-    //   panels  code_panel list, empty = every panel
-    //   buy     all | days | months (bought in the last buyn) | hours (bought
-    //           buyn hours ago or earlier)
-    //   active  only accounts that are active (or not started yet)
-    //   notify  the owner of each of the bot's services is told
+    //   kind      volume | time
+    //   mode      fixed (value: GB, or whole days) | total | left (value: percent)
+    //   scope     bot (the bot's own services) | panel (every account on the panels)
+    //   lang      all | a language - the bot's users of that language (scope bot)
+    //   panels    code_panel list, empty = every panel
+    //   buy       all | lasth | days | months (bought in the last buyn hours/
+    //             days/months) | hours (bought buyn hours ago or earlier) |
+    //             next (🔜 every purchase from the start until buyn hours later)
+    //   statuses  the account states that get it (bulkgift_statuses())
+    //   notify    the owner of each of the bot's services is told
+    // A started campaign also keeps its window: win_from / win_to / late_until.
     // A value that does not fit its kind and mode is dropped, not guessed at.
     function bulkgift_params($raw)
     {
@@ -138,16 +179,32 @@ if (!function_exists('bulkgift_params')) {
         $o['scope'] = ($p['scope'] ?? '') === 'panel' ? 'panel' : 'bot';
         $o['lang'] = in_array($p['lang'] ?? '', panel_langs(), true) ? $p['lang'] : 'all';
         $o['panels'] = array_values(array_unique(array_filter(array_map('strval', (array) ($p['panels'] ?? [])), 'strlen')));
-        $o['buy'] = in_array($p['buy'] ?? '', ['days', 'months', 'hours'], true) ? $p['buy'] : 'all';
-        $o['buyn'] = max(0, min(100000, (int) ($p['buyn'] ?? 0)));
+        $o['buy'] = in_array($p['buy'] ?? '', ['lasth', 'days', 'months', 'hours', 'next'], true) ? $p['buy'] : 'all';
+        $o['buyn'] = max(0, min($o['buy'] === 'next' ? bulkgift_max_next_hours() : 100000, (int) ($p['buyn'] ?? 0)));
         if ($o['buy'] === 'all' || $o['buyn'] < 1) {
             $o['buy'] = 'all';
             $o['buyn'] = 0;
         }
-        $o['active'] = array_key_exists('active', $p) ? (bool) $p['active'] : true;
+        // what is sold is the bot's: a campaign is about the bot's own services
+        if ($o['buy'] === 'next') {
+            $o['scope'] = 'bot';
+        }
+        // the old single switch: on = still going, off = everything
+        if (array_key_exists('statuses', $p)) {
+            $o['statuses'] = array_values(array_intersect(bulkgift_statuses(), array_map('strval', (array) $p['statuses'])));
+        } elseif (array_key_exists('active', $p)) {
+            $o['statuses'] = $p['active'] ? bulkgift_default_statuses() : bulkgift_statuses();
+        } else {
+            $o['statuses'] = bulkgift_default_statuses();
+        }
         $o['notify'] = array_key_exists('notify', $p) ? (bool) $p['notify'] : true;
         // a job also keeps the names its panels had when it was started
         $o['pnames'] = array_values(array_filter(array_map('strval', (array) ($p['pnames'] ?? [])), 'strlen'));
+        foreach (['win_from', 'win_to', 'late_until'] as $k) {
+            if (isset($p[$k]) && is_numeric($p[$k])) {
+                $o[$k] = (int) $p[$k];
+            }
+        }
         return $o;
     }
     // The amount someone typed: [value, null] or [null, the text of why not]
@@ -188,6 +245,14 @@ if (!function_exists('bulkgift_params')) {
     {
         $now = $now ?? time();
         $n = (int) $p['buyn'];
+        if ($p['buy'] === 'next') {
+            // a campaign: from its start, up to now, never past its end
+            $from = (int) ($p['win_from'] ?? $now);
+            return [$from, min($now, (int) ($p['win_to'] ?? ($from + $n * 3600)))];
+        }
+        if ($p['buy'] === 'lasth') {
+            return [$now - $n * 3600, null];
+        }
         if ($p['buy'] === 'days') {
             return [$now - $n * 86400, null];
         }
@@ -223,10 +288,25 @@ if (!function_exists('bulkgift_all_panels')) {
         $k = subapp_kind(['payg' => $inv['payg'] ?? 0, 'name_product' => $inv['name_product'] ?? '']);
         return $k === 'h' ? 'payg' : ($k === 't' ? 'test' : 'ok');
     }
+    // 🔜 was this service sold? Not a 🧪 test, a 🎁 referral reward or a
+    // panel account an admin handed to a user (🔗 واگذاری) - ⏱ is a sale, and
+    // is left out and listed like everywhere else
+    function bulkgift_is_sale(array $inv)
+    {
+        if (bulkgift_kind_of($inv) === 'test' || (int) ($inv['affrw'] ?? 0) === 1) {
+            return false;
+        }
+        foreach (panel_langs() as $l) {
+            if ((string) ($inv['name_product'] ?? '') === (string) (lang_tab_texts($l)['users']['status']['assignedServiceName'] ?? "\0")) {
+                return false;
+            }
+        }
+        return true;
+    }
     // the bot's own services a run is for, as SQL over invoice i
     // ($names: the panels', always given - a service on a panel the bot no
     // longer has is nobody's to give to)
-    function bulkgift_invoice_where(array $p, array $names)
+    function bulkgift_invoice_where(array $p, array $names, $now = null)
     {
         $w = ["i.Status IN ('" . implode("', '", bulkgift_live_statuses()) . "')"];
         $a = [];
@@ -237,7 +317,7 @@ if (!function_exists('bulkgift_all_panels')) {
             $w[] = "i.id_user IN (SELECT u.id FROM user u WHERE {$lw})";
             $a = array_merge($a, $lp);
         }
-        [$from, $to] = bulkgift_buy_window($p);
+        [$from, $to] = bulkgift_buy_window($p, $now);
         if ($from !== null || $to !== null) {
             $w[] = "i.time_sell REGEXP '^[0-9]+$'";
             if ($from !== null) {
@@ -264,7 +344,8 @@ if (!function_exists('bulkgift_all_panels')) {
         $panels = bulkgift_panels_of($p);
         $names = array_map(fn($r) => (string) $r['name_panel'], $panels);
         $out = ['n' => 0, 'h' => 0, 't' => 0, 'unsupported' => [], 'listable' => false, 'panels' => count($panels)];
-        if ($names) {
+        // a campaign's purchases have not been made yet
+        if ($names && !bulkgift_is_live($p)) {
             [$w, $a] = bulkgift_invoice_where($p, $names);
             $st = $pdo->prepare("SELECT i.Service_location, i.username, i.payg, i.name_product FROM invoice i WHERE {$w}");
             $st->execute($a);
@@ -343,28 +424,54 @@ if (!function_exists('bulkgift_amount_label')) {
         }
         return implode('، ', array_map(fn($n) => aff_bidi($n, htmlspecialchars($n)), $names));
     }
+    // a moment the admin reads: the Jalali date and time, as the bot's reports
+    // write them
+    function bulkgift_when($ts)
+    {
+        if (!function_exists('jdate')) {
+            require_once __DIR__ . '/jdf.php';
+        }
+        return jdate('Y/m/d H:i', (int) $ts);
+    }
     function bulkgift_buy_label(array $p)
     {
         $t = bulkgift_texts();
         if ($p['buy'] === 'all') {
             return $t['buyAllShort'];
         }
+        // a started campaign: its own window
+        if ($p['buy'] === 'next' && isset($p['win_from'], $p['win_to'])) {
+            return strtr($t['buyNextRun'], ['{from}' => bulkgift_when($p['win_from']), '{to}' => bulkgift_when($p['win_to'])]);
+        }
         return strtr($t['buy' . ucfirst($p['buy'])], ['{n}' => number_format($p['buyn'])]);
+    }
+    // «🟢 فعال، ⏸ شروع‌نشده» - or «همه» when every state is picked
+    function bulkgift_status_label(array $p)
+    {
+        $t = bulkgift_texts();
+        if (count($p['statuses']) === count(bulkgift_statuses())) {
+            return $t['statusAllShort'];
+        }
+        if (!$p['statuses']) {
+            return $t['statusNone'];
+        }
+        return implode('، ', array_map(fn($s) => $t['st_' . $s], $p['statuses']));
     }
     // ▫️ one line for each setting
     function bulkgift_summary_rows(array $p)
     {
         $t = bulkgift_texts();
-        return implode("\n", [
+        return implode("\n", array_filter([
             strtr($t['rowKind'], ['{v}' => $p['kind'] === 'time' ? $t['kindTime'] : $t['kindVolume']]),
             strtr($t['rowAmount'], ['{v}' => bulkgift_amount_label($p)]),
-            strtr($t['rowScope'], ['{v}' => bulkgift_scope_label($p)]),
+            // a campaign is about what is sold in the bot, whoever buys it
+            bulkgift_is_live($p) ? '' : strtr($t['rowScope'], ['{v}' => bulkgift_scope_label($p)]),
             strtr($t['rowLang'], ['{v}' => bulkgift_lang_label($p)]),
             strtr($t['rowPanels'], ['{v}' => bulkgift_panels_label($p)]),
             strtr($t['rowBuy'], ['{v}' => bulkgift_buy_label($p)]),
-            strtr($t['rowStatus'], ['{v}' => $p['active'] ? $t['statusActiveShort'] : $t['statusAllShort']]),
+            strtr($t['rowStatus'], ['{v}' => bulkgift_status_label($p)]),
             strtr($t['rowNotify'], ['{v}' => $p['notify'] ? $t['notifyOn'] : $t['notifyOff']]),
-        ]);
+        ], 'strlen'));
     }
 }
 
@@ -378,13 +485,39 @@ if (!function_exists('bulkgift_job')) {
         $r = $st->fetch(PDO::FETCH_ASSOC);
         return $r ?: null;
     }
-    // the run going on now, if there is one - there is never more than one
-    function bulkgift_active_job()
+    // the runs going on now: never more than one ordinary run and one 🔜
+    // campaign
+    function bulkgift_active_jobs()
     {
         global $pdo;
         bulkgift_ensure_schema();
-        $r = $pdo->query("SELECT * FROM bulk_gift_job WHERE state IN ('queued', 'running') ORDER BY id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-        return $r ?: null;
+        return $pdo->query("SELECT * FROM bulk_gift_job WHERE state IN ('queued', 'running') ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+    }
+    // the one going on now ($live: true = the campaign, false = the other,
+    // null = whichever started first), or null
+    function bulkgift_active_job($live = null)
+    {
+        foreach (bulkgift_active_jobs() as $j) {
+            if ($live === null || bulkgift_is_live(bulkgift_job_params($j)) === $live) {
+                return $j;
+            }
+        }
+        return null;
+    }
+    // 🔜 ended campaigns still waiting for purchases of their time that are
+    // confirmed late (card-to-card) - they get their gift without a report
+    function bulkgift_late_jobs()
+    {
+        global $pdo;
+        bulkgift_ensure_schema();
+        $out = [];
+        foreach ($pdo->query("SELECT * FROM bulk_gift_job WHERE state = 'done' AND finished_at > " . (time() - 3 * 86400) . " ORDER BY id")->fetchAll(PDO::FETCH_ASSOC) as $j) {
+            $p = bulkgift_job_params($j);
+            if (bulkgift_is_live($p) && (int) ($p['late_until'] ?? 0) > time()) {
+                $out[] = $j;
+            }
+        }
+        return $out;
     }
     function bulkgift_recent($limit = 10)
     {
@@ -407,19 +540,32 @@ if (!function_exists('bulkgift_job')) {
         if ($p['value'] === null) {
             return ['error' => $t['noValue']];
         }
+        if (!$p['statuses']) {
+            return ['error' => $t['noStatus']];
+        }
         $panels = bulkgift_panels_of($p);
         if (!$panels) {
             return ['error' => $t['noPanels']];
         }
         $p['pnames'] = $p['panels'] ? array_map(fn($r) => (string) $r['name_panel'], $panels) : [];
+        $live = bulkgift_is_live($p);
+        if ($live) {
+            // its window starts now; a purchase of it confirmed later still
+            // counts for a day after its end
+            $now = time();
+            $p['win_from'] = $now;
+            $p['win_to'] = $now + (int) $p['buyn'] * 3600;
+            $p['late_until'] = $p['win_to'] + 86400;
+        }
         // two admins pressing at once must not start two
         $got = (int) $pdo->query("SELECT GET_LOCK('mirza_bulkgift_new', 5)")->fetchColumn();
         try {
-            if (bulkgift_active_job() !== null) {
-                return ['error' => $t['busy']];
+            if (bulkgift_active_job($live) !== null) {
+                return ['error' => $live ? $t['busyLive'] : $t['busy']];
             }
-            $pdo->prepare("INSERT INTO bulk_gift_job (params, state, origin, created_by, created_at) VALUES (?, 'queued', ?, ?, ?)")
-                ->execute([json_encode($p, JSON_UNESCAPED_UNICODE), $origin === 'web' ? 'web' : 'bot', (string) $createdBy, time()]);
+            // a campaign has nothing to read first: it takes purchases in as they come
+            $pdo->prepare("INSERT INTO bulk_gift_job (params, state, prepared, origin, created_by, created_at, started_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                ->execute([json_encode($p, JSON_UNESCAPED_UNICODE), $live ? 'running' : 'queued', $live ? 1 : 0, $origin === 'web' ? 'web' : 'bot', (string) $createdBy, time(), $live ? time() : 0]);
             return ['id' => (int) $pdo->lastInsertId()];
         } finally {
             if ($got === 1) {
@@ -621,6 +767,8 @@ if (!function_exists('bulkgift_prepare')) {
                         'l' => (float) ($u['data_limit'] ?? 0),
                         'u' => (float) ($u['used_traffic'] ?? 0),
                         'e' => bulkgift_ts($u['expire'] ?? null),
+                        // not started yet: how long it will run once it is
+                        'h' => (int) ($u['on_hold_expire_duration'] ?? 0),
                     ]),
                 ];
                 // made in the panel: when it was made is its purchase
@@ -711,6 +859,48 @@ if (!function_exists('bulkgift_prepare')) {
             ->execute([json_encode(bulkgift_unique_notes($notes), JSON_UNESCAPED_UNICODE), $job['id']]);
         return true;
     }
+    // 🔜 A campaign's new purchases since it last looked: every service sold
+    // in its window that is a service by now - a payment confirmed late (card-
+    // to-card) included - with the ⏱ ones left out and listed. One already
+    // taken in is not taken again. How many came in.
+    function bulkgift_live_pickup(array $job, $now = null)
+    {
+        global $pdo;
+        $p = bulkgift_job_params($job);
+        if (function_exists('payg_ensure_schema')) {
+            payg_ensure_schema();
+        }
+        $byName = [];
+        foreach (bulkgift_all_panels() as $r) {
+            $byName[(string) $r['name_panel']] = $r;
+        }
+        $names = array_values(array_filter($p['panels'] ? $p['pnames'] : array_keys($byName), fn($n) => isset($byName[$n])));
+        if (!$names) {
+            return 0;
+        }
+        [$w, $a] = bulkgift_invoice_where($p, $names, $now);
+        $st = $pdo->prepare("SELECT i.* FROM invoice i WHERE {$w} AND NOT EXISTS (SELECT 1 FROM bulk_gift_item b WHERE b.job_id = ? AND b.id_invoice = i.id_invoice) ORDER BY CAST(i.time_sell AS UNSIGNED)");
+        $st->execute(array_merge($a, [(int) $job['id']]));
+        $rows = [];
+        while ($r = $st->fetch(PDO::FETCH_ASSOC)) {
+            if (!bulkgift_is_sale($r)) {
+                continue;
+            }
+            $payg = bulkgift_kind_of($r) === 'payg';
+            $rows[] = [
+                'panel' => (string) $r['Service_location'],
+                'username' => (string) $r['username'],
+                'src' => 'bot',
+                'id_invoice' => (string) $r['id_invoice'],
+                'id_user' => (string) $r['id_user'],
+                'start_ts' => (int) $r['time_sell'],
+                'state' => $payg ? 'skipped' : 'pending',
+                'reason' => $payg ? 'payg' : '',
+            ];
+        }
+        bulkgift_add_items($job['id'], $rows);
+        return count($rows);
+    }
     // a run read again after a cut-off writes its notes again
     function bulkgift_unique_notes(array $notes)
     {
@@ -737,24 +927,93 @@ if (!function_exists('bulkgift_work')) {
         $s = is_scalar($m) ? (string) $m : json_encode($m, JSON_UNESCAPED_UNICODE);
         return mb_substr(trim(strip_tags((string) $s)), 0, 300);
     }
-    // What one account gets: ['gb' => x] or ['days' => n], or ['skip' => why].
-    // $d: what the panel says about it (DataUser's shape); $start: when it
-    // was bought (or made, in the panel), 0 when not known.
+    // The state an account is really in: what its panel says, checked against
+    // its own numbers - «active» with its time or its volume gone is over (a
+    // panel can be a few minutes behind). One of bulkgift_statuses(), or
+    // 'other' for anything a panel calls its own.
+    function bulkgift_status(array $d, $now = null)
+    {
+        $now = $now ?? time();
+        $s = strtolower((string) ($d['status'] ?? ''));
+        // Marzneshin's own spelling, as DataUser() passes it on
+        $s = ['limtied' => 'limited'][$s] ?? $s;
+        if ($s === 'active') {
+            $expire = (int) ($d['expire'] ?? 0);
+            $limit = (float) ($d['data_limit'] ?? 0);
+            if ($expire > 0 && $expire <= $now) {
+                $s = 'expired';
+            } elseif ($limit > 0 && (float) ($d['used_traffic'] ?? 0) >= $limit) {
+                $s = 'limited';
+            }
+        }
+        return in_array($s, bulkgift_statuses(), true) ? $s : 'other';
+    }
+    // How long a not-started account will run once it starts, in seconds, as
+    // its panel keeps it - null where the panel does not say, or keeps it in
+    // a way the bot cannot change (it is then left out of a time gift).
+    function bulkgift_hold_seconds(array $panel, $username)
+    {
+        $type = (string) ($panel['type'] ?? '');
+        if ($type === 'marzban' || $type === 'rebecca') {
+            $r = $type === 'marzban' ? getuser($username, $panel['name_panel']) : getuser_rebecca($username, $panel['name_panel']);
+            $b = json_decode((string) ($r['body'] ?? ''), true);
+            $v = is_array($b) ? ($b['on_hold_expire_duration'] ?? null) : null;
+        } elseif ($type === 'marzneshin') {
+            $r = getuserm($username, $panel['name_panel']);
+            $b = json_decode((string) ($r['body'] ?? ''), true);
+            $v = is_array($b) && ($b['expire_strategy'] ?? '') === 'start_on_first_use' ? ($b['usage_duration'] ?? null) : null;
+        } elseif ($type === 'x-ui_single') {
+            // a negative expiryTime: milliseconds from the first connection
+            $r = get_clinets($username, $panel);
+            $b = json_decode((string) ($r['body'] ?? ''), true);
+            $x = is_array($b) ? ($b['obj']['client']['expiryTime'] ?? null) : null;
+            $v = is_numeric($x) && (float) $x < -10000 ? (int) round(-(float) $x / 1000) : null;
+        } else {
+            return null;
+        }
+        return is_numeric($v) && (int) $v > 0 ? (int) $v : null;
+    }
+    // ...and what gives it a new length while it keeps waiting - the very
+    // fields the bot makes such an account with
+    function bulkgift_hold_config(array $panel, $seconds)
+    {
+        $s = (int) $seconds;
+        switch ((string) ($panel['type'] ?? '')) {
+            case 'marzban':
+            case 'rebecca':
+                return ['on_hold_expire_duration' => $s];
+            case 'marzneshin':
+                return ['usage_duration' => $s, 'expire_strategy' => 'start_on_first_use'];
+            case 'x-ui_single':
+                return ['expiryTime' => -$s * 1000];
+        }
+        return null;
+    }
+    // What one account gets: ['gb' => x] or ['days' => n] (+ 'hold' for one
+    // not started yet), or ['skip' => why]. $d: what the panel says about it
+    // (DataUser's shape, plus 'hold': bulkgift_hold_seconds()); $start: when
+    // it was bought (or made, in the panel), 0 when not known.
     function bulkgift_eval(array $p, array $d, $start, $now = null)
     {
         $now = $now ?? time();
-        $status = (string) ($d['status'] ?? '');
+        $status = bulkgift_status($d, $now);
         $limit = (float) ($d['data_limit'] ?? 0);
         $used = (float) ($d['used_traffic'] ?? 0);
         $expire = (int) ($d['expire'] ?? 0);
-        // not started yet counts as active: it is a subscription nobody used up
-        if ($p['active'] && !in_array($status, ['active', 'on_hold'], true)) {
+        if (!in_array($status, $p['statuses'], true)) {
             return ['skip' => 'inactive'];
         }
         if ($p['kind'] === 'time') {
-            // its clock starts at the first connection; its time is not a date yet
             if ($status === 'on_hold') {
-                return ['skip' => 'onhold'];
+                // its clock starts at the first connection: the days go on its
+                // length (all of it is still ahead - total and what is left are
+                // the same), and it keeps waiting
+                $hold = (int) ($d['hold'] ?? 0);
+                if ($hold <= 0) {
+                    return ['skip' => 'onhold'];
+                }
+                $days = $p['mode'] === 'fixed' ? (int) $p['value'] : (int) round($hold / 86400 * $p['value'] / 100);
+                return $days < 1 ? ['skip' => 'small'] : ['days' => $days, 'hold' => $hold];
             }
             if ($expire <= 0) {
                 return ['skip' => 'unlimited'];
@@ -818,9 +1077,26 @@ if (!function_exists('bulkgift_work')) {
             $msg = is_array($d) ? bulkgift_msg($d['msg'] ?? '') : '';
             return strcasecmp($msg, 'user not found') === 0 ? ['skipped', 'missing'] : ['failed', 'failed', '', $msg];
         }
+        if ($p['kind'] === 'time' && bulkgift_status($d) === 'on_hold' && in_array('on_hold', $p['statuses'], true)) {
+            $d['hold'] = bulkgift_hold_seconds($panel, $inv['username']) ?? 0;
+        }
         $ev = bulkgift_eval($p, $d, (int) $item['start_ts']);
         if (isset($ev['skip'])) {
             return ['skipped', $ev['skip']];
+        }
+        if (isset($ev['hold'])) {
+            // not started yet: extra_time() would start its clock today - the
+            // days go on its length instead, and it keeps waiting
+            $res = $mp->Modifyuser($inv['username'], $panel['name_panel'], bulkgift_hold_config($panel, $ev['hold'] + (int) $ev['days'] * 86400));
+            if (!is_array($res) || empty($res['status'])) {
+                return ['failed', 'failed', '', bulkgift_msg(is_array($res) ? ($res['msg'] ?? '') : '')];
+            }
+            $amount = (string) (int) $ev['days'];
+            bulkgift_log_service($inv, $p, $ev, $d);
+            if ($p['notify']) {
+                bulkgift_notify($inv, $p, $amount);
+            }
+            return ['done', 'done', $amount, null];
         }
         // extra_volume() and extra_time() mark every invoice of this username
         // active: an old, removed service with the same name would come back
@@ -858,7 +1134,7 @@ if (!function_exists('bulkgift_work')) {
     function bulkgift_give_panel(array $p, array $item)
     {
         $snap = json_decode((string) ($item['snap'] ?? ''), true) ?: [];
-        $pre = bulkgift_eval($p, ['status' => $snap['s'] ?? '', 'data_limit' => $snap['l'] ?? 0, 'used_traffic' => $snap['u'] ?? 0, 'expire' => $snap['e'] ?? 0], (int) $item['start_ts']);
+        $pre = bulkgift_eval($p, ['status' => $snap['s'] ?? '', 'data_limit' => $snap['l'] ?? 0, 'used_traffic' => $snap['u'] ?? 0, 'expire' => $snap['e'] ?? 0, 'hold' => $snap['h'] ?? 0], (int) $item['start_ts']);
         if (isset($pre['skip'])) {
             return ['skipped', $pre['skip']];
         }
@@ -872,11 +1148,17 @@ if (!function_exists('bulkgift_work')) {
             $msg = is_array($d) ? bulkgift_msg($d['msg'] ?? '') : '';
             return strcasecmp($msg, 'user not found') === 0 ? ['skipped', 'missing'] : ['failed', 'failed', '', $msg];
         }
+        if ($p['kind'] === 'time' && bulkgift_status($d) === 'on_hold' && in_array('on_hold', $p['statuses'], true)) {
+            $d['hold'] = bulkgift_hold_seconds($panel, $item['username']) ?? 0;
+        }
         $ev = bulkgift_eval($p, $d, (int) $item['start_ts']);
         if (isset($ev['skip'])) {
             return ['skipped', $ev['skip']];
         }
-        if ($p['kind'] === 'time') {
+        if (isset($ev['hold'])) {
+            // not started yet: a longer wait-to-start, still waiting
+            $cfg = bulkgift_hold_config($panel, $ev['hold'] + (int) $ev['days'] * 86400);
+        } elseif ($p['kind'] === 'time') {
             $cfg = ['expire' => max(time(), (int) $d['expire']) + (int) $ev['days'] * 86400];
         } else {
             $cfg = ['data_limit' => (int) round((float) $d['data_limit'] + $ev['gb'] * pow(1024, 3))];
@@ -979,14 +1261,32 @@ if (!function_exists('bulkgift_progress_payload')) {
     {
         $t = bulkgift_texts();
         $p = bulkgift_job_params($job);
-        $lines = [
-            strtr($t['progressTitle'], ['{kind}' => $p['kind'] === 'time' ? $t['kindNameTime'] : $t['kindNameVolume']]),
-            '➖➖➖➖➖➖➖➖➖➖',
-            strtr($t['rowAmount'], ['{v}' => bulkgift_amount_label($p)]),
-            strtr($t['rowScope'], ['{v}' => bulkgift_scope_label($p)]),
-            '',
-        ];
-        if (!(int) $job['prepared']) {
+        $kind = $p['kind'] === 'time' ? $t['kindNameTime'] : $t['kindNameVolume'];
+        if (bulkgift_is_live($p)) {
+            // 🔜 a campaign: how long it still takes purchases, and what they got
+            $c = bulkgift_counts($job['id']);
+            $lines = [
+                strtr($t['liveTitle'], ['{kind}' => $kind]),
+                '➖➖➖➖➖➖➖➖➖➖',
+                strtr($t['rowAmount'], ['{v}' => bulkgift_amount_label($p)]),
+                strtr($t['liveUntil'], ['{to}' => bulkgift_when($p['win_to'] ?? time())]),
+                '',
+                strtr($t['liveCount'], ['{n}' => number_format($c['done'])]),
+                strtr($t['cntSkipped'], ['{n}' => number_format($c['skipped'])]),
+                strtr($t['cntFailed'], ['{n}' => number_format($c['failed'] + $c['unknown'])]),
+            ];
+        } else {
+            $lines = [
+                strtr($t['progressTitle'], ['{kind}' => $kind]),
+                '➖➖➖➖➖➖➖➖➖➖',
+                strtr($t['rowAmount'], ['{v}' => bulkgift_amount_label($p)]),
+                strtr($t['rowScope'], ['{v}' => bulkgift_scope_label($p)]),
+                '',
+            ];
+        }
+        if (bulkgift_is_live($p)) {
+            // nothing more to add
+        } elseif (!(int) $job['prepared']) {
             $lines[] = $t['queued'];
         } else {
             $c = bulkgift_counts($job['id']);
@@ -1019,8 +1319,13 @@ if (!function_exists('bulkgift_progress_payload')) {
         if (!$force && time() - (int) $job['shown_at'] < 10) {
             return;
         }
-        $pdo->prepare("UPDATE bulk_gift_job SET shown_at = ? WHERE id = ?")->execute([time(), $job['id']]);
         [$text, $kb] = bulkgift_progress_payload($job);
+        // nothing new since the last one: Telegram would refuse it anyway
+        $hash = sha1($text . $kb);
+        if ($hash === (string) ($job['shown_hash'] ?? '')) {
+            return;
+        }
+        $pdo->prepare("UPDATE bulk_gift_job SET shown_at = ?, shown_hash = ? WHERE id = ?")->execute([time(), $hash, $job['id']]);
         Editmessagetext($job['created_by'], (int) $job['admin_msg'], $text, $kb, 'HTML');
     }
     // the message in the admin's chat that shows the run's progress
@@ -1070,12 +1375,15 @@ if (!function_exists('bulkgift_progress_payload')) {
         $p = bulkgift_job_params($job);
         $c = bulkgift_counts($job['id']);
         $kind = $p['kind'] === 'time' ? $t['kindNameTime'] : $t['kindNameVolume'];
+        $live = bulkgift_is_live($p);
+        $title = $live
+            ? ($job['state'] === 'cancelled' ? $t['liveCancelledTitle'] : $t['liveDoneTitle'])
+            : ($job['state'] === 'cancelled' ? $t['cancelledTitle'] : $t['doneTitle']);
         $parts = [
-            strtr($job['state'] === 'cancelled' ? $t['cancelledTitle'] : $t['doneTitle'], ['{kind}' => $kind])
-            . "\n➖➖➖➖➖➖➖➖➖➖\n" . bulkgift_summary_rows($p),
+            strtr($title, ['{kind}' => $kind]) . "\n➖➖➖➖➖➖➖➖➖➖\n" . bulkgift_summary_rows($p),
         ];
         if ($c['total'] === 0) {
-            $parts[] = $t['emptyResult'];
+            $parts[] = $live ? $t['liveEmpty'] : $t['emptyResult'];
         } else {
             $res = [$t['resultHead']];
             $line = fn($label, $n) => strtr($t['resultLine'], ['{label}' => $label, '{n}' => number_format($n)]);
@@ -1124,6 +1432,10 @@ if (!function_exists('bulkgift_progress_payload')) {
                 $out[] = strtr($t['moreItems'], ['{n}' => number_format(count($notes) - 10)]);
             }
             $parts[] = $t['notesHead'] . "\n<blockquote>" . implode("\n", $out) . '</blockquote>';
+        }
+        // a campaign that ran its time: purchases of it confirmed late still get theirs
+        if ($live && $job['state'] !== 'cancelled' && isset($p['late_until'])) {
+            $parts[] = strtr($t['liveLateNote'], ['{until}' => bulkgift_when($p['late_until'])]);
         }
         $tail = bulkgift_duration_text($job) . ($job['origin'] === 'web' ? "\n" . $t['fromWeb'] : '');
         $parts[] = $tail;
@@ -1198,55 +1510,85 @@ if (!function_exists('bulkgift_cron')) {
         curl_exec($ch);
         curl_close($ch);
     }
-    // cronbot/gift.php: works on the run going on, if there is one - one
-    // worker at a time (a MySQL lock, so the cron and a kick never overlap),
-    // for at most $budget seconds ($maxItems: for tests). Hands the rest to
-    // the next run straight away when there is more.
-    // 'idle' | 'busy' | 'preparing' | 'more' | 'finished'
-    function bulkgift_cron($budget = null, $maxItems = null)
+    // One run's turn: [what became of it, how many accounts it got through].
+    // An ordinary run: 'preparing' | 'more' | 'finished'. A 🔜 campaign: it
+    // takes in what was sold since it last looked - 'live' until its time is
+    // up and all of that is done, then 'finished'; an ended one still waiting
+    // for late payments: 'late'.
+    function bulkgift_cron_job(array $job, $deadline, $maxItems = null, $now = null)
+    {
+        global $pdo;
+        $p = bulkgift_job_params($job);
+        $live = bulkgift_is_live($p);
+        bulkgift_stale_claims($job['id']);
+        if ($live && $job['state'] === 'done') {
+            bulkgift_live_pickup($job, $now);
+            return ['late', bulkgift_work($job, $deadline, $maxItems)];
+        }
+        if (!$live && !(int) $job['prepared'] && !(int) $job['cancel_req']) {
+            bulkgift_admin_msg($job['id']);
+            if (!bulkgift_prepare($job, $deadline)) {
+                bulkgift_progress($job['id'], true);
+                return ['preparing', 0];
+            }
+        }
+        $job = bulkgift_job($job['id']);
+        bulkgift_admin_msg($job['id']);
+        if ($live && !(int) $job['cancel_req']) {
+            bulkgift_live_pickup($job, $now);
+        }
+        $worked = bulkgift_work($job, $deadline, $maxItems);
+        $job = bulkgift_job($job['id']);
+        $st = $pdo->prepare("SELECT COUNT(*) FROM bulk_gift_item WHERE job_id = ? AND state = 'pending'");
+        $st->execute([$job['id']]);
+        $pending = (int) $st->fetchColumn();
+        $over = !$live || ($now ?? time()) >= (int) ($p['win_to'] ?? 0);
+        if ((int) $job['cancel_req'] === 1 || ($pending === 0 && $over)) {
+            bulkgift_finish($job);
+            return ['finished', $worked];
+        }
+        bulkgift_progress($job['id'], true);
+        return [$live ? 'live' : 'more', $worked];
+    }
+    // cronbot/gift.php: works on the runs going on - one worker at a time (a
+    // MySQL lock, so the cron and a kick never overlap), for at most $budget
+    // seconds ($maxItems a run and $now: for tests). A campaign goes first
+    // (it is quick), then the ordinary run, whose rest is handed straight on
+    // to the next request. Says what became of the ordinary run, or of the
+    // campaign when there is none:
+    // 'idle' | 'busy' | 'preparing' | 'more' | 'live' | 'late' | 'finished'
+    function bulkgift_cron($budget = null, $maxItems = null, $now = null)
     {
         global $pdo;
         bulkgift_ensure_schema();
-        if (bulkgift_active_job() === null) {
+        if (!bulkgift_active_jobs() && !bulkgift_late_jobs()) {
             return 'idle';
         }
         if ((int) $pdo->query("SELECT GET_LOCK('mirza_bulkgift', 0)")->fetchColumn() !== 1) {
             return 'busy';
         }
         $result = 'idle';
-        $worked = 0;
+        $kick = false;
         try {
             $deadline = time() + ($budget ?? bulkgift_budget());
-            $job = bulkgift_active_job();
-            if ($job === null) {
-                return $result;
-            }
-            bulkgift_stale_claims($job['id']);
-            if (!(int) $job['prepared'] && !(int) $job['cancel_req']) {
-                bulkgift_admin_msg($job['id']);
-                if (!bulkgift_prepare($job, $deadline)) {
-                    $result = 'preparing';
-                    bulkgift_progress($job['id'], true);
-                    return $result;
+            $jobs = array_merge(bulkgift_active_jobs(), bulkgift_late_jobs());
+            usort($jobs, fn($a, $b) => (int) bulkgift_is_live(bulkgift_job_params($b)) <=> (int) bulkgift_is_live(bulkgift_job_params($a)));
+            foreach ($jobs as $job) {
+                if (time() >= $deadline) {
+                    break;
                 }
-            }
-            $job = bulkgift_job($job['id']);
-            bulkgift_admin_msg($job['id']);
-            $worked = bulkgift_work($job, $deadline, $maxItems);
-            $job = bulkgift_job($job['id']);
-            $st = $pdo->prepare("SELECT COUNT(*) FROM bulk_gift_item WHERE job_id = ? AND state = 'pending'");
-            $st->execute([$job['id']]);
-            if ((int) $st->fetchColumn() === 0 || (int) $job['cancel_req'] === 1) {
-                bulkgift_finish($job);
-                $result = 'finished';
-            } else {
-                bulkgift_progress($job['id'], true);
-                $result = 'more';
+                [$r, $worked] = bulkgift_cron_job($job, $deadline, $maxItems, $now);
+                if (!bulkgift_is_live(bulkgift_job_params($job)) || $result === 'idle') {
+                    $result = $r;
+                }
+                if ($r === 'preparing' || ($r === 'more' && $worked > 0)) {
+                    $kick = true;
+                }
             }
             return $result;
         } finally {
             $pdo->query("SELECT RELEASE_LOCK('mirza_bulkgift')");
-            if ($result === 'preparing' || ($result === 'more' && $worked > 0)) {
+            if ($kick) {
                 bulkgift_kick();
             }
         }
@@ -1312,7 +1654,10 @@ if (!function_exists('bulkgift_hub_payload')) {
             ? $btn($t['valueBtnUnset'], 'bgh:v', 'danger')
             : $btn(strtr($t['valueBtn'], ['{v}' => strip_tags(bulkgift_amount_label($p))]), 'bgh:v', 'success')];
         $rows[] = [$btn($t['sepWho'], 'bgh:sep:who', null)];
-        $rows[] = [$pick($p['scope'] === 'bot', $t['scopeBot'], 'bgh:s:bot'), $pick($p['scope'] === 'panel', $t['scopePanel'], 'bgh:s:panel')];
+        // a campaign is about what the bot sells: no panel accounts to pick
+        if (!bulkgift_is_live($p)) {
+            $rows[] = [$pick($p['scope'] === 'bot', $t['scopeBot'], 'bgh:s:bot'), $pick($p['scope'] === 'panel', $t['scopePanel'], 'bgh:s:panel')];
+        }
         if ($p['scope'] === 'bot') {
             $row = [$pick($p['lang'] === 'all', $t['langAll'], 'bgh:l:all')];
             foreach (panel_langs() as $l) {
@@ -1336,9 +1681,13 @@ if (!function_exists('bulkgift_hub_payload')) {
             $rows[] = $line;
         }
         $buy = fn($k, $label) => $pick($p['buy'] === $k, $p['buy'] === $k ? bulkgift_buy_label($p) : $label, 'bgh:b:' . $k);
-        $rows[] = [$buy('all', $t['buyAll']), $buy('days', $t['buyDaysBtn'])];
+        $rows[] = [$buy('all', $t['buyAll']), $buy('next', $t['buyNextBtn'])];
+        $rows[] = [$buy('lasth', $t['buyLasthBtn']), $buy('days', $t['buyDaysBtn'])];
         $rows[] = [$buy('months', $t['buyMonthsBtn']), $buy('hours', $t['buyHoursBtn'])];
-        $rows[] = [$pick($p['active'], $t['statusActive'], 'bgh:a:1'), $pick(!$p['active'], $t['statusAll'], 'bgh:a:0')];
+        // which states get it, any mix of them
+        $st = fn($s) => $pick(in_array($s, $p['statuses'], true), $t['st_' . $s], 'bgh:t:' . $s);
+        $rows[] = [$st('active'), $st('on_hold')];
+        $rows[] = [$st('limited'), $st('expired'), $st('disabled')];
         $rows[] = [$btn($t['sepMsg'], 'bgh:sep:msg', null)];
         $rows[] = [$btn($p['notify'] ? $t['notifyOnBtn'] : $t['notifyOffBtn'], 'bgh:n', $p['notify'] ? 'success' : 'danger'), $btn($t['previewBtn'], 'bgh:pv')];
         $rows[] = [$btn($t['continueBtn'], 'bgh:go', 'success')];
@@ -1351,18 +1700,22 @@ if (!function_exists('bulkgift_hub_payload')) {
     function bulkgift_confirm_payload(array $p)
     {
         $t = bulkgift_texts();
-        $pv = bulkgift_preview($p);
-        $parts = [
-            $t['confirmTitle'] . "\n➖➖➖➖➖➖➖➖➖➖\n" . bulkgift_summary_rows($p),
-            strtr($t['confirmCounts'], ['{n}' => number_format($pv['n']), '{h}' => number_format($pv['h']), '{t}' => number_format($pv['t'])]),
-        ];
-        if ($p['scope'] === 'panel') {
-            $parts[] = $t['confirmPanelNote'] . ($pv['unsupported']
-                ? "\n" . strtr($t['confirmUnsupported'], ['{list}' => implode("\n", array_map(fn($n) => '▫️ ' . aff_bidi($n, '<b>' . htmlspecialchars($n) . '</b>'), $pv['unsupported']))])
-                : '');
+        $parts = [$t['confirmTitle'] . "\n➖➖➖➖➖➖➖➖➖➖\n" . bulkgift_summary_rows($p)];
+        if (bulkgift_is_live($p)) {
+            // 🔜 nothing to count yet: what will count, and for how long
+            $parts[] = strtr($t['confirmNext'], ['{n}' => number_format($p['buyn'])]);
+            $can = true;
+        } else {
+            $pv = bulkgift_preview($p);
+            $parts[] = strtr($t['confirmCounts'], ['{n}' => number_format($pv['n']), '{h}' => number_format($pv['h']), '{t}' => number_format($pv['t'])]);
+            if ($p['scope'] === 'panel') {
+                $parts[] = $t['confirmPanelNote'] . ($pv['unsupported']
+                    ? "\n" . strtr($t['confirmUnsupported'], ['{list}' => implode("\n", array_map(fn($n) => '▫️ ' . aff_bidi($n, '<b>' . htmlspecialchars($n) . '</b>'), $pv['unsupported']))])
+                    : '');
+            }
+            $can = $pv['n'] > 0 || ($p['scope'] === 'panel' && $pv['listable']);
+            $parts[] = $can ? $t['confirmLiveNote'] : $t['emptyResult'];
         }
-        $can = $pv['n'] > 0 || ($p['scope'] === 'panel' && $pv['listable']);
-        $parts[] = $can ? $t['confirmLiveNote'] : $t['emptyResult'];
         $rows = [];
         if ($can) {
             $rows[] = [['text' => $t['confirmBtn'], 'callback_data' => 'bgh:start:' . bulkgift_sig($p), 'style' => 'success']];
