@@ -631,6 +631,8 @@ $shopkeyboard = json_encode([
         [['text' => $textbotlang['keyboard']['financial']], ['text' => $textbotlang['Admin']['LangScope']['hubBtn']]],
         // ⏱ اکانت ساعتی is a way of selling, so its settings live with the shop's
         [['text' => $textbotlang['keyboard']['topupPackages']], ['text' => $textbotlang['Admin']['Payg']['rowLabel']]],
+        // 🎁 حجم یا زمان گروهی: what the shop sold, topped up for many at once
+        [['text' => $textbotlang['Admin']['BulkGift']['btn']]],
         [['text' => $textbotlang['Admin']['backAdminBtn']], ['text' => $textbotlang['Admin']['backMenuBtn']]]
     ],
     'resize_keyboard' => true

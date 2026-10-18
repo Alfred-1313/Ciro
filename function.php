@@ -9202,7 +9202,7 @@ if (!function_exists('money_input_steps')) {
             'getpriceftime', 'getpricnntime', 'getpricnn2time',
             'GetPriceExtra', 'GetPricecustomvo', 'GetPricetimeextra', 'GetPriceExtratime',
             // admin: discount and gift codes
-            'get_price_code', 'get_price_codesell', 'getvaluegift',
+            'get_price_code', 'get_price_codesell',
             // admin: deposit limits, per gateway
             'minbalance', 'maxbalance', 'minbalancebulk',
             'getmaincart', 'getmaxcart',
@@ -12431,8 +12431,8 @@ if (!function_exists('bt_section_meta')) {
                 'alert' => 'پیام‌هایی که وقتی ادمین موجودی کاربر رو زیاد یا کم می‌کنه (تکی یا همگانی) به خود کاربر می‌رسه - به زبان و با ارز کیف پول خودش.',
             ],
             'um_orders' => [
-                'label' => '⬇️ 🛍 پیام‌های سرویس‌ها: حذف، بازگشت مبلغ، واگذاری',
-                'alert' => 'پیام‌هایی که بعد از حذف سرویس توسط ادمین، جواب درخواست حذف سرویس، یا واگذاری یه سرویس پنل به کاربر (🔗) بهش می‌رسه.',
+                'label' => '⬇️ 🛍 پیام‌های سرویس‌ها: حذف، بازگشت مبلغ، واگذاری، هدیه',
+                'alert' => 'پیام‌هایی که بعد از حذف سرویس توسط ادمین، جواب درخواست حذف سرویس، واگذاری یه سرویس پنل به کاربر (🔗)، یا اضافه شدن 🎁 حجم یا زمان گروهی به سرویسش بهش می‌رسه.',
             ],
             'um_account' => [
                 'label' => '⬇️ 👤 پیام‌های حساب کاربر',
@@ -20929,3 +20929,5 @@ function parseConfigs($input)
 
 // ⏱ اکانت ساعتی - its own file, needed by the bot, the crons and the web panel alike
 require_once __DIR__ . '/payg.php';
+// 🎁 حجم یا زمان گروهی - the same
+require_once __DIR__ . '/bulkgift.php';
