@@ -9032,6 +9032,15 @@ if (preg_match('/^setbbtnemoji-([a-z]{2})$/', (string) $user['step'], $btm) && $
     sendmessage($from_id, $bb_msg . "\n\n" . $bb_text, $bb_kb, 'HTML');
     return;
 }
+if (preg_match('/^volpct\|prev$/', $datain) && $adminrulecheck['rule'] == "administrator") {
+    // 🔋's preview button: only shows how the customer's button looks
+    telegram('answerCallbackQuery', [
+        'callback_query_id' => $callback_query_id,
+        'text' => '👁 این فقط پیش‌نمایش دکمه‌ست، همون‌طور که مشتری می‌بینه - زدنش کاری نمی‌کنه. برای تغییر متن، رنگ، ایموجی یا جای دکمه از دکمه‌های زیرش استفاده کن.',
+        'show_alert' => true,
+    ]);
+    return;
+}
 if (preg_match('/^volpct\|hub\|([a-z]{2})$/', $datain, $vp_m) && $adminrulecheck['rule'] == "administrator") {
     list($vp_text, $vp_kb) = volumepct_hub_payload($vp_m[1], $textbotlang);
     Editmessagetext($from_id, $message_id, $vp_text, $vp_kb, 'HTML');

@@ -17144,7 +17144,10 @@ if (!function_exists('volumepct_tier_detail_payload')) {
         $hasEmoji = !empty($look['emoji']) || !empty($look['emojiIcon']);
         $previewKb = json_decode(volumepct_tier_kb($index, $lang, $tabTexts, 0, true), true);
         $previewBtn = $previewKb['inline_keyboard'][0][0];
-        $previewBtn['callback_data'] = 'none';
+        // only a preview: white, so it does not look like a tool, and a tap
+        // says so (its colour is the one ticked ✅ below)
+        unset($previewBtn['style']);
+        $previewBtn['callback_data'] = 'volpct|prev';
         $isHidden = !empty($look['hidden']);
         if ($isHidden) {
             $previewBtn['text'] = '🚫 ' . $previewBtn['text'];
@@ -17172,7 +17175,7 @@ if (!function_exists('volumepct_tier_detail_payload')) {
             $info .= "🚫 دکمه مخفیه - این پیام بدون دکمه فرستاده می‌شه.\n";
         }
         $info .= "🔗 " . ($meta['single'] ? '' : 'آستانه و ') . "رنگ/ایموجی/جای دکمه برای همه‌ی زبان‌ها یکیه؛ کپشن، استیکر و متن دکمه مال همین زبانه.\n";
-        $info .= "➖➖➖➖➖➖➖➖➖➖\n👁 پیش‌نمایش زنده دکمه 👇";
+        $info .= "➖➖➖➖➖➖➖➖➖➖\n👁 پیش‌نمایش دکمه (سفید = فقط برای دیدن؛ رنگش همونیه که پایین ✅ خورده) 👇";
 
         $kb = ['inline_keyboard' => []];
         // a one-off notice has no list screen above it, so its switch is here
