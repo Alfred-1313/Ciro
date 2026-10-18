@@ -14464,6 +14464,9 @@ if (!function_exists('topup_disc_method_to_gateway')) {
             // screens was never actually credited
             'TON' => 'ton',
             'TRX' => 'trx',
+            // stored by topup_gateway_dispatch.php; missing here, FrenzyEx's
+            // invoice promised its 🎁 discount and the wallet never got it
+            'frenzyex' => 'frenzyex',
         ];
         return $map[(string) $method] ?? null;
     }
@@ -14486,7 +14489,7 @@ if (!function_exists('topup_disc_auto_eligible')) {
     // even mention it in the top-up caption beforehand, so the two can never
     // drift out of sync the way they did before (caption used to ignore the
     // per-user cap entirely)
-    function topup_disc_auto_eligible($userId, $lang, $gatewayKey, $auto = null)
+    function topup_disc_auto_eligible($userId, $lang, $gatewayKey, $auto = null, $exceptOrder = null)
     {
         if ($auto === null) {
             $auto = topup_disc_auto_for($lang, $gatewayKey);
@@ -14501,7 +14504,7 @@ if (!function_exists('topup_disc_auto_eligible')) {
         if ($perUser > 0 && topup_disc_auto_user_count($userId, $lang, $gatewayKey) >= $perUser) {
             return false;
         }
-        if (!empty($auto['newUserOnly']) && topup_disc_user_has_any_paid_topup($userId)) {
+        if (!empty($auto['newUserOnly']) && topup_disc_user_has_any_paid_topup($userId, $exceptOrder)) {
             return false;
         }
         return true;
@@ -14537,7 +14540,7 @@ if (!function_exists('topup_disc_group_user_count')) {
 }
 if (!function_exists('topup_disc_group_eligible')) {
     // the group twin of topup_disc_auto_eligible(), same rules, category scope
-    function topup_disc_group_eligible($userId, $lang, $group, $g = null)
+    function topup_disc_group_eligible($userId, $lang, $group, $g = null, $exceptOrder = null)
     {
         if ($g === null) {
             $g = topup_disc_group_live($lang, $group);
@@ -14552,7 +14555,7 @@ if (!function_exists('topup_disc_group_eligible')) {
         if ($perUser > 0 && topup_disc_group_user_count($userId, $lang, $group) >= $perUser) {
             return false;
         }
-        if (!empty($g['newUserOnly']) && topup_disc_user_has_any_paid_topup($userId)) {
+        if (!empty($g['newUserOnly']) && topup_disc_user_has_any_paid_topup($userId, $exceptOrder)) {
             return false;
         }
         return true;
@@ -14562,14 +14565,22 @@ if (!function_exists('topup_disc_user_has_any_paid_topup')) {
     // true once this user has ANY previously-completed wallet top-up (any
     // gateway) - backs the "فقط کاربران جدید" (new-users-only) restriction on
     // both the auto discount and discount codes. Called from inside
-    // topup_disc_award(), itself called from DirectPayment() BEFORE the
-    // current row's own payment_Status flips to 'paid', so this naturally
-    // excludes the payment currently being credited.
-    function topup_disc_user_has_any_paid_topup($userId)
+    // topup_disc_award(), itself called from DirectPayment(). $exceptOrder is
+    // the row being credited: FrenzyEx, TON, TRX and USDT-BEP20 flip it to
+    // 'paid' BEFORE DirectPayment() (their double-credit guard), so without it
+    // a user's very first top-up counted as an earlier one and lost a
+    // new-users-only discount.
+    function topup_disc_user_has_any_paid_topup($userId, $exceptOrder = null)
     {
         global $pdo;
-        $st = $pdo->prepare("SELECT Payment_Method FROM Payment_report WHERE id_user = ? AND payment_Status = 'paid'");
-        $st->execute([$userId]);
+        $sql = "SELECT Payment_Method FROM Payment_report WHERE id_user = ? AND payment_Status = 'paid'";
+        $params = [$userId];
+        if ($exceptOrder !== null && (string) $exceptOrder !== '') {
+            $sql .= " AND id_order <> ?";
+            $params[] = (string) $exceptOrder;
+        }
+        $st = $pdo->prepare($sql);
+        $st->execute($params);
         foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $method) {
             if (topup_disc_method_to_gateway($method) !== null) {
                 return true;
@@ -14618,7 +14629,7 @@ if (!function_exists('topup_disc_award')) {
             return 0;
         }
         $lang = (is_array($userRow) && !empty($userRow['lang'])) ? $userRow['lang'] : 'fa';
-        $eff = topup_disc_effective($userId, $lang, $gw, $paid);
+        $eff = topup_disc_effective($userId, $lang, $gw, $paid, $paymentReport['id_order'] ?? null);
         if ($eff === null || $eff['bonus'] <= 0) {
             return 0;
         }
@@ -16341,15 +16352,16 @@ if (!function_exists('topup_disc_effective')) {
     // Both an activated code and a codeless auto-discount may qualify; the one
     // giving the LARGER bonus wins (never stacked, never silently worse).
     // Returns ['source'=>'code'|'auto', 'bonus'=>int, 'disc'=>[...], 'code'=>string]
-    // or null when nothing applies.
-    function topup_disc_effective($userId, $lang, $gatewayKey, $amount)
+    // or null when nothing applies. $exceptOrder: the order being credited (see
+    // topup_disc_user_has_any_paid_topup).
+    function topup_disc_effective($userId, $lang, $gatewayKey, $amount, $exceptOrder = null)
     {
         $candidates = [];
         $adminBypass = topup_disc_admin_restrictions_bypassed($userId);
         $auto = topup_disc_auto_for($lang, $gatewayKey);
         $autoLive = !empty($auto['enabled'])
             && (intval($auto['expiry'] ?? 0) === 0 || time() < intval($auto['expiry']));
-        if ($autoLive && topup_disc_auto_eligible($userId, $lang, $gatewayKey, $auto)) {
+        if ($autoLive && topup_disc_auto_eligible($userId, $lang, $gatewayKey, $auto, $exceptOrder)) {
             $b = topup_disc_bonus_of($auto, $amount);
             if ($b > 0) {
                 $candidates[] = ['source' => 'auto', 'bonus' => $b, 'disc' => $auto, 'code' => ''];
@@ -16365,7 +16377,7 @@ if (!function_exists('topup_disc_effective')) {
                 continue;
             }
             $gAuto = topup_disc_group_live($lang, $discGroup);
-            if ($gAuto !== null && topup_disc_group_eligible($userId, $lang, $discGroup, $gAuto)) {
+            if ($gAuto !== null && topup_disc_group_eligible($userId, $lang, $discGroup, $gAuto, $exceptOrder)) {
                 $b = topup_disc_bonus_of($gAuto, $amount);
                 if ($b > 0) {
                     // the scope it came from travels with it, so the caption can
@@ -16381,7 +16393,7 @@ if (!function_exists('topup_disc_effective')) {
             if ($found !== null && topup_disc_code_status($found['code']) === 'active') {
                 $perUser = intval($found['code']['limitPerUser'] ?? 1);
                 $codeOk = $adminBypass || (($perUser === 0 || topup_disc_code_user_count($found['code']['code'], $userId) < $perUser)
-                    && (empty($found['code']['newUserOnly']) || !topup_disc_user_has_any_paid_topup($userId)));
+                    && (empty($found['code']['newUserOnly']) || !topup_disc_user_has_any_paid_topup($userId, $exceptOrder)));
                 if ($codeOk) {
                     $b = topup_disc_bonus_of($found['code'], $amount);
                     if ($b > 0) {
