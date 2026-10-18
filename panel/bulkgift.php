@@ -16,8 +16,8 @@ $adminId = (string) (db_fetch($pdo, "SELECT id_admin FROM admin WHERE username =
 
 // what the form says, as it was sent - it is shown again as it was
 $raw = [
-    'kind' => 'volume', 'mode' => 'fixed', 'value' => '', 'scope' => 'bot', 'lang' => 'all',
-    'panels' => [], 'buy' => 'all', 'buyn' => '', 'statuses' => bulkgift_default_statuses(), 'notify' => '1',
+    'job' => 'now', 'kind' => 'volume', 'mode' => 'fixed', 'value' => '', 'scope' => 'bot', 'lang' => 'all',
+    'panels' => [], 'buy' => 'all', 'buyn' => '', 'hours' => '', 'statuses' => bulkgift_default_statuses(), 'notify' => '1',
 ];
 $err = null;
 $preview = null;
@@ -38,28 +38,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: bulkgift.php');
         exit;
     }
-    foreach (['kind', 'mode', 'value', 'scope', 'lang', 'buy', 'buyn', 'notify'] as $k) {
+    foreach (['job', 'kind', 'mode', 'value', 'scope', 'lang', 'buy', 'buyn', 'hours', 'notify'] as $k) {
         $raw[$k] = trim((string) ($_POST[$k] ?? $raw[$k]));
     }
     $raw['panels'] = array_values(array_map('strval', (array) ($_POST['panels'] ?? [])));
     $raw['statuses'] = array_values(array_intersect(bulkgift_statuses(), array_map('strval', (array) ($_POST['statuses'] ?? []))));
+    $camp = $raw['job'] === 'camp';
     $kind = $raw['kind'] === 'time' ? 'time' : 'volume';
     $mode = in_array($raw['mode'], ['total', 'left'], true) ? $raw['mode'] : 'fixed';
     [$value, $why] = $raw['value'] === '' ? [null, $r['noValue']] : bulkgift_parse_value($kind, $mode, $raw['value']);
+    // 🔜 a campaign: its length in hours; otherwise the purchase filter
+    $buy = $camp ? 'next' : (in_array($raw['buy'], ['lasth', 'days', 'months', 'hours'], true) ? $raw['buy'] : 'all');
     $buyn = 0;
-    if ($why === null && in_array($raw['buy'], ['lasth', 'days', 'months', 'hours', 'next'], true)) {
+    if ($why === null && $camp) {
+        $buyn = bulkgift_parse_count($raw['hours']);
+        if ($buyn === null || $buyn > bulkgift_max_next_hours()) {
+            $why = $r['badNext'] . ' — ' . $t['bgHours'];
+        }
+    } elseif ($why === null && $buy !== 'all') {
         $buyn = bulkgift_parse_count($raw['buyn']);
-        if ($buyn === null || ($raw['buy'] === 'next' && $buyn > bulkgift_max_next_hours())) {
-            $why = ($raw['buy'] === 'next' ? $r['badNext'] : $r['badCount']) . ' — ' . $t['bgBuyN'];
+        if ($buyn === null) {
+            $why = $r['badCount'] . ' — ' . $t['bgBuyN'];
         }
     }
-    if ($why === null && !$raw['statuses']) {
+    if ($why === null && !$camp && !$raw['statuses']) {
         $why = $r['noStatus'];
     }
     $p = bulkgift_params([
         'kind' => $kind, 'mode' => $mode, 'value' => $value,
         'scope' => $raw['scope'], 'lang' => $raw['lang'], 'panels' => $raw['panels'],
-        'buy' => $raw['buy'], 'buyn' => (int) $buyn,
+        'buy' => $buy, 'buyn' => (int) $buyn,
         'statuses' => $raw['statuses'], 'notify' => $raw['notify'] === '1',
     ]);
     if ($why !== null) {
@@ -105,9 +113,10 @@ $formOpen = fn($extra = '') => '<form method="POST" action="bulkgift.php"' . $ex
 // a run's settings in a line
 $jobLine = function (array $j) use ($r, $plain) {
     $p = bulkgift_job_params($j);
-    return $plain($p['kind'] === 'time' ? $r['kindTime'] : $r['kindVolume']) . ' · ' . $plain(bulkgift_amount_label($p))
-        . ' · ' . $plain(bulkgift_is_live($p) ? bulkgift_buy_label($p) : bulkgift_scope_label($p));
+    return $plain(bulkgift_what_label($p)) . ' · ' . $plain(bulkgift_is_live($p) ? $r['jobCampBtn'] . ' ' . bulkgift_camp_label($p) : bulkgift_who_label($p));
 };
+// a part of the form's title, the way the bot's screen groups them
+$head = fn($label, $attr = '') => '<div class="set-row"' . $attr . '><div class="set-label" style="color:var(--mute)">' . htmlspecialchars($label) . '</div></div>';
 $langOptions = ['all' => $plain($r['langAll'])];
 foreach (web_langs() as $code => $name) {
     $langOptions[$code] = $name;
@@ -169,7 +178,7 @@ include __DIR__ . '/inc/layout_head.php';
   <?php if ($preview !== null): ?>
     <div class="notice notice-ok" style="margin:12px 16px 0">
       <?php if ($previewLive): ?>
-        <?= htmlspecialchars($plain(strtr($r['confirmNext'], ['{n}' => number_format((int) $raw['buyn'])]))) ?>
+        <?= htmlspecialchars($plain(strtr($r['confirmNext'], ['{n}' => number_format((int) $raw['hours'])]))) ?>
       <?php else: ?>
         <?= htmlspecialchars(sprintf($t['bgCountResult'], number_format($preview['n']), number_format($preview['h']), number_format($preview['t']))) ?>
         <?php if ($raw['scope'] === 'panel'): ?><br><?= htmlspecialchars($plain($r['confirmPanelNote'])) ?><?php endif; ?>
@@ -178,13 +187,16 @@ include __DIR__ . '/inc/layout_head.php';
     </div>
   <?php endif; ?>
   <div class="notice notice-warn" style="margin:12px 16px 0"><?= nl2br(htmlspecialchars($plain($r['skipNote']))) ?></div>
-  <?= $formOpen() ?>
+  <?= $formOpen(' id="bgform"') ?>
   <div class="card-body">
+    <?= $field($t['bgJob'], $select('job', ['now' => $plain($r['jobNowBtn']), 'camp' => $plain($r['jobCampBtn'])], $raw['job']), $t['bgJobHint']) ?>
+    <?= $head($t['bgSecWhat']) ?>
     <?= $field($t['bgKind'], $select('kind', ['volume' => $plain($r['kindVolume']), 'time' => $plain($r['kindTime'])], $raw['kind'])) ?>
-    <?= $field($t['bgMode'], $select('mode', ['fixed' => $plain($r['modeFixed']), 'total' => $plain($r['modeTotal']), 'left' => $plain($r['modeLeft'])], $raw['mode'])) ?>
+    <?= $field($t['bgMode'], $select('mode', ['fixed' => $plain($r['modeFixedBtn']), 'total' => $plain($r['modeTotalBtn']), 'left' => $plain($r['modeLeftBtn'])], $raw['mode'])) ?>
     <?= $field($t['bgValue'], $input('value', $raw['value'], 'inputmode="decimal" dir="ltr" style="max-width:160px" placeholder="5"'), $t['bgValueHint']) ?>
-    <?= $field($t['bgScope'], $select('scope', ['bot' => $plain($r['scopeBot']), 'panel' => $plain($r['scopePanel'])], $raw['scope'])) ?>
-    <?= $field($t['bgLang'], $select('lang', $langOptions, $raw['lang']), $t['bgLangHint']) ?>
+    <?= $head($t['bgSecWho']) ?>
+    <div data-job="now"><?= $field($t['bgScope'], $select('scope', ['bot' => $plain($r['whoBot']), 'panel' => $plain($r['whoPanel'])], $raw['scope'])) ?></div>
+    <div data-scope="bot"><?= $field($t['bgLang'], $select('lang', $langOptions, $raw['lang']), $t['bgLangHint']) ?></div>
     <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['bgPanels']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgPanelsHint']) ?></div></div>
       <div class="set-ctl"><div class="lang-chips">
         <?php foreach ($panels as $pn): ?>
@@ -192,17 +204,25 @@ include __DIR__ . '/inc/layout_head.php';
         <?php endforeach; ?>
       </div></div>
     </div>
-    <?= $field($t['bgBuy'], '<div style="display:flex;gap:6px;flex-wrap:wrap">' . $select('buy', [
-        'all' => $plain($r['buyAll']), 'next' => $plain($r['buyNextBtn']), 'lasth' => $plain($r['buyLasthBtn']),
-        'days' => $plain($r['buyDaysBtn']), 'months' => $plain($r['buyMonthsBtn']), 'hours' => $plain($r['buyHoursBtn']),
-    ], $raw['buy']) . $input('buyn', $raw['buyn'], 'inputmode="numeric" dir="ltr" style="max-width:110px" placeholder="1"') . '</div>', $t['bgBuyHint']) ?>
-    <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['bgStatus']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgStatusHint']) ?></div></div>
-      <div class="set-ctl"><div class="lang-chips">
-        <?php foreach (bulkgift_statuses() as $s): ?>
-          <label class="lang-chip"><input type="checkbox" name="statuses[]" value="<?= $s ?>"<?= in_array($s, $raw['statuses'], true) ? ' checked' : '' ?>> <?= htmlspecialchars($plain($r['st_' . $s])) ?></label>
-        <?php endforeach; ?>
-      </div></div>
+    <div data-job="camp">
+      <?= $head('⏳ ' . $t['bgHours']) ?>
+      <?= $field($t['bgHours'], $input('hours', $raw['hours'], 'inputmode="numeric" dir="ltr" style="max-width:110px" placeholder="1"'), $t['bgHoursHint']) ?>
     </div>
+    <div data-job="now">
+      <?= $head($t['bgSecWhen']) ?>
+      <?= $field($t['bgBuy'], '<div style="display:flex;gap:6px;flex-wrap:wrap">' . $select('buy', [
+          'all' => $plain($r['buyAll']), 'lasth' => $plain($r['buyLasthBtn']),
+          'days' => $plain($r['buyDaysBtn']), 'months' => $plain($r['buyMonthsBtn']), 'hours' => $plain($r['buyHoursBtn']),
+      ], $raw['buy']) . $input('buyn', $raw['buyn'], 'inputmode="numeric" dir="ltr" style="max-width:110px" placeholder="1"') . '</div>', $t['bgBuyHint']) ?>
+      <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['bgStatus']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgStatusHint']) ?></div></div>
+        <div class="set-ctl"><div class="lang-chips">
+          <?php foreach (bulkgift_statuses() as $s): ?>
+            <label class="lang-chip"><input type="checkbox" name="statuses[]" value="<?= $s ?>"<?= in_array($s, $raw['statuses'], true) ? ' checked' : '' ?>> <?= htmlspecialchars($plain($r['st_' . $s])) ?></label>
+          <?php endforeach; ?>
+        </div></div>
+      </div>
+    </div>
+    <?= $head($t['bgSecMsg']) ?>
     <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['bgNotify']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgNotifyHint']) ?></div></div>
       <div class="set-ctl"><label class="lang-chip" style="justify-content:center"><input type="hidden" name="notify" value="0"><input type="checkbox" name="notify" value="1"<?= $raw['notify'] === '1' ? ' checked' : '' ?>> <?= htmlspecialchars($t['refOn']) ?></label></div>
     </div>
@@ -213,6 +233,21 @@ include __DIR__ . '/inc/layout_head.php';
   </div>
   </form>
 </div>
+<script>
+  // only what this kind of run uses: a campaign has its length, the other
+  // its purchase filter and states; the language is for the bot's users
+  (function () {
+    var f = document.getElementById('bgform');
+    if (!f) { return; }
+    function sync() {
+      var job = f.elements['job'].value, scope = f.elements['scope'].value;
+      f.querySelectorAll('[data-job]').forEach(function (el) { el.style.display = el.getAttribute('data-job') === job ? '' : 'none'; });
+      f.querySelectorAll('[data-scope]').forEach(function (el) { el.style.display = (job === 'camp' || scope === el.getAttribute('data-scope')) ? '' : 'none'; });
+    }
+    f.addEventListener('change', sync);
+    sync();
+  })();
+</script>
 
 <div class="card fade-up" id="history" style="margin-bottom:14px">
   <?= $cardHead('📋 ' . htmlspecialchars($t['bgHistoryTitle']), '') ?>

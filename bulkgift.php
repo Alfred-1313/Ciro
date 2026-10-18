@@ -197,6 +197,11 @@ if (!function_exists('bulkgift_params')) {
         } else {
             $o['statuses'] = bulkgift_default_statuses();
         }
+        // a campaign's purchases are new - started or waiting to start - and its
+        // screen has no states to pick: one left from before must not bite
+        if ($o['buy'] === 'next') {
+            $o['statuses'] = bulkgift_default_statuses();
+        }
         $o['notify'] = array_key_exists('notify', $p) ? (bool) $p['notify'] : true;
         // a job also keeps the names its panels had when it was started
         $o['pnames'] = array_values(array_filter(array_map('strval', (array) ($p['pnames'] ?? [])), 'strlen'));
@@ -398,19 +403,6 @@ if (!function_exists('bulkgift_amount_label')) {
         $key = ($p['kind'] === 'time' ? 'time' : 'vol') . ucfirst($p['mode']);
         return strtr($t[$key], ['{n}' => bulkgift_num($p['value'])]);
     }
-    function bulkgift_scope_label(array $p)
-    {
-        $t = bulkgift_texts();
-        return $p['scope'] === 'panel' ? $t['scopePanel'] : $t['scopeBot'];
-    }
-    function bulkgift_lang_label(array $p)
-    {
-        $t = bulkgift_texts();
-        if ($p['scope'] === 'panel') {
-            return $t['langPanelScope'];
-        }
-        return $p['lang'] === 'all' ? $t['langAll'] : bulkgift_lang_name($p['lang']);
-    }
     // the panels by name (a job's: the names they had when it started)
     function bulkgift_panels_label(array $p)
     {
@@ -457,21 +449,53 @@ if (!function_exists('bulkgift_amount_label')) {
         }
         return implode('، ', array_map(fn($s) => $t['st_' . $s], $p['statuses']));
     }
-    // ▫️ one line for each setting
+    // «📦 5 گیگ», «⏰ 10٪ از زمان باقی‌مونده», «📦 حجم — مقدارش هنوز تعیین نشده»
+    function bulkgift_what_label(array $p)
+    {
+        $t = bulkgift_texts();
+        $kind = $p['kind'] === 'time' ? $t['kindTime'] : $t['kindVolume'];
+        if ($p['value'] === null) {
+            return strtr($t['whatUnset'], ['{kind}' => $kind]);
+        }
+        return ($p['kind'] === 'time' ? '⏰ ' : '📦 ') . bulkgift_amount_label($p);
+    }
+    // «🤖 سرویس‌های ربات · 🇬🇧 English», «🌐 همه‌ی حساب‌های پنل», «🛒 هر کی از ربات بخره»
+    function bulkgift_who_label(array $p)
+    {
+        $t = bulkgift_texts();
+        if ($p['scope'] === 'panel') {
+            return $t['whoPanel'];
+        }
+        $who = bulkgift_is_live($p) ? $t['whoBuyers'] : $t['whoBot'];
+        return $p['lang'] === 'all' ? $who : $who . ' · ' . bulkgift_lang_name($p['lang']);
+    }
+    // 🔜 how long a campaign takes purchases: from its start, or its window once started
+    function bulkgift_camp_label(array $p)
+    {
+        $t = bulkgift_texts();
+        if (isset($p['win_from'], $p['win_to'])) {
+            return strtr($t['campRun'], ['{from}' => bulkgift_when($p['win_from']), '{to}' => bulkgift_when($p['win_to'])]);
+        }
+        return strtr($t['campFor'], ['{n}' => number_format($p['buyn'])]);
+    }
+    // ▫️ one line for each part of the settings, the way the screen groups them
     function bulkgift_summary_rows(array $p)
     {
         $t = bulkgift_texts();
-        return implode("\n", array_filter([
-            strtr($t['rowKind'], ['{v}' => $p['kind'] === 'time' ? $t['kindTime'] : $t['kindVolume']]),
-            strtr($t['rowAmount'], ['{v}' => bulkgift_amount_label($p)]),
-            // a campaign is about what is sold in the bot, whoever buys it
-            bulkgift_is_live($p) ? '' : strtr($t['rowScope'], ['{v}' => bulkgift_scope_label($p)]),
-            strtr($t['rowLang'], ['{v}' => bulkgift_lang_label($p)]),
+        $live = bulkgift_is_live($p);
+        $rows = [
+            strtr($t['rowJob'], ['{v}' => $live ? $t['jobCamp'] : $t['jobNow']]),
+            strtr($t['rowWhat'], ['{v}' => bulkgift_what_label($p)]),
+            strtr($t['rowWho'], ['{v}' => bulkgift_who_label($p)]),
             strtr($t['rowPanels'], ['{v}' => bulkgift_panels_label($p)]),
-            strtr($t['rowBuy'], ['{v}' => bulkgift_buy_label($p)]),
-            strtr($t['rowStatus'], ['{v}' => bulkgift_status_label($p)]),
-            strtr($t['rowNotify'], ['{v}' => $p['notify'] ? $t['notifyOn'] : $t['notifyOff']]),
-        ], 'strlen'));
+            $live ? strtr($t['rowCamp'], ['{v}' => bulkgift_camp_label($p)]) : strtr($t['rowBuy'], ['{v}' => bulkgift_buy_label($p)]),
+        ];
+        // a campaign's purchases are new: started or waiting to start
+        if (!$live) {
+            $rows[] = strtr($t['rowStatus'], ['{v}' => bulkgift_status_label($p)]);
+        }
+        $rows[] = strtr($t['rowNotify'], ['{v}' => $p['notify'] ? $t['notifyOn'] : $t['notifyOff']]);
+        return implode("\n", $rows);
     }
 }
 
@@ -1268,7 +1292,7 @@ if (!function_exists('bulkgift_progress_payload')) {
             $lines = [
                 strtr($t['liveTitle'], ['{kind}' => $kind]),
                 '➖➖➖➖➖➖➖➖➖➖',
-                strtr($t['rowAmount'], ['{v}' => bulkgift_amount_label($p)]),
+                strtr($t['rowWhat'], ['{v}' => bulkgift_what_label($p)]),
                 strtr($t['liveUntil'], ['{to}' => bulkgift_when($p['win_to'] ?? time())]),
                 '',
                 strtr($t['liveCount'], ['{n}' => number_format($c['done'])]),
@@ -1279,8 +1303,8 @@ if (!function_exists('bulkgift_progress_payload')) {
             $lines = [
                 strtr($t['progressTitle'], ['{kind}' => $kind]),
                 '➖➖➖➖➖➖➖➖➖➖',
-                strtr($t['rowAmount'], ['{v}' => bulkgift_amount_label($p)]),
-                strtr($t['rowScope'], ['{v}' => bulkgift_scope_label($p)]),
+                strtr($t['rowWhat'], ['{v}' => bulkgift_what_label($p)]),
+                strtr($t['rowWho'], ['{v}' => bulkgift_who_label($p)]),
                 '',
             ];
         }
@@ -1634,65 +1658,103 @@ if (!function_exists('bulkgift_hub_payload')) {
         unset($p['pnames']);
         return hash('crc32b', json_encode($p));
     }
-    // 🏬 ← 🎁: the settings, one button for each - ✅ on what is picked
+    // a button; $style null = white (Telegram's own)
+    function bulkgift_btn($text, $cb, $style = 'primary')
+    {
+        $b = ['text' => $text, 'callback_data' => $cb];
+        if ($style !== null) {
+            $b['style'] = $style;
+        }
+        return $b;
+    }
+    // one choice of several: ✅ and green when it is the one
+    function bulkgift_pick($on, $text, $cb)
+    {
+        return bulkgift_btn(($on ? '✅ ' : '') . $text, $cb, $on ? 'success' : 'primary');
+    }
+    // 🏬 ← 🎁: what kind of run, then one button for each part - each says
+    // what it is set to and opens a screen of its own (bulkgift_section_payload)
     function bulkgift_hub_payload(array $p)
     {
         $t = bulkgift_texts();
-        $btn = function ($text, $cb, $style = 'primary') {
-            $b = ['text' => $text, 'callback_data' => $cb];
-            if ($style !== null) {
-                $b['style'] = $style;
-            }
-            return $b;
-        };
-        $pick = fn($on, $text, $cb) => $btn(($on ? '✅ ' : '') . $text, $cb, $on ? 'success' : 'primary');
+        $live = bulkgift_is_live($p);
         $rows = [];
-        $rows[] = [$btn($t['sepWhat'], 'bgh:sep:what', null)];
-        $rows[] = [$pick($p['kind'] === 'volume', $t['kindVolume'], 'bgh:k:volume'), $pick($p['kind'] === 'time', $t['kindTime'], 'bgh:k:time')];
-        $rows[] = [$pick($p['mode'] === 'fixed', $t['modeFixed'], 'bgh:m:fixed'), $pick($p['mode'] === 'total', $t['modeTotal'], 'bgh:m:total'), $pick($p['mode'] === 'left', $t['modeLeft'], 'bgh:m:left')];
-        $rows[] = [$p['value'] === null
-            ? $btn($t['valueBtnUnset'], 'bgh:v', 'danger')
-            : $btn(strtr($t['valueBtn'], ['{v}' => strip_tags(bulkgift_amount_label($p))]), 'bgh:v', 'success')];
-        $rows[] = [$btn($t['sepWho'], 'bgh:sep:who', null)];
-        // a campaign is about what the bot sells: no panel accounts to pick
-        if (!bulkgift_is_live($p)) {
-            $rows[] = [$pick($p['scope'] === 'bot', $t['scopeBot'], 'bgh:s:bot'), $pick($p['scope'] === 'panel', $t['scopePanel'], 'bgh:s:panel')];
+        $rows[] = [bulkgift_pick(!$live, $t['jobNowBtn'], 'bgh:job:now'), bulkgift_pick($live, $t['jobCampBtn'], 'bgh:job:camp')];
+        $rows[] = [bulkgift_btn(strtr($t['secWhatBtn'], ['{v}' => $p['value'] === null ? $t['valueNone'] : strip_tags(bulkgift_amount_label($p))]), 'bgh:sec:what', $p['value'] === null ? 'danger' : 'primary')];
+        $rows[] = [bulkgift_btn(strtr($t['secWhoBtn'], ['{v}' => strip_tags(bulkgift_who_label($p))]), 'bgh:sec:who')];
+        if ($live) {
+            $rows[] = [bulkgift_btn(strtr($t['secCampBtn'], ['{n}' => number_format($p['buyn'])]), 'bgh:hours')];
+        } else {
+            $rows[] = [bulkgift_btn(strtr($t['secBuyBtn'], ['{v}' => strip_tags(bulkgift_buy_label($p))]), 'bgh:sec:buy')];
+            $rows[] = [bulkgift_btn(strtr($t['secStBtn'], ['{v}' => strip_tags(bulkgift_status_label($p))]), 'bgh:sec:st')];
         }
-        if ($p['scope'] === 'bot') {
-            $row = [$pick($p['lang'] === 'all', $t['langAll'], 'bgh:l:all')];
-            foreach (panel_langs() as $l) {
-                $row[] = $pick($p['lang'] === $l, bulkgift_lang_name($l), 'bgh:l:' . $l);
+        $rows[] = [bulkgift_btn($p['notify'] ? $t['notifyOnBtn'] : $t['notifyOffBtn'], 'bgh:n', $p['notify'] ? 'success' : 'danger'), bulkgift_btn($t['previewBtn'], 'bgh:pv')];
+        $rows[] = [bulkgift_btn($t['continueBtn'], 'bgh:go', 'success')];
+        $rows[] = [bulkgift_btn($t['closeBtn'], 'bgh:x', 'danger')];
+        $text = $t['title'] . "\n➖➖➖➖➖➖➖➖➖➖\n" . $t['intro'] . "\n\n" . bulkgift_summary_rows($p) . "\n\n" . $t['skipNote'];
+        return [$text, json_encode(['inline_keyboard' => $rows])];
+    }
+    // One part's own screen - what (📦 or ⏰, how it is counted, how much),
+    // who (bot or panel, language, panels), buy (when it was bought), st (the
+    // account states): its choices one under the other, and 🔙 to the menu.
+    function bulkgift_section_payload(array $p, $sec)
+    {
+        $t = bulkgift_texts();
+        $line = "\n➖➖➖➖➖➖➖➖➖➖\n";
+        $rows = [];
+        if ($sec === 'what') {
+            $rows[] = [bulkgift_pick($p['kind'] === 'volume', $t['kindVolume'], 'bgh:k:volume'), bulkgift_pick($p['kind'] === 'time', $t['kindTime'], 'bgh:k:time')];
+            foreach (['fixed', 'total', 'left'] as $m) {
+                $rows[] = [bulkgift_pick($p['mode'] === $m, $t['mode' . ucfirst($m) . 'Btn'], 'bgh:m:' . $m)];
             }
-            $rows[] = $row;
-        }
-        $rows[] = [$pick(!$p['panels'], $t['panelsAll'], 'bgh:p:all')];
-        $line = [];
-        // Telegram refuses a message with more than 100 buttons: past the
-        // first 60 panels, one is picked on the web panel's page
-        foreach (array_slice(bulkgift_all_panels(), 0, 60) as $r) {
-            $name = (string) $r['name_panel'] . ($p['scope'] === 'panel' && !bulkgift_listable($r) ? $t['panelBotOnly'] : '');
-            $line[] = $pick(in_array((string) $r['code_panel'], $p['panels'], true), $name, 'bgh:p:' . (int) $r['id']);
-            if (count($line) === 2) {
-                $rows[] = $line;
-                $line = [];
+            $rows[] = [$p['value'] === null
+                ? bulkgift_btn($t['valueBtnUnset'], 'bgh:v', 'danger')
+                : bulkgift_btn(strtr($t['valueBtn'], ['{v}' => strip_tags(bulkgift_amount_label($p))]), 'bgh:v', 'success')];
+            $text = $t['whatTitle'] . $line . $t['whatHint'] . "\n\n" . strtr($t['rowWhat'], ['{v}' => bulkgift_what_label($p)]);
+        } elseif ($sec === 'who') {
+            // a campaign is about what the bot sells: no panel accounts to pick
+            if (!bulkgift_is_live($p)) {
+                $rows[] = [bulkgift_pick($p['scope'] === 'bot', $t['whoBot'], 'bgh:s:bot')];
+                $rows[] = [bulkgift_pick($p['scope'] === 'panel', $t['whoPanel'], 'bgh:s:panel')];
             }
+            if ($p['scope'] === 'bot') {
+                $rows[] = [bulkgift_btn($t['sepLang'], 'bgh:sep:lang', null)];
+                $row = [bulkgift_pick($p['lang'] === 'all', $t['langAll'], 'bgh:l:all')];
+                foreach (panel_langs() as $l) {
+                    $row[] = bulkgift_pick($p['lang'] === $l, bulkgift_lang_name($l), 'bgh:l:' . $l);
+                }
+                $rows[] = $row;
+            }
+            $rows[] = [bulkgift_btn($t['sepPanels'], 'bgh:sep:panels', null)];
+            $rows[] = [bulkgift_pick(!$p['panels'], $t['panelsAll'], 'bgh:p:all')];
+            $pair = [];
+            // Telegram refuses a message with more than 100 buttons: past the
+            // first 80 panels, one is picked on the web panel's page
+            foreach (array_slice(bulkgift_all_panels(), 0, 80) as $r) {
+                $name = (string) $r['name_panel'] . ($p['scope'] === 'panel' && !bulkgift_listable($r) ? $t['panelBotOnly'] : '');
+                $pair[] = bulkgift_pick(in_array((string) $r['code_panel'], $p['panels'], true), $name, 'bgh:p:' . (int) $r['id']);
+                if (count($pair) === 2) {
+                    $rows[] = $pair;
+                    $pair = [];
+                }
+            }
+            if ($pair) {
+                $rows[] = $pair;
+            }
+            $text = $t['whoTitle'] . $line . (bulkgift_is_live($p) ? $t['whoHintCamp'] : $t['whoHint']) . "\n\n"
+                . strtr($t['rowWho'], ['{v}' => bulkgift_who_label($p)]) . "\n" . strtr($t['rowPanels'], ['{v}' => bulkgift_panels_label($p)]);
+        } elseif ($sec === 'buy') {
+            foreach (['all' => $t['buyAll'], 'lasth' => $t['buyLasthBtn'], 'days' => $t['buyDaysBtn'], 'months' => $t['buyMonthsBtn'], 'hours' => $t['buyHoursBtn']] as $k => $label) {
+                $rows[] = [bulkgift_pick($p['buy'] === $k, $p['buy'] === $k ? strip_tags(bulkgift_buy_label($p)) : $label, 'bgh:b:' . $k)];
+            }
+            $text = $t['buyTitle'] . $line . $t['buyHint'] . "\n\n" . strtr($t['rowBuy'], ['{v}' => bulkgift_buy_label($p)]);
+        } else {
+            foreach (bulkgift_statuses() as $s) {
+                $rows[] = [bulkgift_pick(in_array($s, $p['statuses'], true), $t['st_' . $s], 'bgh:t:' . $s)];
+            }
+            $text = $t['stTitle'] . $line . $t['stHint'] . "\n\n" . strtr($t['rowStatus'], ['{v}' => bulkgift_status_label($p)]);
         }
-        if ($line) {
-            $rows[] = $line;
-        }
-        $buy = fn($k, $label) => $pick($p['buy'] === $k, $p['buy'] === $k ? bulkgift_buy_label($p) : $label, 'bgh:b:' . $k);
-        $rows[] = [$buy('all', $t['buyAll']), $buy('next', $t['buyNextBtn'])];
-        $rows[] = [$buy('lasth', $t['buyLasthBtn']), $buy('days', $t['buyDaysBtn'])];
-        $rows[] = [$buy('months', $t['buyMonthsBtn']), $buy('hours', $t['buyHoursBtn'])];
-        // which states get it, any mix of them
-        $st = fn($s) => $pick(in_array($s, $p['statuses'], true), $t['st_' . $s], 'bgh:t:' . $s);
-        $rows[] = [$st('active'), $st('on_hold')];
-        $rows[] = [$st('limited'), $st('expired'), $st('disabled')];
-        $rows[] = [$btn($t['sepMsg'], 'bgh:sep:msg', null)];
-        $rows[] = [$btn($p['notify'] ? $t['notifyOnBtn'] : $t['notifyOffBtn'], 'bgh:n', $p['notify'] ? 'success' : 'danger'), $btn($t['previewBtn'], 'bgh:pv')];
-        $rows[] = [$btn($t['continueBtn'], 'bgh:go', 'success')];
-        $rows[] = [$btn($t['closeBtn'], 'bgh:x', 'danger')];
-        $text = $t['title'] . "\n➖➖➖➖➖➖➖➖➖➖\n" . $t['intro'] . "\n\n" . $t['settingsHead'] . "\n" . bulkgift_summary_rows($p) . "\n\n" . $t['skipNote'];
+        $rows[] = [bulkgift_btn($t['backBtn'], 'bgh', 'danger')];
         return [$text, json_encode(['inline_keyboard' => $rows])];
     }
     // «🚀 ادامه»: the settings once more, and what they find among the bot's
@@ -1724,10 +1786,11 @@ if (!function_exists('bulkgift_hub_payload')) {
         $rows[] = [['text' => $t['closeBtn'], 'callback_data' => 'bgh:x', 'style' => 'danger']];
         return [implode("\n\n", $parts), json_encode(['inline_keyboard' => $rows])];
     }
-    // a question that took the screen's place, with its way back
-    function bulkgift_ask_payload($text)
+    // a question that took the screen's place, with its way back ($back: the
+    // screen it was asked from)
+    function bulkgift_ask_payload($text, $back = 'bgh')
     {
-        return [$text, json_encode(['inline_keyboard' => [[['text' => bulkgift_texts()['backBtn'], 'callback_data' => 'bgh', 'style' => 'danger']]]])];
+        return [$text, json_encode(['inline_keyboard' => [[bulkgift_btn(bulkgift_texts()['backBtn'], $back, 'danger')]]])];
     }
     // 👁 the message a customer of $lang gets: a percentage is shown for a 10
     // GB, 30-day subscription
