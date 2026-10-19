@@ -131,7 +131,7 @@ $jobLine = function (array $j) use ($r, $plain) {
 };
 // 🎯 opens by itself when something in it is not the usual setting, the way
 // the bot's summary lists those
-$moreOpen = $raw['mode'] !== 'fixed' || $raw['scope'] !== 'bot' || $raw['lang'] !== 'all' || $raw['panels'] || $raw['notify'] !== '1'
+$moreOpen = $raw['scope'] !== 'bot' || $raw['lang'] !== 'all' || $raw['notify'] !== '1'
     || ($raw['job'] !== 'camp' && ($raw['buy'] !== 'all' || $raw['statuses'] !== bulkgift_default_statuses() || $raw['refs'] === '1'));
 $langOptions = ['all' => $plain($r['langAll'])];
 foreach (web_langs() as $code => $name) {
@@ -215,20 +215,20 @@ include __DIR__ . '/inc/layout_head.php';
   <div class="card-body">
     <?= $field($t['bgJob'], $select('job', ['now' => $plain($r['jobNow']), 'camp' => $plain($r['campBtn'])], $raw['job']), $t['bgJobHint']) ?>
     <?= $field($t['bgKind'], $select('kind', ['volume' => $plain($r['kindVolume']), 'time' => $plain($r['kindTime'])], $raw['kind'])) ?>
+    <?= $field($t['bgMode'], $select('mode', ['fixed' => $plain($r['modeFixedBtn']), 'total' => $plain($r['modeTotalBtn']), 'left' => $plain($r['modeLeftBtn'])], $raw['mode'])) ?>
     <?= $field($t['bgValue'], $input('value', $raw['value'], 'inputmode="decimal" dir="ltr" style="max-width:160px" placeholder="5"'), $t['bgValueHint']) ?>
+    <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['bgPanels']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgPanelsHint']) ?></div></div>
+      <div class="set-ctl"><div class="lang-chips">
+        <?php foreach ($panels as $pn): ?>
+          <label class="lang-chip"><input type="checkbox" name="panels[]" value="<?= htmlspecialchars((string) $pn['code_panel']) ?>"<?= in_array((string) $pn['code_panel'], $raw['panels'], true) ? ' checked' : '' ?>> <?= htmlspecialchars((string) $pn['name_panel']) ?><?= bulkgift_listable($pn) ? '' : htmlspecialchars($r['panelBotOnly']) ?></label>
+        <?php endforeach; ?>
+      </div></div>
+    </div>
     <div data-job="camp"><?= $field($t['bgHours'], $input('hours', $raw['hours'], 'inputmode="numeric" dir="ltr" style="max-width:110px" placeholder="24"'), $t['bgHoursHint']) ?></div>
     <details id="bgmore"<?= $moreOpen ? ' open' : '' ?>>
       <summary class="set-row" style="cursor:pointer;list-style:none"><div><div class="set-label">🎯 <?= htmlspecialchars($t['bgMore']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgMoreHint']) ?></div></div><div class="set-ctl"><span class="bg-chev" aria-hidden="true">▾</span></div></summary>
-      <?= $field($t['bgMode'], $select('mode', ['fixed' => $plain($r['modeFixedBtn']), 'total' => $plain($r['modeTotalBtn']), 'left' => $plain($r['modeLeftBtn'])], $raw['mode'])) ?>
       <div data-job="now"><?= $field($t['bgScope'], $select('scope', ['bot' => $plain($r['whoBot']), 'panel' => $plain($r['whoPanel'])], $raw['scope'])) ?></div>
       <div data-scope="bot"><?= $field($t['bgLang'], $select('lang', $langOptions, $raw['lang']), $t['bgLangHint']) ?></div>
-      <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['bgPanels']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgPanelsHint']) ?></div></div>
-        <div class="set-ctl"><div class="lang-chips">
-          <?php foreach ($panels as $pn): ?>
-            <label class="lang-chip"><input type="checkbox" name="panels[]" value="<?= htmlspecialchars((string) $pn['code_panel']) ?>"<?= in_array((string) $pn['code_panel'], $raw['panels'], true) ? ' checked' : '' ?>> <?= htmlspecialchars((string) $pn['name_panel']) ?><?= bulkgift_listable($pn) ? '' : htmlspecialchars($r['panelBotOnly']) ?></label>
-          <?php endforeach; ?>
-        </div></div>
-      </div>
       <div data-job="now">
         <?= $field($t['bgBuy'], '<div style="display:flex;gap:6px;flex-wrap:wrap">' . $select('buy', [
             'all' => $plain($r['buyAll']), 'lasth' => $plain($r['buyLasthBtn']),

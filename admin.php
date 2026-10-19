@@ -21416,9 +21416,9 @@ if ($datain == "linkappsetting") {
     }
     Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
 } elseif (preg_match('/^bgh:(k|ck):(volume|time)$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
-    // 📦 / ⏰ - from the first screen (k: to the subscriptions there are now)
-    // or a campaign's (ck): a fixed amount to begin with, asked for at once -
-    // a campaign's length is asked right after it
+    // step 1: 📦 / ⏰ - from the first screen (k: to the subscriptions there
+    // are now) or a campaign's (ck); step 2 asks how it is counted
+    step('home', $from_id);
     $bg_p = $bg_m[1] === 'k' ? bulkgift_params([]) : bulkgift_draft($from_id);
     $bg_p['kind'] = $bg_m[2];
     $bg_p['mode'] = 'fixed';
@@ -21428,10 +21428,56 @@ if ($datain == "linkappsetting") {
         $bg_p['buyn'] = 24;
     }
     bulkgift_draft_save($from_id, $bg_p);
-    savedata("clear", $bg_m[1] === 'ck' ? 'bg_camp' : 'bg_ask', 1);
-    step('bgh_value', $from_id);
-    bulkgift_draft_ask($from_id, $message_id);
-    [$bg_text, $bg_kb] = bulkgift_ask_payload(bulkgift_value_ask($bg_p), $bg_m[1] === 'k' ? 'bgh' : 'bgh:cpk');
+    [$bg_text, $bg_kb] = bulkgift_mode_payload(bulkgift_draft($from_id));
+    Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
+} elseif (preg_match('/^bgh:(wk|wa|wps|wn|wh|wm:(fixed|total|left)|wp:(all|\d+))$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
+    // The steps: wk 2 (how it is counted), wm picks it and wa asks 3 (how
+    // much) again, wps 4 (which panels, wp ticks one) and wn goes on from it -
+    // to a campaign's 5 (wh, how long) or to the summary. Every step's 🔙 is
+    // the one before it.
+    $bg_t = $textbotlang['Admin']['BulkGift'];
+    $bg_p = bulkgift_draft($from_id);
+    $bg_go = explode(':', $bg_m[1])[0];
+    step('home', $from_id);
+    if ($bg_go === 'wm' || $bg_go === 'wa') {
+        if ($bg_go === 'wm') {
+            $bg_p['mode'] = $bg_m[2];
+            $bg_p['value'] = null;
+            bulkgift_draft_save($from_id, $bg_p);
+            $bg_p = bulkgift_draft($from_id);
+        }
+        // the answer leads on to step 4
+        savedata("clear", "bg_wiz", 1);
+        step('bgh_value', $from_id);
+        bulkgift_draft_ask($from_id, $message_id);
+        [$bg_text, $bg_kb] = bulkgift_value_payload($bg_p);
+    } elseif ($bg_go === 'wp') {
+        $bg_v = $bg_m[3];
+        if ($bg_v === 'all') {
+            $bg_p['panels'] = [];
+        } else {
+            $bg_row = select("marzban_panel", "*", "id", $bg_v, "select");
+            if (is_array($bg_row)) {
+                $bg_code = (string) $bg_row['code_panel'];
+                $bg_p['panels'] = in_array($bg_code, $bg_p['panels'], true)
+                    ? array_values(array_diff($bg_p['panels'], [$bg_code]))
+                    : array_merge($bg_p['panels'], [$bg_code]);
+            }
+        }
+        bulkgift_draft_save($from_id, $bg_p);
+        [$bg_text, $bg_kb] = bulkgift_wpanels_payload(bulkgift_draft($from_id));
+    } elseif ($bg_go === 'wh' || ($bg_go === 'wn' && bulkgift_is_live($bg_p))) {
+        savedata("clear", "bg_buy", 'next');
+        step('bgh_buyn', $from_id);
+        bulkgift_draft_ask($from_id, $message_id);
+        [$bg_text, $bg_kb] = bulkgift_whours_payload($bg_p);
+    } elseif ($bg_go === 'wn' && $bg_p['value'] !== null) {
+        [$bg_text, $bg_kb] = bulkgift_summary_payload($bg_p);
+    } elseif ($bg_go === 'wps' && $bg_p['value'] !== null) {
+        [$bg_text, $bg_kb] = bulkgift_wpanels_payload($bg_p);
+    } elseif ($bg_go === 'wk' || $bg_go === 'wps' || $bg_go === 'wn') {
+        [$bg_text, $bg_kb] = bulkgift_mode_payload($bg_p);
+    }
     Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
 } elseif (preg_match('/^bgh:(m|l|p|b|t):([a-z0-9_]+)$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
     // one of 🎯's settings changed: a single choice goes back to the summary,
@@ -21529,23 +21575,18 @@ if ($datain == "linkappsetting") {
     }
     step('home', $from_id);
     bulkgift_draft_save($from_id, $bg_p);
-    // the question goes; the next screen comes under the answer - a new
-    // campaign's «what», or the summary
+    // the question goes; the next screen comes under the answer - step 4
+    // (which panels) for an amount asked step by step, else the summary
     $bg_ask = bulkgift_draft_ask($from_id);
     if ($bg_ask > 0) {
         deletemessage($from_id, $bg_ask);
     }
     $bg_p = bulkgift_draft($from_id);
-    if ($user['step'] == 'bgh_value' && !empty($bg_pv['bg_camp']) && bulkgift_is_live($bg_p)) {
-        // a new campaign's amount: how long it runs comes next
-        savedata("clear", "bg_buy", 'next');
-        step('bgh_buyn', $from_id);
-        [$bg_text, $bg_kb] = bulkgift_ask_payload($bg_t['askBuyNext'], 'bgh:sum');
-        $bg_sent = sendmessage($from_id, $bg_text, $bg_kb, 'HTML');
-        bulkgift_draft_ask($from_id, (int) ($bg_sent['result']['message_id'] ?? 0));
-        return;
+    if ($user['step'] == 'bgh_value' && !empty($bg_pv['bg_wiz'])) {
+        [$bg_text, $bg_kb] = bulkgift_wpanels_payload($bg_p);
+    } else {
+        [$bg_text, $bg_kb] = $bg_p['value'] !== null ? bulkgift_summary_payload($bg_p) : (bulkgift_is_live($bg_p) ? bulkgift_camp_payload() : bulkgift_start_payload());
     }
-    [$bg_text, $bg_kb] = $bg_p['value'] !== null ? bulkgift_summary_payload($bg_p) : (bulkgift_is_live($bg_p) ? bulkgift_camp_payload() : bulkgift_start_payload());
     sendmessage($from_id, $bg_text, $bg_kb, 'HTML');
 } elseif ($datain === 'bgh:pv' && $adminrulecheck['rule'] == "administrator") {
     // 👁 the message each language's customers get - 🎨's text, as 🎨 has it

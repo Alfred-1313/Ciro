@@ -199,7 +199,7 @@ class ManagePanel
         if ($Get_Data_Panel['type'] == "marzban") {
             //create user
             $ConnectToPanel = adduser($Get_Data_Panel['name_panel'], $data_limit, $usernameC, $expire, $note, $Get_Data_Product['data_limit_reset'], $Get_Data_Product['name_product']);
-            if (!empty($ConnectToPanel['status']) && $ConnectToPanel['status'] == 500) {
+            if (!empty($ConnectToPanel['status']) && $ConnectToPanel['status'] >= 500) {
                 return array(
                     'status' => 'Unsuccessful',
                     'msg' => $ConnectToPanel['status']
@@ -212,6 +212,12 @@ class ManagePanel
                 );
             }
             $data_Output = json_decode($ConnectToPanel['body'], true);
+            if (!is_array($data_Output)) {
+                return array(
+                    'status' => 'Unsuccessful',
+                    'msg' => 'bad answer'
+                );
+            }
             if (!empty($data_Output['detail']) && $data_Output['detail']) {
                 $Output['status'] = 'Unsuccessful';
                 if ($data_Output['detail']) {
@@ -241,7 +247,7 @@ class ManagePanel
         } elseif ($Get_Data_Panel['type'] == "marzneshin") {
             //create user
             $ConnectToPanel = adduserm($Get_Data_Panel['name_panel'], $data_limit, $usernameC, $expire, $Get_Data_Product['name_product'], $note, $Get_Data_Product['data_limit_reset']);
-            if (!empty($ConnectToPanel['status']) && $ConnectToPanel['status'] == 500) {
+            if (!empty($ConnectToPanel['status']) && $ConnectToPanel['status'] >= 500) {
                 return array(
                     'status' => 'Unsuccessful',
                     'msg' => $ConnectToPanel['status']
@@ -254,6 +260,12 @@ class ManagePanel
                 );
             }
             $data_Output = json_decode($ConnectToPanel['body'], true);
+            if (!is_array($data_Output)) {
+                return array(
+                    'status' => 'Unsuccessful',
+                    'msg' => 'bad answer'
+                );
+            }
             if (isset($data_Output['detail']) && $data_Output['detail']) {
                 $Output['status'] = 'Unsuccessful';
                 if ($data_Output['detail']) {
@@ -621,13 +633,19 @@ class ManagePanel
                     'status' => 'Unsuccessful',
                     'msg' => $UsernameData['error']
                 );
-            } elseif (!empty($UsernameData['status']) && $UsernameData['status'] == 500) {
+            } elseif (!empty($UsernameData['status']) && $UsernameData['status'] >= 500) {
                 $Output = array(
                     'status' => 'Unsuccessful',
                     'msg' => $UsernameData['status']
                 );
             } else {
                 $UsernameData = json_decode($UsernameData['body'], true);
+                if (!is_array($UsernameData)) {
+                    return array(
+                        'status' => 'Unsuccessful',
+                        'msg' => 'bad answer'
+                    );
+                }
                 if (!empty($UsernameData['detail'])) {
                     return array(
                         'status' => 'Unsuccessful',
@@ -693,7 +711,7 @@ class ManagePanel
                     'status' => 'Unsuccessful',
                     'msg' => $UsernameData['error']
                 );
-            } elseif (!empty($UsernameData['status']) && $UsernameData['status'] == 500) {
+            } elseif (!empty($UsernameData['status']) && $UsernameData['status'] >= 500) {
                 $Output = array(
                     'status' => 'Unsuccessful',
                     'msg' => $UsernameData['status']
@@ -1729,10 +1747,10 @@ class ManagePanel
                     'status' => false,
                     'msg' => $modify['error']
                 );
-            } elseif (!empty($modify['status']) && $modify['status'] == 500) {
+            } elseif (!empty($modify['status']) && $modify['status'] >= 400) {
                 return array(
                     'status' => false,
-                    'msg' => 'error code : ' . $modify['status']
+                    'msg' => (json_decode((string) $modify['body'], true)['detail'] ?? null) ?: 'error code : ' . $modify['status']
                 );
             }
             $modifycheck = json_decode($modify['body'], true);
@@ -1754,10 +1772,10 @@ class ManagePanel
                     'status' => false,
                     'msg' => $modify['error']
                 );
-            } elseif (!empty($modify['status']) && $modify['status'] == 500) {
+            } elseif (!empty($modify['status']) && $modify['status'] >= 400) {
                 return array(
                     'status' => false,
-                    'msg' => 'error code : ' . $modify['status']
+                    'msg' => (json_decode((string) $modify['body'], true)['detail'] ?? null) ?: 'error code : ' . $modify['status']
                 );
             }
             $modifycheck = json_decode($modify['body'], true);

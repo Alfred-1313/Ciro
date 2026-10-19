@@ -5564,11 +5564,11 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'bgMoreHint' => 'All optional; left alone, it goes to every active subscription of the bot.',
                 'bgGuide' => 'Guide',
                 'bgGuideText' => '1. Pick the job: a gift to the subscriptions there are now, or a purchase campaign (every purchase from its start for some hours).
-2. Pick volume or time and type the amount:
+2. Pick volume or time, then «How to count» (a fixed amount, or a percent of each subscription\'s total or of what it has left), then the amount and the panels:
 ▫️ Volume: 5 = 5 GB, 5.5 = 5 GB and 500 MB, 0.1 = 100 MB
 ▫️ Time: 1 = 1 day, 0.1 = 1 hour, 2.12 = 2 days and 12 hours (the number after the point is hours, up to 23)
 3. Press «Check the count» to see about how many subscriptions get it, then «Start».
-«🎯 More settings» is optional: percent, language, panels, purchase time, account status, accounts that are not in the bot, referral reward configs, and the message to the user.
+«🎯 More settings» is optional: language, purchase time, account status, accounts that are not in the bot, referral reward configs, and the message to the user.
 ⏱ Hourly, 🧪 test, ♾ unlimited accounts and 🎁 configs earned by bringing referrals get nothing (the last ones can be turned on in «🎯 More settings»). ⏸ An account not started yet gets the time on its length and keeps waiting.
 Its progress shows here and in the bot; the final report, with the exact number, comes to the bot. An account whose panel does not answer is tried up to 3 times; if it still fails, «Earlier runs» gets a «🔁 Retry failed» button.',
                 'bgStatus' => 'Account status',
