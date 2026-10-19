@@ -3216,6 +3216,17 @@ n2',
       'cannotChangeToAll' => '❌ نمی توانید محصول تعریف شده را به نام موقعیت /all تغییر دهید.',
       'locationUpdated' => '✅موقعیت محصول بروزرسانی شد',
       'askNewVolume' => 'حجم جدید را ارسال کنید',
+      'askSpeed' => '🚀 <b>محدودیت سرعت</b> (فقط برای پنل ربکا)
+چند مگابیت بر ثانیه (Mbps)؟
+<blockquote><code>10</code> یعنی 10 Mbps
+<code>2.5</code> یعنی 2.5 Mbps
+<code>0</code> یعنی بدون محدودیت</blockquote>',
+      'speedNoneBtn' => '♾ بدون محدودیت',
+      'invalidSpeed' => '❌ سرعت رو نفهمیدم. یه عدد بفرست، مثلاً <code>10</code> یا <code>2.5</code>؛ <code>0</code> یعنی بدون محدودیت.',
+      'speedUpdated' => '✅ محدودیت سرعت محصول ذخیره شد.',
+      'speedLine' => '🚀 محدودیت سرعت: <b>%s</b>',
+      'speedNone' => 'بدون محدودیت',
+      'speedBtn' => '🚀 محدودیت سرعت: %s',
       'updated' => '✅محصول بروزرسانی شد',
       'firstPurchaseDesc' => '📌 از طریق این قابلیت می توانید تعیین کنید این محصول برای خرید اول باشد یا خیر',
       'nameExists' => '❌ محصول با نام %s وجود دارد',
@@ -9496,6 +9507,9 @@ nowpayments.io
     'prodDaysHint' => '0 یعنی نامحدود',
     'prodFieldPanel' => 'پنل (لوکیشن)',
     'prodFieldReset' => 'ریست حجم',
+    'prodFieldSpeed' => '🚀 محدودیت سرعت (Mbps)',
+    'prodSpeedHint' => 'فقط برای پنل ربکا. مثلاً 10 یا 2.5؛ خالی یا 0 یعنی بدون محدودیت.',
+    'prodSpeedInvalid' => 'محدودیت سرعت باید یه عدد باشه، مثلاً 10 یا 2.5؛ 0 یعنی بدون محدودیت.',
     'prodReset_no_reset' => 'بدون ریست',
     'prodReset_day' => 'روزانه',
     'prodReset_week' => 'هفتگی',

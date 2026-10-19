@@ -19862,6 +19862,65 @@ if (!function_exists('service_button_invoice_id')) {
         return null;
     }
 }
+if (!function_exists('speed_limit_parse')) {
+    // 🚀 Speed limits - only Rebecca panels have them (its form's «Speed limit»,
+    // in Mbps; it keeps them as speed_limit_kbps = Mbps × 1000, 0 = none).
+    // A speed someone typed, in Mbps: «10», «2.5», «۵ Mbps», «0» (none) - null
+    // when it is not one
+    function speed_limit_parse($text)
+    {
+        $s = trim(strtr((string) $text, [
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4', '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4', '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+            '٫' => '.', ',' => '.', '،' => '.',
+        ]));
+        $s = trim((string) preg_replace('/\s*(mbps|mb\/s|مگابیت|مگ)$/iu', '', $s));
+        if (!preg_match('/^\d+(\.\d+)?$/', $s) || (float) $s > 100000) {
+            return null;
+        }
+        return round((float) $s, 2);
+    }
+    // «10», «2.5», «0» - the way it is kept and shown
+    function speed_limit_store($mbps)
+    {
+        $s = rtrim(rtrim(number_format(max(0, (float) $mbps), 2, '.', ''), '0'), '.');
+        return $s === '' ? '0' : $s;
+    }
+    // what Rebecca keeps: kbps
+    function speed_limit_kbps($mbps)
+    {
+        return (int) round(max(0, (float) $mbps) * 1000);
+    }
+    // can something on $location have one: a Rebecca panel - or every panel
+    // ('/all') while at least one of them is Rebecca
+    function speed_limit_applies($location)
+    {
+        global $pdo;
+        if ((string) $location === '/all') {
+            return (int) $pdo->query("SELECT COUNT(*) FROM marzban_panel WHERE type = 'rebecca'")->fetchColumn() > 0;
+        }
+        $panel = select("marzban_panel", "*", "name_panel", (string) $location, "select");
+        return is_array($panel) && ($panel['type'] ?? '') === 'rebecca';
+    }
+    // «10 Mbps», or the words for none
+    function speed_limit_label($mbps, $none)
+    {
+        return (float) $mbps > 0 ? speed_limit_store($mbps) . ' Mbps' : $none;
+    }
+    // A new Rebecca account's speed in kbps (0 = none): what the caller asks
+    // for (a referral plan's), else 🎁 اکانت تست's for a test account, else its
+    // product's
+    function speed_limit_for_new(array $config, $product, array $panel)
+    {
+        if (isset($config['speed_mbps'])) {
+            return speed_limit_kbps($config['speed_mbps']);
+        }
+        if (is_array($product) && ($product['name_product'] ?? '') === 'usertest') {
+            return speed_limit_kbps($panel['speed_usertest'] ?? 0);
+        }
+        return speed_limit_kbps(is_array($product) ? ($product['speed_limit'] ?? 0) : 0);
+    }
+}
 if (!function_exists('volume_parse')) {
     // A volume someone typed: «10», «0.2», «1.5 گیگ», «200MB», «۲۰۰ مگ» - in
     // $base's unit ('gb' or 'mb'); a bare number is already in it. null when

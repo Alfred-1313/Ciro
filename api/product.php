@@ -120,6 +120,11 @@ function prod_product_add(array $data, string $method): void
             sendJsonResponse(false, "location not found", [], 200);
         $locationName = $panel['name_panel'];
     }
+    // 🚀 speed_limit: Mbps (2.5 works), 0 = none - Rebecca panels only
+    $speed = speed_limit_parse($data['speed_limit'] ?? '0');
+    if ($speed === null) {
+        sendJsonResponse(false, "invalid speed_limit: Mbps, like 10 or 2.5; 0 = no limit", [], 200);
+    }
     try {
         $randomString = bin2hex(random_bytes(3));
 
@@ -138,6 +143,7 @@ function prod_product_add(array $data, string $method): void
             'category' => empty($data['category']) ? null : $data['category'],
             'one_buy_status' => empty($data['one_buy_status']) ? 0 : $data['one_buy_status'],
             'hide_panel' => empty($data['hide_panel']) ? "{}" : $data['hide_panel'],
+            'speed_limit' => speed_limit_applies($locationName) ? speed_limit_store($speed) : '0',
         ];
 
         $columns = implode(',', array_keys($productData));
@@ -198,8 +204,17 @@ function prod_product_edit(array $data, string $method): void
         }
         $volumeNew = volume_store($volumeNew);
     }
+    $speedNew = null;
+    if (isset($data['speed_limit'])) {
+        $speedNew = speed_limit_parse($data['speed_limit']);
+        if ($speedNew === null) {
+            sendJsonResponse(false, "invalid speed_limit: Mbps, like 10 or 2.5; 0 = no limit", [], 200);
+        }
+        $speedNew = speed_limit_store($speedNew);
+    }
     try {
         $productData = [
+            'speed_limit' => $speedNew ?? ($product['speed_limit'] ?? '0'),
             'name_product' => isset($data['name']) ? $data['name'] : $product['name_product'],
             'price_product' => isset($data['price']) ? $data['price'] : $product['price_product'],
             'Volume_constraint' => $volumeNew ?? $product['Volume_constraint'],

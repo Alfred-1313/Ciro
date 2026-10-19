@@ -4833,9 +4833,14 @@ if (!function_exists('product_edit_hub_payload')) {
     // keyboard: same fields, same underlying step()-based text-input flow
     // for each (unchanged), just reachable via callback + organized into
     // logical rows instead of one long flat list
-    function product_edit_hub_payload($textbotlang)
+    // $productId: the product it is for (the one being edited when left out) -
+    // 🚀 its speed is offered only where its panel can hold one (Rebecca)
+    function product_edit_hub_payload($textbotlang, $productId = null)
     {
+        global $user;
         $kb = ['inline_keyboard' => []];
+        $pe_id = (string) ($productId ?? ($user['Processing_value'] ?? ''));
+        $pe_row = ctype_digit($pe_id) ? select("product", "*", "id", $pe_id, "select") : null;
         $kb['inline_keyboard'][] = [
             ['text' => $textbotlang['keyboard']['price'], 'callback_data' => 'prodedit_price'],
             ['text' => $textbotlang['keyboard']['volume'], 'callback_data' => 'prodedit_volume'],
@@ -4856,6 +4861,11 @@ if (!function_exists('product_edit_hub_payload')) {
         $kb['inline_keyboard'][] = [
             ['text' => $textbotlang['Admin']['ProdCurrency']['currencyBtn'], 'callback_data' => 'prodedit_currency'],
         ];
+        if (is_array($pe_row) && speed_limit_applies($pe_row['Location'])) {
+            $kb['inline_keyboard'][] = [
+                ['text' => sprintf($textbotlang['Admin']['Product']['speedBtn'], speed_limit_label($pe_row['speed_limit'] ?? 0, $textbotlang['Admin']['Product']['speedNone'])), 'callback_data' => 'prodedit_speed'],
+            ];
+        }
         $kb['inline_keyboard'][] = [
             ['text' => $textbotlang['keyboard']['setInbound'], 'callback_data' => 'prodedit_setinbound'],
             ['text' => $textbotlang['keyboard']['showFirstPurchase'], 'callback_data' => 'prodedit_showfirstpurchase'],
@@ -4960,7 +4970,16 @@ if (!function_exists('product_info_caption')) {
             return null;
         }
         $count_invoice = select("invoice", "*", "name_product", $info_product['name_product'], "count");
-        return sprintf($textbotlang['Admin']['Product']['editSummary'], $info_product['name_product'], money($info_product['price_product'], $info_product['currency'] ?? null), $info_product['Volume_constraint'], $info_product['Location'], $info_product['Service_time'], $info_product['agent'], $info_product['data_limit_reset'], $info_product['note'], $info_product['category'], $count_invoice);
+        return sprintf($textbotlang['Admin']['Product']['editSummary'], $info_product['name_product'], money($info_product['price_product'], $info_product['currency'] ?? null), $info_product['Volume_constraint'], $info_product['Location'], $info_product['Service_time'], $info_product['agent'], $info_product['data_limit_reset'], $info_product['note'], $info_product['category'], $count_invoice)
+            . product_speed_caption_line($info_product, $textbotlang);
+    }
+    // 🚀 a product's speed under its summary - where its panel can hold one
+    function product_speed_caption_line($row, $textbotlang)
+    {
+        if (!is_array($row) || !speed_limit_applies($row['Location'] ?? '')) {
+            return '';
+        }
+        return "\n" . sprintf($textbotlang['Admin']['Product']['speedLine'], speed_limit_label($row['speed_limit'] ?? 0, $textbotlang['Admin']['Product']['speedNone']));
     }
 }
 if (!function_exists('help_layout_back_cb')) {
@@ -13891,12 +13910,27 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     savedata("save", "price_product", money_normalize($text));
     $userdata = json_decode($user['Processing_value'], true);
     $panel = select("marzban_panel", "*", "name_panel", $userdata['Location'], "select");
-    if (in_array($panel['type'], ["marzban", "marzneshin", "remnawave"], true)) {
+    if (in_array($panel['type'] ?? '', ["marzban", "marzneshin", "remnawave"], true)) {
         sendmessage($from_id, $textbotlang['Admin']['Product']['getTimeReset'], $keyboardtimereset, 'HTML');
         step('getnote', $from_id);
         return;
     }
     savedata("save", "data_limit_reset", "no_reset");
+    // 🚀 its speed - asked only where a panel can hold one (Rebecca)
+    if (speed_limit_applies($userdata['Location'])) {
+        sendmessage($from_id, $textbotlang['Admin']['Product']['askSpeed'], $speedlimit_keyboard, 'HTML');
+        step('get_speed', $from_id);
+        return;
+    }
+    sendmessage($from_id, $textbotlang['Admin']['Product']['askNote'], $addproduct_note_keyboard, 'HTML');
+    step('endstep', $from_id);
+} elseif ($user['step'] == "get_speed") {
+    $sp_mbps = $text === $textbotlang['Admin']['Product']['speedNoneBtn'] ? 0.0 : speed_limit_parse($text);
+    if ($sp_mbps === null) {
+        sendmessage($from_id, $textbotlang['Admin']['Product']['invalidSpeed'], $speedlimit_keyboard, 'HTML');
+        return;
+    }
+    savedata("save", "speed_limit", speed_limit_store($sp_mbps));
     sendmessage($from_id, $textbotlang['Admin']['Product']['askNote'], $addproduct_note_keyboard, 'HTML');
     step('endstep', $from_id);
 } elseif ($user['step'] == "getnote") {
@@ -13914,7 +13948,9 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
         $userdata['category'] = null;
     $pc_lang = ($userdata['prod_lang'] ?? 'all') === 'all' ? 'all' : $userdata['prod_lang'];
     $pc_cur = $userdata['prod_currency'] ?? currency_default_code();
-    $stmt = $pdo->prepare("INSERT IGNORE INTO product (name_product,code_product,price_product,Volume_constraint,Service_time,Location,agent,data_limit_reset,note,category,hide_panel,one_buy_status,lang,currency) VALUES (:name_product,:code_product,:price_product,:Volume_constraint,:Service_time,:Location,:agent,:data_limit_reset,:note,:category,:hide_panel,'0',:lang,:currency)");
+    $pc_speed = speed_limit_store($userdata['speed_limit'] ?? 0);
+    $stmt = $pdo->prepare("INSERT IGNORE INTO product (name_product,code_product,price_product,Volume_constraint,Service_time,Location,agent,data_limit_reset,note,category,hide_panel,one_buy_status,lang,currency,speed_limit) VALUES (:name_product,:code_product,:price_product,:Volume_constraint,:Service_time,:Location,:agent,:data_limit_reset,:note,:category,:hide_panel,'0',:lang,:currency,:speed_limit)");
+    $stmt->bindParam(':speed_limit', $pc_speed);
     $stmt->bindParam(':lang', $pc_lang);
     $stmt->bindParam(':currency', $pc_cur);
     $stmt->bindParam(':name_product', $userdata['name_product']);
@@ -14272,8 +14308,25 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     $__q36->execute();
     $info_product = $__q36->fetch(PDO::FETCH_ASSOC);
     $count_invoice = select("invoice", "*", "name_product", $info_product['name_product'], "count");
-    $infoproduct = sprintf($textbotlang['Admin']['Product']['editSummary'], $info_product['name_product'], money($info_product['price_product'], $info_product['currency'] ?? null), $info_product['Volume_constraint'], $info_product['Location'], $info_product['Service_time'], $info_product['agent'], $info_product['data_limit_reset'], $info_product['note'], $info_product['category'], $count_invoice);
-    sendmessage($from_id, $infoproduct, product_edit_hub_payload($textbotlang), 'HTML');
+    $infoproduct = sprintf($textbotlang['Admin']['Product']['editSummary'], $info_product['name_product'], money($info_product['price_product'], $info_product['currency'] ?? null), $info_product['Volume_constraint'], $info_product['Location'], $info_product['Service_time'], $info_product['agent'], $info_product['data_limit_reset'], $info_product['note'], $info_product['category'], $count_invoice)
+        . product_speed_caption_line($info_product, $textbotlang);
+    sendmessage($from_id, $infoproduct, product_edit_hub_payload($textbotlang, $id_product), 'HTML');
+    step('home', $from_id);
+} elseif ($datain == "prodedit_speed" && $adminrulecheck['rule'] == "administrator") {
+    sendmessage($from_id, $textbotlang['Admin']['Product']['askSpeed'], $speedlimit_keyboard, 'HTML');
+    step('change_speed', $from_id);
+} elseif ($user['step'] == "change_speed") {
+    $sp_mbps = $text === $textbotlang['Admin']['Product']['speedNoneBtn'] ? 0.0 : speed_limit_parse($text);
+    if ($sp_mbps === null) {
+        sendmessage($from_id, $textbotlang['Admin']['Product']['invalidSpeed'], $speedlimit_keyboard, 'HTML');
+        return;
+    }
+    $panel = select("marzban_panel", "*", "code_panel", $user['Processing_value_one'], "select");
+    $pdo->prepare("UPDATE product SET speed_limit = ? WHERE id = ? AND (Location = ? OR Location = '/all') AND agent = ?")
+        ->execute([speed_limit_store($sp_mbps), $user['Processing_value'], is_array($panel) ? $panel['name_panel'] : '/all', $user['Processing_value_tow']]);
+    clearSelectCache('product');
+    $__pcaption = product_info_caption($user['Processing_value'], $user['Processing_value_tow'], is_array($panel) ? $panel['name_panel'] : '/all', $textbotlang);
+    sendmessage($from_id, $textbotlang['Admin']['Product']['speedUpdated'] . ($__pcaption !== null ? "\n\n" . $__pcaption : ""), product_edit_hub_payload($textbotlang), 'HTML');
     step('home', $from_id);
 } elseif ($datain == "prodedit_price" && $adminrulecheck['rule'] == "administrator") {
     sendmessage($from_id, $textbotlang['Admin']['Product']['askNewPrice'], $backadmin, 'HTML');

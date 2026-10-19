@@ -2218,6 +2218,17 @@ User types: f, n, n2',
                         'cannotChangeToAll' => '❌ You cannot change a defined product to the position name /all.',
                         'locationUpdated' => '✅ The product position was updated',
                         'askNewVolume' => 'Send the new volume',
+                        'askSpeed' => '🚀 <b>Speed limit</b> (Rebecca panels only)
+How many megabits per second (Mbps)?
+<blockquote><code>10</code> is 10 Mbps
+<code>2.5</code> is 2.5 Mbps
+<code>0</code> is no limit</blockquote>',
+                        'speedNoneBtn' => '♾ No limit',
+                        'invalidSpeed' => '❌ That is not a speed. Send a number, like <code>10</code> or <code>2.5</code>; <code>0</code> is no limit.',
+                        'speedUpdated' => '✅ The product\'s speed limit was saved.',
+                        'speedLine' => '🚀 Speed limit: <b>%s</b>',
+                        'speedNone' => 'no limit',
+                        'speedBtn' => '🚀 Speed limit: %s',
                         'updated' => '✅ Product updated',
                         'firstPurchaseDesc' => '📌 Through this feature you can set whether this product is for the first purchase or not',
                         'nameExists' => '❌ A product named %s already exists',
@@ -5455,6 +5466,9 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'prodDaysHint' => '0 is unlimited',
                 'prodFieldPanel' => 'Panel (location)',
                 'prodFieldReset' => 'Traffic reset',
+                'prodFieldSpeed' => '🚀 Speed limit (Mbps)',
+                'prodSpeedHint' => 'Rebecca panels only. Like 10 or 2.5; empty or 0 is no limit.',
+                'prodSpeedInvalid' => 'The speed limit has to be a number, like 10 or 2.5; 0 is no limit.',
                 'prodReset_no_reset' => 'No reset',
                 'prodReset_day' => 'Daily',
                 'prodReset_week' => 'Weekly',

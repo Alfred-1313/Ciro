@@ -497,6 +497,8 @@ try {
         addFieldToTable("marzban_panel", "val_usertest", "100", "VARCHAR(50)");
         addFieldToTable("marzban_panel", "time_usertest", "1", "VARCHAR(50)");
         addFieldToTable("marzban_panel", "del_usertest", "0", "VARCHAR(50)");
+        // 🚀 a test account's speed in Mbps (Rebecca only; 0 = none)
+        addFieldToTable("marzban_panel", "speed_usertest", "0", "VARCHAR(20)");
         addFieldToTable("marzban_panel", "secret_code", null, "VARCHAR(200)");
         addFieldToTable("marzban_panel", "inboundstatus", "offinbounddisable", "VARCHAR(50)");
         addFieldToTable("marzban_panel", "inbound_deactive", "0", "VARCHAR(100)");
@@ -571,6 +573,8 @@ try {
         addFieldToTable("product", "agent", "f", "varchar(50)");
         addFieldToTable("product", "lang", "all", "varchar(20)");
         addFieldToTable("product", "code_product", null, "varchar(50)");
+        // 🚀 the speed its accounts get, in Mbps (Rebecca only; 0 = none)
+        addFieldToTable("product", "speed_limit", "0", "VARCHAR(20)");
     }
 } catch (Exception $e) {
     file_put_contents('error_log', $e->getMessage());

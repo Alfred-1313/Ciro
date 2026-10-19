@@ -59,10 +59,20 @@ $readForm = function (?int $id) use ($pdo, $t, $panels, $categories, $currencies
     // only these panels reset a user's traffic on a schedule
     $reset = ($panel !== null && in_array($panel['type'], $resetPanels, true) && in_array($_POST['data_limit_reset'] ?? '', ['no_reset', 'day', 'week', 'month', 'year'], true))
         ? $_POST['data_limit_reset'] : 'no_reset';
+    // 🚀 only where its panel can hold one (Rebecca); empty is none
+    $speed = '0';
+    if (speed_limit_applies($location)) {
+        $sp = trim((string) ($_POST['speed_limit'] ?? '')) === '' ? 0.0 : speed_limit_parse((string) $_POST['speed_limit']);
+        if ($sp === null) {
+            return [null, $t['prodSpeedInvalid']];
+        }
+        $speed = speed_limit_store($sp);
+    }
     return [[
         'name_product' => $name, 'price_product' => money_normalize($_POST['price_product']), 'Volume_constraint' => volume_store($gb),
         'Service_time' => (string) (int) $days, 'Location' => $location, 'agent' => $agent, 'data_limit_reset' => $reset,
         'note' => trim((string) ($_POST['note_product'] ?? '')), 'category' => $category === '' ? null : $category, 'lang' => $lang, 'currency' => $cur,
+        'speed_limit' => $speed,
     ], null];
 };
 
@@ -77,10 +87,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($action === 'add' || $action === '
         try {
             if ($action === 'add') {
                 $row['code_product'] = bin2hex(random_bytes(2));
-                db_query($pdo, "INSERT INTO product (name_product,price_product,Volume_constraint,Service_time,Location,agent,data_limit_reset,note,category,lang,currency,code_product,hide_panel,one_buy_status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'{}','0')", array_values($row));
+                db_query($pdo, "INSERT INTO product (name_product,price_product,Volume_constraint,Service_time,Location,agent,data_limit_reset,note,category,lang,currency,speed_limit,code_product,hide_panel,one_buy_status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'{}','0')", array_values($row));
                 flash('success', $t['productAddedPrefix'] . $row['name_product'] . $t['productAddedSuffix']);
             } elseif ($pid) {
-                db_query($pdo, "UPDATE product SET name_product=?,price_product=?,Volume_constraint=?,Service_time=?,Location=?,agent=?,data_limit_reset=?,note=?,category=?,lang=?,currency=? WHERE id=?", array_merge(array_values($row), [$pid]));
+                db_query($pdo, "UPDATE product SET name_product=?,price_product=?,Volume_constraint=?,Service_time=?,Location=?,agent=?,data_limit_reset=?,note=?,category=?,lang=?,currency=?,speed_limit=? WHERE id=?", array_merge(array_values($row), [$pid]));
                 flash('success', $t['productEdited']);
             }
         } catch (Exception $e) {
@@ -241,6 +251,11 @@ echo web_lang_assets();
               <?php endforeach; ?>
             </select>
           </div>
+          <div class="field" id="prodSpeedField">
+            <label><?= $t['prodFieldSpeed'] ?></label>
+            <input type="text" name="speed_limit" id="prodSpeed" class="input" inputmode="decimal" dir="ltr" placeholder="10 · 2.5">
+            <div class="field-hint"><?= $t['prodSpeedHint'] ?></div>
+          </div>
           <div class="field">
             <label><?= $t['prodFieldCategory'] ?></label>
             <select name="category" id="prodCategory" class="select">
@@ -276,6 +291,8 @@ echo web_lang_assets();
 (function () {
   var curByLang = <?= json_encode($curByLang) ?>, curDefault = <?= json_encode(currency_default_code()) ?>;
   var resetTypes = <?= json_encode($resetPanels) ?>;
+  // 🚀 Rebecca only: its panel, or every panel while one of them is Rebecca
+  var hasRebecca = <?= json_encode(in_array('rebecca', array_column($panels, 'type'), true)) ?>;
   var $ = function (id) { return document.getElementById(id); };
   var curTouched = false;
   $('prodCurrency').addEventListener('change', function () { curTouched = true; });
@@ -300,6 +317,7 @@ echo web_lang_assets();
     if (!curTouched) $('prodCurrency').value = langs.length === 1 && curByLang[langs[0]] ? curByLang[langs[0]] : curDefault;
     var type = ($('prodPanel').selectedOptions[0] || {}).dataset || {};
     $('prodResetField').style.display = resetTypes.indexOf(type.type || '') !== -1 ? '' : 'none';
+    $('prodSpeedField').style.display = (type.type === 'rebecca' || ($('prodPanel').value === '/all' && hasRebecca)) ? '' : 'none';
   }
   document.addEventListener('langchange', sync);
   $('prodPanel').addEventListener('change', sync);
@@ -316,6 +334,7 @@ echo web_lang_assets();
     $('prodNote').value = p.note || '';
     $('prodAgent').value = p.agent || 'f';
     $('prodReset').value = p.data_limit_reset || 'no_reset';
+    $('prodSpeed').value = parseFloat(p.speed_limit || '0') > 0 ? p.speed_limit : '';
     var langs = (!p.lang || p.lang === 'all') ? [] : p.lang.split(',');
     document.querySelectorAll('[data-lang-group=prodLang] input').forEach(function (b) {
       b.checked = b.value === 'all' ? !langs.length : langs.indexOf(b.value) !== -1;

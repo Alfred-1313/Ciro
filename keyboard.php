@@ -663,6 +663,14 @@ $addproduct_note_keyboard = json_encode([
     ],
     'resize_keyboard' => true
 ]);
+// 🚀 a product's speed limit: a number, or none
+$speedlimit_keyboard = json_encode([
+    'keyboard' => [
+        [['text' => $textbotlang['Admin']['Product']['speedNoneBtn']]],
+        [['text' => $textbotlang['Admin']['backAdminBtn']], ['text' => $textbotlang['Admin']['backMenuBtn']]]
+    ],
+    'resize_keyboard' => true
+]);
 $bulkproduct_note_keyboard = json_encode([
     'keyboard' => [
         [['text' => $textbotlang['Admin']['BulkProduct']['skipNoteBtn']]],

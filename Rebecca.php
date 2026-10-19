@@ -48,11 +48,12 @@ function revoke_sub_rebecca($username_account, $location)
     return $response;
 }
 #-----------------------------#
-function adduser_rebecca($location, $data_limit, $username_ac, $timestamp, $name_product, $note = '', $data_limit_reset = 'no_reset', $limitip = null)
+// $speedKbps: 🚀 its speed limit (0 = none)
+function adduser_rebecca($location, $data_limit, $username_ac, $timestamp, $name_product, $note = '', $data_limit_reset = 'no_reset', $limitip = null, $speedKbps = 0)
 {
     $product = select('product', "*", "name_product", $name_product, "select");
     $panel = select("marzban_panel", "*", "name_panel", $location, "select");
-    if ($product['inbounds'] != null) {
+    if (is_array($product) && $product['inbounds'] != null) {
         $panel['proxies'] = $product['inbounds'];
     }
     $service_ids = json_decode($panel['proxies'], true);
@@ -66,6 +67,9 @@ function adduser_rebecca($location, $data_limit, $username_ac, $timestamp, $name
     );
     if ($limitip != null && $panel['limit_in_panel'] == "1") {
         $data['ip_limit'] = intval($limitip);
+    }
+    if ((int) $speedKbps > 0) {
+        $data['speed_limit_kbps'] = (int) $speedKbps;
     }
     if ($name_product == "usertest") {
         $on_hold = $panel['on_hold_test'] != "0";

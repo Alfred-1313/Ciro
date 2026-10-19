@@ -555,7 +555,7 @@ class ManagePanel
         } elseif ($Get_Data_Panel['type'] == "rebecca") {
             //create user
             $order_get = select("invoice", "*", "username", $usernameC, "select");
-            $ConnectToPanel = adduser_rebecca($Get_Data_Panel['name_panel'], $data_limit, $usernameC, $expire, $Get_Data_Product['name_product'], $note, $Get_Data_Product['data_limit_reset'], $order_get['limit_user']);
+            $ConnectToPanel = adduser_rebecca($Get_Data_Panel['name_panel'], $data_limit, $usernameC, $expire, $Get_Data_Product['name_product'], $note, $Get_Data_Product['data_limit_reset'], $order_get['limit_user'] ?? null, speed_limit_for_new($Data_Config, $Get_Data_Product, $Get_Data_Panel));
             if (!empty($ConnectToPanel['status']) && $ConnectToPanel['status'] == 500) {
                 return array(
                     'status' => 'Unsuccessful',
@@ -2514,6 +2514,11 @@ class ManagePanel
                 'data_limit' => $data_limit_new,
                 'expire' => $time_new == 0 ? null : $time_new,
             );
+            // 🚀 renewed into a product with a speed limit: that limit (one
+            // without leaves the account's own as it is)
+            if ($panel['type'] === 'rebecca' && is_array($product) && (float) ($product['speed_limit'] ?? 0) > 0) {
+                $data['speed_limit_kbps'] = speed_limit_kbps($product['speed_limit']);
+            }
         }
         $extend = $this->Modifyuser($username, $panel['name_panel'], $data);
         if ($extend['status'] == false) {
