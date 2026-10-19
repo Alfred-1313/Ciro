@@ -147,7 +147,7 @@ if (!function_exists('bulkgift_params')) {
     }
     // A run's settings from anything - a draft, a job's row, a web form:
     //   kind      volume | time
-    //   mode      fixed (value: GB, or whole days) | total | left (value: percent)
+    //   mode      fixed (value: GB, or days to the hour) | total | left (value: percent)
     //   scope     bot (the bot's own services) | panel (every account on the panels)
     //   lang      all | a language - the bot's users of that language (scope bot)
     //   panels    code_panel list, empty = every panel
@@ -155,6 +155,8 @@ if (!function_exists('bulkgift_params')) {
     //             days/months) | hours (bought buyn hours ago or earlier) |
     //             next (🔜 every purchase from the start until buyn hours later)
     //   statuses  the account states that get it (bulkgift_statuses())
+    //   refs      🎁 the free configs given for referrals (invoice.affrw = 1)
+    //             get it too - left out otherwise
     //   notify    the owner of each of the bot's services is told
     // A started campaign also keeps its window: win_from / win_to / late_until.
     // A value that does not fit its kind and mode is dropped, not guessed at.
@@ -205,6 +207,8 @@ if (!function_exists('bulkgift_params')) {
         if ($o['buy'] === 'next') {
             $o['statuses'] = bulkgift_default_statuses();
         }
+        // a campaign gives to sales only - a referral's free config is none
+        $o['refs'] = !empty($p['refs']) && $o['buy'] !== 'next';
         $o['notify'] = array_key_exists('notify', $p) ? (bool) $p['notify'] : true;
         // a job also keeps the names its panels had when it was started
         $o['pnames'] = array_values(array_filter(array_map('strval', (array) ($p['pnames'] ?? [])), 'strlen'));
@@ -362,7 +366,7 @@ if (!function_exists('bulkgift_all_panels')) {
         return [implode(' AND ', $w), $a];
     }
     // What a run with these settings finds among the bot's own services, before
-    // it is started: 'n' about how many get it, 'h' ⏱ and 't' 🧪 left out, and for «همه‌ی
+    // it is started: 'n' about how many get it, 'h' ⏱, 't' 🧪 and 'r' 🎁 left out, and for «همه‌ی
     // کاربران پنل» the panels whose own list cannot be read ('unsupported') and
     // whether any can ('listable'). One account counts once.
     function bulkgift_preview(array $p)
@@ -373,11 +377,14 @@ if (!function_exists('bulkgift_all_panels')) {
         }
         $panels = bulkgift_panels_of($p);
         $names = array_map(fn($r) => (string) $r['name_panel'], $panels);
-        $out = ['n' => 0, 'h' => 0, 't' => 0, 'unsupported' => [], 'listable' => false, 'panels' => count($panels)];
+        $out = ['n' => 0, 'h' => 0, 't' => 0, 'r' => 0, 'unsupported' => [], 'listable' => false, 'panels' => count($panels)];
         // a campaign's purchases have not been made yet
         if ($names && !bulkgift_is_live($p)) {
+            if (function_exists('affrw_ensure_table')) {
+                affrw_ensure_table();
+            }
             [$w, $a] = bulkgift_invoice_where($p, $names);
-            $st = $pdo->prepare("SELECT i.Service_location, i.username, i.payg, i.name_product, i.Status FROM invoice i WHERE {$w}");
+            $st = $pdo->prepare("SELECT i.Service_location, i.username, i.payg, i.name_product, i.Status, i.affrw FROM invoice i WHERE {$w}");
             $st->execute($a);
             $seen = [];
             // 'n' is about how many will get it: the state the bot last saw of
@@ -393,6 +400,8 @@ if (!function_exists('bulkgift_all_panels')) {
                 $k = bulkgift_kind_of($r);
                 if ($k === 'payg' || $k === 'test') {
                     $out[$k === 'payg' ? 'h' : 't']++;
+                } elseif (!$p['refs'] && (int) $r['affrw'] === 1) {
+                    $out['r']++;
                 } elseif (in_array($state[(string) $r['Status']] ?? 'other', $p['statuses'], true)) {
                     $out['n']++;
                 }
@@ -565,6 +574,7 @@ if (!function_exists('bulkgift_amount_label')) {
         // a campaign's purchases are new: started or waiting to start
         if (!$live) {
             $rows[] = strtr($t['rowStatus'], ['{v}' => bulkgift_status_label($p)]);
+            $rows[] = strtr($t['rowRefs'], ['{v}' => $p['refs'] ? $t['refsYes'] : $t['refsNo']]);
         }
         $rows[] = strtr($t['rowNotify'], ['{v}' => $p['notify'] ? $t['notifyOn'] : $t['notifyOff']]);
         return implode("\n", $rows);
@@ -908,13 +918,22 @@ if (!function_exists('bulkgift_prepare')) {
             if (function_exists('payg_ensure_schema')) {
                 payg_ensure_schema();
             }
+            if (function_exists('affrw_ensure_table')) {
+                affrw_ensure_table();
+            }
             if ($names) {
                 [$w, $a] = bulkgift_invoice_where($p, $names);
-                $st = $pdo->prepare("SELECT i.id_invoice, i.id_user, i.username, i.Service_location, i.time_sell, i.name_product, i.payg FROM invoice i WHERE {$w} ORDER BY i.id_invoice");
+                $st = $pdo->prepare("SELECT i.id_invoice, i.id_user, i.username, i.Service_location, i.time_sell, i.name_product, i.payg, i.affrw FROM invoice i WHERE {$w} ORDER BY i.id_invoice");
                 $st->execute($a);
                 $rows = [];
                 while ($r = $st->fetch(PDO::FETCH_ASSOC)) {
                     $k = bulkgift_kind_of($r);
+                    // 🎁 a referral's free config, unless asked for: left out
+                    // and counted (still listed, so «every panel account»
+                    // does not take it for one the bot does not have)
+                    if ($k === 'ok' && !$p['refs'] && (int) $r['affrw'] === 1) {
+                        $k = 'referral';
+                    }
                     $rows[] = [
                         'panel' => (string) $r['Service_location'],
                         'username' => (string) $r['username'],
@@ -922,7 +941,7 @@ if (!function_exists('bulkgift_prepare')) {
                         'id_invoice' => (string) $r['id_invoice'],
                         'id_user' => (string) $r['id_user'],
                         'start_ts' => ctype_digit((string) $r['time_sell']) ? (int) $r['time_sell'] : 0,
-                        // ⏱ and 🧪 are left out here and now, and counted
+                        // ⏱, 🧪 and 🎁 are left out here and now, and counted
                         'state' => $k === 'ok' ? 'pending' : 'skipped',
                         'reason' => $k === 'ok' ? '' : $k,
                     ];
@@ -1500,7 +1519,7 @@ if (!function_exists('bulkgift_progress_payload')) {
             $res = [$t['resultHead']];
             $line = fn($label, $n) => strtr($t['resultLine'], ['{label}' => $label, '{n}' => number_format($n)]);
             $res[] = $line($t['reasonDone'], $c['done']);
-            foreach (['payg', 'test', 'inactive', 'onhold', 'unlimited', 'nothing', 'nototal', 'small', 'nobuy', 'missing'] as $why) {
+            foreach (['payg', 'test', 'referral', 'inactive', 'onhold', 'unlimited', 'nothing', 'nototal', 'small', 'nobuy', 'missing'] as $why) {
                 if (!empty($c['reasons'][$why])) {
                     $res[] = $line($t['reason' . ucfirst($why)], $c['reasons'][$why]);
                 }
@@ -1814,6 +1833,9 @@ if (!function_exists('bulkgift_hub_payload')) {
         if (!$live && $p['statuses'] !== bulkgift_default_statuses()) {
             $rows[] = strtr($t['rowStatus'], ['{v}' => bulkgift_status_label($p)]);
         }
+        if ($p['refs']) {
+            $rows[] = strtr($t['rowRefs'], ['{v}' => $t['refsYes']]);
+        }
         if (!$p['notify']) {
             $rows[] = strtr($t['rowNotify'], ['{v}' => $t['notifyOff']]);
         }
@@ -1841,6 +1863,9 @@ if (!function_exists('bulkgift_hub_payload')) {
             $line = strtr($can ? $t[$key] : $t['sumEmpty'], $what + ['{n}' => number_format($pv['n'])]);
             if ($pv['h'] + $pv['t'] > 0) {
                 $notes[] = strtr($t['sumSkip'], ['{h}' => number_format($pv['h']), '{t}' => number_format($pv['t'])]);
+            }
+            if ($pv['r'] > 0) {
+                $notes[] = strtr($t['sumSkipRefs'], ['{r}' => number_format($pv['r'])]);
             }
             if ($p['scope'] === 'panel') {
                 $notes[] = $t['sumPanelNote'];
@@ -1885,6 +1910,7 @@ if (!function_exists('bulkgift_hub_payload')) {
             $rows[] = $row($p['buy'] !== 'all', $t['moreBuy'], strtr($t['moreBuySet'], ['{v}' => bulkgift_buy_label($p)]), 'bgh:sec:buy');
             $rows[] = $row($p['statuses'] !== bulkgift_default_statuses(), $t['moreSt'], strtr($t['moreStSet'], ['{v}' => bulkgift_status_label($p)]), 'bgh:sec:st');
             $rows[] = $row($p['scope'] === 'panel', $t['moreScope'], $t['moreScopeSet'], 'bgh:sc');
+            $rows[] = $row($p['refs'], $t['moreRefs'], $t['moreRefsSet'], 'bgh:rf');
         }
         $rows[] = $row(!$p['notify'], $t['moreNotify'], $t['moreNotifySet'], 'bgh:n');
         $rows[] = [bulkgift_btn($t['previewBtn'], 'bgh:pv', null)];

@@ -17,7 +17,7 @@ $adminId = (string) (db_fetch($pdo, "SELECT id_admin FROM admin WHERE username =
 // what the form says, as it was sent - it is shown again as it was
 $raw = [
     'job' => 'now', 'kind' => 'volume', 'mode' => 'fixed', 'value' => '', 'scope' => 'bot', 'lang' => 'all',
-    'panels' => [], 'buy' => 'all', 'buyn' => '', 'hours' => '', 'statuses' => bulkgift_default_statuses(), 'notify' => '1',
+    'panels' => [], 'buy' => 'all', 'buyn' => '', 'hours' => '', 'statuses' => bulkgift_default_statuses(), 'refs' => '0', 'notify' => '1',
 ];
 $err = null;
 $preview = null;
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: bulkgift.php');
         exit;
     }
-    foreach (['job', 'kind', 'mode', 'value', 'scope', 'lang', 'buy', 'buyn', 'hours', 'notify'] as $k) {
+    foreach (['job', 'kind', 'mode', 'value', 'scope', 'lang', 'buy', 'buyn', 'hours', 'refs', 'notify'] as $k) {
         $raw[$k] = trim((string) ($_POST[$k] ?? $raw[$k]));
     }
     $raw['panels'] = array_values(array_map('strval', (array) ($_POST['panels'] ?? [])));
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'kind' => $kind, 'mode' => $mode, 'value' => $value,
         'scope' => $raw['scope'], 'lang' => $raw['lang'], 'panels' => $raw['panels'],
         'buy' => $buy, 'buyn' => (int) $buyn,
-        'statuses' => $raw['statuses'], 'notify' => $raw['notify'] === '1',
+        'statuses' => $raw['statuses'], 'refs' => $raw['refs'] === '1', 'notify' => $raw['notify'] === '1',
     ]);
     if ($why !== null) {
         $err = strip_tags($why);
@@ -118,7 +118,7 @@ $jobLine = function (array $j) use ($r, $plain) {
 // 🎯 opens by itself when something in it is not the usual setting, the way
 // the bot's summary lists those
 $moreOpen = $raw['mode'] !== 'fixed' || $raw['scope'] !== 'bot' || $raw['lang'] !== 'all' || $raw['panels'] || $raw['notify'] !== '1'
-    || ($raw['job'] !== 'camp' && ($raw['buy'] !== 'all' || $raw['statuses'] !== bulkgift_default_statuses()));
+    || ($raw['job'] !== 'camp' && ($raw['buy'] !== 'all' || $raw['statuses'] !== bulkgift_default_statuses() || $raw['refs'] === '1'));
 $langOptions = ['all' => $plain($r['langAll'])];
 foreach (web_langs() as $code => $name) {
     $langOptions[$code] = $name;
@@ -190,6 +190,7 @@ include __DIR__ . '/inc/layout_head.php';
         <br><?= htmlspecialchars($plain($r['sumCampNote'])) ?>
       <?php else: ?>
         <?= htmlspecialchars(sprintf($t['bgCountResult'], number_format($preview['n']), number_format($preview['h']), number_format($preview['t']))) ?>
+        <?php if ($preview['r'] > 0): ?><br><?= htmlspecialchars(sprintf($t['bgCountRefs'], number_format($preview['r']))) ?><?php endif; ?>
         <?php if ($raw['scope'] === 'panel'): ?><br><?= htmlspecialchars($plain($r['sumPanelNote'])) ?><?php endif; ?>
         <?php if ($preview['unsupported']): ?><br><?= htmlspecialchars($plain(strtr($r['sumUnsupported'], ['{list}' => implode('، ', $preview['unsupported'])]))) ?><?php endif; ?>
       <?php endif; ?>
@@ -225,6 +226,9 @@ include __DIR__ . '/inc/layout_head.php';
               <label class="lang-chip"><input type="checkbox" name="statuses[]" value="<?= $s ?>"<?= in_array($s, $raw['statuses'], true) ? ' checked' : '' ?>> <?= htmlspecialchars($plain($r['st_' . $s])) ?></label>
             <?php endforeach; ?>
           </div></div>
+        </div>
+        <div class="set-row"><div><div class="set-label">🎁 <?= htmlspecialchars($t['bgRefs']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgRefsHint']) ?></div></div>
+          <div class="set-ctl"><label class="lang-chip" style="justify-content:center"><input type="hidden" name="refs" value="0"><input type="checkbox" name="refs" value="1"<?= $raw['refs'] === '1' ? ' checked' : '' ?>> <?= htmlspecialchars($t['bgRefsOn']) ?></label></div>
         </div>
       </div>
       <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['bgNotify']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgNotifyHint']) ?></div></div>

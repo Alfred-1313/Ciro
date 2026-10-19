@@ -21354,12 +21354,12 @@ if ($datain == "linkappsetting") {
     bulkgift_draft_save($from_id, bulkgift_params([]));
     [$bg_text, $bg_kb] = bulkgift_start_payload();
     sendmessage($from_id, $bg_text, $bg_kb, 'HTML');
-} elseif (preg_match('/^bgh(?::(sum|more|camp|cpk|hours|sc|n|help|go)|:sec:(mode|lang|panels|buy|st))?$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^bgh(?::(sum|more|camp|cpk|hours|sc|rf|n|help|go)|:sec:(mode|lang|panels|buy|st))?$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
     // The screens: «bgh» alone is the first one, sum the summary, more 🎯
     // and sec:* one of 🎯's own; camp a new campaign's «what» (cpk: back to
-    // it), hours asks its length again; sc and n switch «اکانت‌هایی که توی
-    // ربات نیستن» and the message to the owner; help 📖 (go: a summary button
-    // of an older screen)
+    // it), hours asks its length again; sc, rf and n switch «اکانت‌هایی که
+    // توی ربات نیستن», 🎁 the referrals' free configs and the message to the
+    // owner; help 📖 (go: a summary button of an older screen)
     $bg_t = $textbotlang['Admin']['BulkGift'];
     $bg_p = bulkgift_draft($from_id);
     $bg_go = $bg_m[1] ?? '';
@@ -21383,9 +21383,11 @@ if ($datain == "linkappsetting") {
         return;
     }
     step('home', $from_id);
-    if ($bg_go === 'sc' || $bg_go === 'n') {
+    if ($bg_go === 'sc' || $bg_go === 'rf' || $bg_go === 'n') {
         if ($bg_go === 'sc') {
             $bg_p['scope'] = $bg_p['scope'] === 'panel' ? 'bot' : 'panel';
+        } elseif ($bg_go === 'rf') {
+            $bg_p['refs'] = !$bg_p['refs'];
         } else {
             $bg_p['notify'] = !$bg_p['notify'];
         }
