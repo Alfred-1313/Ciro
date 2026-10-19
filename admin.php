@@ -21354,24 +21354,31 @@ if ($datain == "linkappsetting") {
     bulkgift_draft_save($from_id, bulkgift_params([]));
     [$bg_text, $bg_kb] = bulkgift_start_payload();
     sendmessage($from_id, $bg_text, $bg_kb, 'HTML');
-} elseif (preg_match('/^bgh(?::(sum|more|camp|cpk|hours|sc|n|go)|:sec:(mode|lang|panels|buy|st))?$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^bgh(?::(sum|more|camp|cpk|hours|sc|n|help|go)|:sec:(mode|lang|panels|buy|st))?$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
     // The screens: «bgh» alone is the first one, sum the summary, more 🎯
-    // and sec:* one of 🎯's own; camp and hours ask a campaign's length, cpk
-    // is its «what» screen; sc and n switch «حتی اکانت‌های خودِ پنل» and the
-    // message to the owner (go: a summary button of an older screen)
+    // and sec:* one of 🎯's own; camp a new campaign's «what» (cpk: back to
+    // it), hours asks its length again; sc and n switch «اکانت‌هایی که توی
+    // ربات نیستن» and the message to the owner; help 📖 (go: a summary button
+    // of an older screen)
     $bg_t = $textbotlang['Admin']['BulkGift'];
     $bg_p = bulkgift_draft($from_id);
     $bg_go = $bg_m[1] ?? '';
     $bg_sec = $bg_m[2] ?? '';
-    if ($bg_go === 'camp' || $bg_go === 'hours') {
-        // a campaign starts with its length - from the first screen, a fresh one
-        if ($bg_go === 'camp') {
-            bulkgift_draft_save($from_id, bulkgift_params([]));
-        }
+    if ($bg_go === 'camp') {
+        // a fresh campaign: what each purchase gets first, then how long -
+        // a day until that is asked
+        step('home', $from_id);
+        bulkgift_draft_save($from_id, bulkgift_params(['buy' => 'next', 'buyn' => 24]));
+        [$bg_text, $bg_kb] = bulkgift_camp_payload();
+        Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
+        return;
+    }
+    if ($bg_go === 'hours') {
+        // ⏳ a campaign's length again, from 🎯
         savedata("clear", "bg_buy", 'next');
         step('bgh_buyn', $from_id);
         bulkgift_draft_ask($from_id, $message_id);
-        [$bg_text, $bg_kb] = bulkgift_ask_payload($bg_t['askBuyNext'], $bg_go === 'camp' ? 'bgh' : 'bgh:more');
+        [$bg_text, $bg_kb] = bulkgift_ask_payload($bg_t['askBuyNext'], 'bgh:sum');
         Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
         return;
     }
@@ -21391,47 +21398,55 @@ if ($datain == "linkappsetting") {
     } elseif ($bg_go === 'more') {
         [$bg_text, $bg_kb] = bulkgift_more_payload($bg_p);
     } elseif ($bg_go === 'cpk' && bulkgift_is_live($bg_p)) {
-        [$bg_text, $bg_kb] = bulkgift_camp_payload($bg_p);
+        [$bg_text, $bg_kb] = bulkgift_camp_payload();
     } elseif (($bg_go === 'sum' || $bg_go === 'go') && $bg_p['value'] !== null) {
         [$bg_text, $bg_kb] = bulkgift_summary_payload($bg_p);
     } elseif ($bg_go === 'sum' || $bg_go === 'go') {
-        // the amount was dropped on the way (another way of counting it, its
-        // question left with 🔙): asked again rather than starting over
+        // no amount yet (an older screen's button): asked for, not started over
+        savedata("clear", "bg_ask", 'value');
         step('bgh_value', $from_id);
         bulkgift_draft_ask($from_id, $message_id);
         [$bg_text, $bg_kb] = bulkgift_ask_payload(bulkgift_value_ask($bg_p), 'bgh');
+    } elseif ($bg_go === 'help') {
+        [$bg_text, $bg_kb] = bulkgift_help_payload($bg_p['value'] !== null ? 'bgh:sum' : 'bgh');
     } else {
         [$bg_text, $bg_kb] = bulkgift_start_payload();
     }
     Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
 } elseif (preg_match('/^bgh:(k|ck):(volume|time)$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
     // 📦 / ⏰ - from the first screen (k: to the subscriptions there are now)
-    // or a campaign's (ck): a fixed amount to begin with, asked for at once
-    $bg_p =$bg_m[1] === 'k' ? bulkgift_params([]) : bulkgift_draft($from_id);
+    // or a campaign's (ck): a fixed amount to begin with, asked for at once -
+    // a campaign's length is asked right after it
+    $bg_p = $bg_m[1] === 'k' ? bulkgift_params([]) : bulkgift_draft($from_id);
     $bg_p['kind'] = $bg_m[2];
     $bg_p['mode'] = 'fixed';
     $bg_p['value'] = null;
+    if ($bg_m[1] === 'ck' && !bulkgift_is_live($bg_p)) {
+        $bg_p['buy'] = 'next';
+        $bg_p['buyn'] = 24;
+    }
     bulkgift_draft_save($from_id, $bg_p);
+    savedata("clear", $bg_m[1] === 'ck' ? 'bg_camp' : 'bg_ask', 1);
     step('bgh_value', $from_id);
     bulkgift_draft_ask($from_id, $message_id);
     [$bg_text, $bg_kb] = bulkgift_ask_payload(bulkgift_value_ask($bg_p), $bg_m[1] === 'k' ? 'bgh' : 'bgh:cpk');
     Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
 } elseif (preg_match('/^bgh:(m|l|p|b|t):([a-z0-9_]+)$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
-    // one of 🎯's settings changed: a single choice goes back to 🎯, a tick
-    // redraws its own screen, and a choice that needs a number asks for it
+    // one of 🎯's settings changed: a single choice goes back to the summary,
+    // a tick redraws its own screen, and a choice that needs a number asks
+    // for it - its 🔙 leaves things as they were
     $bg_t = $textbotlang['Admin']['BulkGift'];
     $bg_p = bulkgift_draft($from_id);
     [$bg_key, $bg_val] = [$bg_m[1], $bg_m[2]];
-    $bg_back = 'more';
+    $bg_back = 'sum';
     if ($bg_key === 'm' && in_array($bg_val, ['fixed', 'total', 'left'], true)) {
         if ($bg_val !== $bg_p['mode']) {
-            // gigabytes, days and percents are not the same number: asked again
-            $bg_p['mode'] = $bg_val;
-            $bg_p['value'] = null;
-            bulkgift_draft_save($from_id, $bg_p);
+            // gigabytes, days and percents are not the same number: the new
+            // way is kept once its amount is typed
+            savedata("clear", "bg_mode", $bg_val);
             step('bgh_value', $from_id);
             bulkgift_draft_ask($from_id, $message_id);
-            [$bg_text, $bg_kb] = bulkgift_ask_payload(bulkgift_value_ask($bg_p), 'bgh:sec:mode');
+            [$bg_text, $bg_kb] = bulkgift_ask_payload(bulkgift_value_ask($bg_p, $bg_val), 'bgh:sum');
             Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
             return;
         }
@@ -21459,7 +21474,7 @@ if ($datain == "linkappsetting") {
             savedata("clear", "bg_buy", $bg_val);
             step('bgh_buyn', $from_id);
             bulkgift_draft_ask($from_id, $message_id);
-            [$bg_text, $bg_kb] = bulkgift_ask_payload($bg_t['askBuy' . ucfirst($bg_val)], 'bgh:sec:buy');
+            [$bg_text, $bg_kb] = bulkgift_ask_payload($bg_t['askBuy' . ucfirst($bg_val)], 'bgh:sum');
             Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
             return;
         }
@@ -21476,19 +21491,27 @@ if ($datain == "linkappsetting") {
     step('home', $from_id);
     bulkgift_draft_save($from_id, $bg_p);
     $bg_p = bulkgift_draft($from_id);
-    [$bg_text, $bg_kb] = $bg_back === 'more' ? bulkgift_more_payload($bg_p) : bulkgift_sub_payload($bg_p, $bg_back);
+    if ($bg_back !== 'sum') {
+        [$bg_text, $bg_kb] = bulkgift_sub_payload($bg_p, $bg_back);
+    } else {
+        [$bg_text, $bg_kb] = $bg_p['value'] !== null ? bulkgift_summary_payload($bg_p) : bulkgift_start_payload();
+    }
     Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
 } elseif (($user['step'] == 'bgh_value' || $user['step'] == 'bgh_buyn') && $datain === '' && $adminrulecheck['rule'] == "administrator") {
     // the typed answer - a button tapped meanwhile (🚫 لغو of a run, say) is
     // that button's, not an answer
     $bg_t = $textbotlang['Admin']['BulkGift'];
     $bg_p = bulkgift_draft($from_id);
+    $bg_pv = json_decode((string) $user['Processing_value'], true) ?: [];
     if ($user['step'] == 'bgh_value') {
-        [$bg_v, $bg_err] = bulkgift_parse_value($bg_p['kind'], $bg_p['mode'], (string) $text);
+        // a way of counting picked in 🎯 is kept with its amount
+        $bg_mode = in_array($bg_pv['bg_mode'] ?? '', ['fixed', 'total', 'left'], true) ? $bg_pv['bg_mode'] : $bg_p['mode'];
+        [$bg_v, $bg_err] = bulkgift_parse_value($bg_p['kind'], $bg_mode, (string) $text);
         if ($bg_err !== null) {
             sendmessage($from_id, $bg_err, null, 'HTML');
             return;
         }
+        $bg_p['mode'] = $bg_mode;
         $bg_p['value'] = $bg_v;
     } else {
         $bg_n = bulkgift_parse_count((string) $text);
@@ -21511,7 +21534,16 @@ if ($datain == "linkappsetting") {
         deletemessage($from_id, $bg_ask);
     }
     $bg_p = bulkgift_draft($from_id);
-    [$bg_text, $bg_kb] = $bg_p['value'] !== null ? bulkgift_summary_payload($bg_p) : (bulkgift_is_live($bg_p) ? bulkgift_camp_payload($bg_p) : bulkgift_start_payload());
+    if ($user['step'] == 'bgh_value' && !empty($bg_pv['bg_camp']) && bulkgift_is_live($bg_p)) {
+        // a new campaign's amount: how long it runs comes next
+        savedata("clear", "bg_buy", 'next');
+        step('bgh_buyn', $from_id);
+        [$bg_text, $bg_kb] = bulkgift_ask_payload($bg_t['askBuyNext'], 'bgh:sum');
+        $bg_sent = sendmessage($from_id, $bg_text, $bg_kb, 'HTML');
+        bulkgift_draft_ask($from_id, (int) ($bg_sent['result']['message_id'] ?? 0));
+        return;
+    }
+    [$bg_text, $bg_kb] = $bg_p['value'] !== null ? bulkgift_summary_payload($bg_p) : (bulkgift_is_live($bg_p) ? bulkgift_camp_payload() : bulkgift_start_payload());
     sendmessage($from_id, $bg_text, $bg_kb, 'HTML');
 } elseif ($datain === 'bgh:pv' && $adminrulecheck['rule'] == "administrator") {
     // 👁 the message each language's customers get - 🎨's text, as 🎨 has it

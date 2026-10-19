@@ -1650,7 +1650,7 @@ You can see and manage it in «🛍 My services».',
                         'assignedServiceName' => '🔗 Dedicated service',
                         'bulkGiftVolume' => '🎁 <b>{amount} GB</b> of gift volume was added to your service <code>{username}</code>.
 <i>You can see it in «🛍 My services».</i>',
-                        'bulkGiftTime' => '🎁 <b>{amount} days</b> were added to your service <code>{username}</code> as a gift.
+                        'bulkGiftTime' => '🎁 Gift time added to your service <code>{username}</code>: <b>{amount}</b>.
 <i>You can see it in «🛍 My services».</i>',
                         'servicesFound' => '🛍 {countservice} services found. To view and manage a service, click on one of the services',
                         'infoUnavailable' => '❌ Viewing account information is not possible at the moment',
@@ -5547,7 +5547,7 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'bgKind' => 'What to add',
                 'bgMode' => 'How to count it',
                 'bgValue' => 'Amount',
-                'bgValueHint' => 'GB for a fixed volume, days for a fixed time, percent for the percentage modes',
+                'bgValueHint' => 'Volume: 5 = 5 GB, 5.5 = 5 GB and 500 MB, 0.1 = 100 MB · Time: 1 = 1 day, 0.1 = 1 hour, 2.12 = 2 days and 12 hours · Percent: 0.1 to 100',
                 'bgScope' => 'Who gets it',
                 'bgLang' => 'Users\' language',
                 'bgLangHint' => 'Only for «bot users»; «every panel user» takes every account',
@@ -5562,6 +5562,15 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'bgHoursHint' => 'Every new purchase from the start for this many hours gets it; 720 at most',
                 'bgMore' => 'More settings',
                 'bgMoreHint' => 'All optional; left alone, it goes to every active subscription of the bot.',
+                'bgGuide' => 'Guide',
+                'bgGuideText' => '1. Pick the job: a gift to the subscriptions there are now, or a purchase campaign (every purchase from its start for some hours).
+2. Pick volume or time and type the amount:
+▫️ Volume: 5 = 5 GB, 5.5 = 5 GB and 500 MB, 0.1 = 100 MB
+▫️ Time: 1 = 1 day, 0.1 = 1 hour, 2.12 = 2 days and 12 hours (the number after the point is hours, up to 23)
+3. Press «Check the count» to see about how many subscriptions get it, then «Start».
+«🎯 More settings» is optional: percent, language, panels, purchase time, account status, accounts that are not in the bot, and the message to the user.
+⏱ Hourly, 🧪 test and ♾ unlimited accounts get nothing. ⏸ An account not started yet gets the time on its length and keeps waiting.
+Its progress shows here and in the bot; the final report, with the exact number, comes to the bot.',
                 'bgStatus' => 'Account status',
                 'bgStatusHint' => 'Every ticked state gets it',
                 'bgLiveTitle' => 'Purchase campaign running',
@@ -5571,7 +5580,7 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'bgCountBtn' => 'Check the count',
                 'bgStartBtn' => 'Start',
                 'bgStartConfirm' => 'Start it? What gets added cannot be taken back.',
-                'bgCountResult' => 'Bot services to check: %s — hourly accounts left out: %s — test accounts: %s',
+                'bgCountResult' => 'About %s subscriptions get it — hourly accounts left out: %s — test accounts: %s. The exact number comes in the report at the end.',
                 'bgStarted' => 'Started; its progress shows here and in the bot.',
                 'bgNowTitle' => 'Running now',
                 'bgNowSub' => 'This page refreshes itself every few seconds until it ends.',

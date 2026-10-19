@@ -182,10 +182,11 @@ include __DIR__ . '/inc/layout_head.php';
 </style>
 <div class="card fade-up" id="form" style="margin-bottom:14px">
   <?= $cardHead('🎁 ' . htmlspecialchars($t['bgFormTitle']), htmlspecialchars($t['bgFormSub'])) ?>
+  <details id="bgguide" class="notice" style="margin:12px 16px 0"><summary style="cursor:pointer;font-weight:700">📖 <?= htmlspecialchars($t['bgGuide']) ?></summary><div style="margin-top:8px;line-height:1.9"><?= nl2br(htmlspecialchars($t['bgGuideText'])) ?></div></details>
   <?php if ($preview !== null): ?>
     <div class="notice notice-ok" style="margin:12px 16px 0">
       <?php if ($previewLive): ?>
-        <?= htmlspecialchars($plain(strtr($r['sumCampLine'], ['{hours}' => number_format($p['buyn']), '{amount}' => bulkgift_amount_label($p)]))) ?>
+        <?= htmlspecialchars($plain(strtr($r['sumCampLine'], ['{hours}' => number_format($p['buyn']), '{what}' => bulkgift_what_text($p)]))) ?>
         <br><?= htmlspecialchars($plain($r['sumCampNote'])) ?>
       <?php else: ?>
         <?= htmlspecialchars(sprintf($t['bgCountResult'], number_format($preview['n']), number_format($preview['h']), number_format($preview['t']))) ?>

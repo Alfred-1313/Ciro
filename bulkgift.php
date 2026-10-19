@@ -170,7 +170,10 @@ if (!function_exists('bulkgift_params')) {
             if ($o['mode'] !== 'fixed') {
                 $v = ($v >= 0.1 && $v <= 100) ? round($v, 2) : null;
             } elseif ($o['kind'] === 'time') {
-                $v = (floor($v) == $v && $v >= 1 && $v <= 3650) ? (int) $v : null;
+                // days, to the hour: 1/24 is an hour (a run from before hours
+                // could be given keeps its whole days)
+                $h = bulkgift_hours_of($v);
+                $v = ($h >= 1 && $h <= 3650 * 24 && abs($v * 24 - $h) < 0.01) ? ($h % 24 === 0 ? intdiv($h, 24) : round($h / 24, 6)) : null;
             } else {
                 $v = $v >= 0.01 ? round($v, 4) : null;
             }
@@ -216,7 +219,7 @@ if (!function_exists('bulkgift_params')) {
     function bulkgift_parse_value($kind, $mode, $text)
     {
         $t = bulkgift_texts();
-        $s = bulkgift_digits($text);
+        $s = strtr(bulkgift_digits($text), [',' => '.', '،' => '.']);
         if ($mode !== 'fixed') {
             $s = trim(preg_replace('/[%٪\s]+$/u', '', $s));
             if (!preg_match('/^\d+(\.\d+)?$/', $s) || (float) $s < 0.1 || (float) $s > 100) {
@@ -225,16 +228,38 @@ if (!function_exists('bulkgift_params')) {
             return [round((float) $s, 2), null];
         }
         if ($kind === 'volume') {
-            $gb = volume_parse($s, 'gb');
-            if ($gb === null || $gb < 0.01) {
+            // gigabytes, what comes after the point as megabytes the way the
+            // owner says it: 5.5 = 5 GB and 500 MB, 0.1 = 100 MB; «500 مگ» too
+            if (!preg_match('/^(\d+(?:\.\d+)?)\s*(mb|m|مگ|مگابایت|gb|g|گیگ|گیگابایت)?$/iu', $s, $m)) {
                 return [null, $t['badVolume']];
             }
-            return [round($gb, 4), null];
+            $unit = mb_strtolower($m[2] ?? '');
+            $gb = (float) $m[1] / ($unit !== '' && in_array(mb_substr($unit, 0, 1), ['m', 'م'], true) ? 1000 : 1);
+            if ($gb < 0.01 || $gb > 100000) {
+                return [null, $t['badVolume']];
+            }
+            return [round($gb, 3), null];
         }
-        if (!preg_match('/^\d+$/', $s) || (int) $s < 1 || (int) $s > 3650) {
+        // days, and after the point hours: 1 = a day, 0.1 = an hour, 2.12 = 2
+        // days and 12 hours; «12 ساعت» and «3 روز» too
+        if (preg_match('/^(\d+)\s*(ساعت|h|hours?)$/iu', $s, $m)) {
+            $h = (int) $m[1];
+        } elseif (preg_match('/^(\d+)\s*(روز|d|days?)$/iu', $s, $m)) {
+            $h = (int) $m[1] * 24;
+        } elseif (preg_match('/^(\d+)(?:\.(\d{1,2}))?$/', $s, $m) && (int) ($m[2] ?? 0) <= 23) {
+            $h = (int) $m[1] * 24 + (int) ($m[2] ?? 0);
+        } else {
             return [null, $t['badDays']];
         }
-        return [(int) $s, null];
+        if ($h < 1 || $h > 3650 * 24) {
+            return [null, $t['badDays']];
+        }
+        return [$h % 24 === 0 ? intdiv($h, 24) : round($h / 24, 6), null];
+    }
+    // a time gift's days (as kept) in whole hours
+    function bulkgift_hours_of($days)
+    {
+        return (int) round((float) $days * 24);
     }
     // «چند روز/ماه/ساعت» for the purchase filter: a whole number, or null
     function bulkgift_parse_count($text)
@@ -337,7 +362,7 @@ if (!function_exists('bulkgift_all_panels')) {
         return [implode(' AND ', $w), $a];
     }
     // What a run with these settings finds among the bot's own services, before
-    // it is started: 'n' to look at, 'h' ⏱ and 't' 🧪 left out, and for «همه‌ی
+    // it is started: 'n' about how many get it, 'h' ⏱ and 't' 🧪 left out, and for «همه‌ی
     // کاربران پنل» the panels whose own list cannot be read ('unsupported') and
     // whether any can ('listable'). One account counts once.
     function bulkgift_preview(array $p)
@@ -352,9 +377,13 @@ if (!function_exists('bulkgift_all_panels')) {
         // a campaign's purchases have not been made yet
         if ($names && !bulkgift_is_live($p)) {
             [$w, $a] = bulkgift_invoice_where($p, $names);
-            $st = $pdo->prepare("SELECT i.Service_location, i.username, i.payg, i.name_product FROM invoice i WHERE {$w}");
+            $st = $pdo->prepare("SELECT i.Service_location, i.username, i.payg, i.name_product, i.Status FROM invoice i WHERE {$w}");
             $st->execute($a);
             $seen = [];
+            // 'n' is about how many will get it: the state the bot last saw of
+            // each (the run reads the panel itself, so the report has the
+            // exact number)
+            $state = ['active' => 'active', 'sendedwarn' => 'active', 'send_on_hold' => 'on_hold', 'end_of_volume' => 'limited', 'end_of_time' => 'expired'];
             while ($r = $st->fetch(PDO::FETCH_ASSOC)) {
                 $key = bulkgift_ukey($r['Service_location'], $r['username']);
                 if (isset($seen[$key])) {
@@ -362,7 +391,11 @@ if (!function_exists('bulkgift_all_panels')) {
                 }
                 $seen[$key] = true;
                 $k = bulkgift_kind_of($r);
-                $out[$k === 'payg' ? 'h' : ($k === 'test' ? 't' : 'n')]++;
+                if ($k === 'payg' || $k === 'test') {
+                    $out[$k === 'payg' ? 'h' : 't']++;
+                } elseif (in_array($state[(string) $r['Status']] ?? 'other', $p['statuses'], true)) {
+                    $out['n']++;
+                }
             }
         }
         if ($p['scope'] === 'panel') {
@@ -393,15 +426,54 @@ if (!function_exists('bulkgift_amount_label')) {
     {
         return lang_tab_texts('fa')['bottext']['langs'][$lang] ?? $lang;
     }
-    // «5 گیگ», «10٪ از حجم باقی‌مونده», «— (هنوز تعیین نشده)»
+    // «5 گیگ و 500 مگابایت», «2 روز و 12 ساعت», «10٪ از حجم باقی‌مونده»,
+    // «— (هنوز تعیین نشده)»
     function bulkgift_amount_label(array $p)
     {
         $t = bulkgift_texts();
         if ($p['value'] === null) {
             return $t['valueUnset'];
         }
+        if ($p['mode'] === 'fixed') {
+            return $p['kind'] === 'time' ? bulkgift_hours_text(bulkgift_hours_of($p['value'])) : bulkgift_gb_text($p['value']);
+        }
         $key = ($p['kind'] === 'time' ? 'time' : 'vol') . ucfirst($p['mode']);
         return strtr($t[$key], ['{n}' => bulkgift_num($p['value'])]);
+    }
+    // «5 گیگ حجم», «2 روز زمان», «10٪ از حجم باقی‌مونده»: how much of what
+    function bulkgift_what_text(array $p)
+    {
+        return bulkgift_amount_label($p) . ($p['mode'] === 'fixed' && $p['value'] !== null ? ' ' . bulkgift_texts()['kindName' . ucfirst($p['kind'])] : '');
+    }
+    // «5 گیگ», «5 گیگ و 500 مگابایت», «100 مگابایت»: what comes after the
+    // point as megabytes, the way it is typed (5.5 = 5 GB and 500 MB)
+    function bulkgift_gb_text($gb, $lang = 'fa')
+    {
+        $u = lang_tab_texts($lang)['common']['units'] ?? [];
+        $mb = (int) round((float) $gb * 1000);
+        $parts = [];
+        if (intdiv($mb, 1000) > 0) {
+            $parts[] = intdiv($mb, 1000) . ' ' . ($u['gb'] ?? 'GB');
+        }
+        if ($mb % 1000 > 0 || !$parts) {
+            $parts[] = ($mb % 1000) . ' ' . ($u['mbShort'] ?? 'MB');
+        }
+        return implode($u['andJoin'] ?? ' ', $parts);
+    }
+    // «5 روز», «1 روز و 6 ساعت», «6 ساعت» - in $lang's words
+    function bulkgift_hours_text($hours, $lang = 'fa')
+    {
+        $u = lang_tab_texts($lang)['common']['units'] ?? [];
+        $h = max(0, (int) $hours);
+        $parts = [];
+        if (intdiv($h, 24) > 0) {
+            $d = intdiv($h, 24);
+            $parts[] = $d . ' ' . ($d === 1 ? ($u['dayOne'] ?? 'day') : ($u['dayMany'] ?? 'days'));
+        }
+        if ($h % 24 > 0 || !$parts) {
+            $parts[] = ($h % 24) . ' ' . ($h % 24 === 1 ? ($u['hourOne'] ?? 'hour') : ($u['hourMany'] ?? 'hours'));
+        }
+        return implode($u['andJoin'] ?? ' ', $parts);
     }
     // the panels by name (a job's: the names they had when it started)
     function bulkgift_panels_label(array $p)
@@ -1013,7 +1085,7 @@ if (!function_exists('bulkgift_work')) {
         }
         return null;
     }
-    // What one account gets: ['gb' => x] or ['days' => n] (+ 'hold' for one
+    // What one account gets: ['gb' => x] or ['hours' => n] (+ 'hold' for one
     // not started yet), or ['skip' => why]. $d: what the panel says about it
     // (DataUser's shape, plus 'hold': bulkgift_hold_seconds()); $start: when
     // it was bought (or made, in the panel), 0 when not known.
@@ -1029,34 +1101,34 @@ if (!function_exists('bulkgift_work')) {
         }
         if ($p['kind'] === 'time') {
             if ($status === 'on_hold') {
-                // its clock starts at the first connection: the days go on its
+                // its clock starts at the first connection: the time goes on its
                 // length (all of it is still ahead - total and what is left are
                 // the same), and it keeps waiting
                 $hold = (int) ($d['hold'] ?? 0);
                 if ($hold <= 0) {
                     return ['skip' => 'onhold'];
                 }
-                $days = $p['mode'] === 'fixed' ? (int) $p['value'] : (int) round($hold / 86400 * $p['value'] / 100);
-                return $days < 1 ? ['skip' => 'small'] : ['days' => $days, 'hold' => $hold];
+                $hours = $p['mode'] === 'fixed' ? bulkgift_hours_of($p['value']) : (int) round($hold / 3600 * $p['value'] / 100);
+                return $hours < 1 ? ['skip' => 'small'] : ['hours' => $hours, 'hold' => $hold];
             }
             if ($expire <= 0) {
                 return ['skip' => 'unlimited'];
             }
             if ($p['mode'] === 'fixed') {
-                $days = (int) $p['value'];
+                $hours = bulkgift_hours_of($p['value']);
             } elseif ($p['mode'] === 'total') {
                 if ($start <= 0 || $expire <= $start) {
                     return ['skip' => 'nototal'];
                 }
-                $days = (int) round(($expire - $start) / 86400 * $p['value'] / 100);
+                $hours = (int) round(($expire - $start) / 3600 * $p['value'] / 100);
             } else {
                 $left = $expire - $now;
                 if ($left <= 0) {
                     return ['skip' => 'nothing'];
                 }
-                $days = (int) round($left / 86400 * $p['value'] / 100);
+                $hours = (int) round($left / 3600 * $p['value'] / 100);
             }
-            return $days < 1 ? ['skip' => 'small'] : ['days' => $days];
+            return $hours < 1 ? ['skip' => 'small'] : ['hours' => $hours];
         }
         // no limit to add to - and a volume added to it would set one
         if ($limit <= 0) {
@@ -1108,14 +1180,21 @@ if (!function_exists('bulkgift_work')) {
         if (isset($ev['skip'])) {
             return ['skipped', $ev['skip']];
         }
+        // these two take whole days only: the hours go to the nearest day
+        if (isset($ev['hours']) && in_array((string) $panel['type'], ['hiddify', 'mirza_agent'], true)) {
+            $ev['hours'] = (int) round($ev['hours'] / 24) * 24;
+            if ($ev['hours'] < 24) {
+                return ['skipped', 'small'];
+            }
+        }
         if (isset($ev['hold'])) {
             // not started yet: extra_time() would start its clock today - the
-            // days go on its length instead, and it keeps waiting
-            $res = $mp->Modifyuser($inv['username'], $panel['name_panel'], bulkgift_hold_config($panel, $ev['hold'] + (int) $ev['days'] * 86400));
+            // time goes on its length instead, and it keeps waiting
+            $res = $mp->Modifyuser($inv['username'], $panel['name_panel'], bulkgift_hold_config($panel, $ev['hold'] + (int) $ev['hours'] * 3600));
             if (!is_array($res) || empty($res['status'])) {
                 return ['failed', 'failed', '', bulkgift_msg(is_array($res) ? ($res['msg'] ?? '') : '')];
             }
-            $amount = (string) (int) $ev['days'];
+            $amount = (string) (int) $ev['hours'];
             bulkgift_log_service($inv, $p, $ev, $d);
             if ($p['notify']) {
                 bulkgift_notify($inv, $p, $amount);
@@ -1128,7 +1207,9 @@ if (!function_exists('bulkgift_work')) {
         $st->execute([$inv['username'], $inv['id_invoice']]);
         $others = $st->fetchAll(PDO::FETCH_ASSOC);
         if ($p['kind'] === 'time') {
-            $res = $mp->extra_time($inv['username'], $panel['code_panel'], (int) $ev['days']);
+            // extra_time() counts in days: an hour is 1/24 of one
+            $h = (int) $ev['hours'];
+            $res = $mp->extra_time($inv['username'], $panel['code_panel'], $h % 24 === 0 ? intdiv($h, 24) : $h / 24);
         } else {
             $res = $mp->extra_volume($inv['username'], $panel['code_panel'], $ev['gb']);
         }
@@ -1145,7 +1226,7 @@ if (!function_exists('bulkgift_work')) {
         if (!is_array($res) || empty($res['status'])) {
             return ['failed', 'failed', '', bulkgift_msg(is_array($res) ? ($res['msg'] ?? '') : '')];
         }
-        $amount = $p['kind'] === 'time' ? (string) (int) $ev['days'] : volume_store($ev['gb']);
+        $amount = $p['kind'] === 'time' ? (string) (int) $ev['hours'] : volume_store($ev['gb']);
         bulkgift_log_service($inv, $p, $ev, $d);
         if ($p['notify']) {
             bulkgift_notify($inv, $p, $amount);
@@ -1181,9 +1262,9 @@ if (!function_exists('bulkgift_work')) {
         }
         if (isset($ev['hold'])) {
             // not started yet: a longer wait-to-start, still waiting
-            $cfg = bulkgift_hold_config($panel, $ev['hold'] + (int) $ev['days'] * 86400);
+            $cfg = bulkgift_hold_config($panel, $ev['hold'] + (int) $ev['hours'] * 3600);
         } elseif ($p['kind'] === 'time') {
-            $cfg = ['expire' => max(time(), (int) $d['expire']) + (int) $ev['days'] * 86400];
+            $cfg = ['expire' => max(time(), (int) $d['expire']) + (int) $ev['hours'] * 3600];
         } else {
             $cfg = ['data_limit' => (int) round((float) $d['data_limit'] + $ev['gb'] * pow(1024, 3))];
         }
@@ -1191,7 +1272,7 @@ if (!function_exists('bulkgift_work')) {
         if (!is_array($res) || empty($res['status'])) {
             return ['failed', 'failed', '', bulkgift_msg(is_array($res) ? ($res['msg'] ?? '') : '')];
         }
-        return ['done', 'done', $p['kind'] === 'time' ? (string) (int) $ev['days'] : volume_store($ev['gb']), null];
+        return ['done', 'done', $p['kind'] === 'time' ? (string) (int) $ev['hours'] : volume_store($ev['gb']), null];
     }
     // the service's history (👁 of the order in 👤 مدیریت کاربر), as every
     // other change to a service is kept
@@ -1199,7 +1280,7 @@ if (!function_exists('bulkgift_work')) {
     {
         global $pdo;
         $value = $p['kind'] === 'time'
-            ? ['time_value' => (int) $ev['days'], 'old_volume' => $d['data_limit'] ?? 0, 'expire_old' => $d['expire'] ?? 0]
+            ? ['time_value' => $ev['hours'] % 24 === 0 ? intdiv((int) $ev['hours'], 24) : round($ev['hours'] / 24, 2), 'time_hours' => (int) $ev['hours'], 'old_volume' => $d['data_limit'] ?? 0, 'expire_old' => $d['expire'] ?? 0]
             : ['volume_value' => $ev['gb'], 'old_volume' => $d['data_limit'] ?? 0, 'expire_old' => $d['expire'] ?? 0];
         try {
             $pdo->prepare("INSERT INTO service_other (id_user, username, value, type, time, price, status, output) VALUES (?, ?, ?, ?, ?, '0', 'paid', ?)")
@@ -1227,10 +1308,17 @@ if (!function_exists('bulkgift_work')) {
             return;
         }
         bottext_extras_key_hint('users.status.' . $key);
-        sendmessage($id, strtr($tpl, [
-            '{amount}' => $p['kind'] === 'time' ? (string) $amount : volume_num($amount),
-            '{username}' => htmlspecialchars((string) $inv['username']),
-        ]), null, 'HTML');
+        sendmessage($id, bulkgift_fill($tpl, $p['kind'], $p['kind'] === 'time' ? bulkgift_hours_text((int) $amount, $lang) : volume_num($amount), htmlspecialchars((string) $inv['username'])), null, 'HTML');
+    }
+    // 🎨's text with the amount in: a time's {amount} says its own unit («2
+    // روز و 12 ساعت»), so a text from before hours, with «{amount} روز»
+    // after it, does not say it twice
+    function bulkgift_fill($tpl, $kind, $amount, $username)
+    {
+        if ($kind === 'time') {
+            $tpl = str_replace(['{amount} روز', '{amount} days', '{amount} day'], '{amount}', (string) $tpl);
+        }
+        return strtr((string) $tpl, ['{amount}' => $amount, '{username}' => $username]);
     }
     // A run's next accounts, until its time is up: claimed one at a time, then
     // given, left out or failed. How many it got through.
@@ -1673,27 +1761,35 @@ if (!function_exists('bulkgift_hub_payload')) {
         return bulkgift_btn(($on ? '✅ ' : '') . $text, $cb, $on ? 'success' : 'primary');
     }
     // 🏬 ← 🎁, the first screen: the usual job - something for every active
-    // subscription of the bot - is two taps away, a campaign is the third
-    // button; everything else waits behind «🎯 تنظیمات بیشتر» on the summary
+    // subscription of the bot - is a tap and a number away, a campaign is the
+    // third button, 📖 says how it all goes; everything else waits behind
+    // «🎯 تنظیمات بیشتر» on the summary
     function bulkgift_start_payload()
     {
         $t = bulkgift_texts();
         $rows = [
             [bulkgift_btn($t['addVolumeBtn'], 'bgh:k:volume'), bulkgift_btn($t['addTimeBtn'], 'bgh:k:time')],
             [bulkgift_btn($t['campBtn'], 'bgh:camp', null)],
-            [bulkgift_btn($t['closeBtn'], 'bgh:x', 'danger')],
+            [bulkgift_btn($t['helpBtn'], 'bgh:help', null), bulkgift_btn($t['closeBtn'], 'bgh:x', 'danger')],
         ];
         return [$t['title'] . "\n➖➖➖➖➖➖➖➖➖➖\n" . $t['startAsk'], json_encode(['inline_keyboard' => $rows])];
     }
-    // 🔜 a campaign once its length is known: what each purchase gets
-    function bulkgift_camp_payload(array $p)
+    // 🔜 a campaign, the way a gift goes: what each purchase gets and how
+    // much, then how long it runs
+    function bulkgift_camp_payload()
     {
         $t = bulkgift_texts();
         $rows = [
             [bulkgift_btn($t['campVolumeBtn'], 'bgh:ck:volume'), bulkgift_btn($t['campTimeBtn'], 'bgh:ck:time')],
             [bulkgift_btn($t['backBtn'], 'bgh', 'danger')],
         ];
-        return [strtr($t['campTitle'], ['{n}' => number_format($p['buyn'])]) . "\n➖➖➖➖➖➖➖➖➖➖\n" . $t['campAsk'], json_encode(['inline_keyboard' => $rows])];
+        return [$t['campTitle'] . "\n➖➖➖➖➖➖➖➖➖➖\n" . $t['campAsk'], json_encode(['inline_keyboard' => $rows])];
+    }
+    // 📖 how it all goes, in one message; 🔙 to where it was opened from
+    function bulkgift_help_payload($back = 'bgh')
+    {
+        $t = bulkgift_texts();
+        return [$t['help'], json_encode(['inline_keyboard' => [[bulkgift_btn($t['backBtn'], $back, 'danger')]]])];
     }
     // the panels picked, by name, as plain text for a button
     function bulkgift_panel_names(array $p)
@@ -1723,23 +1819,26 @@ if (!function_exists('bulkgift_hub_payload')) {
         }
         return implode("\n", $rows);
     }
-    // The summary before anything starts: what, to how many, every setting that
-    // is not the usual one, and 🚀 - which carries the settings' crc, so what
-    // starts is what this screen says. Nothing found: no 🚀.
+    // The summary before anything starts: what, to about how many, every
+    // setting that is not the usual one, and 🚀 - which carries the settings'
+    // crc, so what starts is what this screen says. Nothing found: no 🚀.
     function bulkgift_summary_payload(array $p)
     {
         $t = bulkgift_texts();
         $live = bulkgift_is_live($p);
+        $what = ['{icon}' => $p['kind'] === 'time' ? '⏰' : '📦', '{what}' => bulkgift_what_text($p)];
         $notes = [];
         if ($live) {
-            $head = strtr($t['campTitle'], ['{n}' => number_format($p['buyn'])]);
-            $line = strtr($t['sumCampLine'], ['{hours}' => number_format($p['buyn']), '{amount}' => bulkgift_amount_label($p)]);
+            $head = $t['campTitle'];
+            $line = strtr($t['sumCampLine'], $what + ['{hours}' => number_format($p['buyn'])]);
             $notes[] = $t['sumCampNote'];
             $can = true;
         } else {
             $pv = bulkgift_preview($p);
             $head = $t['title'];
-            $line = strtr($p['scope'] === 'panel' ? $t['sumLinePanel'] : $t['sumLine'], ['{amount}' => bulkgift_amount_label($p), '{n}' => number_format($pv['n'])]);
+            $can = $pv['n'] > 0 || ($p['scope'] === 'panel' && $pv['listable']);
+            $key = $p['scope'] === 'panel' ? 'sumLinePanel' : ($p['statuses'] === bulkgift_default_statuses() ? 'sumLine' : 'sumLineAny');
+            $line = strtr($can ? $t[$key] : $t['sumEmpty'], $what + ['{n}' => number_format($pv['n'])]);
             if ($pv['h'] + $pv['t'] > 0) {
                 $notes[] = strtr($t['sumSkip'], ['{h}' => number_format($pv['h']), '{t}' => number_format($pv['t'])]);
             }
@@ -1749,47 +1848,51 @@ if (!function_exists('bulkgift_hub_payload')) {
                     $notes[] = strtr($t['sumUnsupported'], ['{list}' => implode('، ', array_map(fn($n) => aff_bidi($n, '<b>' . htmlspecialchars($n) . '</b>'), $pv['unsupported']))]);
                 }
             }
-            $can = $pv['n'] > 0 || ($p['scope'] === 'panel' && $pv['listable']);
+            if ($can) {
+                $notes[] = $t['sumExact'];
+            }
         }
         $extra = bulkgift_nondefault_rows($p);
         $text = $head . "\n➖➖➖➖➖➖➖➖➖➖\n" . $line
             . ($extra !== '' ? "\n\n" . $extra : '')
-            . ($notes ? "\n<blockquote>" . implode("\n", $notes) . '</blockquote>' : '')
-            . ($can ? '' : "\n\n" . $t['sumEmpty']);
+            . ($notes ? "\n<blockquote>" . implode("\n", $notes) . '</blockquote>' : '');
         $rows = [];
         if ($can) {
             $rows[] = [bulkgift_btn($live ? $t['startCampBtn'] : $t['startBtn'], 'bgh:start:' . bulkgift_sig($p), 'success')];
         }
         $rows[] = [bulkgift_btn($t['moreBtn'], 'bgh:more')];
-        $rows[] = [bulkgift_btn($t['cancelDraftBtn'], 'bgh:x', 'danger')];
+        $rows[] = [bulkgift_btn($t['helpBtn'], 'bgh:help', null), bulkgift_btn($t['cancelDraftBtn'], 'bgh:x', 'danger')];
         return [$text, json_encode(['inline_keyboard' => $rows])];
     }
-    // 🎯 تنظیمات بیشتر: one button for each of the rest, saying what it is set
-    // to; 🔙 to the summary
+    // 🎯 تنظیمات بیشتر: one button for each of the rest, in plain words - what
+    // it does while it is the usual one, ✅ and what it is set to once it is
+    // not; 🔙 to the summary
     function bulkgift_more_payload(array $p)
     {
         $t = bulkgift_texts();
         $live = bulkgift_is_live($p);
+        $row = fn($set, $usual, $changed, $cb) => [bulkgift_btn($set ? $changed : $usual, $cb, $set ? 'success' : 'primary')];
         $names = bulkgift_panel_names($p);
         $rows = [];
-        $rows[] = [bulkgift_btn($p['mode'] === 'fixed' ? $t['moreModeFixed'] : strtr($t['moreModePct'], ['{v}' => $t['modeName' . ucfirst($p['mode'])]]), 'bgh:sec:mode')];
+        $rows[] = $row($p['mode'] !== 'fixed', $t['moreMode'], strtr($t['moreModeSet'], ['{v}' => bulkgift_amount_label($p)]), 'bgh:sec:mode');
         if ($p['scope'] === 'bot') {
-            $rows[] = [bulkgift_btn(strtr($t['moreLangBtn'], ['{v}' => $p['lang'] === 'all' ? $t['allShort'] : bulkgift_lang_name($p['lang'])]), 'bgh:sec:lang')];
+            $rows[] = $row($p['lang'] !== 'all', $t['moreLang'], strtr($t['moreLangSet'], ['{v}' => bulkgift_lang_name($p['lang'])]), 'bgh:sec:lang');
         }
-        $rows[] = [bulkgift_btn(strtr($t['morePanelsBtn'], ['{v}' => !$names ? $t['allShort'] : (count($names) > 2 ? strtr($t['panelsCount'], ['{n}' => count($names)]) : implode('، ', $names))]), 'bgh:sec:panels')];
+        $rows[] = $row((bool) $p['panels'], $t['morePanels'], strtr($t['morePanelsSet'], ['{v}' => count($names) > 2 ? strtr($t['panelsCount'], ['{n}' => count($names)]) : implode('، ', $names)]), 'bgh:sec:panels');
         if ($live) {
             $rows[] = [bulkgift_btn(strtr($t['moreHoursBtn'], ['{n}' => number_format($p['buyn'])]), 'bgh:hours')];
         } else {
-            $rows[] = [bulkgift_btn(strtr($t['moreBuyBtn'], ['{v}' => bulkgift_buy_label($p)]), 'bgh:sec:buy')];
-            $rows[] = [bulkgift_btn(strtr($t['moreStBtn'], ['{v}' => bulkgift_status_label($p)]), 'bgh:sec:st')];
-            $rows[] = [bulkgift_btn($p['scope'] === 'panel' ? $t['moreScopeOn'] : $t['moreScopeOff'], 'bgh:sc', $p['scope'] === 'panel' ? 'success' : 'primary')];
+            $rows[] = $row($p['buy'] !== 'all', $t['moreBuy'], strtr($t['moreBuySet'], ['{v}' => bulkgift_buy_label($p)]), 'bgh:sec:buy');
+            $rows[] = $row($p['statuses'] !== bulkgift_default_statuses(), $t['moreSt'], strtr($t['moreStSet'], ['{v}' => bulkgift_status_label($p)]), 'bgh:sec:st');
+            $rows[] = $row($p['scope'] === 'panel', $t['moreScope'], $t['moreScopeSet'], 'bgh:sc');
         }
-        $rows[] = [bulkgift_btn($p['notify'] ? $t['notifyOnBtn'] : $t['notifyOffBtn'], 'bgh:n', $p['notify'] ? 'success' : 'danger'), bulkgift_btn($t['previewBtn'], 'bgh:pv')];
+        $rows[] = $row(!$p['notify'], $t['moreNotify'], $t['moreNotifySet'], 'bgh:n');
+        $rows[] = [bulkgift_btn($t['previewBtn'], 'bgh:pv', null)];
         $rows[] = [bulkgift_btn($t['backSumBtn'], 'bgh:sum', 'danger')];
         return [$t['moreTitle'] . "\n➖➖➖➖➖➖➖➖➖➖\n" . $t['moreHint'], json_encode(['inline_keyboard' => $rows])];
     }
     // One setting of 🎯 on a screen of its own - mode, lang, panels, buy, st:
-    // its choices one under the other, and 🔙 to 🎯
+    // its choices one under the other, and 🔙 to the summary
     function bulkgift_sub_payload(array $p, $sec)
     {
         $t = bulkgift_texts();
@@ -1825,7 +1928,7 @@ if (!function_exists('bulkgift_hub_payload')) {
             $text = $t['panelsTitle'] . $line . $t['panelsHint'];
         } elseif ($sec === 'buy') {
             foreach (['all' => $t['buyAll'], 'lasth' => $t['buyLasthBtn'], 'days' => $t['buyDaysBtn'], 'months' => $t['buyMonthsBtn'], 'hours' => $t['buyHoursBtn']] as $k => $label) {
-                $rows[] = [bulkgift_pick($p['buy'] === $k, $p['buy'] === $k ? bulkgift_buy_label($p) : $label, 'bgh:b:' . $k)];
+                $rows[] = [bulkgift_pick($p['buy'] === $k, $p['buy'] === $k && $k !== 'all' ? bulkgift_buy_label($p) : $label, 'bgh:b:' . $k)];
             }
             $text = $t['buyTitle'] . $line . $t['buyHint'];
         } else {
@@ -1834,7 +1937,7 @@ if (!function_exists('bulkgift_hub_payload')) {
             }
             $text = $t['stTitle'] . $line . $t['stHint'];
         }
-        $rows[] = [bulkgift_btn($t['backBtn'], 'bgh:more', 'danger')];
+        $rows[] = [bulkgift_btn($t['backSumBtn'], 'bgh:sum', 'danger')];
         return [$text, json_encode(['inline_keyboard' => $rows])];
     }
     // a question that took the screen's place, with its way back ($back: the
@@ -1843,11 +1946,12 @@ if (!function_exists('bulkgift_hub_payload')) {
     {
         return [$text, json_encode(['inline_keyboard' => [[bulkgift_btn(bulkgift_texts()['backBtn'], $back, 'danger')]]])];
     }
-    // the question for the amount: gigabytes, days or a percent
-    function bulkgift_value_ask(array $p)
+    // the question for the amount: gigabytes, days and hours, or a percent
+    // ($mode: a way of counting picked but not saved yet)
+    function bulkgift_value_ask(array $p, $mode = null)
     {
         $t = bulkgift_texts();
-        return $p['mode'] !== 'fixed' ? $t['askPercent'] : ($p['kind'] === 'time' ? $t['askDays'] : $t['askVolume']);
+        return ($mode ?? $p['mode']) !== 'fixed' ? $t['askPercent'] : ($p['kind'] === 'time' ? $t['askDays'] : $t['askVolume']);
     }
     // 👁 the message a customer of $lang gets: a percentage is shown for a 10
     // GB, 30-day subscription
@@ -1855,10 +1959,12 @@ if (!function_exists('bulkgift_hub_payload')) {
     {
         $key = $p['kind'] === 'time' ? 'bulkGiftTime' : 'bulkGiftVolume';
         $v = (float) ($p['value'] ?? 0);
-        if ($p['mode'] !== 'fixed') {
-            $v = $p['kind'] === 'time' ? max(1, (int) round(30 * $v / 100)) : max(0.01, round(10 * $v / 100, 2));
+        if ($p['kind'] === 'time') {
+            $h = $p['mode'] === 'fixed' ? bulkgift_hours_of($v) : (int) round(30 * 24 * $v / 100);
+            $amount = bulkgift_hours_text(max(1, $h), $lang);
+        } else {
+            $amount = volume_num(max(0.01, $p['mode'] === 'fixed' ? $v : round(10 * $v / 100, 2)));
         }
-        $amount = $p['kind'] === 'time' ? (string) max(1, (int) $v) : volume_num($v > 0 ? $v : 1);
-        return strtr((string) lang_tab_texts($lang)['users']['status'][$key], ['{amount}' => $amount, '{username}' => 'user_1234']);
+        return bulkgift_fill(lang_tab_texts($lang)['users']['status'][$key], $p['kind'], $amount, 'user_1234');
     }
 }

@@ -2669,7 +2669,8 @@ class ManagePanel
         }
         $old_limit_time = $user_info['expire'];
         $old_limit_time = time() - $old_limit_time > 0 ? time() : $old_limit_time;
-        $new_limit = $limit_time_new == 0 ? 0 : $limit_time_new * 86400 + $old_limit_time;
+        // a part of a day (an hour is 1/24) still ends on a whole second
+        $new_limit = $limit_time_new == 0 ? 0 : (int) round($limit_time_new * 86400) + (int) $old_limit_time;
         $inbound_id = isset($panel['inboundid']) ? $panel['inboundid'] : 1;
         $inbounds = is_string($panel['inbounds']) ? json_decode($panel['inbounds']) : "{}";
         if ($panel['type'] != "WGDashboard") {
