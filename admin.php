@@ -21812,6 +21812,179 @@ if ($datain == "linkappsetting") {
     }
 } elseif ($datain === 'bgcn' && $adminrulecheck['rule'] == "administrator") {
     deletemessage($from_id, $message_id);
+} elseif ($text == $textbotlang['Admin']['BulkSpeed']['btn'] && $adminrulecheck['rule'] == "administrator") {
+    // 🏬 تنظیمات فروشگاه ← 🚀 سرعت گروهی (bulkspeed.php): Rebecca panels only -
+    // the button is there only while one is. Fresh settings every time it
+    // opens; a run going on shows first, with its 🚫 لغو.
+    step('home', $from_id);
+    if (!bulkspeed_available()) {
+        sendmessage($from_id, $textbotlang['Admin']['BulkSpeed']['noRebecca'], null, 'HTML');
+        return;
+    }
+    foreach (bulkspeed_active_jobs() as $bs_job) {
+        [$bs_text, $bs_kb] = bulkspeed_progress_payload($bs_job);
+        sendmessage($from_id, $bs_text, $bs_kb, 'HTML');
+    }
+    bulkspeed_draft_save($from_id, bulkspeed_params([]));
+    [$bs_text, $bs_kb] = bulkspeed_step1_payload(bulkspeed_draft($from_id));
+    $bs_sent = sendmessage($from_id, $bs_text, $bs_kb, 'HTML');
+    // step 1 is a question: the speed typed next is its answer
+    bulkspeed_draft_ask($from_id, (int) ($bs_sent['result']['message_id'] ?? 0));
+    step('bsp_value', $from_id);
+} elseif (preg_match('/^bsp:(s1|s2|s3|s4|v0|help|x|g:(sale|payg|ref|test)|w:(bot|panel)|p:(all|\d+)|go:([0-9a-f]{8}))$/', $datain, $bs_m) && $adminrulecheck['rule'] == "administrator") {
+    // The steps: s1 how fast (typed, or v0 ♾ to take it off), s2 whose (g
+    // ticks a kind of the bot's services, w picks all of the bot's or every
+    // account of the panels), s3 which Rebecca panels (p ticks one), s4 the
+    // summary and go its 🚀. Every step's 🔙 is the one before it.
+    $bs_t = $textbotlang['Admin']['BulkSpeed'];
+    $bs_p = bulkspeed_draft($from_id);
+    $bs_go = explode(':', $bs_m[1])[0];
+    step('home', $from_id);
+    if ($bs_go === 'x') {
+        deletemessage($from_id, $message_id);
+        return;
+    }
+    if ($bs_go === 'v0') {
+        $bs_p['speed'] = 0;
+        $bs_go = 's2';
+    } elseif ($bs_go === 'g') {
+        // a kind ticked or not; after 🤖 or 🌐 it starts the ticks afresh
+        $bs_g = $bs_m[2];
+        if ($bs_p['who'] !== 'groups') {
+            $bs_p['who'] = 'groups';
+            $bs_p['groups'] = [$bs_g];
+        } else {
+            $bs_p['groups'] = in_array($bs_g, $bs_p['groups'], true) ? array_values(array_diff($bs_p['groups'], [$bs_g])) : array_merge($bs_p['groups'], [$bs_g]);
+        }
+        $bs_go = 's2';
+    } elseif ($bs_go === 'w') {
+        // 🤖 / 🌐 on - or off again
+        $bs_p['who'] = $bs_p['who'] === $bs_m[3] ? 'groups' : $bs_m[3];
+        $bs_p['groups'] = [];
+        $bs_go = 's2';
+    } elseif ($bs_go === 'p') {
+        if ($bs_m[4] === 'all') {
+            $bs_p['panels'] = [];
+        } else {
+            $bs_row = select("marzban_panel", "*", "id", $bs_m[4], "select");
+            if (is_array($bs_row) && ($bs_row['type'] ?? '') === 'rebecca') {
+                $bs_code = (string) $bs_row['code_panel'];
+                $bs_p['panels'] = in_array($bs_code, $bs_p['panels'], true)
+                    ? array_values(array_diff($bs_p['panels'], [$bs_code]))
+                    : array_merge($bs_p['panels'], [$bs_code]);
+            }
+        }
+        $bs_go = 's3';
+    } elseif ($bs_go === 'go') {
+        // changed in another copy of the screen since this one was drawn: what
+        // would start is not what this one says - the summary as it is now
+        if (bulkspeed_sig($bs_p) !== $bs_m[5]) {
+            telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $bs_t['changedAlert'], 'show_alert' => true]);
+            $bs_go = 's4';
+        } else {
+            $bs_new = bulkspeed_create($bs_p, $from_id, 'bot');
+            if (isset($bs_new['error'])) {
+                telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => mb_substr(strip_tags($bs_new['error']), 0, 195), 'show_alert' => true]);
+                return;
+            }
+            // this screen is the run's progress message from now on
+            bulkspeed_set_admin_msg($bs_new['id'], $message_id);
+            [$bs_text, $bs_kb] = bulkspeed_progress_payload(bulkspeed_job($bs_new['id']));
+            Editmessagetext($from_id, $message_id, $bs_text, $bs_kb, 'HTML');
+            telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $bs_t['startedAlert']]);
+            bulkgift_kick();
+            return;
+        }
+    }
+    bulkspeed_draft_save($from_id, $bs_p);
+    $bs_p = bulkspeed_draft($from_id);
+    if ($bs_go === 'help') {
+        [$bs_text, $bs_kb] = bulkspeed_help_payload($bs_p['speed'] !== null && bulkspeed_who_set($bs_p) ? 'bsp:s4' : 'bsp:s1');
+        Editmessagetext($from_id, $message_id, $bs_text, $bs_kb, 'HTML');
+        return;
+    }
+    // «➡️» on step 2 with nobody picked: said, and it stays
+    if ($bs_m[1] === 's3' && $bs_p['speed'] !== null && !bulkspeed_who_set($bs_p)) {
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $bs_t['whoNone'], 'show_alert' => true]);
+        return;
+    }
+    // a step needs the ones before it (an older screen's button): without
+    // them, the first of those
+    if ($bs_p['speed'] === null) {
+        $bs_go = 's1';
+    } elseif (!bulkspeed_who_set($bs_p) && ($bs_go === 's3' || $bs_go === 's4')) {
+        $bs_go = 's2';
+    }
+    if ($bs_go === 's1') {
+        // the question again: the speed typed next is its answer
+        bulkspeed_draft_ask($from_id, $message_id);
+        step('bsp_value', $from_id);
+        [$bs_text, $bs_kb] = bulkspeed_step1_payload($bs_p);
+    } elseif ($bs_go === 's2') {
+        [$bs_text, $bs_kb] = bulkspeed_who_payload($bs_p);
+    } elseif ($bs_go === 's3') {
+        [$bs_text, $bs_kb] = bulkspeed_panels_payload($bs_p);
+    } else {
+        [$bs_text, $bs_kb] = bulkspeed_summary_payload($bs_p);
+    }
+    Editmessagetext($from_id, $message_id, $bs_text, $bs_kb, 'HTML');
+} elseif ($user['step'] == 'bsp_value' && $datain === '' && $adminrulecheck['rule'] == "administrator") {
+    // step 1's answer, the speed - a button tapped meanwhile is that button's
+    $bs_v = speed_limit_parse((string) $text);
+    if ($bs_v === null) {
+        sendmessage($from_id, $textbotlang['Admin']['BulkSpeed']['badSpeed'], null, 'HTML');
+        return;
+    }
+    step('home', $from_id);
+    $bs_p = bulkspeed_draft($from_id);
+    $bs_p['speed'] = $bs_v;
+    bulkspeed_draft_save($from_id, $bs_p);
+    // the question goes; step 2 comes under the answer
+    $bs_ask = bulkspeed_draft_ask($from_id);
+    if ($bs_ask > 0) {
+        deletemessage($from_id, $bs_ask);
+    }
+    [$bs_text, $bs_kb] = bulkspeed_who_payload(bulkspeed_draft($from_id));
+    sendmessage($from_id, $bs_text, $bs_kb, 'HTML');
+} elseif (preg_match('/^bsc:(\d+)$/', $datain, $bs_m) && $adminrulecheck['rule'] == "administrator") {
+    // 🚫 لغو: asked in a message of its own - the progress message goes on
+    // changing under it
+    $bs_t = $textbotlang['Admin']['BulkSpeed'];
+    $bs_job = bulkspeed_job($bs_m[1]);
+    if ($bs_job === null || !in_array($bs_job['state'], ['queued', 'running'], true)) {
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $bs_t['cancelGone'], 'show_alert' => true]);
+        return;
+    }
+    sendmessage($from_id, $bs_t['cancelAsk'], json_encode(['inline_keyboard' => [[
+        ['text' => $bs_t['cancelYes'], 'callback_data' => 'bscy:' . (int) $bs_job['id'], 'style' => 'danger'],
+        ['text' => $bs_t['cancelNo'], 'callback_data' => 'bscn', 'style' => 'primary'],
+    ]]]), 'HTML');
+} elseif (preg_match('/^bscy:(\d+)$/', $datain, $bs_m) && $adminrulecheck['rule'] == "administrator") {
+    // what was set stays; the report comes when the run has stopped
+    deletemessage($from_id, $message_id);
+    if (!bulkspeed_cancel($bs_m[1])) {
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $textbotlang['Admin']['BulkSpeed']['cancelGone'], 'show_alert' => true]);
+    }
+} elseif ($datain === 'bscn' && $adminrulecheck['rule'] == "administrator") {
+    deletemessage($from_id, $message_id);
+} elseif (preg_match('/^bsr:(\d+)$/', $datain, $bs_m) && $adminrulecheck['rule'] == "administrator") {
+    // 🔁 under a report: its failed accounts once more - the others are not
+    // touched again; the button goes, a new progress message and report come
+    $bs_r = bulkspeed_retry((int) $bs_m[1]);
+    if (isset($bs_r['error'])) {
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => mb_substr(strip_tags($bs_r['error']), 0, 195), 'show_alert' => true]);
+        return;
+    }
+    telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => strtr($textbotlang['Admin']['BulkSpeed']['retryStarted'], ['{n}' => number_format($bs_r['n'])])]);
+    telegram('editMessageReplyMarkup', ['chat_id' => $from_id, 'message_id' => $message_id, 'reply_markup' => json_encode(['inline_keyboard' => []])]);
+    bulkgift_kick();
+} elseif (str_starts_with($datain, 'bsp:') && $adminrulecheck['rule'] == "administrator") {
+    // a button of an older version of these screens still in the chat: step 1
+    // in its place, with what was picked so far
+    bulkspeed_draft_ask($from_id, $message_id);
+    step('bsp_value', $from_id);
+    [$bs_text, $bs_kb] = bulkspeed_step1_payload(bulkspeed_draft($from_id));
+    Editmessagetext($from_id, $message_id, $bs_text, $bs_kb, 'HTML');
 } elseif (preg_match('/expireset_(\w+)/', $datain, $datagetr)) {
     $id_user = $datagetr[1];
     savedata("clear", "id_user", $id_user);

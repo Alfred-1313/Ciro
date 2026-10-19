@@ -139,6 +139,13 @@ $initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
             <span class="nav-icon"><?= icon('gift') ?></span><span
               class="nav-label"><?= $textbotlang['panel']['bgPageTitle'] ?></span>
           </a>
+          <?php if (bulkspeed_available()): /* 🚀 only while a panel can hold a speed limit (Rebecca) */ ?>
+          <a href="bulkspeed.php" class="nav-item <?= $activeNav === 'bulkspeed' ? 'active' : '' ?>"
+            title="<?= $textbotlang['panel']['bsPageTitle'] ?>">
+            <span class="nav-icon"><?= icon('zap') ?></span><span
+              class="nav-label"><?= $textbotlang['panel']['bsPageTitle'] ?></span>
+          </a>
+          <?php endif; ?>
           <a href="features.php" class="nav-item <?= $activeNav === 'features' ? 'active' : '' ?>"
             title="<?= $textbotlang['panel']['featPageTitle'] ?>">
             <span class="nav-icon"><?= icon('settings') ?></span><span

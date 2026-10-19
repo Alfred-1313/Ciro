@@ -20994,3 +20994,5 @@ function parseConfigs($input)
 require_once __DIR__ . '/payg.php';
 // 🎁 حجم یا زمان گروهی - the same
 require_once __DIR__ . '/bulkgift.php';
+// 🚀 سرعت گروهی (Rebecca panels) - the same, on 🎁's helpers
+require_once __DIR__ . '/bulkspeed.php';

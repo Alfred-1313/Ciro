@@ -3,7 +3,7 @@
 // and hands the rest straight on to the next request (bulkgift.php,
 // bulkgift_cron). Called every 5 minutes by cron, and right away when a run
 // is started or there is more to do - so it must not stop when that request
-// is dropped.
+// is dropped. 🚀 سرعت گروهی's run (bulkspeed.php) gets the time 🎁's left.
 ignore_user_abort(true);
 ini_set('error_log', 'error_log');
 date_default_timezone_set('Asia/Tehran');
@@ -22,4 +22,7 @@ foreach (['gift', 'username.json'] as $old) {
     }
 }
 
-bulkgift_cron();
+$gift_budget = bulkgift_budget();
+$gift_from = time();
+bulkgift_cron($gift_budget);
+bulkspeed_cron(max(5, $gift_budget - (time() - $gift_from)));
