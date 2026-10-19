@@ -21590,6 +21590,17 @@ if ($datain == "linkappsetting") {
     bulkgift_kick();
 } elseif ($datain === 'bgh:x' && $adminrulecheck['rule'] == "administrator") {
     deletemessage($from_id, $message_id);
+} elseif (preg_match('/^bgr:(\d+)$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
+    // 🔁 under a report: its failed accounts once more - nobody else's gift is
+    // touched again; the button goes, a new progress message and report come
+    $bg_r = bulkgift_retry((int) $bg_m[1]);
+    if (isset($bg_r['error'])) {
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => mb_substr(strip_tags($bg_r['error']), 0, 195), 'show_alert' => true]);
+        return;
+    }
+    telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => strtr($textbotlang['Admin']['BulkGift']['retryStarted'], ['{n}' => number_format($bg_r['n'])])]);
+    telegram('editMessageReplyMarkup', ['chat_id' => $from_id, 'message_id' => $message_id, 'reply_markup' => json_encode(['inline_keyboard' => []])]);
+    bulkgift_kick();
 } elseif (str_starts_with($datain, 'bgh:') && $adminrulecheck['rule'] == "administrator") {
     // a button of an older version of these screens still in the chat: the
     // first screen in its place

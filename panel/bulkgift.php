@@ -38,6 +38,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: bulkgift.php');
         exit;
     }
+    if ($action === 'retry') {
+        // 🔁 a finished run's failed accounts once more (its new report goes
+        // to the bot)
+        ob_start();
+        require_once __DIR__ . '/../botapi.php';
+        $res = bulkgift_retry((int) ($_POST['id'] ?? 0));
+        if (!isset($res['error'])) {
+            bulkgift_kick();
+        }
+        ob_end_clean();
+        flash(isset($res['error']) ? 'error' : 'success', isset($res['error']) ? strip_tags($res['error']) : sprintf($t['bgRetried'], number_format($res['n'])));
+        header('Location: bulkgift.php');
+        exit;
+    }
     foreach (['job', 'kind', 'mode', 'value', 'scope', 'lang', 'buy', 'buyn', 'hours', 'refs', 'notify'] as $k) {
         $raw[$k] = trim((string) ($_POST[$k] ?? $raw[$k]));
     }
@@ -262,7 +276,7 @@ include __DIR__ . '/inc/layout_head.php';
   <?= $cardHead('📋 ' . htmlspecialchars($t['bgHistoryTitle']), '') ?>
   <div class="card-body">
     <?php if (!$history): ?><div class="cf"><?= htmlspecialchars($t['bgHistoryEmpty']) ?></div><?php endif; ?>
-    <?php foreach ($history as $h): $hc = bulkgift_counts($h['id']); ?>
+    <?php foreach ($history as $h): $hc = bulkgift_counts($h['id']); $hr = $h['state'] === 'done' && !bulkgift_is_live(bulkgift_job_params($h)) ? count(bulkgift_retryable_ids($h['id'])) : 0; ?>
       <div class="set-row">
         <div>
           <div class="set-label"><?= htmlspecialchars($jobLine($h)) ?></div>
@@ -272,6 +286,9 @@ include __DIR__ . '/inc/layout_head.php';
           <span title="<?= htmlspecialchars($t['bgDone']) ?>">✅ <?= number_format($hc['done']) ?></span>
           &nbsp;<span title="<?= htmlspecialchars($t['bgSkipped']) ?>">⏭ <?= number_format($hc['skipped']) ?></span>
           &nbsp;<span title="<?= htmlspecialchars($t['bgFailed']) ?>">❌ <?= number_format($hc['failed'] + $hc['unknown']) ?></span>
+          <?php if ($hr > 0): ?>
+            <?= $formOpen(' style="display:inline-block;margin-inline-start:8px"') ?><input type="hidden" name="action" value="retry"><input type="hidden" name="id" value="<?= (int) $h['id'] ?>"><button class="btn btn-ghost btn-sm" type="submit">🔁 <?= htmlspecialchars(sprintf($t['bgRetryBtn'], number_format($hr))) ?></button></form>
+          <?php endif; ?>
         </div>
       </div>
     <?php endforeach; ?>

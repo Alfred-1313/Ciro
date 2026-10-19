@@ -86,6 +86,19 @@ if (!function_exists('bulkgift_ensure_schema')) {
             UNIQUE KEY bulk_gift_one (job_id, ukey),
             KEY bulk_gift_todo (job_id, state))
             ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci");
+        // tries / next_at / pre came later: an account the panel could not be
+        // reached for is tried again a few minutes on, and pre keeps what the
+        // panel said right before a change that may not have gone through
+        try {
+            $have = $pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bulk_gift_item' AND COLUMN_NAME IN ('tries', 'next_at', 'pre')")->fetchAll(PDO::FETCH_COLUMN);
+            foreach (['tries' => 'TINYINT NOT NULL DEFAULT 0', 'next_at' => 'INT NOT NULL DEFAULT 0', 'pre' => 'TEXT NULL'] as $col => $def) {
+                if (!in_array($col, $have, true)) {
+                    $pdo->exec("ALTER TABLE bulk_gift_item ADD {$col} {$def}");
+                }
+            }
+        } catch (Exception $e) {
+            error_log('bulk gift retry columns: ' . $e->getMessage());
+        }
         $pdo->query("CREATE TABLE IF NOT EXISTS bulk_gift_draft (
             admin_id VARCHAR(100) NOT NULL PRIMARY KEY,
             params TEXT NOT NULL,
@@ -1188,12 +1201,30 @@ if (!function_exists('bulkgift_work')) {
         }
         $mp = bulkgift_manage_panel();
         $d = $mp->DataUser($panel['name_panel'], $inv['username']);
+        // a failed read changed nothing: ['read' => 1] says so to a retry
         if (!is_array($d) || ($d['status'] ?? '') === 'Unsuccessful') {
             $msg = is_array($d) ? bulkgift_msg($d['msg'] ?? '') : '';
-            return strcasecmp($msg, 'user not found') === 0 ? ['skipped', 'missing'] : ['failed', 'failed', '', $msg];
+            return strcasecmp($msg, 'user not found') === 0 ? ['skipped', 'missing'] : ['failed', 'failed', '', $msg, ['read' => 1]];
+        }
+        // an error page instead of the account (a gateway's 502/504): no state
+        // to go by - not «not one of the ticked states»
+        if (!is_string($d['status'] ?? null) || trim($d['status']) === '') {
+            return ['failed', 'failed', '', 'bad answer', ['read' => 1]];
         }
         if ($p['kind'] === 'time' && bulkgift_status($d) === 'on_hold' && in_array('on_hold', $p['statuses'], true)) {
             $d['hold'] = bulkgift_hold_seconds($panel, $inv['username']) ?? 0;
+        }
+        // tried before, and that change may have gone through with no answer:
+        // the gift is not given twice
+        $pre = json_decode((string) ($item['pre'] ?? ''), true);
+        if (is_array($pre) && isset($pre['l']) && bulkgift_given_already($pre, $d)) {
+            $ev = isset($pre['gb']) ? ['gb' => (float) $pre['gb']] : ['hours' => (int) $pre['hours']];
+            $amount = isset($ev['gb']) ? volume_store($ev['gb']) : (string) $ev['hours'];
+            bulkgift_log_service($inv, $p, $ev, ['data_limit' => $pre['l'], 'expire' => $pre['e']]);
+            if ($p['notify']) {
+                bulkgift_notify($inv, $p, $amount);
+            }
+            return ['done', 'done', $amount, null];
         }
         $ev = bulkgift_eval($p, $d, (int) $item['start_ts']);
         if (isset($ev['skip'])) {
@@ -1211,7 +1242,7 @@ if (!function_exists('bulkgift_work')) {
             // time goes on its length instead, and it keeps waiting
             $res = $mp->Modifyuser($inv['username'], $panel['name_panel'], bulkgift_hold_config($panel, $ev['hold'] + (int) $ev['hours'] * 3600));
             if (!is_array($res) || empty($res['status'])) {
-                return ['failed', 'failed', '', bulkgift_msg(is_array($res) ? ($res['msg'] ?? '') : '')];
+                return ['failed', 'failed', '', bulkgift_msg(is_array($res) ? ($res['msg'] ?? '') : ''), bulkgift_pre($d, $ev)];
             }
             $amount = (string) (int) $ev['hours'];
             bulkgift_log_service($inv, $p, $ev, $d);
@@ -1243,7 +1274,7 @@ if (!function_exists('bulkgift_work')) {
         }
         clearSelectCache('invoice');
         if (!is_array($res) || empty($res['status'])) {
-            return ['failed', 'failed', '', bulkgift_msg(is_array($res) ? ($res['msg'] ?? '') : '')];
+            return ['failed', 'failed', '', bulkgift_msg(is_array($res) ? ($res['msg'] ?? '') : ''), bulkgift_pre($d, $ev)];
         }
         $amount = $p['kind'] === 'time' ? (string) (int) $ev['hours'] : volume_store($ev['gb']);
         bulkgift_log_service($inv, $p, $ev, $d);
@@ -1270,10 +1301,17 @@ if (!function_exists('bulkgift_work')) {
         $d = $mp->DataUser($panel['name_panel'], $item['username']);
         if (!is_array($d) || ($d['status'] ?? '') === 'Unsuccessful') {
             $msg = is_array($d) ? bulkgift_msg($d['msg'] ?? '') : '';
-            return strcasecmp($msg, 'user not found') === 0 ? ['skipped', 'missing'] : ['failed', 'failed', '', $msg];
+            return strcasecmp($msg, 'user not found') === 0 ? ['skipped', 'missing'] : ['failed', 'failed', '', $msg, ['read' => 1]];
+        }
+        if (!is_string($d['status'] ?? null) || trim($d['status']) === '') {
+            return ['failed', 'failed', '', 'bad answer', ['read' => 1]];
         }
         if ($p['kind'] === 'time' && bulkgift_status($d) === 'on_hold' && in_array('on_hold', $p['statuses'], true)) {
             $d['hold'] = bulkgift_hold_seconds($panel, $item['username']) ?? 0;
+        }
+        $pre = json_decode((string) ($item['pre'] ?? ''), true);
+        if (is_array($pre) && isset($pre['l']) && bulkgift_given_already($pre, $d)) {
+            return ['done', 'done', isset($pre['gb']) ? volume_store($pre['gb']) : (string) (int) $pre['hours'], null];
         }
         $ev = bulkgift_eval($p, $d, (int) $item['start_ts']);
         if (isset($ev['skip'])) {
@@ -1289,7 +1327,7 @@ if (!function_exists('bulkgift_work')) {
         }
         $res = $mp->Modifyuser($item['username'], $panel['name_panel'], $cfg);
         if (!is_array($res) || empty($res['status'])) {
-            return ['failed', 'failed', '', bulkgift_msg(is_array($res) ? ($res['msg'] ?? '') : '')];
+            return ['failed', 'failed', '', bulkgift_msg(is_array($res) ? ($res['msg'] ?? '') : ''), bulkgift_pre($d, $ev)];
         }
         return ['done', 'done', $p['kind'] === 'time' ? (string) (int) $ev['hours'] : volume_store($ev['gb']), null];
     }
@@ -1339,23 +1377,32 @@ if (!function_exists('bulkgift_work')) {
         }
         return strtr((string) $tpl, ['{amount}' => $amount, '{username}' => $username]);
     }
+    // how long an account the panel could not be reached for waits before its
+    // next try - after the first, then the second (three tries in all)
+    function bulkgift_retry_delays()
+    {
+        return [120, 600];
+    }
     // A run's next accounts, until its time is up: claimed one at a time, then
-    // given, left out or failed. How many it got through.
+    // given, left out or failed - a network error waits and is tried again.
+    // How many it got through.
     function bulkgift_work(array $job, $deadline, $maxItems = null)
     {
         global $pdo;
         $p = bulkgift_job_params($job);
         $n = 0;
-        $next = $pdo->prepare("SELECT * FROM bulk_gift_item WHERE job_id = ? AND state = 'pending' ORDER BY id LIMIT 1");
+        $delays = bulkgift_retry_delays();
+        $next = $pdo->prepare("SELECT * FROM bulk_gift_item WHERE job_id = ? AND state = 'pending' AND next_at <= ? ORDER BY id LIMIT 1");
         $claim = $pdo->prepare("UPDATE bulk_gift_item SET state = 'claimed', updated_at = ? WHERE id = ? AND state = 'pending'");
-        $save = $pdo->prepare("UPDATE bulk_gift_item SET state = ?, reason = ?, amount = ?, info = ?, updated_at = ? WHERE id = ?");
+        $save = $pdo->prepare("UPDATE bulk_gift_item SET state = ?, reason = ?, amount = ?, info = ?, pre = ?, updated_at = ? WHERE id = ?");
+        $later = $pdo->prepare("UPDATE bulk_gift_item SET state = 'pending', tries = tries + 1, next_at = ?, info = ?, pre = ?, updated_at = ? WHERE id = ?");
         $stop = $pdo->prepare("SELECT cancel_req FROM bulk_gift_job WHERE id = ?");
         while (time() < $deadline && ($maxItems === null || $n < $maxItems)) {
             $stop->execute([$job['id']]);
             if ((int) $stop->fetchColumn() === 1) {
                 break;
             }
-            $next->execute([$job['id']]);
+            $next->execute([$job['id'], time()]);
             $item = $next->fetch(PDO::FETCH_ASSOC);
             $next->closeCursor();
             if (!$item) {
@@ -1371,8 +1418,21 @@ if (!function_exists('bulkgift_work')) {
                 error_log('bulk gift item ' . $item['id'] . ': ' . $e->getMessage());
                 $r = ['failed', 'failed', '', bulkgift_msg($e->getMessage())];
             }
-            $r += [null, '', '', null];
-            $save->execute([$r[0], (string) $r[1], (string) $r[2], $r[3] === null ? null : (string) $r[3], time(), $item['id']]);
+            $r += [null, '', '', null, null];
+            // what the panel said before a change that failed (or that only
+            // reading failed) - an earlier try's, when this one got no further
+            $old = json_decode((string) ($item['pre'] ?? ''), true);
+            $pre = $r[4];
+            if ($pre === null || (isset($pre['read']) && is_array($old) && isset($old['l']))) {
+                $pre = is_array($old) ? $old : null;
+            }
+            $pre = $pre !== null ? json_encode($pre) : null;
+            $tries = (int) ($item['tries'] ?? 0);
+            if ($r[0] === 'failed' && bulkgift_net_kind((string) $r[3]) !== null && $tries < count($delays)) {
+                $later->execute([time() + $delays[$tries], (string) $r[3], $pre, time(), $item['id']]);
+            } else {
+                $save->execute([$r[0], (string) $r[1], (string) $r[2], $r[3] === null ? null : (string) $r[3], $pre, time(), $item['id']]);
+            }
             $n++;
             bulkgift_progress($job['id']);
         }
@@ -1427,6 +1487,11 @@ if (!function_exists('bulkgift_progress_payload')) {
             $lines[] = strtr($t['cntDone'], ['{n}' => number_format($c['done'])]);
             $lines[] = strtr($t['cntSkipped'], ['{n}' => number_format($c['skipped'])]);
             $lines[] = strtr($t['cntFailed'], ['{n}' => number_format($c['failed'] + $c['unknown'])]);
+            $wait = bulkgift_waiting($job['id']);
+            if ($wait > 0) {
+                $lines[] = '';
+                $lines[] = strtr($t['retryWaiting'], ['{n}' => number_format($wait)]);
+            }
         }
         if ($job['origin'] === 'web') {
             $lines[] = '';
@@ -1487,14 +1552,74 @@ if (!function_exists('bulkgift_progress_payload')) {
         $sec = max(0, (int) $job['finished_at'] - $from);
         return strtr($t['duration'], ['{d}' => $sec < 60 ? $t['durSeconds'] : strtr($t['durMinutes'], ['{n}' => number_format((int) round($sec / 60))])]);
     }
-    // one account of a list in the report: ‏• user · panel (: why)
+    // one account of a list in the report: ‏• user · panel (: why) - a network
+    // error in plain words
     function bulkgift_item_line(array $r, $withInfo = false)
     {
         $line = "\u{200F}• <code>" . htmlspecialchars((string) $r['username']) . '</code> · ' . aff_bidi((string) $r['panel'], htmlspecialchars((string) $r['panel']));
         if ($withInfo && trim((string) $r['info']) !== '') {
-            $line .= ': <i>' . htmlspecialchars(mb_substr((string) $r['info'], 0, 90)) . '</i>';
+            $label = bulkgift_err_label((string) $r['info']);
+            $line .= ': ' . ($label ?? '<i>' . htmlspecialchars(mb_substr((string) $r['info'], 0, 90)) . '</i>');
         }
         return $line;
+    }
+    // What a failed call says about the network: 'safe' - nothing reached the
+    // panel (its address not found, no connection), 'maybe' - it may have (no
+    // answer in time, a broken or unreadable one), null - the panel itself
+    // answered with an error
+    function bulkgift_net_kind($msg)
+    {
+        $m = strtolower((string) $msg);
+        if ($m === '') {
+            return null;
+        }
+        if (preg_match('/resolving timed out|could not resolve|connection timed out|failed to connect|connection refused|could(n\'t| not) connect|no route to host|network is unreachable/', $m)) {
+            return 'safe';
+        }
+        if (preg_match('/timed out|timeout|empty reply|recv failure|connection reset|ssl|bad answer|gateway|error code : 5\d\d|\b50[234]\b/', $m)) {
+            return 'maybe';
+        }
+        return null;
+    }
+    // a network error in the admin's words, or null
+    function bulkgift_err_label($msg)
+    {
+        $t = bulkgift_texts();
+        $m = strtolower((string) $msg);
+        if (preg_match('/resolving timed out|could not resolve/', $m)) {
+            return $t['errDns'];
+        }
+        if (bulkgift_net_kind($m) === 'safe') {
+            return $t['errConnect'];
+        }
+        if ($m === 'bad answer') {
+            return $t['errBadAnswer'];
+        }
+        return bulkgift_net_kind($m) === 'maybe' ? $t['errTimeout'] : null;
+    }
+    // A change that did not answer may have gone through anyway: the panel's
+    // account now against what it said right before ($pre). True when the
+    // gift is on it already.
+    function bulkgift_given_already(array $pre, array $d)
+    {
+        if (isset($pre['gb'])) {
+            return (float) ($d['data_limit'] ?? 0) >= (float) ($pre['l'] ?? 0) + (float) $pre['gb'] * pow(1024, 3) * 0.9;
+        }
+        if (isset($pre['hours'])) {
+            $want = (int) $pre['hours'] * 3600 * 0.9;
+            if ((int) ($pre['h'] ?? 0) > 0) {
+                // it was waiting to start: its length
+                return (int) ($d['hold'] ?? 0) >= (int) $pre['h'] + $want;
+            }
+            return (int) ($d['expire'] ?? 0) >= (int) ($pre['e'] ?? 0) + $want;
+        }
+        return false;
+    }
+    // what is kept of an account right before its change
+    function bulkgift_pre(array $d, array $ev)
+    {
+        return ['l' => (float) ($d['data_limit'] ?? 0), 'e' => (int) ($d['expire'] ?? 0), 'h' => (int) ($ev['hold'] ?? 0)]
+            + (isset($ev['gb']) ? ['gb' => (float) $ev['gb']] : ['hours' => (int) ($ev['hours'] ?? 0)]);
     }
     // The report the admin gets at the end: the settings, how many went where
     // and why, the ⏱ accounts that were left out, what failed, what is
@@ -1550,6 +1675,21 @@ if (!function_exists('bulkgift_progress_payload')) {
             }
             $parts[] = $head . "\n<blockquote>" . implode("\n", $out) . '</blockquote>';
         }
+        // the errors that were the network's: what they mean, and the 🔁
+        if ($c['failed'] > 0) {
+            $st = $pdo->prepare("SELECT info, pre FROM bulk_gift_item WHERE job_id = ? AND state = 'failed'");
+            $st->execute([$job['id']]);
+            $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+            if (array_filter($rows, fn($r) => bulkgift_net_kind($r['info']) !== null)) {
+                $parts[] = $t['netNote'];
+            }
+            // one from before tries were kept that may have reached the panel:
+            // not tried again blindly
+            $unsure = count(array_filter($rows, fn($r) => (string) ($r['pre'] ?? '') === '' && bulkgift_net_kind($r['info']) === 'maybe'));
+            if ($unsure > 0) {
+                $parts[] = strtr($t['netCheck'], ['{n}' => number_format($unsure)]);
+            }
+        }
         $notes = json_decode((string) ($job['notes'] ?? ''), true) ?: [];
         if ($notes) {
             $out = [];
@@ -1602,9 +1742,75 @@ if (!function_exists('bulkgift_progress_payload')) {
             if ((int) $job['admin_msg'] > 0) {
                 deletemessage($to, (int) $job['admin_msg']);
             }
-            sendmessage($to, bulkgift_report($job), null, 'HTML');
+            sendmessage($to, bulkgift_report($job), bulkgift_report_kb($job), 'HTML');
         }
         return true;
+    }
+    // accounts waiting for another try after a network error
+    function bulkgift_waiting($jobId)
+    {
+        global $pdo;
+        $st = $pdo->prepare("SELECT COUNT(*) FROM bulk_gift_item WHERE job_id = ? AND state = 'pending' AND tries > 0");
+        $st->execute([(int) $jobId]);
+        return (int) $st->fetchColumn();
+    }
+    // 🔁 the failed accounts of a finished run a new try cannot give twice: the
+    // bot knows what the panel said before the change (or that only reading
+    // failed), or it could not reach the panel at all
+    function bulkgift_retryable_ids($jobId)
+    {
+        global $pdo;
+        bulkgift_ensure_schema();
+        $st = $pdo->prepare("SELECT id, info, pre FROM bulk_gift_item WHERE job_id = ? AND state = 'failed' ORDER BY id");
+        $st->execute([(int) $jobId]);
+        $ids = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            if ((string) ($r['pre'] ?? '') !== '' || bulkgift_net_kind($r['info']) === 'safe') {
+                $ids[] = (int) $r['id'];
+            }
+        }
+        return $ids;
+    }
+    // under the report: 🔁 for those, when there are any
+    function bulkgift_report_kb(array $job)
+    {
+        if ($job['state'] !== 'done' || bulkgift_is_live(bulkgift_job_params($job))) {
+            return null;
+        }
+        $n = count(bulkgift_retryable_ids($job['id']));
+        return $n > 0 ? json_encode(['inline_keyboard' => [[bulkgift_btn(strtr(bulkgift_texts()['retryBtn'], ['{n}' => number_format($n)]), 'bgr:' . (int) $job['id'])]]]) : null;
+    }
+    // The run goes on with just those - the others, given or left out, are
+    // not touched again: ['n' => how many] or ['error' => why not]
+    function bulkgift_retry($jobId)
+    {
+        global $pdo;
+        $t = bulkgift_texts();
+        $job = bulkgift_job((int) $jobId);
+        if ($job === null || $job['state'] !== 'done' || bulkgift_is_live(bulkgift_job_params($job))) {
+            return ['error' => $t['retryNone']];
+        }
+        $got = (int) $pdo->query("SELECT GET_LOCK('mirza_bulkgift_new', 5)")->fetchColumn();
+        try {
+            if (bulkgift_active_job(false) !== null) {
+                return ['error' => $t['busy']];
+            }
+            $ids = bulkgift_retryable_ids($job['id']);
+            if (!$ids) {
+                return ['error' => $t['retryNone']];
+            }
+            $now = time();
+            $pdo->prepare("UPDATE bulk_gift_item SET state = 'pending', reason = '', tries = 0, next_at = 0, updated_at = ? WHERE job_id = ? AND state = 'failed' AND id IN (" . implode(',', $ids) . ")")
+                ->execute([$now, $job['id']]);
+            // its progress message and its report come again, for this pass
+            $pdo->prepare("UPDATE bulk_gift_job SET state = 'running', cancel_req = 0, admin_msg = 0, shown_at = 0, shown_hash = '', started_at = ?, finished_at = 0 WHERE id = ? AND state = 'done'")
+                ->execute([$now, $job['id']]);
+            return ['n' => count($ids)];
+        } finally {
+            if ($got === 1) {
+                $pdo->query("SELECT RELEASE_LOCK('mirza_bulkgift_new')");
+            }
+        }
     }
 }
 
