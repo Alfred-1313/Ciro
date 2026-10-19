@@ -3329,6 +3329,9 @@ n2',
       'affrwNeedBtn' => '👥 دعوت لازم: {need}',
       'affrwVolumeBtn' => '📦 حجم: {volume} گیگ',
       'affrwDaysBtn' => '⏳ مدت: {days} روز',
+      'affrwSpeedBtn' => '🚀 سرعت: {speed}',
+      'affrwSpeedNone' => 'بدون محدودیت',
+      'ask_affrw_speed' => "🚀 سرعت کانفیگ رایگان زبان <b>{lang}</b> چند مگابیت بر ثانیه (Mbps) باشه؟\n\n<blockquote><code>10</code> یعنی 10 Mbps\n<code>2.5</code> یعنی 2.5 Mbps\n<code>0</code> یعنی بدون محدودیت</blockquote>\n<i>فقط روی پنل ربکا کار می‌کنه.</i>",
       'affrwPanelBtn' => '🖥 پنل: {panel}',
       'affrwModeBtn' => '📨 تحویل: {mode}',
       'affrwMaxBtn' => '🔁 چند بار: {max}',
@@ -7719,7 +7722,23 @@ nowpayments.io
       'needTwoCategories' => 'برای جابجایی حداقل به ۲ دسته‌بندی نیاز داری.',
       'backToHubBtn' => '🔙 برگشت',
     ),
-    'PanelMenu' => 
+    'TestMenu' =>
+    array (
+      'caption' => '🎁 <b>اکانت تست</b> · {panel}
+➖➖➖➖➖➖➖➖➖➖
+<blockquote>{rows}</blockquote>
+<i>هر کدوم رو بزنی، مقدار تازه‌ش رو می‌پرسه.</i>',
+      'rowTime' => '▫️ زمان سرویس تست: <b>{v} ساعت</b>',
+      'rowVolume' => '▫️ حجم اکانت تست: <b>{v} مگابایت</b>',
+      'rowDelete' => '▫️ حذف اکانت تست: <b>{v}</b>',
+      'deleteOff' => 'خاموش',
+      'deleteHours' => '{n} ساعت بعد از ساخت',
+      'rowSpeed' => '▫️ سرعت اکانت تست: <b>{v}</b>',
+      'speedBtn' => '🚀 سرعت اکانت تست',
+      'speedNone' => 'بدون محدودیت',
+      'closeBtn' => '❌ بستن',
+    ),
+    'PanelMenu' =>
     array (
       'connectionBtn' => '🔧 مشخصات پنل',
       'accountBtn' => '👤 ساخت و تمدید اکانت',

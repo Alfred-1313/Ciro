@@ -73,7 +73,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ints[$k] = (string) (int) $v;
         }
         $hours = trim((string) ($_POST['affrw_del_hours'] ?? ''));
-        if ($gb === null) {
+        // 🚀 Mbps on a Rebecca panel; empty is none
+        $speed = trim((string) ($_POST['affrw_speed'] ?? '')) === '' ? 0.0 : speed_limit_parse((string) $_POST['affrw_speed']);
+        if ($speed === null) {
+            $err = $t['prodSpeedInvalid'];
+        } elseif ($gb === null) {
             $err = $t['prodVolumeInvalid'];
         } elseif ($panelCode !== '' && !in_array($panelCode, array_column($panels, 'code_panel'), true)) {
             $err = $t['prodPanelInvalid'];
@@ -88,6 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $save = $ints + [
                 'affrw_panel' => $panelCode,
                 'affrw_gb' => volume_store($gb),
+                'affrw_speed' => speed_limit_store($speed),
                 'affrw_mode' => ($_POST['affrw_mode'] ?? '') === 'auto' ? 'auto' : 'admin',
                 'affrw_leave' => $isOn('affrw_leave') ? '1' : '0',
                 'affrw_uname' => in_array($_POST['affrw_uname'] ?? '', ['ref', 'random', 'user'], true) ? $_POST['affrw_uname'] : 'ref',
@@ -232,6 +237,19 @@ echo web_lang_assets();
     <?= $field($t['refRewardNeed'], $input('affrw_need', $rw['need'], 'inputmode="numeric"')) ?>
     <?= $field($t['refRewardVolume'], $input('affrw_gb', volume_num($rw['gb'])), $t['prodVolumeHint']) ?>
     <?= $field($t['refRewardDays'], $input('affrw_days', $rw['days'], 'inputmode="numeric"')) ?>
+    <?php $rwRebecca = array_values(array_map(fn($p) => (string) $p['code_panel'], array_filter($panels, fn($p) => ($p['type'] ?? '') === 'rebecca'))); ?>
+    <div id="rwSpeedRow" data-rebecca="<?= htmlspecialchars(json_encode($rwRebecca)) ?>"<?= in_array((string) $rw['panel'], $rwRebecca, true) ? '' : ' style="display:none"' ?>>
+      <?= $field($t['prodFieldSpeed'], $input('affrw_speed', (float) $rw['speed'] > 0 ? speed_limit_store($rw['speed']) : '', 'inputmode="decimal" dir="ltr" placeholder="10 · 2.5"'), $t['prodSpeedHint']) ?>
+    </div>
+    <script>
+      // 🚀 only for a Rebecca panel
+      (function () {
+        var row = document.getElementById('rwSpeedRow'), sel = document.querySelector('select[name="affrw_panel"]');
+        if (!row || !sel) { return; }
+        var codes = JSON.parse(row.getAttribute('data-rebecca') || '[]');
+        sel.addEventListener('change', function () { row.style.display = codes.indexOf(sel.value) !== -1 ? '' : 'none'; });
+      })();
+    </script>
     <?= $field($t['refRewardMax'], $input('affrw_max', $rw['max'], 'inputmode="numeric"'), $t['refRewardMaxHint']) ?>
     <?= $field($t['refRewardMode'], $select('affrw_mode', ['admin' => $t['refModeAdmin'], 'auto' => $t['refModeAuto']], $rw['mode'])) ?>
     <?= $switch('affrw_leave', $rules['leave'], $t['refRewardLeave'], $t['refRewardLeaveHint']) ?>

@@ -4973,6 +4973,31 @@ if (!function_exists('product_info_caption')) {
         return sprintf($textbotlang['Admin']['Product']['editSummary'], $info_product['name_product'], money($info_product['price_product'], $info_product['currency'] ?? null), $info_product['Volume_constraint'], $info_product['Location'], $info_product['Service_time'], $info_product['agent'], $info_product['data_limit_reset'], $info_product['note'], $info_product['category'], $count_invoice)
             . product_speed_caption_line($info_product, $textbotlang);
     }
+    // 🎁 اکانت تست of one panel: what it is set to, bold in a quote, a glass
+    // button for each - 🚀 its speed only on Rebecca, nothing else holds one -
+    // and a red ❌ بستن
+    function panel_test_menu_payload($panel, $textbotlang)
+    {
+        $t = $textbotlang['Admin']['TestMenu'];
+        $k = $textbotlang['keyboard'];
+        $panel = is_array($panel) ? $panel : [];
+        $del = (int) ($panel['del_usertest'] ?? 0);
+        $rows = [
+            strtr($t['rowTime'], ['{v}' => (int) ($panel['time_usertest'] ?? 1)]),
+            strtr($t['rowVolume'], ['{v}' => (int) ($panel['val_usertest'] ?? 100)]),
+            strtr($t['rowDelete'], ['{v}' => $del > 0 ? strtr($t['deleteHours'], ['{n}' => $del]) : $t['deleteOff']]),
+        ];
+        $kb = [
+            [['text' => $k['testServiceTime'], 'callback_data' => 'ptest_time'], ['text' => $k['testAccountVolume'], 'callback_data' => 'ptest_vol']],
+            [['text' => $k['testDeleteTime'], 'callback_data' => 'ptest_del']],
+        ];
+        if (($panel['type'] ?? '') === 'rebecca') {
+            $rows[] = strtr($t['rowSpeed'], ['{v}' => speed_limit_label($panel['speed_usertest'] ?? 0, $t['speedNone'])]);
+            $kb[] = [['text' => $t['speedBtn'], 'callback_data' => 'ptest_speed']];
+        }
+        $kb[] = [['text' => $t['closeBtn'], 'callback_data' => 'ptest_x', 'style' => 'danger']];
+        return [strtr($t['caption'], ['{panel}' => htmlspecialchars((string) ($panel['name_panel'] ?? '')), '{rows}' => implode("\n", $rows)]), json_encode(['inline_keyboard' => $kb])];
+    }
     // 🚀 a product's speed under its summary - where its panel can hold one
     function product_speed_caption_line($row, $textbotlang)
     {
@@ -5439,6 +5464,7 @@ if (!function_exists('feature_section_of_key')) {
             'affrw_need' => 'affr',
             'affrw_gb' => 'affr',
             'affrw_days' => 'affr',
+            'affrw_speed' => 'affr',
             'affrw_max' => 'affr',
             'affrw_reset' => 'affr',
         ];
@@ -5778,6 +5804,10 @@ if (!function_exists('aff_section_rows')) {
                     $val(strtr($s['affrwVolumeBtn'], ['{volume}' => volume_num($rw['gb'])]), "flsask:{$lang}:affrw_gb"),
                     $val(strtr($s['affrwDaysBtn'], ['{days}' => $rw['days']]), "flsask:{$lang}:affrw_days"),
                 ],
+                // 🚀 only when its panel is Rebecca - nothing else holds a speed
+                ...($rwPanel !== null && ($rwPanel['type'] ?? '') === 'rebecca'
+                    ? [[$val(strtr($s['affrwSpeedBtn'], ['{speed}' => speed_limit_label($rw['speed'], $s['affrwSpeedNone'])]), "flsask:{$lang}:affrw_speed")]]
+                    : []),
                 [$val(strtr($s['affrwPanelBtn'], ['{panel}' => $rwPanel !== null ? $rwPanel['name_panel'] : $s['affrwNoPanel']]), "flsaffrw:{$lang}:panel")],
                 [$val(strtr($s['affrwModeBtn'], ['{mode}' => $rw['mode'] === 'auto' ? $s['affrwModeAuto'] : $s['affrwModeAdmin']]), "flsaffrw:{$lang}:mode")],
                 [$tog(feature_setting_value('affrw_leave', $lang, '0') === '1', $s['affrwLeaveBtn'], "flsaffrw:{$lang}:leave")],
@@ -11881,6 +11911,14 @@ elseif ($datain == "systemsms") {
             return;
         }
         feature_setting_set($fs_key, $fs_lang, volume_store($fs_gb));
+    } elseif ($fs_key === 'affrw_speed') {
+        // 🚀 its speed in Mbps (2.5 works), 0 = none
+        $fs_sp = speed_limit_parse($text);
+        if ($fs_sp === null) {
+            sendmessage($from_id, $fs_tx['Admin']['Product']['invalidSpeed'], null, 'HTML');
+            return;
+        }
+        feature_setting_set($fs_key, $fs_lang, speed_limit_store($fs_sp));
     } elseif (in_array($fs_key, ['affrw_need', 'affrw_days', 'affrw_max'], true)) {
         // 🎁 کانفیگ رایگان: a count, gigabytes, days - none of them can be 0
         if (!ctype_digit((string) $text) || intval($text) < 1) {
@@ -15489,7 +15527,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     outtypepanel($typepanel['type'], $textbotlang['Admin']['managepanel']['changedLimit']);
     update("marzban_panel", "limit_panel", $text, "name_panel", $user['Processing_value']);
     step('home', $from_id);
-} elseif ($text == $textbotlang['keyboard']['testServiceTime'] && $adminrulecheck['rule'] == "administrator") {
+} elseif (($text == $textbotlang['keyboard']['testServiceTime'] || $datain === 'ptest_time') && $adminrulecheck['rule'] == "administrator") {
     sendmessage($from_id, $textbotlang['Admin']['getlimitusertest']['askTime'], $backadmin, 'HTML');
     step('updatetime', $from_id);
 } elseif ($user['step'] == "updatetime") {
@@ -15500,8 +15538,12 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     $typepanel = select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select");
     outtypepanel($typepanel['type'], $textbotlang['Admin']['managepanel']['savedData']);
     update("marzban_panel", "time_usertest", $text, "name_panel", $user['Processing_value']);
+    // back on 🎁 اکانت تست's glass buttons, with what it is set to now
+    clearSelectCache('marzban_panel');
+    [$pt_cap, $pt_kb] = panel_test_menu_payload(select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select"), $textbotlang);
+    sendmessage($from_id, $pt_cap, $pt_kb, 'HTML');
     step('home', $from_id);
-} elseif ($text == $textbotlang['keyboard']['testAccountVolume'] && $adminrulecheck['rule'] == "administrator") {
+} elseif (($text == $textbotlang['keyboard']['testAccountVolume'] || $datain === 'ptest_vol') && $adminrulecheck['rule'] == "administrator") {
     sendmessage($from_id, $textbotlang['Admin']['getlimitusertest']['askVolume'] . $textbotlang['Admin']['volumeHintMb'], $backadmin, 'HTML');
     step('val_usertest', $from_id);
 } elseif ($user['step'] == "val_usertest") {
@@ -15514,8 +15556,12 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     $typepanel = select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select");
     outtypepanel($typepanel['type'], $textbotlang['Admin']['managepanel']['savedData']);
     update("marzban_panel", "val_usertest", $text, "name_panel", $user['Processing_value']);
+    // back on 🎁 اکانت تست's glass buttons, with what it is set to now
+    clearSelectCache('marzban_panel');
+    [$pt_cap, $pt_kb] = panel_test_menu_payload(select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select"), $textbotlang);
+    sendmessage($from_id, $pt_cap, $pt_kb, 'HTML');
     step('home', $from_id);
-} elseif ($text == $textbotlang['keyboard']['testDeleteTime'] && $adminrulecheck['rule'] == "administrator") {
+} elseif (($text == $textbotlang['keyboard']['testDeleteTime'] || $datain === 'ptest_del') && $adminrulecheck['rule'] == "administrator") {
     sendmessage($from_id, $textbotlang['Admin']['getlimitusertest']['askDeleteTime'], $backadmin, 'HTML');
     step('del_usertest', $from_id);
 } elseif ($user['step'] == "del_usertest") {
@@ -15544,7 +15590,31 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     } else {
         sendmessage($from_id, $textbotlang['Admin']['getlimitusertest']['deleteTimeDisabled'], null, 'HTML');
     }
+    // back on 🎁 اکانت تست's glass buttons, with what it is set to now
+    clearSelectCache('marzban_panel');
+    [$pt_cap, $pt_kb] = panel_test_menu_payload(select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select"), $textbotlang);
+    sendmessage($from_id, $pt_cap, $pt_kb, 'HTML');
     step('home', $from_id);
+} elseif ($datain === 'ptest_speed' && $adminrulecheck['rule'] == "administrator") {
+    // 🚀 a test account's speed (the button is there only for Rebecca)
+    sendmessage($from_id, $textbotlang['Admin']['Product']['askSpeed'], $speedlimit_keyboard, 'HTML');
+    step('speed_usertest', $from_id);
+} elseif ($user['step'] == "speed_usertest") {
+    $pt_sp = $text === $textbotlang['Admin']['Product']['speedNoneBtn'] ? 0.0 : speed_limit_parse($text);
+    if ($pt_sp === null) {
+        sendmessage($from_id, $textbotlang['Admin']['Product']['invalidSpeed'], $speedlimit_keyboard, 'HTML');
+        return;
+    }
+    $typepanel = select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select");
+    outtypepanel($typepanel['type'] ?? '', $textbotlang['Admin']['managepanel']['savedData']);
+    update("marzban_panel", "speed_usertest", speed_limit_store($pt_sp), "name_panel", $user['Processing_value']);
+    // back on 🎁 اکانت تست's glass buttons, with what it is set to now
+    clearSelectCache('marzban_panel');
+    [$pt_cap, $pt_kb] = panel_test_menu_payload(select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select"), $textbotlang);
+    sendmessage($from_id, $pt_cap, $pt_kb, 'HTML');
+    step('home', $from_id);
+} elseif ($datain === 'ptest_x' && $adminrulecheck['rule'] == "administrator") {
+    deletemessage($from_id, $message_id);
 } elseif ($text == $textbotlang['keyboard']['setInboundId'] && $adminrulecheck['rule'] == "administrator") {
     sendmessage($from_id, $textbotlang['Admin']['managepanel']['askInboundId'], $backadmin, 'HTML');
     step('getinboundiid', $from_id);
@@ -20426,6 +20496,12 @@ if ($datain == "linkappsetting") {
     $stmt->execute();
 } elseif (in_array($text, panel_menu_group_labels($textbotlang), true) && $adminrulecheck['rule'] == "administrator") {
     $pm_panel = select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select");
+    // 🎁 اکانت تست: glass buttons of its own instead of a keyboard
+    if ($text === $textbotlang['Admin']['PanelMenu']['testBtn'] && is_array($pm_panel)) {
+        [$pt_cap, $pt_kb] = panel_test_menu_payload($pm_panel, $textbotlang);
+        sendmessage($from_id, $pt_cap, $pt_kb, 'HTML');
+        return;
+    }
     $pm_flat = $panel_menu_flat[$pm_panel['type'] ?? ''] ?? $panel_menu_flat['marzban'];
     $pm_kb = panel_menu_submenu_json($pm_flat, $text, $textbotlang);
     if ($pm_kb === null) {

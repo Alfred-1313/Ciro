@@ -18657,6 +18657,8 @@ if (!function_exists('affrw_cfg')) {
             'need' => max(1, (int) feature_setting_value('affrw_need', $lang, '3')),
             'gb' => max(0.01, (float) feature_setting_value('affrw_gb', $lang, '10')),
             'days' => max(1, (int) feature_setting_value('affrw_days', $lang, '1')),
+            // 🚀 Mbps on a Rebecca panel, 0 = none
+            'speed' => max(0, (float) feature_setting_value('affrw_speed', $lang, '0')),
             'panel' => (string) feature_setting_value('affrw_panel', $lang, ''),
             'mode' => feature_setting_value('affrw_mode', $lang, 'admin') === 'auto' ? 'auto' : 'admin',
             'since' => (int) feature_setting_value('affrw_since', $lang, '0'),
@@ -19421,6 +19423,8 @@ if (!function_exists('affrw_cfg')) {
                 'from_id' => $uid,
                 'username' => $u['username'] ?? '',
                 'type' => 'buy',
+                // 🚀 the plan's speed (only a Rebecca panel holds one)
+                'speed_mbps' => ($panel['type'] ?? '') === 'rebecca' ? (float) ($cfg['speed'] ?? 0) : 0,
             ];
             $out = $ManagePanel->createUser($panel['name_panel'], "customvolume", $username_ac, $datac);
         }
