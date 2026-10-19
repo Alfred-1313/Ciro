@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
     } else {
-        // «تعداد رو ببین»: what the bot's «🚀 ادامه» shows
+        // «تعداد رو ببین»: what the bot's summary shows
         $preview = bulkgift_preview($p);
         $previewLive = bulkgift_is_live($p);
     }
@@ -113,10 +113,12 @@ $formOpen = fn($extra = '') => '<form method="POST" action="bulkgift.php"' . $ex
 // a run's settings in a line
 $jobLine = function (array $j) use ($r, $plain) {
     $p = bulkgift_job_params($j);
-    return $plain(bulkgift_what_label($p)) . ' · ' . $plain(bulkgift_is_live($p) ? $r['jobCampBtn'] . ' ' . bulkgift_camp_label($p) : bulkgift_who_label($p));
+    return $plain(bulkgift_what_label($p)) . ' · ' . $plain(bulkgift_is_live($p) ? $r['campBtn'] . ' ' . bulkgift_camp_label($p) : bulkgift_who_label($p));
 };
-// a part of the form's title, the way the bot's screen groups them
-$head = fn($label, $attr = '') => '<div class="set-row"' . $attr . '><div class="set-label" style="color:var(--mute)">' . htmlspecialchars($label) . '</div></div>';
+// 🎯 opens by itself when something in it is not the usual setting, the way
+// the bot's summary lists those
+$moreOpen = $raw['mode'] !== 'fixed' || $raw['scope'] !== 'bot' || $raw['lang'] !== 'all' || $raw['panels'] || $raw['notify'] !== '1'
+    || ($raw['job'] !== 'camp' && ($raw['buy'] !== 'all' || $raw['statuses'] !== bulkgift_default_statuses()));
 $langOptions = ['all' => $plain($r['langAll'])];
 foreach (web_langs() as $code => $name) {
     $langOptions[$code] = $name;
@@ -173,59 +175,61 @@ include __DIR__ . '/inc/layout_head.php';
 </script>
 <?php endif; ?>
 
+<style>
+  #bgmore > summary::-webkit-details-marker { display: none; }
+  #bgmore .bg-chev { display: inline-block; font-size: 1.1rem; color: var(--mute); transition: transform .15s; }
+  #bgmore[open] .bg-chev { transform: rotate(180deg); }
+</style>
 <div class="card fade-up" id="form" style="margin-bottom:14px">
   <?= $cardHead('🎁 ' . htmlspecialchars($t['bgFormTitle']), htmlspecialchars($t['bgFormSub'])) ?>
   <?php if ($preview !== null): ?>
     <div class="notice notice-ok" style="margin:12px 16px 0">
       <?php if ($previewLive): ?>
-        <?= htmlspecialchars($plain(strtr($r['confirmNext'], ['{n}' => number_format((int) $raw['hours'])]))) ?>
+        <?= htmlspecialchars($plain(strtr($r['sumCampLine'], ['{hours}' => number_format($p['buyn']), '{amount}' => bulkgift_amount_label($p)]))) ?>
+        <br><?= htmlspecialchars($plain($r['sumCampNote'])) ?>
       <?php else: ?>
         <?= htmlspecialchars(sprintf($t['bgCountResult'], number_format($preview['n']), number_format($preview['h']), number_format($preview['t']))) ?>
-        <?php if ($raw['scope'] === 'panel'): ?><br><?= htmlspecialchars($plain($r['confirmPanelNote'])) ?><?php endif; ?>
-        <?php if ($preview['unsupported']): ?><br><?= htmlspecialchars($plain(strtr($r['confirmUnsupported'], ['{list}' => implode('، ', $preview['unsupported'])]))) ?><?php endif; ?>
+        <?php if ($raw['scope'] === 'panel'): ?><br><?= htmlspecialchars($plain($r['sumPanelNote'])) ?><?php endif; ?>
+        <?php if ($preview['unsupported']): ?><br><?= htmlspecialchars($plain(strtr($r['sumUnsupported'], ['{list}' => implode('، ', $preview['unsupported'])]))) ?><?php endif; ?>
       <?php endif; ?>
     </div>
   <?php endif; ?>
   <div class="notice notice-warn" style="margin:12px 16px 0"><?= nl2br(htmlspecialchars($plain($r['skipNote']))) ?></div>
   <?= $formOpen(' id="bgform"') ?>
   <div class="card-body">
-    <?= $field($t['bgJob'], $select('job', ['now' => $plain($r['jobNowBtn']), 'camp' => $plain($r['jobCampBtn'])], $raw['job']), $t['bgJobHint']) ?>
-    <?= $head($t['bgSecWhat']) ?>
+    <?= $field($t['bgJob'], $select('job', ['now' => $plain($r['jobNow']), 'camp' => $plain($r['campBtn'])], $raw['job']), $t['bgJobHint']) ?>
     <?= $field($t['bgKind'], $select('kind', ['volume' => $plain($r['kindVolume']), 'time' => $plain($r['kindTime'])], $raw['kind'])) ?>
-    <?= $field($t['bgMode'], $select('mode', ['fixed' => $plain($r['modeFixedBtn']), 'total' => $plain($r['modeTotalBtn']), 'left' => $plain($r['modeLeftBtn'])], $raw['mode'])) ?>
     <?= $field($t['bgValue'], $input('value', $raw['value'], 'inputmode="decimal" dir="ltr" style="max-width:160px" placeholder="5"'), $t['bgValueHint']) ?>
-    <?= $head($t['bgSecWho']) ?>
-    <div data-job="now"><?= $field($t['bgScope'], $select('scope', ['bot' => $plain($r['whoBot']), 'panel' => $plain($r['whoPanel'])], $raw['scope'])) ?></div>
-    <div data-scope="bot"><?= $field($t['bgLang'], $select('lang', $langOptions, $raw['lang']), $t['bgLangHint']) ?></div>
-    <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['bgPanels']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgPanelsHint']) ?></div></div>
-      <div class="set-ctl"><div class="lang-chips">
-        <?php foreach ($panels as $pn): ?>
-          <label class="lang-chip"><input type="checkbox" name="panels[]" value="<?= htmlspecialchars((string) $pn['code_panel']) ?>"<?= in_array((string) $pn['code_panel'], $raw['panels'], true) ? ' checked' : '' ?>> <?= htmlspecialchars((string) $pn['name_panel']) ?><?= bulkgift_listable($pn) ? '' : htmlspecialchars($r['panelBotOnly']) ?></label>
-        <?php endforeach; ?>
-      </div></div>
-    </div>
-    <div data-job="camp">
-      <?= $head('⏳ ' . $t['bgHours']) ?>
-      <?= $field($t['bgHours'], $input('hours', $raw['hours'], 'inputmode="numeric" dir="ltr" style="max-width:110px" placeholder="1"'), $t['bgHoursHint']) ?>
-    </div>
-    <div data-job="now">
-      <?= $head($t['bgSecWhen']) ?>
-      <?= $field($t['bgBuy'], '<div style="display:flex;gap:6px;flex-wrap:wrap">' . $select('buy', [
-          'all' => $plain($r['buyAll']), 'lasth' => $plain($r['buyLasthBtn']),
-          'days' => $plain($r['buyDaysBtn']), 'months' => $plain($r['buyMonthsBtn']), 'hours' => $plain($r['buyHoursBtn']),
-      ], $raw['buy']) . $input('buyn', $raw['buyn'], 'inputmode="numeric" dir="ltr" style="max-width:110px" placeholder="1"') . '</div>', $t['bgBuyHint']) ?>
-      <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['bgStatus']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgStatusHint']) ?></div></div>
+    <div data-job="camp"><?= $field($t['bgHours'], $input('hours', $raw['hours'], 'inputmode="numeric" dir="ltr" style="max-width:110px" placeholder="24"'), $t['bgHoursHint']) ?></div>
+    <details id="bgmore"<?= $moreOpen ? ' open' : '' ?>>
+      <summary class="set-row" style="cursor:pointer;list-style:none"><div><div class="set-label">🎯 <?= htmlspecialchars($t['bgMore']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgMoreHint']) ?></div></div><div class="set-ctl"><span class="bg-chev" aria-hidden="true">▾</span></div></summary>
+      <?= $field($t['bgMode'], $select('mode', ['fixed' => $plain($r['modeFixedBtn']), 'total' => $plain($r['modeTotalBtn']), 'left' => $plain($r['modeLeftBtn'])], $raw['mode'])) ?>
+      <div data-job="now"><?= $field($t['bgScope'], $select('scope', ['bot' => $plain($r['whoBot']), 'panel' => $plain($r['whoPanel'])], $raw['scope'])) ?></div>
+      <div data-scope="bot"><?= $field($t['bgLang'], $select('lang', $langOptions, $raw['lang']), $t['bgLangHint']) ?></div>
+      <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['bgPanels']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgPanelsHint']) ?></div></div>
         <div class="set-ctl"><div class="lang-chips">
-          <?php foreach (bulkgift_statuses() as $s): ?>
-            <label class="lang-chip"><input type="checkbox" name="statuses[]" value="<?= $s ?>"<?= in_array($s, $raw['statuses'], true) ? ' checked' : '' ?>> <?= htmlspecialchars($plain($r['st_' . $s])) ?></label>
+          <?php foreach ($panels as $pn): ?>
+            <label class="lang-chip"><input type="checkbox" name="panels[]" value="<?= htmlspecialchars((string) $pn['code_panel']) ?>"<?= in_array((string) $pn['code_panel'], $raw['panels'], true) ? ' checked' : '' ?>> <?= htmlspecialchars((string) $pn['name_panel']) ?><?= bulkgift_listable($pn) ? '' : htmlspecialchars($r['panelBotOnly']) ?></label>
           <?php endforeach; ?>
         </div></div>
       </div>
-    </div>
-    <?= $head($t['bgSecMsg']) ?>
-    <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['bgNotify']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgNotifyHint']) ?></div></div>
-      <div class="set-ctl"><label class="lang-chip" style="justify-content:center"><input type="hidden" name="notify" value="0"><input type="checkbox" name="notify" value="1"<?= $raw['notify'] === '1' ? ' checked' : '' ?>> <?= htmlspecialchars($t['refOn']) ?></label></div>
-    </div>
+      <div data-job="now">
+        <?= $field($t['bgBuy'], '<div style="display:flex;gap:6px;flex-wrap:wrap">' . $select('buy', [
+            'all' => $plain($r['buyAll']), 'lasth' => $plain($r['buyLasthBtn']),
+            'days' => $plain($r['buyDaysBtn']), 'months' => $plain($r['buyMonthsBtn']), 'hours' => $plain($r['buyHoursBtn']),
+        ], $raw['buy']) . $input('buyn', $raw['buyn'], 'inputmode="numeric" dir="ltr" style="max-width:110px" placeholder="1"') . '</div>', $t['bgBuyHint']) ?>
+        <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['bgStatus']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgStatusHint']) ?></div></div>
+          <div class="set-ctl"><div class="lang-chips">
+            <?php foreach (bulkgift_statuses() as $s): ?>
+              <label class="lang-chip"><input type="checkbox" name="statuses[]" value="<?= $s ?>"<?= in_array($s, $raw['statuses'], true) ? ' checked' : '' ?>> <?= htmlspecialchars($plain($r['st_' . $s])) ?></label>
+            <?php endforeach; ?>
+          </div></div>
+        </div>
+      </div>
+      <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['bgNotify']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgNotifyHint']) ?></div></div>
+        <div class="set-ctl"><label class="lang-chip" style="justify-content:center"><input type="hidden" name="notify" value="0"><input type="checkbox" name="notify" value="1"<?= $raw['notify'] === '1' ? ' checked' : '' ?>> <?= htmlspecialchars($t['refOn']) ?></label></div>
+      </div>
+    </details>
   </div>
   <div class="modal-foot" style="border-radius:0 0 10px 10px;display:flex;gap:8px;flex-wrap:wrap">
     <button type="submit" name="action" value="count" class="btn btn-ghost"><?= icon('eye', 13) ?> <?= htmlspecialchars($t['bgCountBtn']) ?></button>

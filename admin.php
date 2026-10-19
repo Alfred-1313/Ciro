@@ -21351,61 +21351,94 @@ if ($datain == "linkappsetting") {
         [$bg_text, $bg_kb] = bulkgift_progress_payload($bg_job);
         sendmessage($from_id, $bg_text, $bg_kb, 'HTML');
     }
-    $bg_p = bulkgift_params([]);
-    bulkgift_draft_save($from_id, $bg_p);
-    [$bg_text, $bg_kb] = bulkgift_hub_payload($bg_p);
+    bulkgift_draft_save($from_id, bulkgift_params([]));
+    [$bg_text, $bg_kb] = bulkgift_start_payload();
     sendmessage($from_id, $bg_text, $bg_kb, 'HTML');
-} elseif (preg_match('/^bgh:sec:(what|who|buy|st)$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
-    // one part of the settings on a screen of its own
-    step('home', $from_id);
-    [$bg_text, $bg_kb] = bulkgift_section_payload(bulkgift_draft($from_id), $bg_m[1]);
-    Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
-} elseif (preg_match('/^bgh:(?:job:(now|camp)|(hours))$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
-    // 🎁 to the subscriptions there are now, or 🔜 a campaign - which first
-    // asks how long it takes purchases (⏳ asks that again)
+} elseif (preg_match('/^bgh(?::(sum|more|camp|cpk|hours|sc|n|go)|:sec:(mode|lang|panels|buy|st))?$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
+    // The screens: «bgh» alone is the first one, sum the summary, more 🎯
+    // and sec:* one of 🎯's own; camp and hours ask a campaign's length, cpk
+    // is its «what» screen; sc and n switch «حتی اکانت‌های خودِ پنل» and the
+    // message to the owner (go: a summary button of an older screen)
     $bg_t = $textbotlang['Admin']['BulkGift'];
     $bg_p = bulkgift_draft($from_id);
-    if (($bg_m[1] ?? '') === 'camp' || ($bg_m[2] ?? '') === 'hours') {
+    $bg_go = $bg_m[1] ?? '';
+    $bg_sec = $bg_m[2] ?? '';
+    if ($bg_go === 'camp' || $bg_go === 'hours') {
+        // a campaign starts with its length - from the first screen, a fresh one
+        if ($bg_go === 'camp') {
+            bulkgift_draft_save($from_id, bulkgift_params([]));
+        }
         savedata("clear", "bg_buy", 'next');
         step('bgh_buyn', $from_id);
         bulkgift_draft_ask($from_id, $message_id);
-        [$bg_text, $bg_kb] = bulkgift_ask_payload($bg_t['askBuyNext']);
+        [$bg_text, $bg_kb] = bulkgift_ask_payload($bg_t['askBuyNext'], $bg_go === 'camp' ? 'bgh' : 'bgh:more');
         Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
         return;
     }
     step('home', $from_id);
-    if (bulkgift_is_live($bg_p)) {
-        $bg_p['buy'] = 'all';
-        $bg_p['buyn'] = 0;
+    if ($bg_go === 'sc' || $bg_go === 'n') {
+        if ($bg_go === 'sc') {
+            $bg_p['scope'] = $bg_p['scope'] === 'panel' ? 'bot' : 'panel';
+        } else {
+            $bg_p['notify'] = !$bg_p['notify'];
+        }
         bulkgift_draft_save($from_id, $bg_p);
+        $bg_p = bulkgift_draft($from_id);
+        $bg_go = 'more';
     }
-    [$bg_text, $bg_kb] = bulkgift_hub_payload(bulkgift_draft($from_id));
+    if ($bg_sec !== '') {
+        [$bg_text, $bg_kb] = bulkgift_sub_payload($bg_p, $bg_sec);
+    } elseif ($bg_go === 'more') {
+        [$bg_text, $bg_kb] = bulkgift_more_payload($bg_p);
+    } elseif ($bg_go === 'cpk' && bulkgift_is_live($bg_p)) {
+        [$bg_text, $bg_kb] = bulkgift_camp_payload($bg_p);
+    } elseif (($bg_go === 'sum' || $bg_go === 'go') && $bg_p['value'] !== null) {
+        [$bg_text, $bg_kb] = bulkgift_summary_payload($bg_p);
+    } elseif ($bg_go === 'sum' || $bg_go === 'go') {
+        // the amount was dropped on the way (another way of counting it, its
+        // question left with 🔙): asked again rather than starting over
+        step('bgh_value', $from_id);
+        bulkgift_draft_ask($from_id, $message_id);
+        [$bg_text, $bg_kb] = bulkgift_ask_payload(bulkgift_value_ask($bg_p), 'bgh');
+    } else {
+        [$bg_text, $bg_kb] = bulkgift_start_payload();
+    }
     Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
-} elseif (preg_match('/^bgh(?::(k|m|s|l|p|b|a|t):([a-z0-9_]+))?$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
-    // one setting changed - and the screen of its part again (🔙, a question's
-    // 🔙 and ✏️ تغییر تنظیمات are «bgh» alone: the menu)
-    step('home', $from_id);
+} elseif (preg_match('/^bgh:(k|ck):(volume|time)$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
+    // 📦 / ⏰ - from the first screen (k: to the subscriptions there are now)
+    // or a campaign's (ck): a fixed amount to begin with, asked for at once
+    $bg_p =$bg_m[1] === 'k' ? bulkgift_params([]) : bulkgift_draft($from_id);
+    $bg_p['kind'] = $bg_m[2];
+    $bg_p['mode'] = 'fixed';
+    $bg_p['value'] = null;
+    bulkgift_draft_save($from_id, $bg_p);
+    step('bgh_value', $from_id);
+    bulkgift_draft_ask($from_id, $message_id);
+    [$bg_text, $bg_kb] = bulkgift_ask_payload(bulkgift_value_ask($bg_p), $bg_m[1] === 'k' ? 'bgh' : 'bgh:cpk');
+    Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
+} elseif (preg_match('/^bgh:(m|l|p|b|t):([a-z0-9_]+)$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
+    // one of 🎯's settings changed: a single choice goes back to 🎯, a tick
+    // redraws its own screen, and a choice that needs a number asks for it
     $bg_t = $textbotlang['Admin']['BulkGift'];
     $bg_p = bulkgift_draft($from_id);
-    $bg_key = $bg_m[1] ?? '';
-    $bg_val = $bg_m[2] ?? '';
-    $bg_sec = ['k' => 'what', 'm' => 'what', 's' => 'who', 'l' => 'who', 'p' => 'who', 'b' => 'buy', 't' => 'st', 'a' => 'st'][$bg_key] ?? null;
-    if ($bg_key === 'k' && in_array($bg_val, ['volume', 'time'], true) && $bg_val !== $bg_p['kind']) {
-        $bg_p['kind'] = $bg_val;
-        // gigabytes are not days - a percentage stays what it was
-        if ($bg_p['mode'] === 'fixed') {
+    [$bg_key, $bg_val] = [$bg_m[1], $bg_m[2]];
+    $bg_back = 'more';
+    if ($bg_key === 'm' && in_array($bg_val, ['fixed', 'total', 'left'], true)) {
+        if ($bg_val !== $bg_p['mode']) {
+            // gigabytes, days and percents are not the same number: asked again
+            $bg_p['mode'] = $bg_val;
             $bg_p['value'] = null;
+            bulkgift_draft_save($from_id, $bg_p);
+            step('bgh_value', $from_id);
+            bulkgift_draft_ask($from_id, $message_id);
+            [$bg_text, $bg_kb] = bulkgift_ask_payload(bulkgift_value_ask($bg_p), 'bgh:sec:mode');
+            Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
+            return;
         }
-    } elseif ($bg_key === 'm' && in_array($bg_val, ['fixed', 'total', 'left'], true) && $bg_val !== $bg_p['mode']) {
-        if (($bg_val === 'fixed') !== ($bg_p['mode'] === 'fixed')) {
-            $bg_p['value'] = null;
-        }
-        $bg_p['mode'] = $bg_val;
-    } elseif ($bg_key === 's' && in_array($bg_val, ['bot', 'panel'], true)) {
-        $bg_p['scope'] = $bg_val;
     } elseif ($bg_key === 'l' && ($bg_val === 'all' || in_array($bg_val, panel_langs(), true))) {
         $bg_p['lang'] = $bg_val;
     } elseif ($bg_key === 'p') {
+        $bg_back = 'panels';
         if ($bg_val === 'all') {
             $bg_p['panels'] = [];
         } else {
@@ -21421,40 +21454,33 @@ if ($datain == "linkappsetting") {
         if ($bg_val === 'all') {
             $bg_p['buy'] = 'all';
             $bg_p['buyn'] = 0;
-        } elseif (in_array($bg_val, ['lasth', 'days', 'months', 'hours', 'next'], true)) {
+        } elseif (in_array($bg_val, ['lasth', 'days', 'months', 'hours'], true)) {
             // how many first - it is set once that is known
             savedata("clear", "bg_buy", $bg_val);
             step('bgh_buyn', $from_id);
             bulkgift_draft_ask($from_id, $message_id);
-            [$bg_text, $bg_kb] = bulkgift_ask_payload($bg_t['askBuy' . ucfirst($bg_val)], $bg_val === 'next' ? 'bgh' : 'bgh:sec:buy');
+            [$bg_text, $bg_kb] = bulkgift_ask_payload($bg_t['askBuy' . ucfirst($bg_val)], 'bgh:sec:buy');
             Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
             return;
         }
     } elseif ($bg_key === 't' && in_array($bg_val, bulkgift_statuses(), true)) {
         // one state on or off - at least one has to stay
+        $bg_back = 'st';
         $bg_on = array_values(array_diff($bg_p['statuses'], [$bg_val]));
         if (in_array($bg_val, $bg_p['statuses'], true) && !$bg_on) {
             telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => strip_tags($bg_t['noStatus']), 'show_alert' => true]);
             return;
         }
         $bg_p['statuses'] = in_array($bg_val, $bg_p['statuses'], true) ? $bg_on : array_merge($bg_p['statuses'], [$bg_val]);
-    } elseif ($bg_key === 'a') {
-        // a screen from before the states could be picked one by one
-        $bg_p['statuses'] = $bg_val === '1' ? bulkgift_default_statuses() : bulkgift_statuses();
     }
+    step('home', $from_id);
     bulkgift_draft_save($from_id, $bg_p);
     $bg_p = bulkgift_draft($from_id);
-    [$bg_text, $bg_kb] = $bg_sec === null ? bulkgift_hub_payload($bg_p) : bulkgift_section_payload($bg_p, $bg_sec);
+    [$bg_text, $bg_kb] = $bg_back === 'more' ? bulkgift_more_payload($bg_p) : bulkgift_sub_payload($bg_p, $bg_back);
     Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
-} elseif ($datain === 'bgh:v' && $adminrulecheck['rule'] == "administrator") {
-    // ✏️ the amount - the question takes the screen's place
-    $bg_t = $textbotlang['Admin']['BulkGift'];
-    $bg_p = bulkgift_draft($from_id);
-    step('bgh_value', $from_id);
-    bulkgift_draft_ask($from_id, $message_id);
-    [$bg_text, $bg_kb] = bulkgift_ask_payload($bg_p['mode'] !== 'fixed' ? $bg_t['askPercent'] : ($bg_p['kind'] === 'time' ? $bg_t['askDays'] : $bg_t['askVolume']), 'bgh:sec:what');
-    Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
-} elseif (($user['step'] == 'bgh_value' || $user['step'] == 'bgh_buyn') && $adminrulecheck['rule'] == "administrator") {
+} elseif (($user['step'] == 'bgh_value' || $user['step'] == 'bgh_buyn') && $datain === '' && $adminrulecheck['rule'] == "administrator") {
+    // the typed answer - a button tapped meanwhile (🚫 لغو of a run, say) is
+    // that button's, not an answer
     $bg_t = $textbotlang['Admin']['BulkGift'];
     $bg_p = bulkgift_draft($from_id);
     if ($user['step'] == 'bgh_value') {
@@ -21478,19 +21504,15 @@ if ($datain == "linkappsetting") {
     }
     step('home', $from_id);
     bulkgift_draft_save($from_id, $bg_p);
-    // the question goes, the screen comes back under the answer
+    // the question goes; the next screen comes under the answer - a new
+    // campaign's «what», or the summary
     $bg_ask = bulkgift_draft_ask($from_id);
     if ($bg_ask > 0) {
         deletemessage($from_id, $bg_ask);
     }
-    [$bg_text, $bg_kb] = bulkgift_hub_payload(bulkgift_draft($from_id));
-    sendmessage($from_id, $bg_text, $bg_kb, 'HTML');
-} elseif ($datain === 'bgh:n' && $adminrulecheck['rule'] == "administrator") {
     $bg_p = bulkgift_draft($from_id);
-    $bg_p['notify'] = !$bg_p['notify'];
-    bulkgift_draft_save($from_id, $bg_p);
-    [$bg_text, $bg_kb] = bulkgift_hub_payload(bulkgift_draft($from_id));
-    Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
+    [$bg_text, $bg_kb] = $bg_p['value'] !== null ? bulkgift_summary_payload($bg_p) : (bulkgift_is_live($bg_p) ? bulkgift_camp_payload($bg_p) : bulkgift_start_payload());
+    sendmessage($from_id, $bg_text, $bg_kb, 'HTML');
 } elseif ($datain === 'bgh:pv' && $adminrulecheck['rule'] == "administrator") {
     // 👁 the message each language's customers get - 🎨's text, as 🎨 has it
     $bg_t = $textbotlang['Admin']['BulkGift'];
@@ -21510,23 +21532,6 @@ if ($datain == "linkappsetting") {
         }
         sendmessage($from_id, $bg_cap, $bg_kb, 'HTML');
     }
-} elseif (preg_match('/^bgh:sep:(lang|panels)$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
-    telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $textbotlang['Admin']['BulkGift']['sep' . ucfirst($bg_m[1]) . 'Alert'], 'show_alert' => true]);
-    return;
-} elseif ($datain === 'bgh:go' && $adminrulecheck['rule'] == "administrator") {
-    // 🚀 ادامه: the settings once more, with what they find
-    $bg_t = $textbotlang['Admin']['BulkGift'];
-    $bg_p = bulkgift_draft($from_id);
-    $bg_live = bulkgift_is_live($bg_p);
-    $bg_why = $bg_p['value'] === null ? $bg_t['noValue']
-        : (bulkgift_active_job($bg_live) !== null ? ($bg_live ? $bg_t['busyLive'] : $bg_t['busy'])
-        : (!bulkgift_panels_of($bg_p) ? $bg_t['noPanels'] : null));
-    if ($bg_why !== null) {
-        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => mb_substr(strip_tags($bg_why), 0, 195), 'show_alert' => true]);
-        return;
-    }
-    [$bg_text, $bg_kb] = bulkgift_confirm_payload($bg_p);
-    Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
 } elseif (preg_match('/^bgh:start:([0-9a-f]{8})$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
     $bg_t = $textbotlang['Admin']['BulkGift'];
     $bg_p = bulkgift_draft($from_id);
@@ -21534,7 +21539,7 @@ if ($datain == "linkappsetting") {
     // would start is not what this one says
     if (bulkgift_sig($bg_p) !== $bg_m[1]) {
         telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $bg_t['changedAlert'], 'show_alert' => true]);
-        [$bg_text, $bg_kb] = bulkgift_confirm_payload($bg_p);
+        [$bg_text, $bg_kb] = $bg_p['value'] !== null ? bulkgift_summary_payload($bg_p) : bulkgift_start_payload();
         Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
         return;
     }
@@ -21551,6 +21556,12 @@ if ($datain == "linkappsetting") {
     bulkgift_kick();
 } elseif ($datain === 'bgh:x' && $adminrulecheck['rule'] == "administrator") {
     deletemessage($from_id, $message_id);
+} elseif (str_starts_with($datain, 'bgh:') && $adminrulecheck['rule'] == "administrator") {
+    // a button of an older version of these screens still in the chat: the
+    // first screen in its place
+    step('home', $from_id);
+    [$bg_text, $bg_kb] = bulkgift_start_payload();
+    Editmessagetext($from_id, $message_id, $bg_text, $bg_kb, 'HTML');
 } elseif (preg_match('/^bgc:(\d+)$/', $datain, $bg_m) && $adminrulecheck['rule'] == "administrator") {
     // 🚫 لغو: asked in a message of its own - the progress message goes on
     // changing under it
