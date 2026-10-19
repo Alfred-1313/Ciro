@@ -128,7 +128,11 @@ echo web_lang_assets();
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px" class="fade-up">
   <div style="font-size:.85rem;color:var(--mute)"><?= count($products) ?> <?= $t['productsHeading'] ?></div>
-  <button class="btn btn-primary" onclick="openProduct(null)"><?= icon('plus', 14) ?> <?= $t['productAddProductBtn'] ?></button>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+    <?php /* the same page as 🎨 شخصی‌سازی ← محصولات, for the tab shown here */ ?>
+    <a class="btn btn-ghost" href="looks.php?<?= http_build_query(['lang' => $view !== '' ? $view : 'fa', 'kind' => 'product']) ?>"><?= htmlspecialchars($t['prodLayoutBtn']) ?></a>
+    <button class="btn btn-primary" onclick="openProduct(null)"><?= icon('plus', 14) ?> <?= $t['productAddProductBtn'] ?></button>
+  </div>
 </div>
 
 <div class="card fade-up d1">

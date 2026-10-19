@@ -4914,6 +4914,8 @@ if (!function_exists('product_pick_payload')) {
             $kb['inline_keyboard'][] = [['text' => $label, 'callback_data' => $mode === 'edit' ? "productedit_{$row['id']}" : "pdel|a|{$lang}|{$pid}|{$row['id']}"]];
         }
         if ($mode === 'edit') {
+            // 📐 the same tool as 🎨 ← ظاهر دکمه‌های محصول ← 📐 چیدمان, for this tab; back comes here
+            $kb['inline_keyboard'][] = [['text' => $t['layoutBtn'], 'callback_data' => "help_lay:product:{$lang}:pe"]];
             $code = is_array($panelRow) ? (string) $panelRow['code_panel'] : 'all';
             $kb['inline_keyboard'][] = [['text' => $textbotlang['keyboard']['backToPrevMenu2'], 'callback_data' => "locationedit_{$code}"]];
         } else {
@@ -6436,12 +6438,15 @@ if (!function_exists('help_layout_editor_payload')) {
     // toggle for the selected item. $kind is 'categories' or 'tutorials'.
     // Shows the item's current emoji + color too, so this is always an
     // honest live preview, not just a partial one.
-    function help_layout_editor_payload($lang, $kind, $textbotlang, $selectedIdx = null)
+    // $from 'pe': the same tool opened from 🛍 ✏️ ویرایش محصول's product list
+    // (products only) - every button keeps the :pe mark and back goes to that list
+    function help_layout_editor_payload($lang, $kind, $textbotlang, $selectedIdx = null, $from = '')
     {
         $items = help_layout_items($lang, $kind);
         $section = help_layout_section($lang, $kind);
         $orderedKeys = help_layout_apply_order(array_keys($items), $section['order']);
-        $backCb = help_layout_back_cb($kind, $lang);
+        $sfx = ($from === 'pe' && $kind === 'product') ? ':pe' : '';
+        $backCb = $sfx !== '' ? "pedit|{$lang}" : help_layout_back_cb($kind, $lang);
         $kb = ['inline_keyboard' => []];
         if (empty($orderedKeys)) {
             $kb['inline_keyboard'][] = [['text' => $textbotlang['Admin']['Help']['layoutEmpty'], 'callback_data' => $backCb]];
@@ -6455,11 +6460,11 @@ if (!function_exists('help_layout_editor_payload')) {
                 $name = (!empty($section['hidden'][(string) $key]) ? '🚫 ' : '') . $emo['prefix'] . ($items[$key] ?? $key);
                 $isSel = ($selectedIdx !== null && (string) $selectedIdx === (string) $idx);
                 if ($isSel) {
-                    $btn = ['text' => '🔵 ' . $name, 'callback_data' => "help_lay_cancel:{$kind}:{$lang}"];
+                    $btn = ['text' => '🔵 ' . $name, 'callback_data' => "help_lay_cancel:{$kind}:{$lang}{$sfx}"];
                 } elseif ($selectedIdx !== null) {
-                    $btn = ['text' => $name, 'callback_data' => "help_lay_swap:{$kind}:{$lang}:{$selectedIdx}:{$idx}"];
+                    $btn = ['text' => $name, 'callback_data' => "help_lay_swap:{$kind}:{$lang}:{$selectedIdx}:{$idx}{$sfx}"];
                 } else {
-                    $btn = ['text' => $name, 'callback_data' => "help_lay_pick:{$kind}:{$lang}:{$idx}"];
+                    $btn = ['text' => $name, 'callback_data' => "help_lay_pick:{$kind}:{$lang}:{$idx}{$sfx}"];
                 }
                 if ($emo['icon'] !== '') {
                     $btn['icon_custom_emoji_id'] = $emo['icon'];
@@ -6474,20 +6479,22 @@ if (!function_exists('help_layout_editor_payload')) {
                 $kb['inline_keyboard'][] = $row;
             }
             if ($selectedIdx !== null) {
-                $kb['inline_keyboard'][] = [['text' => $textbotlang['Admin']['Help']['toggleWidthBtn'], 'callback_data' => "help_lay_width:{$kind}:{$lang}:{$selectedIdx}"]];
+                $kb['inline_keyboard'][] = [['text' => $textbotlang['Admin']['Help']['toggleWidthBtn'], 'callback_data' => "help_lay_width:{$kind}:{$lang}:{$selectedIdx}{$sfx}"]];
                 // show/hide for the selected item: a display switch, not a
                 // delete - the item and its own on/off state are untouched
                 $help_sel_key = $orderedKeys[$selectedIdx] ?? null;
                 $help_sel_hidden = ($help_sel_key !== null && !empty($section['hidden'][(string) $help_sel_key]));
                 $kb['inline_keyboard'][] = [[
                     'text' => $help_sel_hidden ? $textbotlang['Admin']['Help']['showBtn'] : $textbotlang['Admin']['Help']['hideBtn'],
-                    'callback_data' => "help_lay_hide:{$kind}:{$lang}:{$selectedIdx}",
+                    'callback_data' => "help_lay_hide:{$kind}:{$lang}:{$selectedIdx}{$sfx}",
                     'style' => $help_sel_hidden ? 'success' : 'danger',
                 ]];
             }
         }
-        $kb['inline_keyboard'][] = [['text' => $textbotlang['Admin']['Help']['resetLayoutBtn'], 'callback_data' => "help_lay_reset:{$kind}:{$lang}"]];
-        $kb['inline_keyboard'][] = [['text' => help_layout_back_label($kind, $textbotlang), 'callback_data' => $backCb]];
+        $kb['inline_keyboard'][] = [['text' => $textbotlang['Admin']['Help']['resetLayoutBtn'], 'callback_data' => "help_lay_reset:{$kind}:{$lang}{$sfx}"]];
+        $kb['inline_keyboard'][] = [$sfx !== ''
+            ? ['text' => $textbotlang['Admin']['Product']['layoutBackBtn'], 'callback_data' => $backCb, 'style' => 'danger']
+            : ['text' => help_layout_back_label($kind, $textbotlang), 'callback_data' => $backCb]];
         return json_encode($kb);
     }
 }
@@ -22333,27 +22340,29 @@ if ($datain == "linkappsetting") {
     }
     $help_kb = help_color_editor_payload($help_lang, $help_kind, $textbotlang);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['colorCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+    // :pe on these help_lay_* taps = opened from ✏️ ویرایش محصول (help_layout_editor_payload)
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
-    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null);
+    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null, $help_m[3] ?? '');
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay_pick:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay_pick:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_sel = (int) $help_m[3];
-    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, $help_sel);
+    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, $help_sel, $help_m[4] ?? '');
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay_cancel:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay_cancel:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
-    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null);
+    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null, $help_m[3] ?? '');
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay_swap:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+):(\d+)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay_swap:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+):(\d+)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_idx1 = (int) $help_m[3];
     $help_idx2 = (int) $help_m[4];
+    $help_from = $help_m[5] ?? '';
     $help_items = help_layout_items($help_lang, $help_kind);
     $help_section = help_layout_section($help_lang, $help_kind);
     $help_ordered = help_layout_apply_order(array_keys($help_items), $help_section['order']);
@@ -22370,12 +22379,13 @@ if ($datain == "linkappsetting") {
             'cache_time' => 1,
         ]);
     }
-    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null);
+    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null, $help_from);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay_width:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay_width:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_idx = (int) $help_m[3];
+    $help_from = $help_m[4] ?? '';
     $help_items = help_layout_items($help_lang, $help_kind);
     $help_section = help_layout_section($help_lang, $help_kind);
     $help_ordered = help_layout_apply_order(array_keys($help_items), $help_section['order']);
@@ -22419,14 +22429,15 @@ if ($datain == "linkappsetting") {
         $help_section['order'] = array_values($help_ordered);
         help_layout_set_section($help_lang, $help_kind, $help_section);
     }
-    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null);
+    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null, $help_from);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay_hide:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay_hide:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     // 🚫 مخفی / 👁 نمایش for one button. Display only: the item itself, its
     // database row and its own on/off switch are never touched.
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_idx = (int) $help_m[3];
+    $help_from = $help_m[4] ?? '';
     $help_items = help_layout_items($help_lang, $help_kind);
     $help_section = help_layout_section($help_lang, $help_kind);
     $help_ordered = help_layout_apply_order(array_keys($help_items), $help_section['order']);
@@ -22457,16 +22468,16 @@ if ($datain == "linkappsetting") {
         $help_section['hidden'] = $help_hidden;
         help_layout_set_section($help_lang, $help_kind, $help_section);
     }
-    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, $help_idx);
+    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, $help_idx, $help_from);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay_reset:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay_reset:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_section = help_layout_section($help_lang, $help_kind);
     // hidden goes with order and width: all three are 📐 چیدمان, so this one
     // button puts every button back on screen in its original place
     help_layout_set_section($help_lang, $help_kind, ['order' => [], 'width' => [], 'hidden' => [], 'emoji' => $help_section['emoji'], 'emojiIcon' => $help_section['emojiIcon'], 'emojiSimple' => $help_section['emojiSimple'], 'color' => $help_section['color'], 'rename' => $help_section['rename']]);
-    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null);
+    $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null, $help_m[3] ?? '');
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
 } elseif (preg_match('/^help_emo:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
