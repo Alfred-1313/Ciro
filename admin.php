@@ -10799,18 +10799,20 @@ elseif ($datain == "systemsms") {
         sendmessage($from_id, $textbotlang['Admin']['messageBulk']['errorRestart'], $keyboardadmin, 'HTML');
         return;
     }
+    // ✨ a premium emoji comes as its plain look plus an entity: kept as a
+    // <tg-emoji> tag, or every user would get the plain one
     if ($userdata['typeservice'] == "forwardmessage") {
         savedata("save", "message", $message_id);
     } elseif ($userdata['typeservice'] == "xdaynotmessage") {
         if ($text) {
-            savedata("save", "message", $text);
+            savedata("save", "message", topup_caption_text_from_update($text, $update));
         } else {
             sendmessage($from_id, $textbotlang['Admin']['messageBulk']['textOnlyInactive'], $backadmin, 'HTML');
             return;
         }
     } elseif ($userdata['typeservice'] == "sendmessage") {
         if ($text) {
-            savedata("save", "message", $text);
+            savedata("save", "message", topup_caption_text_from_update($text, $update));
         } else {
             sendmessage($from_id, $textbotlang['Admin']['messageBulk']['textOnlyBroadcast'], $backadmin, 'HTML');
             return;
@@ -10919,11 +10921,14 @@ elseif ($datain == "systemsms") {
     sendmessage($from_id, $textbotlang['Admin']['messageBulk']['askTextOrImage'], $backadmin, 'HTML');
     step('sendmessagetext', $from_id);
 } elseif ($user['step'] == "sendmessagetext") {
+    // ✨ premium emoji kept as <tg-emoji> tags
     if ($photo) {
+        $caption = premium_emoji_html_from_entities($update['message']['caption'] ?? $caption, $update['message']['caption_entities'] ?? []);
         savedata("save", "type", "photo");
         savedata("save", "photoid", $photoid);
         savedata("save", "text", $caption);
     } else {
+        $text = topup_caption_text_from_update($text, $update);
         savedata("save", "text", $text);
         savedata("save", "type", "text");
     }
@@ -11142,13 +11147,14 @@ elseif ($datain == "systemsms") {
             ],
         ]
     ]);
+    // ✨ premium emoji kept as <tg-emoji> tags
     if ($text) {
-        $textSendAdminToUser = sprintf($ra_texts['users']['support']['messageFromManagement'], $text);
+        $textSendAdminToUser = sprintf($ra_texts['users']['support']['messageFromManagement'], topup_caption_text_from_update($text, $update));
         bottext_extras_key_hint('users.support.messageFromManagement');
         sendmessage($user['Processing_value'], $textSendAdminToUser, $Respuseronse, 'HTML');
     }
     if ($photo) {
-        $textSendAdminToUser = sprintf($ra_texts['users']['support']['messageFromManagement2'], $caption);
+        $textSendAdminToUser = sprintf($ra_texts['users']['support']['messageFromManagement2'], premium_emoji_html_from_entities($update['message']['caption'] ?? $caption, $update['message']['caption_entities'] ?? []));
         telegram('sendphoto', [
             'chat_id' => $user['Processing_value'],
             'photo' => $photoid,
