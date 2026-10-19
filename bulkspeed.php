@@ -4,8 +4,10 @@
 // limit (speed_limit_kbps: Mbps × 1000, the way Rebecca's own form sends it).
 // For the bot's own services of the kinds picked - 🛒 purchases, ⏱ hourly,
 // 🎁 the free configs given for referrals, 🧪 tests - or every service of the
-// bot, or every account on the panels. Opened from 🏬 تنظیمات فروشگاه next to
-// 🎁 حجم یا زمان گروهی (only while there is a Rebecca panel), and from the web
+// bot, or every account on the panels. Opened from 🚀 مدیریت سرعت in 🏬
+// تنظیمات فروشگاه, next to 🎁 حجم یا زمان گروهی (only while there is a Rebecca
+// panel) - the screen that also has every other speed setting (a product's,
+// a test account's, a free referral config's) in one place - and from the web
 // panel's 🚀 page; both start the same run.
 //
 // A run is one bulk_speed_job with one bulk_speed_item for every account it
@@ -863,7 +865,8 @@ if (!function_exists('bulkspeed_step1_payload')) {
         global $pdo;
         bulkspeed_ensure_schema();
         if ($msgId !== null) {
-            $pdo->prepare("UPDATE bulk_speed_draft SET ask_msg = ? WHERE admin_id = ?")->execute([(int) $msgId, (string) $adminId]);
+            // an admin with no draft yet (an old screen's button) gets an empty one
+            $pdo->prepare("INSERT INTO bulk_speed_draft (admin_id, params, ask_msg, updated_at) VALUES (?, '{}', ?, ?) ON DUPLICATE KEY UPDATE ask_msg = VALUES(ask_msg)")->execute([(string) $adminId, (int) $msgId, time()]);
             return (int) $msgId;
         }
         $st = $pdo->prepare("SELECT ask_msg FROM bulk_speed_draft WHERE admin_id = ?");
@@ -883,13 +886,14 @@ if (!function_exists('bulkspeed_step1_payload')) {
         $t = bulkspeed_texts();
         return $t['title'] . strtr($t['stepOf'], ['{i}' => $i, '{n}' => 4]);
     }
-    // step 1: how fast - typed, or ♾ to take the limit off
+    // step 1: how fast - typed, or ♾ to take the limit off; 🔙 to 🚀 مدیریت
+    // سرعت it was opened from
     function bulkspeed_step1_payload(array $p)
     {
         $t = bulkspeed_texts();
         $rows = [
             [bulkgift_btn($t['removeBtn'], 'bsp:v0')],
-            [bulkgift_btn($t['helpBtn'], 'bsp:help', null), bulkgift_btn($t['closeBtn'], 'bsp:x', 'danger')],
+            [bulkgift_btn($t['helpBtn'], 'bsp:help', null), bulkgift_btn($t['backBtn'], 'bsh', 'danger')],
         ];
         $text = bulkspeed_title(1) . "\n➖➖➖➖➖➖➖➖➖➖\n"
             . ($p['speed'] !== null ? '<blockquote>' . bulkspeed_rows($p, 'speed') . "</blockquote>\n" : '')
@@ -977,5 +981,294 @@ if (!function_exists('bulkspeed_step1_payload')) {
     {
         $t = bulkspeed_texts();
         return [$t['help'], json_encode(['inline_keyboard' => [[bulkgift_btn($t['backBtn'], $back, 'danger')]]])];
+    }
+}
+
+if (!function_exists('bulkspeed_hub_payload')) {
+    // 🏬 ← 🚀 مدیریت سرعت: every speed setting in one place. The first screen
+    // says what each is set to; 🛍 / 🧪 / 🎁 open a list to change them, and
+    // 🚀 سرعت گروهی is the run above (what is there now). The settings stay
+    // where they were too (✏️ ویرایش محصول, 🎁 اکانت تست, 👥 ← 🎁 کانفیگ رایگان
+    // با دعوت) - it is the same data, so a change in one shows in the other.
+    // Rebecca panels only: nothing else can hold a speed.
+
+    // 🛍 the products that can hold one: on a Rebecca panel, or on «همه پنل ها»
+    // - every user type, panels in the bot's order and «همه پنل ها» last
+    function bulkspeed_hub_products()
+    {
+        global $pdo;
+        $names = array_map(fn($r) => (string) $r['name_panel'], bulkspeed_all_panels());
+        if (!$names) {
+            return [];
+        }
+        $st = $pdo->prepare("SELECT * FROM product WHERE Location = '/all' OR Location IN (" . implode(', ', array_fill(0, count($names), '?')) . ") ORDER BY (Location = '/all'), Location, id");
+        $st->execute($names);
+        return $st->fetchAll(PDO::FETCH_ASSOC);
+    }
+    // 🎁 each language whose free config is made on a Rebecca panel:
+    // [lang => ['panel' => its row, 'speed' => Mbps]]
+    function bulkspeed_hub_refs()
+    {
+        $out = [];
+        foreach (panel_langs() as $l) {
+            $cfg = affrw_cfg($l);
+            $panel = affrw_panel($cfg);
+            if (is_array($panel) && ($panel['type'] ?? '') === 'rebecca') {
+                $out[$l] = ['panel' => $panel, 'speed' => (float) $cfg['speed']];
+            }
+        }
+        return $out;
+    }
+    // «10 Mbps», or the words for none
+    function bulkspeed_hub_label($mbps)
+    {
+        return speed_limit_label($mbps, bulkspeed_texts()['hubNone']);
+    }
+    // the same for a button: «🚀 10 Mbps» or ♾
+    function bulkspeed_hub_short($mbps)
+    {
+        return (float) $mbps > 0 ? '🚀 ' . speed_limit_store($mbps) . ' Mbps' : '♾';
+    }
+    // a name in a line of text
+    function bulkspeed_hub_name($n)
+    {
+        return aff_bidi((string) $n, htmlspecialchars((string) $n));
+    }
+    // «3 تا با سرعت · 5 تا بدون محدودیت»
+    function bulkspeed_hub_count(array $speeds)
+    {
+        $with = count(array_filter($speeds, fn($s) => (float) $s > 0));
+        return strtr(bulkspeed_texts()['hubCount'], ['{with}' => number_format($with), '{none}' => number_format(count($speeds) - $with)]);
+    }
+    // the first screen: what every speed is set to, bold in a quote, and the
+    // four ways in
+    function bulkspeed_hub_payload()
+    {
+        $t = bulkspeed_texts();
+        $rows = [];
+        $prod = bulkspeed_hub_products();
+        $rows[] = strtr($t['hubRowProducts'], ['{v}' => $prod ? bulkspeed_hub_count(array_column($prod, 'speed_limit')) : $t['hubNoProducts']]);
+        $panels = bulkspeed_all_panels();
+        // a few panels by name, many as a count
+        $rows[] = strtr($t['hubRowTests'], ['{v}' => count($panels) <= 3
+            ? implode(' · ', array_map(fn($r) => bulkspeed_hub_name($r['name_panel']) . ' ' . bulkspeed_hub_label($r['speed_usertest'] ?? 0), $panels))
+            : bulkspeed_hub_count(array_column($panels, 'speed_usertest'))]);
+        $refs = bulkspeed_hub_refs();
+        if ($refs) {
+            $rows[] = strtr($t['hubRowRefs'], ['{v}' => implode(' · ', array_map(fn($l, $r) => bulkgift_lang_name($l) . ' ' . bulkspeed_hub_label($r['speed']), array_keys($refs), $refs))]);
+        }
+        $kb = [
+            [bulkgift_btn($t['hubProductsBtn'], 'bsh:pl:0')],
+            [bulkgift_btn($t['hubTestsBtn'], 'bsh:tl')],
+        ];
+        if ($refs) {
+            $kb[] = [bulkgift_btn($t['hubRefsBtn'], 'bsh:rl')];
+        }
+        $kb[] = [bulkgift_btn($t['groupBtn'], 'bsh:grp', 'success')];
+        $kb[] = [bulkgift_btn($t['closeBtn'], 'bsh:x', 'danger')];
+        return [$t['hubTitle'] . "\n➖➖➖➖➖➖➖➖➖➖\n<blockquote>" . implode("\n", $rows) . "</blockquote>\n" . $t['hubIntro'], json_encode(['inline_keyboard' => $kb])];
+    }
+    // 🛍 one page of the products, a button each with its speed; $note: a line
+    // about what was just done
+    function bulkspeed_hub_products_payload($page = 0, $note = '')
+    {
+        $t = bulkspeed_texts();
+        $k = panel_texts()['keyboard'];
+        $prod = bulkspeed_hub_products();
+        $per = 25;
+        $pages = max(1, (int) ceil(count($prod) / $per));
+        $page = max(0, min($pages - 1, (int) $page));
+        // the panel is named when it could be mistaken for another
+        $several = count(bulkspeed_all_panels()) > 1;
+        $agents = ['n' => $k['normalAgent'], 'n2' => $k['advancedAgent']];
+        $kb = [];
+        foreach (array_slice($prod, $page * $per, $per) as $r) {
+            $label = (string) $r['name_product'];
+            if (isset($agents[$r['agent']])) {
+                $label .= ' · ' . $agents[$r['agent']];
+            }
+            if ($r['Location'] === '/all') {
+                $label .= ' · ' . $k['allPanels'];
+            } elseif ($several) {
+                $label .= ' · ' . $r['Location'];
+            }
+            $kb[] = [bulkgift_btn($label . ' · ' . bulkspeed_hub_short($r['speed_limit'] ?? 0), 'bsh:a:' . bulkspeed_hub_code(['k' => 'p', 'id' => $r['id'], 'pg' => $page]))];
+        }
+        if ($pages > 1) {
+            $nav = [];
+            if ($page > 0) {
+                $nav[] = bulkgift_btn('◀️', 'bsh:pl:' . ($page - 1), null);
+            }
+            $nav[] = bulkgift_btn(strtr($t['hubPage'], ['{i}' => $page + 1, '{n}' => $pages]), 'bsh:pl:' . $page, null);
+            if ($page < $pages - 1) {
+                $nav[] = bulkgift_btn('▶️', 'bsh:pl:' . ($page + 1), null);
+            }
+            $kb[] = $nav;
+        }
+        $kb[] = [bulkgift_btn($t['backBtn'], 'bsh', 'danger')];
+        $text = $t['hubProductsTitle'] . "\n➖➖➖➖➖➖➖➖➖➖\n" . ($note !== '' ? $note . "\n\n" : '');
+        if (!$prod) {
+            return [$text . $t['hubProductsEmpty'], json_encode(['inline_keyboard' => $kb])];
+        }
+        $with = count(array_filter($prod, fn($r) => (float) ($r['speed_limit'] ?? 0) > 0));
+        $text .= $t['hubProductsAsk'] . "\n<blockquote>" . strtr($t['hubProductsStat'], ['{with}' => number_format($with), '{none}' => number_format(count($prod) - $with)]) . "</blockquote>\n" . $t['hubProductsNote'];
+        return [$text, json_encode(['inline_keyboard' => $kb])];
+    }
+    // 🧪 each Rebecca panel, a button with its test account's speed
+    function bulkspeed_hub_tests_payload($note = '')
+    {
+        $t = bulkspeed_texts();
+        $kb = [];
+        foreach (array_slice(bulkspeed_all_panels(), 0, 90) as $r) {
+            $kb[] = [bulkgift_btn($r['name_panel'] . ' · ' . bulkspeed_hub_short($r['speed_usertest'] ?? 0), 'bsh:a:' . bulkspeed_hub_code(['k' => 't', 'id' => $r['id']]))];
+        }
+        $kb[] = [bulkgift_btn($t['backBtn'], 'bsh', 'danger')];
+        return [$t['hubTestsTitle'] . "\n➖➖➖➖➖➖➖➖➖➖\n" . ($note !== '' ? $note . "\n\n" : '') . $t['hubTestsAsk'], json_encode(['inline_keyboard' => $kb])];
+    }
+    // 🎁 each language whose free config is made on a Rebecca panel
+    function bulkspeed_hub_refs_payload($note = '')
+    {
+        $t = bulkspeed_texts();
+        $kb = [];
+        foreach (bulkspeed_hub_refs() as $l => $r) {
+            $kb[] = [bulkgift_btn(bulkgift_lang_name($l) . ' · ' . $r['panel']['name_panel'] . ' · ' . bulkspeed_hub_short($r['speed']), 'bsh:a:' . bulkspeed_hub_code(['k' => 'r', 'lang' => $l]))];
+        }
+        $kb[] = [bulkgift_btn($t['backBtn'], 'bsh', 'danger')];
+        return [$t['hubRefsTitle'] . "\n➖➖➖➖➖➖➖➖➖➖\n" . ($note !== '' ? $note . "\n\n" : '') . $t['hubRefsAsk'], json_encode(['inline_keyboard' => $kb])];
+    }
+    // What a tap on a list picks: ['k' => 'p', 'id' => product, 'pg' => the page
+    // of the list] | ['k' => 't', 'id' => panel] | ['k' => 'r', 'lang' => fa].
+    // Anything else (an older screen's, a thing deleted since): null.
+    function bulkspeed_hub_target($raw)
+    {
+        if (!is_array($raw)) {
+            return null;
+        }
+        if (($raw['k'] ?? '') === 'p' && ctype_digit((string) ($raw['id'] ?? ''))) {
+            return ['k' => 'p', 'id' => (int) $raw['id'], 'pg' => max(0, (int) ($raw['pg'] ?? 0))];
+        }
+        if (($raw['k'] ?? '') === 't' && ctype_digit((string) ($raw['id'] ?? ''))) {
+            return ['k' => 't', 'id' => (int) $raw['id']];
+        }
+        if (($raw['k'] ?? '') === 'r' && in_array($raw['lang'] ?? '', panel_langs(), true)) {
+            return ['k' => 'r', 'lang' => (string) $raw['lang']];
+        }
+        return null;
+    }
+    // A target as the short code a button carries: p123_2 (product 123, on page
+    // 2 of its list), t5 (panel 5), rfa (language fa) - so a button always acts
+    // on the thing it was drawn for, however many questions are in the chat
+    function bulkspeed_hub_code(array $target)
+    {
+        if ($target['k'] === 'p') {
+            return 'p' . (int) $target['id'] . '_' . (int) ($target['pg'] ?? 0);
+        }
+        return $target['k'] === 't' ? 't' . (int) $target['id'] : 'r' . $target['lang'];
+    }
+    // ...and back; null for anything that is not one
+    function bulkspeed_hub_decode($code)
+    {
+        $code = (string) $code;
+        $pick = explode('_', substr($code, 1));
+        $kind = $code === '' ? '' : $code[0];
+        if ($kind === 'p') {
+            return bulkspeed_hub_target(['k' => 'p', 'id' => $pick[0], 'pg' => $pick[1] ?? 0]);
+        }
+        if ($kind === 't') {
+            return bulkspeed_hub_target(['k' => 't', 'id' => $pick[0]]);
+        }
+        return $kind === 'r' ? bulkspeed_hub_target(['k' => 'r', 'lang' => $pick[0]]) : null;
+    }
+    // The thing a target names, as it is now: ['name' => html, 'facts' => the
+    // lines the question shows, 'speed' => Mbps, 'title' => , 'back' => the
+    // list's callback] - or null when it is gone, or no Rebecca panel holds it.
+    function bulkspeed_hub_find(array $target)
+    {
+        $t = bulkspeed_texts();
+        if ($target['k'] === 'p') {
+            $r = select("product", "*", "id", $target['id'], "select");
+            if (!is_array($r) || !speed_limit_applies($r['Location'])) {
+                return null;
+            }
+            return [
+                'name' => bulkspeed_hub_name($r['name_product']), 'speed' => (float) ($r['speed_limit'] ?? 0),
+                'title' => $t['hubProductsTitle'], 'back' => 'bsh:pl:' . (int) ($target['pg'] ?? 0),
+                'facts' => [strtr($t['rowProduct'], ['{v}' => bulkspeed_hub_name($r['name_product'])]), strtr($t['rowPanel'], ['{v}' => $r['Location'] === '/all' ? panel_texts()['keyboard']['allPanels'] : bulkspeed_hub_name($r['Location'])])],
+            ];
+        }
+        if ($target['k'] === 't') {
+            $r = select("marzban_panel", "*", "id", $target['id'], "select");
+            if (!is_array($r) || ($r['type'] ?? '') !== 'rebecca') {
+                return null;
+            }
+            return [
+                'name' => bulkspeed_hub_name($r['name_panel']), 'speed' => (float) ($r['speed_usertest'] ?? 0),
+                'title' => $t['hubTestsTitle'], 'back' => 'bsh:tl',
+                'facts' => [strtr($t['rowPanel'], ['{v}' => bulkspeed_hub_name($r['name_panel'])])],
+            ];
+        }
+        $refs = bulkspeed_hub_refs();
+        if (!isset($refs[$target['lang']])) {
+            return null;
+        }
+        $r = $refs[$target['lang']];
+        return [
+            'name' => bulkgift_lang_name($target['lang']), 'speed' => $r['speed'],
+            'title' => $t['hubRefsTitle'], 'back' => 'bsh:rl',
+            'facts' => [strtr($t['rowLangOne'], ['{v}' => bulkgift_lang_name($target['lang'])]), strtr($t['rowPanel'], ['{v}' => bulkspeed_hub_name($r['panel']['name_panel'])])],
+        ];
+    }
+    // the question for one thing's speed: what it is, what it is now, how to
+    // answer; ♾ for none and a red 🔙 to its list
+    function bulkspeed_hub_ask_payload(array $target)
+    {
+        $t = bulkspeed_texts();
+        $f = bulkspeed_hub_find($target);
+        if ($f === null) {
+            return null;
+        }
+        $facts = array_merge($f['facts'], [strtr($t['rowNow'], ['{v}' => bulkspeed_hub_label($f['speed'])])]);
+        $text = $f['title'] . "\n➖➖➖➖➖➖➖➖➖➖\n<blockquote>" . implode("\n", $facts) . "</blockquote>\n" . $t['hubAsk'];
+        return [$text, json_encode(['inline_keyboard' => [[bulkgift_btn($t['zeroBtn'], 'bsh:v0:' . bulkspeed_hub_code($target))], [bulkgift_btn($t['backBtn'], $f['back'], 'danger')]]])];
+    }
+    // The list a target belongs to, with $note on top
+    function bulkspeed_hub_list_payload(array $target, $note = '')
+    {
+        if ($target['k'] === 'p') {
+            return bulkspeed_hub_products_payload($target['pg'] ?? 0, $note);
+        }
+        return $target['k'] === 't' ? bulkspeed_hub_tests_payload($note) : bulkspeed_hub_refs_payload($note);
+    }
+    // Writes one thing's speed (Mbps, 0 = none) - the very columns and settings
+    // the other screens read; false when it is gone since, or no Rebecca panel
+    // holds it (the bot's and the web page's saves both go through here)
+    function bulkspeed_hub_write(array $target, $mbps)
+    {
+        global $pdo;
+        if (bulkspeed_hub_find($target) === null) {
+            return false;
+        }
+        $store = speed_limit_store($mbps);
+        if ($target['k'] === 'p') {
+            $pdo->prepare("UPDATE product SET speed_limit = ? WHERE id = ?")->execute([$store, (int) $target['id']]);
+            clearSelectCache('product');
+        } elseif ($target['k'] === 't') {
+            $pdo->prepare("UPDATE marzban_panel SET speed_usertest = ? WHERE id = ?")->execute([$store, (int) $target['id']]);
+            clearSelectCache('marzban_panel');
+        } else {
+            feature_setting_set('affrw_speed', $target['lang'], $store);
+        }
+        return true;
+    }
+    // Saves one thing's speed and says so: [text, keyboard] of its list with
+    // the news on top - or, when the thing is gone since, the list with why.
+    function bulkspeed_hub_save(array $target, $mbps)
+    {
+        $t = bulkspeed_texts();
+        $f = bulkspeed_hub_find($target);
+        if ($f === null || !bulkspeed_hub_write($target, $mbps)) {
+            return bulkspeed_hub_list_payload($target, $t['hubGone']);
+        }
+        return bulkspeed_hub_list_payload($target, strtr($t['hubSaved'], ['{name}' => $f['name'], '{speed}' => bulkspeed_hub_label($mbps)]));
     }
 }

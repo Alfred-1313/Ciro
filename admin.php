@@ -21813,9 +21813,9 @@ if ($datain == "linkappsetting") {
 } elseif ($datain === 'bgcn' && $adminrulecheck['rule'] == "administrator") {
     deletemessage($from_id, $message_id);
 } elseif ($text == $textbotlang['Admin']['BulkSpeed']['btn'] && $adminrulecheck['rule'] == "administrator") {
-    // 🏬 تنظیمات فروشگاه ← 🚀 سرعت گروهی (bulkspeed.php): Rebecca panels only -
-    // the button is there only while one is. Fresh settings every time it
-    // opens; a run going on shows first, with its 🚫 لغو.
+    // 🏬 تنظیمات فروشگاه ← 🚀 مدیریت سرعت (bulkspeed.php): every speed setting
+    // in one screen - Rebecca panels only, the button is there only while one
+    // is. A run going on shows first, with its 🚫 لغو.
     step('home', $from_id);
     if (!bulkspeed_available()) {
         sendmessage($from_id, $textbotlang['Admin']['BulkSpeed']['noRebecca'], null, 'HTML');
@@ -21825,12 +21825,85 @@ if ($datain == "linkappsetting") {
         [$bs_text, $bs_kb] = bulkspeed_progress_payload($bs_job);
         sendmessage($from_id, $bs_text, $bs_kb, 'HTML');
     }
-    bulkspeed_draft_save($from_id, bulkspeed_params([]));
-    [$bs_text, $bs_kb] = bulkspeed_step1_payload(bulkspeed_draft($from_id));
-    $bs_sent = sendmessage($from_id, $bs_text, $bs_kb, 'HTML');
-    // step 1 is a question: the speed typed next is its answer
-    bulkspeed_draft_ask($from_id, (int) ($bs_sent['result']['message_id'] ?? 0));
-    step('bsp_value', $from_id);
+    [$bs_text, $bs_kb] = bulkspeed_hub_payload();
+    sendmessage($from_id, $bs_text, $bs_kb, 'HTML');
+} elseif (preg_match('/^bsh(?::(pl|tl|rl|a|v0|grp|x)(?::(\w+))?)?$/', $datain, $bh_m) && $adminrulecheck['rule'] == "administrator") {
+    // The hub's buttons: bsh itself is its first screen; pl / tl / rl the lists
+    // of the products (with a page), the test accounts' and the free configs'
+    // speeds; a asks one thing's speed (bsh_value takes the answer, v0 is ♾ -
+    // both name the thing in the button, bulkspeed_hub_code()); grp starts 🚀
+    // سرعت گروهی's steps. Every 🔙 is the screen before.
+    $bh_t = $textbotlang['Admin']['BulkSpeed'];
+    $bh_go = $bh_m[1] ?? '';
+    $bh_arg = $bh_m[2] ?? '';
+    step('home', $from_id);
+    if ($bh_go === 'x') {
+        deletemessage($from_id, $message_id);
+        return;
+    }
+    if (!bulkspeed_available()) {
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => strip_tags($bh_t['noRebecca']), 'show_alert' => true]);
+        return;
+    }
+    if ($bh_go === 'grp') {
+        // 🚀 سرعت گروهی: fresh settings; step 1 is a question, the speed typed
+        // next is its answer
+        bulkspeed_draft_save($from_id, bulkspeed_params([]));
+        bulkspeed_draft_ask($from_id, $message_id);
+        step('bsp_value', $from_id);
+        [$bh_text, $bh_kb] = bulkspeed_step1_payload(bulkspeed_draft($from_id));
+    } elseif ($bh_go === 'pl') {
+        [$bh_text, $bh_kb] = bulkspeed_hub_products_payload((int) $bh_arg);
+    } elseif ($bh_go === 'tl') {
+        [$bh_text, $bh_kb] = bulkspeed_hub_tests_payload();
+    } elseif ($bh_go === 'rl') {
+        [$bh_text, $bh_kb] = bulkspeed_hub_refs_payload();
+    } elseif ($bh_go === 'a') {
+        $bh_target = bulkspeed_hub_decode($bh_arg);
+        $bh_ask = $bh_target !== null ? bulkspeed_hub_ask_payload($bh_target) : null;
+        if ($bh_ask === null) {
+            // gone since the list was drawn (or not a Rebecca panel any more):
+            // the list as it is now, and why
+            [$bh_text, $bh_kb] = $bh_target !== null ? bulkspeed_hub_list_payload($bh_target, $bh_t['hubGone']) : bulkspeed_hub_payload();
+        } else {
+            // the answer is the next message: kept with what it is for
+            savedata("clear", "sp", $bh_target);
+            bulkspeed_draft_ask($from_id, $message_id);
+            step('bsh_value', $from_id);
+            [$bh_text, $bh_kb] = $bh_ask;
+        }
+    } elseif ($bh_go === 'v0') {
+        // ♾ for the thing this button was drawn for
+        $bh_target = bulkspeed_hub_decode($bh_arg);
+        [$bh_text, $bh_kb] = $bh_target !== null ? bulkspeed_hub_save($bh_target, 0) : bulkspeed_hub_payload();
+    } else {
+        [$bh_text, $bh_kb] = bulkspeed_hub_payload();
+    }
+    Editmessagetext($from_id, $message_id, $bh_text, $bh_kb, 'HTML');
+} elseif ($user['step'] == 'bsh_value' && $datain === '' && $adminrulecheck['rule'] == "administrator") {
+    // the speed typed for the thing asked about - a button tapped meanwhile is
+    // that button's, not an answer
+    $bh_t = $textbotlang['Admin']['BulkSpeed'];
+    $bh_target = bulkspeed_hub_target(json_decode((string) $user['Processing_value'], true)['sp'] ?? null);
+    $bh_v = speed_limit_parse((string) $text);
+    if ($bh_v === null) {
+        sendmessage($from_id, $bh_t['badSpeed'], null, 'HTML');
+        return;
+    }
+    step('home', $from_id);
+    // the question goes; its list comes under the answer, with the news
+    $bh_ask = bulkspeed_draft_ask($from_id);
+    if ($bh_ask > 0) {
+        deletemessage($from_id, $bh_ask);
+    }
+    [$bh_text, $bh_kb] = $bh_target !== null ? bulkspeed_hub_save($bh_target, $bh_v) : bulkspeed_hub_payload();
+    sendmessage($from_id, $bh_text, $bh_kb, 'HTML');
+} elseif (str_starts_with($datain, 'bsh') && $adminrulecheck['rule'] == "administrator") {
+    // a button of an older version of these screens still in the chat: the hub
+    // in its place
+    step('home', $from_id);
+    [$bh_text, $bh_kb] = bulkspeed_hub_payload();
+    Editmessagetext($from_id, $message_id, $bh_text, $bh_kb, 'HTML');
 } elseif (preg_match('/^bsp:(s1|s2|s3|s4|v0|help|x|g:(sale|payg|ref|test)|w:(bot|panel)|p:(all|\d+)|go:([0-9a-f]{8}))$/', $datain, $bs_m) && $adminrulecheck['rule'] == "administrator") {
     // The steps: s1 how fast (typed, or v0 ♾ to take it off), s2 whose (g
     // ticks a kind of the bot's services, w picks all of the bot's or every

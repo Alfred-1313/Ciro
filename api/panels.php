@@ -145,6 +145,11 @@ function panel_panel_add(array $data, string $method): void
         sendJsonResponse(false, "panel name exits", [], 200);
     }
 
+    $newType = empty($data['type']) ? "marzban" : $data['type'];
+    $newSpeed = speed_limit_parse($data['speed_usertest'] ?? '0');
+    if ($newSpeed === null) {
+        sendJsonResponse(false, "invalid speed_usertest: Mbps, like 10 or 2.5; 0 = no limit", [], 200);
+    }
     try {
         $defaultAgentValue = json_encode(['f' => '0', 'n' => '0', 'n2' => '0']);
         $defaultPrice = json_encode(['f' => "4000", 'n' => "4000", 'n2' => "4000"]);
@@ -175,6 +180,8 @@ function panel_panel_add(array $data, string $method): void
             'inbound_deactive' => "0",
             'time_usertest' => empty($data['time_usertest']) ? "1" : $data['time_usertest'],
             'val_usertest' => empty($data['val_usertest']) ? "100" : $data['val_usertest'],
+            // 🚀 a test account's speed (Mbps, 0 = none): Rebecca panels only
+            'speed_usertest' => $newType === 'rebecca' ? speed_limit_store($newSpeed) : "0",
             'priceChangeloc' => "0",
             'status_extend' => "on_extend",
             'subvip' => "offsubvip",
@@ -248,6 +255,17 @@ function panel_panel_edit(array $data, string $method): void
         foreach ($jsonColumns as $field => $column) {
             if (array_key_exists($field, $data)) {
                 $panelData[$column] = is_array($data[$field]) ? json_encode($data[$field]) : $data[$field];
+            }
+        }
+        // 🚀 speed_usertest: a test account's speed in Mbps (2.5 works), 0 =
+        // none - kept for Rebecca panels only, the only ones that can hold one
+        if (array_key_exists('speed_usertest', $data)) {
+            $speed = speed_limit_parse($data['speed_usertest']);
+            if ($speed === null) {
+                sendJsonResponse(false, "invalid speed_usertest: Mbps, like 10 or 2.5; 0 = no limit", [], 200);
+            }
+            if (($panelData['type'] ?? $panel['type']) === 'rebecca') {
+                $panelData['speed_usertest'] = speed_limit_store($speed);
             }
         }
 

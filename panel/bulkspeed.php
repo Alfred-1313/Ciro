@@ -3,11 +3,14 @@ require_once __DIR__ . '/inc/config.php';
 require_once __DIR__ . '/inc/icons.php';
 require_auth();
 
-// 🚀 سرعت گروهی - the very run the bot's 🏬 تنظیمات فروشگاه ← 🚀 starts
-// (bulkspeed.php): set up, counted and started here, then followed here until
-// it ends. Its progress message and its report come to the admin in the bot
-// as well, with the bot's own 🚫 لغو. Rebecca panels only - the others cannot
-// hold a speed limit, so they are not offered.
+// 🚀 مدیریت سرعت - the bot's 🏬 تنظیمات فروشگاه ← 🚀 on the web: every speed
+// setting in one place (a product's, a test account's, a free referral
+// config's - the very ones ✏️ ویرایش محصول, 🎁 اکانت تست and 👥 ← 🎁 کانفیگ
+// رایگان با دعوت change, so a change in one shows in the other), and the run
+// 🚀 سرعت گروهی (bulkspeed.php): set up, counted and started here, then
+// followed here until it ends. Its progress message and its report come to the
+// admin in the bot as well, with the bot's own 🚫 لغو. Rebecca panels only -
+// the others cannot hold a speed limit, so they are not offered.
 $t = $textbotlang['panel'];
 $r = bulkspeed_texts();
 $panels = bulkspeed_all_panels();
@@ -15,12 +18,56 @@ $adminId = (string) (db_fetch($pdo, "SELECT id_admin FROM admin WHERE username =
 
 // what the form says, as it was sent - it is shown again as it was
 $raw = ['speed' => '', 'who' => 'groups', 'groups' => [], 'panels' => []];
+// the speeds as they were typed in the card of all of them, when not saved
+$typed = ['prod' => [], 'test' => [], 'ref' => []];
 $err = null;
 $preview = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check_post();
     $action = (string) ($_POST['action'] ?? '');
+    if ($action === 'speeds') {
+        // every speed in the card, all or none: what is empty or 0 is «no
+        // limit»; only what changed is written
+        $typed = ['prod' => (array) ($_POST['sp_prod'] ?? []), 'test' => (array) ($_POST['sp_test'] ?? []), 'ref' => (array) ($_POST['sp_ref'] ?? [])];
+        $todo = [];
+        $bad = null;
+        $want = function (array $target, $now, $text, $label) use (&$todo, &$bad) {
+            $text = trim((string) $text);
+            $v = $text === '' ? 0.0 : speed_limit_parse($text);
+            if ($v === null) {
+                $bad = $bad ?? $label;
+            } elseif (speed_limit_store($v) !== speed_limit_store($now)) {
+                $todo[] = [$target, $v];
+            }
+        };
+        foreach (bulkspeed_hub_products() as $row) {
+            if (array_key_exists((string) $row['id'], $typed['prod'])) {
+                $want(['k' => 'p', 'id' => (int) $row['id']], $row['speed_limit'] ?? 0, $typed['prod'][(string) $row['id']], $row['name_product']);
+            }
+        }
+        foreach ($panels as $row) {
+            if (array_key_exists((string) $row['id'], $typed['test'])) {
+                $want(['k' => 't', 'id' => (int) $row['id']], $row['speed_usertest'] ?? 0, $typed['test'][(string) $row['id']], $row['name_panel']);
+            }
+        }
+        foreach (bulkspeed_hub_refs() as $l => $row) {
+            if (array_key_exists($l, $typed['ref'])) {
+                $want(['k' => 'r', 'lang' => $l], $row['speed'], $typed['ref'][$l], bulkgift_lang_name($l));
+            }
+        }
+        if ($bad !== null) {
+            $err = sprintf($t['bsRowInvalid'], $bad);
+        } else {
+            $n = 0;
+            foreach ($todo as [$target, $v]) {
+                $n += bulkspeed_hub_write($target, $v) ? 1 : 0;
+            }
+            flash('success', $n > 0 ? sprintf($t['bsSaved'], number_format($n)) : $t['bsNothingChanged']);
+            header('Location: bulkspeed.php');
+            exit;
+        }
+    }
     if ($action === 'cancel') {
         // what was set stays; the report goes to the bot. Whatever the
         // Telegram code prints on the way is not this page's: it would stop
@@ -47,31 +94,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: bulkspeed.php');
         exit;
     }
-    $raw['speed'] = trim((string) ($_POST['speed'] ?? ''));
-    $raw['who'] = in_array($_POST['who'] ?? '', ['groups', 'bot', 'panel'], true) ? (string) $_POST['who'] : 'groups';
-    $raw['groups'] = array_values(array_intersect(bulkspeed_groups(), array_map('strval', (array) ($_POST['groups'] ?? []))));
-    $raw['panels'] = array_values(array_map('strval', (array) ($_POST['panels'] ?? [])));
-    $speed = $raw['speed'] === '' ? null : speed_limit_parse($raw['speed']);
-    $p = bulkspeed_params(['speed' => $speed, 'who' => $raw['who'], 'groups' => $raw['groups'], 'panels' => $raw['panels']]);
-    if ($speed === null) {
-        $err = strip_tags($raw['speed'] === '' ? $r['noSpeed'] : $r['badSpeed']);
-    } elseif (!bulkspeed_who_set($p)) {
-        $err = strip_tags($r['noWho']);
-    } elseif (!bulkspeed_panels_of($p)) {
-        $err = strip_tags($p['panels'] ? $r['noPanels'] : $r['noRebecca']);
-    } elseif ($action === 'start') {
-        $new = bulkspeed_create($p, $adminId, 'web');
-        if (isset($new['error'])) {
-            $err = strip_tags($new['error']);
+    // the form of 🚀 سرعت گروهی (the card of all the speeds was answered above)
+    if ($action !== 'speeds') {
+        $raw['speed'] = trim((string) ($_POST['speed'] ?? ''));
+        $raw['who'] = in_array($_POST['who'] ?? '', ['groups', 'bot', 'panel'], true) ? (string) $_POST['who'] : 'groups';
+        $raw['groups'] = array_values(array_intersect(bulkspeed_groups(), array_map('strval', (array) ($_POST['groups'] ?? []))));
+        $raw['panels'] = array_values(array_map('strval', (array) ($_POST['panels'] ?? [])));
+        $speed = $raw['speed'] === '' ? null : speed_limit_parse($raw['speed']);
+        $p = bulkspeed_params(['speed' => $speed, 'who' => $raw['who'], 'groups' => $raw['groups'], 'panels' => $raw['panels']]);
+        if ($speed === null) {
+            $err = strip_tags($raw['speed'] === '' ? $r['noSpeed'] : $r['badSpeed']);
+        } elseif (!bulkspeed_who_set($p)) {
+            $err = strip_tags($r['noWho']);
+        } elseif (!bulkspeed_panels_of($p)) {
+            $err = strip_tags($p['panels'] ? $r['noPanels'] : $r['noRebecca']);
+        } elseif ($action === 'start') {
+            $new = bulkspeed_create($p, $adminId, 'web');
+            if (isset($new['error'])) {
+                $err = strip_tags($new['error']);
+            } else {
+                bulkgift_kick();
+                flash('success', $t['bgStarted']);
+                header('Location: bulkspeed.php');
+                exit;
+            }
         } else {
-            bulkgift_kick();
-            flash('success', $t['bgStarted']);
-            header('Location: bulkspeed.php');
-            exit;
+            // «تعداد رو ببین»: what the bot's summary shows
+            $preview = bulkspeed_preview($p);
         }
-    } else {
-        // «تعداد رو ببین»: what the bot's summary shows
-        $preview = bulkspeed_preview($p);
     }
 }
 
@@ -140,6 +190,61 @@ include __DIR__ . '/inc/layout_head.php';
 <?php if (!$panels): ?>
   <div class="notice notice-warn fade-up"><?= htmlspecialchars($t['bsNoRebecca']) ?></div>
 <?php else: ?>
+<?php
+  // every speed setting, as it is now: a box each, empty = no limit
+  $hubProducts = bulkspeed_hub_products();
+  $hubRefs = bulkspeed_hub_refs();
+  $agentNames = ['n' => $textbotlang['keyboard']['normalAgent'] ?? 'n', 'n2' => $textbotlang['keyboard']['advancedAgent'] ?? 'n2'];
+  $box = function ($name, $now, $typedValue) {
+      $value = $typedValue !== null ? (string) $typedValue : ((float) $now > 0 ? speed_limit_store($now) : '');
+      return '<input type="text" class="input" name="' . htmlspecialchars($name) . '" value="' . htmlspecialchars($value) . '" inputmode="decimal" dir="ltr" style="max-width:130px" placeholder="♾">';
+  };
+?>
+<div class="card fade-up" id="speeds" style="margin-bottom:14px">
+  <?= $cardHead('🚀 ' . htmlspecialchars($t['bsSpeedsTitle']), htmlspecialchars($t['bsSpeedsSub'])) ?>
+  <?= $formOpen(' id="spform"') ?><input type="hidden" name="action" value="speeds">
+  <div class="card-body">
+    <div class="set-row"><div><div class="set-label">🛍 <?= htmlspecialchars($t['bsSecProducts']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bsSecProductsHint']) ?></div></div></div>
+    <?php if (!$hubProducts): ?>
+      <div class="cf"><?= htmlspecialchars($t['bsNoProducts']) ?></div>
+    <?php else: ?>
+      <div class="tbl-wrap">
+        <table class="tbl-xl">
+          <thead><tr><th><?= htmlspecialchars($t['bsColProduct']) ?></th><th><?= htmlspecialchars($t['bsColPanel']) ?></th><th><?= htmlspecialchars($t['bsColSpeed']) ?></th></tr></thead>
+          <tbody>
+          <?php foreach ($hubProducts as $hp): ?>
+            <tr>
+              <td><?= htmlspecialchars((string) $hp['name_product']) ?><?= isset($agentNames[$hp['agent']]) ? ' <small>· ' . htmlspecialchars($agentNames[$hp['agent']]) . '</small>' : '' ?></td>
+              <td><?= $hp['Location'] === '/all' ? htmlspecialchars($textbotlang['keyboard']['allPanels'] ?? '/all') : htmlspecialchars((string) $hp['Location']) ?></td>
+              <td><?= $box('sp_prod[' . (int) $hp['id'] . ']', $hp['speed_limit'] ?? 0, $typed['prod'][(string) $hp['id']] ?? null) ?></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php endif; ?>
+    <div class="set-row" style="margin-top:14px"><div><div class="set-label">🧪 <?= htmlspecialchars($t['bsSecTests']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bsSecTestsHint']) ?></div></div></div>
+    <?php foreach ($panels as $pn): ?>
+      <div class="set-row"><div><div class="set-label"><?= htmlspecialchars((string) $pn['name_panel']) ?></div></div>
+        <div class="set-ctl"><?= $box('sp_test[' . (int) $pn['id'] . ']', $pn['speed_usertest'] ?? 0, $typed['test'][(string) $pn['id']] ?? null) ?></div>
+      </div>
+    <?php endforeach; ?>
+    <?php if ($hubRefs): ?>
+      <div class="set-row" style="margin-top:14px"><div><div class="set-label">🎁 <?= htmlspecialchars($t['bsSecRefs']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bsSecRefsHint']) ?></div></div></div>
+      <?php foreach ($hubRefs as $rl => $rr): ?>
+        <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($plain(bulkgift_lang_name($rl))) ?></div><div class="set-hint"><?= htmlspecialchars((string) $rr['panel']['name_panel']) ?></div></div>
+          <div class="set-ctl"><?= $box('sp_ref[' . $rl . ']', $rr['speed'], $typed['ref'][$rl] ?? null) ?></div>
+        </div>
+      <?php endforeach; ?>
+    <?php endif; ?>
+    <div class="set-hint" style="margin-top:12px"><?= htmlspecialchars($t['bsSpeedsHint']) ?></div>
+  </div>
+  <div class="modal-foot" style="border-radius:0 0 10px 10px;display:flex;gap:8px;flex-wrap:wrap">
+    <button type="submit" class="btn btn-primary"><?= icon('check', 13) ?> <?= htmlspecialchars($t['bsSaveBtn']) ?></button>
+  </div>
+  </form>
+</div>
+
 <div class="card fade-up" id="form" style="margin-bottom:14px">
   <?= $cardHead('🚀 ' . htmlspecialchars($t['bsFormTitle']), htmlspecialchars($t['bsFormSub'])) ?>
   <?php if ($preview !== null): ?>

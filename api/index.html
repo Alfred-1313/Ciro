@@ -1499,7 +1499,8 @@
                             ["category", "string", false, "عنوان دسته‌بندی."],
                             ["data_limit_reset", "string", false, "سیاست ریست حجم. پیش‌فرض no_reset."],
                             ["one_buy_status", "number", false, "مقدار ۱ یعنی فقط یک‌بار قابل خرید است."],
-                            ["hide_panel", "string", false, "JSON آرایهٔ نام پنل‌هایی که محصول در آن‌ها پنهان است."]
+                            ["hide_panel", "string", false, "JSON آرایهٔ نام پنل‌هایی که محصول در آن‌ها پنهان است."],
+                            ["speed_limit", "number", false, "محدودیت سرعت به مگابیت بر ثانیه (۲.۵ هم می‌شود). مقدار ۰ یعنی بدون محدودیت. فقط روی پنل ربکا (یا /all وقتی یک پنل ربکا هست) ذخیره می‌شود."]
                         ],
                         body: { actions: "product_add", name: "پلن ۳۰ گیگ", location: "7e15", price: 150000, data_limit: 30, time: 30 }
                     },
@@ -1517,7 +1518,8 @@
                             ["note", "string", false, "توضیح محصول."],
                             ["category", "string", false, "عنوان دسته‌بندی."],
                             ["one_buy_status", "number", false, "محدودیت خرید یک‌باره."],
-                            ["hide_panel", "array", false, "آرایهٔ نام پنل‌های پنهان."]
+                            ["hide_panel", "array", false, "آرایهٔ نام پنل‌های پنهان."],
+                            ["speed_limit", "number", false, "محدودیت سرعت به مگابیت بر ثانیه. مقدار ۰ یعنی بدون محدودیت. فقط برای محصول پنل ربکا."]
                         ],
                         body: { actions: "product_edit", id: 1, price: 180000, volume: 40 }
                     },
@@ -1583,7 +1585,8 @@
                             ["inboundid", "string", false, "شناسهٔ اینباند پیش‌فرض."],
                             ["namecustom", "string", false, "پیشوند نام کاربری تولیدی. پیش‌فرض vpn."],
                             ["time_usertest", "string", false, "مدت اکانت تست به روز. پیش‌فرض ۱."],
-                            ["val_usertest", "string", false, "حجم اکانت تست. پیش‌فرض ۱۰۰."]
+                            ["val_usertest", "string", false, "حجم اکانت تست. پیش‌فرض ۱۰۰."],
+                            ["speed_usertest", "string", false, "سرعت اکانت تست به مگابیت بر ثانیه. پیش‌فرض ۰ (بدون محدودیت). فقط برای پنل ربکا."]
                         ],
                         body: { actions: "panel_add", name: "Germany", url: "https://panel.example.com:8000", username_panel: "admin", password_panel: "secret", type: "marzban" }
                     },
@@ -1607,7 +1610,10 @@
                             ["maintime", "object", false, "حداقل مدت مجاز به تفکیک نقش."],
                             ["maxtime", "object", false, "حداکثر مدت مجاز به تفکیک نقش."],
                             ["customvolume", "object", false, "فعال بودن خرید حجمی سفارشی به تفکیک نقش."],
-                            ["hide_user", "array", false, "شناسهٔ کاربرانی که پنل برایشان پنهان است."]
+                            ["hide_user", "array", false, "شناسهٔ کاربرانی که پنل برایشان پنهان است."],
+                            ["time_usertest", "string", false, "مدت اکانت تست به روز."],
+                            ["val_usertest", "string", false, "حجم اکانت تست."],
+                            ["speed_usertest", "string", false, "سرعت اکانت تست به مگابیت بر ثانیه (۲.۵ هم می‌شود). مقدار ۰ یعنی بدون محدودیت. فقط برای پنل ربکا؛ روی پنل دیگر نادیده گرفته می‌شود."]
                         ],
                         body: { actions: "panel_edit", id: 1, status: "disable", maxvolume: { f: "200", n: "500", n2: "1000" } }
                     },
