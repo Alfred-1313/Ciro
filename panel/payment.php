@@ -132,7 +132,7 @@ echo web_lang_assets();
 
 <?= web_lang_tabs($lang, fn($c) => 'payment.php?' . http_build_query(['lang' => $c ?: null]), true, $langCounts) ?>
 
-<div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
+<div class="stats">
   <div class="stat success">
     <div class="stat-label"><?= $textbotlang['panel']['paymentTransactionsHeading'] ?></div>
     <div class="stat-num"<?= count($totalSuccess) > 1 ? ' style="font-size:1.15rem;line-height:1.6"' : '' ?>><?= web_money_lines($totalSuccess) ?></div>

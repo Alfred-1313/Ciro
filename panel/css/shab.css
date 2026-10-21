@@ -14,6 +14,14 @@
   --glass: linear-gradient(160deg, var(--sf), var(--sf2));
   --glass-bd: var(--bd);
   --card: var(--sf);
+  --card-bd: var(--bd);
+  --ac-fill: var(--ac);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --tf: 140ms var(--ease-out);
+  --tm: 220ms var(--ease-out);
+  --ts: 320ms var(--ease-out);
+  --tsp: 240ms var(--ease-out);
   --float-sh: 0 24px 50px rgba(0, 0, 0, 0.35);
   --soft: rgba(127, 127, 140, 0.08);
 }
@@ -50,17 +58,15 @@
   --text: #f8f7fc;
   --text2: #d6d3e0;
   --mute: #93949f;
-  --dim: #73747f;
+  --dim: #8a8b96;
   --fade: #55555d;
   --grad: linear-gradient(135deg, #c44fff, #8e3bb1);
   --sel-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2393949F' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   --glass: linear-gradient(145deg, #2a2b32 0%, #1d1e26 35%, #10121b 85%);
   --glass-bd: #55555d;
-  --card: linear-gradient(
-    150deg,
-    rgba(38, 39, 48, 0.92),
-    rgba(20, 21, 29, 0.92)
-  );
+  --card: #17181f;
+  --card-bd: #272833;
+  --ac-fill: #9b36e0;
   --float-sh: 0 28px 60px #0007;
   --soft: #ffffff07;
 }
@@ -285,25 +291,6 @@
   color: var(--dim);
   margin-top: -2px;
 }
-.window-dots {
-  display: flex;
-  gap: 6px;
-  padding: 7px 9px;
-  border-radius: 9px;
-  background: var(--sf2);
-  flex-shrink: 0;
-  transition: opacity 0.3s;
-}
-.window-dots i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--fade);
-}
-.window-dots i:first-child {
-  background: var(--ac);
-  box-shadow: 0 0 6px var(--acg);
-}
 .sidebar.collapsed .sidebar-brand {
   justify-content: center;
   padding: 0;
@@ -315,9 +302,6 @@
   opacity: 0;
   max-width: 0;
   transform: translateX(10px);
-}
-.sidebar.collapsed .window-dots {
-  display: none;
 }
 
 /* menu search */
@@ -546,7 +530,6 @@
   box-shadow:
     0 0 8px var(--ac),
     0 0 22px 6px var(--acs);
-  animation: shabBreathe 3s ease-in-out infinite;
 }
 .nav-empty {
   padding: 18px 8px;
@@ -650,129 +633,164 @@
   transform: translate(0, -50%);
 }
 
-/* ── top bar: a glass strip floating over the scenery ── */
+/* ── the page's title: plain, on the page (a phone gets a bar with the menu) ── */
 .topbar {
-  top: var(--gut);
-  margin: var(--gut) var(--gut) 0 var(--gut);
-  height: 64px;
-  padding: 0 18px;
-  border: 1px solid var(--bd);
-  border-radius: 22px;
-  background: color-mix(in srgb, var(--sf) 82%, transparent);
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 14px 40px #0003;
-}
-[data-theme="shab"] .topbar {
-  background: #1a1b23c7;
-  border-color: #ffffff12;
-}
-.icon-btn {
-  border-radius: 12px;
+  position: static;
+  display: block;
+  height: auto;
+  margin: 0;
+  padding: 30px var(--gut) 14px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 .topbar-title {
-  font-size: 1.02rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--text);
 }
-.content {
-  padding: 22px var(--gut) 28px;
+.page-lede {
+  max-width: 64ch;
+  margin: -6px 0 22px;
+  font-size: 0.88rem;
+  line-height: 1.9;
+  color: var(--mute);
 }
-
-/* ── surfaces ── */
-.card,
-.stat {
-  border-radius: 22px;
-}
-[data-theme="shab"] .card,
-[data-theme="shab"] .stat {
-  background: var(--card);
-  border-color: #ffffff10;
-  box-shadow:
-    inset 1px 1px 1px #ffffff12,
-    0 18px 40px #0004;
-}
-[data-theme="shab"] .stat:hover {
-  border-color: var(--acg);
-  box-shadow:
-    inset 1px 1px 1px #ffffff12,
-    0 0 0 1px var(--acs),
-    0 18px 44px #0006;
-}
-.stat::before {
-  height: 2px;
-  right: 22px;
-  left: 22px;
-  border-radius: 0 0 4px 4px;
-}
-[data-theme="shab"] thead {
-  background: #ffffff05;
-}
-[data-theme="shab"] tbody tr:hover td {
-  background: #ffffff05;
-}
-.page-head {
-  border-bottom-color: #ffffff0d;
-}
-.page-head h1 {
-  font-size: 1.55rem;
-}
-.btn {
-  border-radius: 12px;
-}
-.btn-sm {
+.icon-btn {
   border-radius: 10px;
 }
-[data-theme="shab"] .btn-primary {
-  background: linear-gradient(135deg, #c056ff, #9a3fd6);
-  border-color: transparent;
-  box-shadow: 0 6px 20px #ac4de04d;
+.content {
+  padding: 0 var(--gut) 40px;
+  animation: none;
 }
-[data-theme="shab"] .btn-primary:hover {
-  background: linear-gradient(135deg, #cc70ff, #ac4de0);
-  box-shadow: 0 8px 26px #ac4de066;
+
+/* ── surfaces: opaque, one border, no shadow - a tone step from the page ── */
+.card {
+  border-radius: 16px;
+  border: 1px solid var(--card-bd);
+  background: var(--card);
+  box-shadow: none;
+}
+/* the headline numbers are one strip split by hairlines, not four tiles */
+.stats {
+  display: grid;
+  gap: 1px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  border: 1px solid var(--card-bd);
+  border-radius: 16px;
+  background: var(--card-bd);
+}
+.stat {
+  gap: 6px;
+  min-height: 0;
+  padding: 18px 20px;
+  border: 0;
+  border-radius: 0;
+  background: var(--card);
+  box-shadow: none;
+}
+.stat::before {
+  display: none;
+}
+.stats .stat {
+  animation: none;
+}
+.stat-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: none;
+  color: var(--mute);
+}
+.stat-num {
+  font-size: 1.55rem;
+  font-weight: 600;
+}
+.stat-meta {
+  font-size: 0.78rem;
+}
+@media (min-width: 1101px) {
+  .stats:has(> :nth-child(5):last-child) {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  .stats:has(> :nth-child(3):last-child) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .stats:has(> :nth-child(2):last-child) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 1100px) {
+  .stats .stat:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 360px) {
+  .stats .stat:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+}
+.btn {
+  border-radius: 10px;
+}
+.btn-sm {
+  border-radius: 8px;
+}
+/* the accent as a fill is darker than as a line: white text on it reads */
+.btn-primary,
+.search-btn,
+.pager .cur {
+  background: var(--ac-fill);
+  border-color: var(--ac-fill);
+  color: var(--btn-ac-text, #fff);
+  box-shadow: none;
+}
+[data-theme="shab"] .btn-primary,
+[data-theme="shab"] .search-btn,
+[data-theme="shab"] .pager .cur {
+  color: #fff;
 }
 .input,
 .select,
 .textarea,
 .search-box {
-  border-radius: 12px;
+  border-radius: 10px;
 }
 [data-theme="shab"] .input,
 [data-theme="shab"] .select,
 [data-theme="shab"] .textarea,
 [data-theme="shab"] .search-box {
-  background-color: #101219bd;
-  border-color: #ffffff12;
+  background-color: #111218;
+  border-color: #2b2c37;
 }
 [data-theme="shab"] .input:focus,
 [data-theme="shab"] .select:focus,
 [data-theme="shab"] .textarea:focus,
 [data-theme="shab"] .search-box:focus-within {
-  border-color: #be5dff80;
-  box-shadow:
-    0 0 0 3px var(--acs),
-    0 0 20px #b24bff14;
+  border-color: var(--ac);
+  box-shadow: 0 0 0 3px var(--acs);
 }
 [data-theme="shab"] .select option {
   background: #1b1c24;
   color: var(--text);
 }
 .notice {
-  border-radius: 14px;
+  border-radius: 10px;
 }
 .theme-card,
 .kv {
-  border-radius: 14px;
+  border-radius: 12px;
 }
 .theme-card.active::after {
   right: auto;
 }
 .pager a,
 .pager span {
-  border-radius: 10px;
-}
-[data-theme="shab"] .pager .cur {
-  background: var(--grad);
-  box-shadow: 0 0 14px var(--acg);
+  border-radius: 8px;
 }
 [data-theme="shab"] ::selection {
   background: #ba4dff55;
@@ -785,7 +803,7 @@
 /* ── dialogs and toasts ── */
 .modal,
 .confirm-box {
-  border-radius: 26px;
+  border-radius: 20px;
 }
 [data-theme="shab"] .modal,
 [data-theme="shab"] .confirm-box {
@@ -1040,13 +1058,6 @@
   }
 }
 
-@keyframes shabBreathe {
-  50% {
-    box-shadow:
-      0 0 11px var(--ac),
-      0 0 26px 7px var(--acg);
-  }
-}
 @keyframes shabEnter {
   from {
     opacity: 0;
@@ -1120,9 +1131,6 @@
     max-width: 190px;
     transform: none;
   }
-  .sidebar.collapsed .window-dots {
-    display: flex;
-  }
   .sidebar.collapsed .sidebar-brand {
     justify-content: space-between;
     padding: 0 6px !important;
@@ -1171,18 +1179,31 @@
     padding: 8px 10px !important;
   }
   .topbar {
-    top: 10px;
-    margin: 10px 10px 0;
-    height: 56px;
-    padding: 0 12px;
-    border-radius: 18px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    height: calc(56px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 14px 0;
+    border-bottom: 1px solid var(--card-bd);
+    background: var(--bg);
+  }
+  .topbar-title {
+    font-size: 1.05rem;
+  }
+  .page-lede {
+    margin: 14px 0 16px;
+    font-size: 0.84rem;
   }
   .content {
-    padding: 14px 10px;
+    padding: 0 12px 24px;
   }
   .card,
-  .stat {
-    border-radius: 18px;
+  .stats {
+    border-radius: 14px;
   }
   body {
     padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
@@ -1257,8 +1278,10 @@
 }
 /* the tab bar's own rules come later in the page; .content outranks them */
 .content .lang-tabs {
-  border-radius: 18px;
-  padding: 6px;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 14px;
+  padding: 4px;
 }
 .content .lang-tab {
   border-radius: 12px;
@@ -1287,4 +1310,277 @@
 .th-sort:hover svg,
 .th-sort.on svg {
   opacity: 1;
+}
+
+/* ══ refinement: precision, motion, touch ══════════════════════════════
+   What reads as «made by a template» is mostly small: tracking on Persian
+   letters, shouting table headers, glows, lifts, blinking dots, motion that
+   is the same everywhere. These rules take it out and put one motion system
+   in its place: ease-out curves, ~150ms for feedback, ~300ms for arrivals,
+   transform and opacity only. */
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+/* Arabic script is joined: any tracking pulls the letters apart (and negative
+   tracking makes them collide), so there is none, anywhere */
+body *,
+body *::before,
+body *::after {
+  letter-spacing: 0 !important;
+}
+td,
+th,
+.stat-num,
+.kv-val,
+.cn,
+.cm,
+.tag,
+.pager {
+  font-variant-numeric: tabular-nums;
+}
+:focus-visible {
+  outline: 2px solid var(--ach);
+  outline-offset: 2px;
+}
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ── tables: rules and alignment, no band, headers that do not shout ── */
+thead,
+[data-theme="shab"] thead {
+  background: none;
+}
+th {
+  padding: 10px 16px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-transform: none;
+  color: var(--mute);
+  border-bottom: 1px solid var(--card-bd);
+}
+td {
+  border-bottom: 1px solid var(--hl);
+}
+[data-theme="shab"] td {
+  border-bottom-color: #20212a;
+}
+.tag {
+  padding: 3px 9px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+/* a status that blinks asks to be looked at; most are plain facts */
+.tag::before {
+  animation: none;
+}
+.bar-fill::after {
+  display: none;
+}
+.btn-primary {
+  font-weight: 600;
+}
+
+/* ── hover only where there is a hover, and never a lift ── */
+.btn:hover,
+.btn-primary:hover,
+.icon-btn:hover,
+.theme-card:hover,
+.stat:hover,
+.modal-x:hover {
+  transform: none;
+}
+.btn-primary:hover,
+.search-btn:hover {
+  background: var(--ac-fill);
+  border-color: var(--ac-fill);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover,
+  .search-btn:hover {
+    filter: brightness(1.12);
+  }
+  tbody tr:hover td {
+    background: var(--soft);
+  }
+}
+@media (hover: none) {
+  tbody tr:hover td {
+    background: none;
+  }
+}
+
+/* ── feedback: the press is instant, the release is quick ── */
+.btn,
+.icon-btn {
+  transition:
+    background-color var(--tf),
+    border-color var(--tf),
+    color var(--tf),
+    filter var(--tf),
+    transform 120ms var(--ease-out);
+}
+.btn:active,
+.search-btn:active,
+.pager a:active,
+.lang-tab:active,
+.theme-card:active {
+  transform: scale(0.97);
+}
+.input,
+.select,
+.textarea,
+.search-box {
+  transition:
+    border-color var(--tf),
+    box-shadow var(--tf),
+    background-color var(--tf);
+}
+button,
+a,
+[role="button"],
+select,
+label {
+  touch-action: manipulation;
+}
+button,
+.btn,
+.nav-item,
+.mtb-tab,
+.lang-tab,
+.icon-btn,
+.pager a {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.sidebar-nav,
+.modal,
+.tbl-wrap {
+  overscroll-behavior: contain;
+}
+/* iOS zooms the page into any field under 16px and does not zoom back */
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select,
+  .input,
+  .select,
+  .textarea,
+  .search-box input {
+    font-size: 16px;
+  }
+}
+
+/* ── arrivals: the page's blocks rise in one after another ── */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fade-up,
+.content > * {
+  animation: rise 300ms var(--ease-out) backwards;
+}
+.content > :nth-child(2) {
+  animation-delay: 40ms;
+}
+.content > :nth-child(3) {
+  animation-delay: 80ms;
+}
+.content > :nth-child(4) {
+  animation-delay: 120ms;
+}
+.content > :nth-child(5) {
+  animation-delay: 160ms;
+}
+.content > :nth-child(n + 6) {
+  animation-delay: 200ms;
+}
+.toast {
+  animation-timing-function: var(--ease-out);
+}
+
+/* ── dialogs: they fade and settle (no overshoot), and leave faster than they arrive ── */
+.modal-veil,
+.confirm-veil {
+  transition: opacity 160ms ease;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.modal-veil.open,
+.confirm-veil.open {
+  transition-duration: 220ms;
+}
+.modal,
+.confirm-box {
+  transform: scale(0.97) translateY(6px);
+  transition:
+    transform 160ms var(--ease-out),
+    opacity 160ms ease;
+}
+.modal-veil.open .modal,
+.confirm-veil.open .confirm-box {
+  transition-duration: 240ms, 200ms;
+}
+@media (max-width: 768px) {
+  /* the sheet comes up on the drawer curve of the phone's own sheets */
+  .modal {
+    transition: transform 340ms var(--ease-drawer) !important;
+  }
+}
+
+/* ── pages: a short crossfade between them, in the browsers that can ── */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+  ::view-transition-old(root) {
+    animation: 110ms var(--ease-out) both vt-out;
+  }
+  ::view-transition-new(root) {
+    animation: 220ms var(--ease-out) both vt-in;
+  }
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* an @handle, an id: left-to-right inside the right-to-left page, so the @ stays in front */
+span.cm,
+.profile-handle {
+  display: inline-block;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* an avatar is a plain disc of the accent, with no glow */
+.profile-avatar {
+  background: var(--ac-fill);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up,
+  .content > *,
+  .modal,
+  .confirm-box {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
 }

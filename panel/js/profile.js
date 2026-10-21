@@ -17,11 +17,17 @@ window.switchTab = function (name) {
     });
 
     var pane = document.getElementById(panes[name]);
-    if (pane) pane.style.display = 'block';
+    if (pane) {
+        pane.style.display = 'block';
+        // the pane arrives with the page's own small rise (not under reduced motion)
+        pane.style.animation = 'none';
+        void pane.offsetHeight;
+        pane.style.animation = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? '' : 'rise 240ms var(--ease-out)';
+    }
 
     var tab = document.getElementById(tabs[name]);
     if (tab) {
-        tab.style.background = 'var(--ac)';
-        tab.style.color = 'var(--btn-ac-text, #fff)';
+        tab.style.background = 'var(--sf3)';
+        tab.style.color = 'var(--text)';
     }
 };

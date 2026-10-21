@@ -387,10 +387,22 @@ if (window.MutationObserver) new MutationObserver(function (list) {
 
 // the first placement jumps straight to the current page; from then on it slides
 if (_sbTrack) {
+    var _prevY = null;
+    try { _prevY = parseFloat(sessionStorage.getItem('panel-nav-y')); } catch (e) { }
     _sbTrack.style.transition = 'none';
     _updateTrack();
+    var _curY = _sbTrack.style.transform;
+    // coming from another page: start where the glow was there, then slide
+    if (!isNaN(_prevY) && _sbTrack.style.opacity === '1' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        _sbTrack.style.transform = 'translateY(' + _prevY + 'px)';
+    }
     void _sbTrack.offsetHeight;
     _sbTrack.style.transition = '';
+    _sbTrack.style.transform = _curY;
+    window.addEventListener('pagehide', function () {
+        var cur = _sbItems.filter(function (a) { return a.classList.contains('active') && !a.hidden; })[0];
+        try { if (cur) sessionStorage.setItem('panel-nav-y', String(cur.offsetTop)); } catch (e) { }
+    });
 }
 // a tap slides the glow onto the new page while it loads
 _sbItems.forEach(function (a) {

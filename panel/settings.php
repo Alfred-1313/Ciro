@@ -56,12 +56,12 @@ $showPageHead = false;
 include __DIR__ . '/inc/layout_head.php';
 ?>
 
-<div style="display:flex;gap:4px;margin-bottom:18px;background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:5px;overflow-x:auto"
+<div style="display:flex;gap:4px;width:fit-content;max-width:100%;margin-bottom:18px;background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:4px;overflow-x:auto"
     class="fade-up">
     <?php foreach ($tabs as $key => $tab_data): ?>
         <a href="?tab=<?= $key ?>"
-            style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:7px;font-size:.82rem;font-weight:600;white-space:nowrap;flex-shrink:0;transition:all .15s;text-decoration:none;
-                  <?= $tab === $key ? 'background:var(--ac);color:#fff;box-shadow:0 0 14px var(--acg)' : 'color:var(--mute)' ?>">
+            style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;font-size:.82rem;font-weight:600;white-space:nowrap;flex-shrink:0;transition:all .15s;text-decoration:none;
+                  <?= $tab === $key ? 'background:var(--sf3);color:var(--text)' : 'color:var(--mute)' ?>">
             <?= icon($tab_data['icon'], 15) ?>     <?= $tab_data['label'] ?>
         </a>
     <?php endforeach; ?>
@@ -78,7 +78,7 @@ include __DIR__ . '/inc/layout_head.php';
         </div>
         <div class="card-body">
             <div
-                style="font-size:.75rem;font-weight:700;color:var(--mute);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">
+                style="font-size:.75rem;font-weight:700;color:var(--mute);margin-bottom:10px">
                 <?= $textbotlang['panel']['settingsThemeLabel'] ?></div>
             <div class="theme-grid" style="margin-bottom:20px">
                 <?php foreach ($themes as $key => $theme):
@@ -96,7 +96,7 @@ include __DIR__ . '/inc/layout_head.php';
                 <?php endforeach; ?>
             </div>
             <div
-                style="font-size:.75rem;font-weight:700;color:var(--mute);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">
+                style="font-size:.75rem;font-weight:700;color:var(--mute);margin-bottom:10px">
                 <?= $textbotlang['panel']['settingsSecuritySection'] ?></div>
             <div class="theme-grid">
                 <?php foreach ($themes as $key => $theme):

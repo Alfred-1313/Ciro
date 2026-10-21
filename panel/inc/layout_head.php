@@ -57,7 +57,7 @@ $brandMark = panel_brand_mark();
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f0f13" id="mtc">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -125,7 +125,6 @@ $brandMark = panel_brand_mark();
           <span class="brand-name"><?= $textbotlang['panel']['layoutNavProducts'] ?><span>
             <?= $textbotlang['panel']['layoutNavPayments'] ?></span></span>
         </a>
-        <span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span>
       </div>
       <div class="nav-search" id="nav-search">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.7" cy="10.7" r="7.3"/><path d="m16 16 4.6 4.6"/></svg>
@@ -164,23 +163,14 @@ $brandMark = panel_brand_mark();
 
     <div class="main">
       <header class="topbar">
-        <div class="topbar-left">
-          <button type="button" class="icon-btn menu-toggle" onclick="openSidebar()"
-            aria-label="<?= htmlspecialchars($textbotlang['panel']['jsNavExpand']) ?>"><?= icon('menu', 18) ?></button>
-          <div>
-            <div class="topbar-title"><?= htmlspecialchars($pageTitlePlain) ?></div>
-            <div class="crumb"><span><?= $textbotlang['panel']['layoutPageTitleSuffix'] ?></span><span
-                style="opacity:.4;margin:0 3px">/</span><span><?= htmlspecialchars($pageTitlePlain) ?></span></div>
-          </div>
-        </div>
-        <div class="topbar-tools">
-          <a href="settings.php" class="icon-btn"
-            title="<?= $textbotlang['panel']['layoutPageTitleSettings'] ?>"><?= icon('settings', 16) ?></a>
-          <a href="logout.php" class="icon-btn"
-            title="<?= $textbotlang['panel']['layoutPageTitleLogout'] ?>"><?= icon('logout', 16) ?></a>
-        </div>
+        <button type="button" class="icon-btn menu-toggle" onclick="openSidebar()"
+          aria-label="<?= htmlspecialchars($textbotlang['panel']['jsNavExpand']) ?>"><?= icon('menu', 18) ?></button>
+        <h1 class="topbar-title"><bdi><?= htmlspecialchars($pageTitlePlain) ?></bdi></h1>
       </header>
       <main class="content">
+        <?php if ($showPageHead && $pageLede): ?>
+          <p class="page-lede fade-up"><?= htmlspecialchars($pageLede) ?></p>
+        <?php endif; ?>
         <?php
         $s = get_flash('success');
         $e = get_flash('error');
@@ -190,11 +180,4 @@ $brandMark = panel_brand_mark();
         if ($e): ?>
           <div class="notice notice-no"><?= htmlspecialchars($e) ?></div><?php endif;
         if ($w): ?>
-          <div class="notice notice-warn"><?= htmlspecialchars($w) ?></div><?php endif;
-        if ($showPageHead): ?>
-          <div class="page-head fade-up">
-            <h1><?= htmlspecialchars($pageTitlePlain) ?></h1>
-            <?php if ($pageLede): ?>
-              <p><?= htmlspecialchars($pageLede) ?></p><?php endif; ?>
-          </div>
-        <?php endif; ?>
+          <div class="notice notice-warn"><?= htmlspecialchars($w) ?></div><?php endif; ?>
