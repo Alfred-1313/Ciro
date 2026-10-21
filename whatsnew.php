@@ -46,4 +46,14 @@ return [
             . "📍 /update or Admin panel → 🔄 Update bot\n"
             . "The update screen now asks GitHub for the newest version: if the bot is on it, it says so, and if a newer one is ready it shows its number.</blockquote>",
     ],
+    [
+        'n' => 3,
+        'date' => '2026-10-22',
+        'fa' => "<blockquote>🔙 <b>اصلاح دکمهٔ بازگشت در «تنظیم نمایش و کپشن کانفیگ»</b>\n"
+            . "📍 🎨 شخصی‌سازی پیام‌ها ← نحوهٔ نمایش کانفیگ (خرید سرویس / اکانت تست / هدیهٔ دعوت)\n"
+            . "بعد از عوض‌کردن ترتیب ستون‌ها یا ویرایش یک دکمه، 🔙 گاهی به صفحهٔ «کپشن دریافت کانفیگ» می‌رفت. حالا همیشه به همان صفحه‌ای برمی‌گردد که از آن آمده‌ای.</blockquote>",
+        'en' => "<blockquote>🔙 <b>Back button fixed in \"Config display and caption\"</b>\n"
+            . "📍 🎨 Customize messages → Config display (purchase / test account / invite gift)\n"
+            . "After changing the column order or editing a button, 🔙 sometimes went to the \"config caption\" page. It now always returns to the page you came from.</blockquote>",
+    ],
 ];

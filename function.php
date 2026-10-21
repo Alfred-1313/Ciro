@@ -17488,6 +17488,59 @@ if (!function_exists('volumepct_tier_detail_payload')) {
         return [$info, json_encode($kb)];
     }
 }
+// Where the 🔙 of a config-display hub (ترتیب و رنگ دکمه‌های دریافت کانفیگ) goes.
+// The hub is reached from two places - the message item's own screen, and the
+// 📌 نحوه‌ی نمایش کانفیگ panel screen - and from the hub the admin also goes on
+// into an element's editor and back, or flips the column order, which draws the
+// hub again. Those later screens carry no memory of the way in, so «back» fell
+// to the message item every time, whatever the admin had come from. The way in
+// is kept here, per admin and per kind (usertest / buy / affrw), set by each
+// entry and read by every later draw. A file rather than the user's
+// Processing_value: the element editor's text step wipes that.
+if (!function_exists('cfgcol_back_set')) {
+    function cfgcol_back_file($adminId)
+    {
+        return __DIR__ . '/storage/cfgcol_back_' . preg_replace('/\D/', '', (string) $adminId) . '.json';
+    }
+    // $cb null: reached from the message item itself (the hub's own default)
+    function cfgcol_back_set($adminId, $kind, $cb)
+    {
+        $f = cfgcol_back_file($adminId);
+        $m = json_decode((string) @file_get_contents($f), true);
+        $m = is_array($m) ? $m : [];
+        if ($cb === null) {
+            unset($m[$kind]);
+        } else {
+            $m[$kind] = (string) $cb;
+        }
+        if (!is_dir(dirname($f))) {
+            @mkdir(dirname($f), 0775, true);
+        }
+        @file_put_contents($f, json_encode($m), LOCK_EX);
+    }
+    function cfgcol_back_get($adminId, $kind)
+    {
+        $m = json_decode((string) @file_get_contents(cfgcol_back_file($adminId)), true);
+        $v = is_array($m) ? ($m[$kind] ?? null) : null;
+        return is_string($v) && $v !== '' ? $v : null;
+    }
+    // the hub drawn again (order flipped, back from an element's editor), with
+    // the way in it was opened by
+    function cfgcol_hub_render($textbotlang, $lang, $kind)
+    {
+        global $from_id;
+        $back = cfgcol_back_get($from_id, $kind);
+        if ($back === null) {
+            $def = [
+                'usertest' => ['users.usertest.selectUsernamePrompt', 'users.status.getConfigHint'],
+                'buy' => ['users.status.getConfigHintBuy', 'users.status.getConfigHintBuy'],
+                'affrw' => [null, 'users.affiliates.rewardConfigHint'],
+            ][$kind];
+            return config_col_order_payload($textbotlang, $lang, $def[0], $kind === 'affrw' ? "cfgdeliv|list|{$lang}|r" : null, $def[1], $kind);
+        }
+        return config_col_order_payload($textbotlang, $lang, null, $back, $kind === 'affrw' ? 'users.affiliates.rewardConfigHint' : null, $kind);
+    }
+}
 if (!function_exists('config_col_order_payload')) {
     // controls which column comes first on the per-service config-list screen
     // (keyboard_config() in keyboard.php): the "دریافت کانفیگ" button, or the
@@ -17729,7 +17782,7 @@ if (!function_exists('configdisplay_element_payload')) {
                 ['text' => ($cur['style'] === 'danger' ? '✅ ' : '') . '🔴 قرمز', 'callback_data' => "cfgcolelstylebuy-{$idx}-danger-{$lang}", 'style' => 'danger'],
             ];
             $kb['inline_keyboard'][] = [['text' => '🔁 ریست این المان', 'callback_data' => "cfgcolelrstbuy-{$idx}-{$lang}", 'style' => 'danger']];
-            $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => "btact|cfgcolbuy|{$lang}|users.status.getConfigHintBuy"]];
+            $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => "cfgcolhub-buy-{$lang}"]];
         } elseif ($kind === 'affrw') {
             $kb['inline_keyboard'][] = [['text' => '✏️ ویرایش متن', 'callback_data' => "cfgcoltextrw-{$idx}-{$lang}"]];
             $kb['inline_keyboard'][] = [
@@ -17747,7 +17800,7 @@ if (!function_exists('configdisplay_element_payload')) {
                 ['text' => ($cur['style'] === 'danger' ? '✅ ' : '') . '🔴 قرمز', 'callback_data' => "cfgcolelstyle-{$idx}-danger-{$lang}", 'style' => 'danger'],
             ];
             $kb['inline_keyboard'][] = [['text' => '🔁 ریست این المان', 'callback_data' => "cfgcolelrst-{$idx}-{$lang}", 'style' => 'danger']];
-            $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => "btact|cfgcol|{$lang}|users.usertest.selectUsernamePrompt"]];
+            $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => "cfgcolhub-ut-{$lang}"]];
         }
         return [$info, json_encode($kb)];
     }

@@ -6859,6 +6859,7 @@ if ($text == "🔘 تنظیمات دکمه‌ها" && $adminrulecheck['rule'] ==
 //----------------[  config column-order manager (lives inside the 🔑 تنظیم اکانت تست
 //                   bottext item only - was briefly also in the 🔘 hub, moved per request) ]----------------
 if (preg_match('/^btact\|cfgcol\|([a-z]{2})\|(.+)$/', $datain, $btm) && $adminrulecheck['rule'] == "administrator") {
+    cfgcol_back_set($from_id, 'usertest', null);
     list($cc_info, $cc_kb) = config_col_order_payload($textbotlang, $btm[1], $btm[2]);
     Editmessagetext($from_id, $message_id, $cc_info, $cc_kb, 'HTML');
     return;
@@ -6897,11 +6898,18 @@ if (preg_match('/^cfgcoldemo-([a-z]{2})$/', $datain, $cc_m) && $adminrulecheck['
     ]);
     return;
 }
+// back from an element's editor to the hub: with the way in it was opened by
+if (preg_match('/^cfgcolhub-(ut|buy)-([a-z]{2})$/', $datain, $cc_m) && $adminrulecheck['rule'] == "administrator") {
+    list($cc_info, $cc_kb) = cfgcol_hub_render($textbotlang, $cc_m[2], $cc_m[1] === 'ut' ? 'usertest' : 'buy');
+    Editmessagetext($from_id, $message_id, $cc_info, $cc_kb, 'HTML');
+    return;
+}
 //----------------[  config column-order manager - BUY variant (independent
 //                   clone of the block above, lives inside the 🛍 پیام‌های
 //                   سرویس‌های من bottext group; separate storage keys via
 //                   the $kind='buy' argument, see function.php ]----------------
 if (preg_match('/^btact\|cfgcolbuy\|([a-z]{2})\|(.+)$/', $datain, $btm) && $adminrulecheck['rule'] == "administrator") {
+    cfgcol_back_set($from_id, 'buy', null);
     list($cc_info, $cc_kb) = config_col_order_payload($textbotlang, $btm[1], $btm[2], null, 'users.status.getConfigHintBuy', 'buy');
     Editmessagetext($from_id, $message_id, $cc_info, $cc_kb, 'HTML');
     return;
@@ -6934,7 +6942,7 @@ if (preg_match('/^cfgcolelrstbuy-([0123])-([a-z]{2})$/', $datain, $cc_m) && $adm
 }
 if (preg_match('/^cfgcolbtbuy-(getfirst|namefirst)-([a-z]{2})$/', $datain, $cc_m) && $adminrulecheck['rule'] == "administrator") {
     config_col_set_order($cc_m[2], $cc_m[1] === 'namefirst', 'buy');
-    list($cc_info, $cc_kb) = config_col_order_payload($textbotlang, $cc_m[2], 'users.status.getConfigHintBuy', null, 'users.status.getConfigHintBuy', 'buy');
+    list($cc_info, $cc_kb) = cfgcol_hub_render($textbotlang, $cc_m[2], 'buy');
     Editmessagetext($from_id, $message_id, $cc_info, $cc_kb, 'HTML');
     return;
 }
@@ -6942,7 +6950,7 @@ if (preg_match('/^cfgcolbtbuy-(getfirst|namefirst)-([a-z]{2})$/', $datain, $cc_m
 //                   (its own store, configDisplayReward; reached from
 //                   📌 نحوه‌ی نمایش کانفیگ (هدیه‌ی دعوت))  ]----------------
 if (preg_match('/^cfgcolrw\|([a-z]{2})$/', $datain, $cc_m) && $adminrulecheck['rule'] == "administrator") {
-    list($cc_info, $cc_kb) = config_col_order_payload($textbotlang, $cc_m[1], null, "cfgdeliv|list|{$cc_m[1]}|r", 'users.affiliates.rewardConfigHint', 'affrw');
+    list($cc_info, $cc_kb) = cfgcol_hub_render($textbotlang, $cc_m[1], 'affrw');
     Editmessagetext($from_id, $message_id, $cc_info, $cc_kb, 'HTML');
     return;
 }
@@ -6974,7 +6982,7 @@ if (preg_match('/^cfgcolelrstrw-([0123])-([a-z]{2})$/', $datain, $cc_m) && $admi
 }
 if (preg_match('/^cfgcolbtrw-(getfirst|namefirst)-([a-z]{2})$/', $datain, $cc_m) && $adminrulecheck['rule'] == "administrator") {
     config_col_set_order($cc_m[2], $cc_m[1] === 'namefirst', 'affrw');
-    list($cc_info, $cc_kb) = config_col_order_payload($textbotlang, $cc_m[2], null, "cfgdeliv|list|{$cc_m[2]}|r", 'users.affiliates.rewardConfigHint', 'affrw');
+    list($cc_info, $cc_kb) = cfgcol_hub_render($textbotlang, $cc_m[2], 'affrw');
     Editmessagetext($from_id, $message_id, $cc_info, $cc_kb, 'HTML');
     return;
 }
@@ -7043,6 +7051,7 @@ if (preg_match('/^cfgdeliv\|rst\|([a-z]{2})\|([^|]+)\|(purchase|usertest|affrw)\
 if (preg_match('/^cfgdeliv\|cfgcol\|([a-z]{2})\|([^|]+)\|([bur])$/', $datain, $cd_m) && $adminrulecheck['rule'] == "administrator") {
     // the flow this screen belongs to: test account ('u'), 🎁 gift ('r') or purchase
     $cd_colKind = ['u' => 'usertest', 'r' => 'affrw'][$cd_m[3]] ?? 'buy';
+    cfgcol_back_set($from_id, $cd_colKind, "cfgdeliv|p|{$cd_m[1]}|{$cd_m[2]}|{$cd_m[3]}");
     list($cd_text, $cd_kb) = config_col_order_payload($textbotlang, $cd_m[1], null, "cfgdeliv|p|{$cd_m[1]}|{$cd_m[2]}|{$cd_m[3]}", $cd_colKind === 'affrw' ? 'users.affiliates.rewardConfigHint' : null, $cd_colKind);
     Editmessagetext($from_id, $message_id, $cd_text, $cd_kb, 'HTML');
     return;
@@ -7178,7 +7187,7 @@ if (preg_match('/^bt_sep\|(\w+)$/', $datain, $bt_sep_m) && $adminrulecheck['rule
 // callback.
 if (preg_match('/^cfgcolbt-(getfirst|namefirst)-([a-z]{2})$/', $datain, $cc_m) && $adminrulecheck['rule'] == "administrator") {
     config_col_set_order($cc_m[2], $cc_m[1] === 'namefirst', 'usertest');
-    list($cc_info, $cc_kb) = config_col_order_payload($textbotlang, $cc_m[2], 'users.usertest.selectUsernamePrompt');
+    list($cc_info, $cc_kb) = cfgcol_hub_render($textbotlang, $cc_m[2], 'usertest');
     Editmessagetext($from_id, $message_id, $cc_info, $cc_kb, 'HTML');
     return;
 }
