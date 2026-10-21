@@ -8,12 +8,7 @@ window.pickTheme = function (t) {
 };
 
 window.setSidebarMode = function (collapsed) {
-    localStorage.setItem('panel-sb-collapsed', collapsed ? '1' : '0');
-    var sb = document.getElementById('sidebar');
-    if (sb) {
-        if (collapsed) sb.classList.add('collapsed');
-        else sb.classList.remove('collapsed');
-    }
+    setSidebarCollapsed(collapsed);
     document.querySelectorAll('[id^="mode"]').forEach(function (b) {
         b.style.borderColor = '';
         b.style.color = '';
@@ -62,11 +57,11 @@ window.checkPwStr = function (val) {
 };
 
 (function () {
-    var cur = localStorage.getItem('panel-theme') || 'navy';
+    var cur = document.documentElement.getAttribute('data-theme') || 'shab';
     var card = document.querySelector('[data-tk="' + cur + '"]');
     if (card) card.classList.add('active');
 
-    var collapsed = localStorage.getItem('panel-sb-collapsed') === '1';
+    var collapsed = (window.panelStore ? panelStore.get('panel-sb-collapsed') : null) === '1';
     var btn = document.getElementById(collapsed ? 'modeCollapsed' : 'modeExpanded');
     if (btn) { btn.style.borderColor = 'var(--ac)'; btn.style.color = 'var(--ac)'; }
 }());

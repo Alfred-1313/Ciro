@@ -123,47 +123,233 @@ document.querySelectorAll('[data-confirm]').forEach(function (el) {
     });
 });
 
-var _THEME_BG = {
-    navy: '#0F172A', purple: '#180D2E', emerald: '#0A1F1C',
+var _store = window.panelStore || {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+};
+var _THEME_BG = window.PANEL_THEME_BG || {
+    shab: '#0f0f13', navy: '#0F172A', purple: '#180D2E', emerald: '#0A1F1C',
     sunset: '#1A0D0D', slate: '#080808', light: '#F1F5F9',
     linen: '#FAF7F2', mint: '#F0FDF4', lavender: '#FAF5FF'
 };
-var _LIGHT_THEMES = ['light', 'linen', 'mint', 'lavender'];
+var _LIGHT_THEMES = window.PANEL_LIGHT_THEMES || { light: 1, linen: 1, mint: 1, lavender: 1 };
 
 window.applyTheme = function (t) {
+    if (!_THEME_BG[t]) t = 'shab';
     var root = document.documentElement;
     root.setAttribute('data-theme', t);
-    root.style.backgroundColor = _THEME_BG[t] || '#0F172A';
-    root.style.colorScheme     = _LIGHT_THEMES.indexOf(t) >= 0 ? 'light' : 'dark';
-    localStorage.setItem('panel-theme', t);
+    root.style.backgroundColor = _THEME_BG[t];
+    root.style.colorScheme     = _LIGHT_THEMES[t] ? 'light' : 'dark';
+    _store.set('panel-theme', t);
+    _store.set('panel-theme-v', '2');
     var mtc = document.getElementById('mtc');
-    if (mtc && _THEME_BG[t]) mtc.content = _THEME_BG[t];
+    if (mtc) mtc.content = _THEME_BG[t];
+};
+
+var _sb       = document.getElementById('sidebar');
+var _sbNav    = document.getElementById('sidebar-nav');
+var _sbTrack  = document.getElementById('nav-track');
+var _sbToggle = document.getElementById('sb-collapse');
+var _sbSearch = document.getElementById('nav-search-input');
+var _sbItems  = _sbNav ? Array.prototype.slice.call(_sbNav.querySelectorAll('.nav-item')) : [];
+var _isPhone  = function () { return window.matchMedia('(max-width: 768px)').matches; };
+
+// the glowing strip behind the current page: it follows its item when the
+// menu is filtered, collapsed or resized
+function _updateTrack() {
+    if (!_sbTrack) return;
+    var cur = null;
+    for (var i = 0; i < _sbItems.length; i++) {
+        if (_sbItems[i].classList.contains('active') && !_sbItems[i].hidden) { cur = _sbItems[i]; break; }
+    }
+    if (!cur) { _sbTrack.style.opacity = '0'; return; }
+    _sbTrack.style.opacity = '1';
+    _sbTrack.style.height = cur.offsetHeight + 'px';
+    _sbTrack.style.transform = 'translateY(' + cur.offsetTop + 'px)';
+}
+
+window.setSidebarCollapsed = function (collapsed, keep) {
+    if (!_sb) return;
+    _sb.classList.toggle('collapsed', collapsed);
+    if (keep !== false) _store.set('panel-sb-collapsed', collapsed ? '1' : '0');
+    if (_sbToggle) {
+        var label = collapsed ? t('jsNavExpand') : t('jsNavCollapse');
+        _sbToggle.setAttribute('aria-expanded', String(!collapsed));
+        _sbToggle.setAttribute('aria-label', label);
+        _sbToggle.title = label;
+    }
+    if (collapsed && _sbSearch && _sbSearch.value) { _sbSearch.value = ''; _filterNav(); }
+    _hideTip();
+    _updateTrack();
 };
 
 window.toggleSidebar = function () {
-    var sb = document.getElementById('sidebar');
-    sb.classList.toggle('collapsed');
-    localStorage.setItem('panel-sb-collapsed', sb.classList.contains('collapsed') ? '1' : '0');
+    if (_sb) setSidebarCollapsed(!_sb.classList.contains('collapsed'));
 };
 
 function openSidebar() {
-    document.getElementById('sidebar').classList.add('open');
+    if (!_sb) return;
+    _sb.classList.add('open');
     document.getElementById('backdrop').classList.add('show');
     document.body.style.overflow = 'hidden';
+    _updateTrack();
 }
 
 function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('backdrop').classList.remove('show');
+    if (!_sb) return;
+    _sb.classList.remove('open');
+    var bd = document.getElementById('backdrop');
+    if (bd) bd.classList.remove('show');
     document.body.style.overflow = '';
 }
 
+if (_sbToggle) _sbToggle.addEventListener('click', toggleSidebar);
+
+// ── menu search ──
+var _norm = function (s) {
+    return String(s || '').replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[‌‏‎]/g, '').replace(/\s+/g, ' ').toLowerCase();
+};
+
+function _filterNav() {
+    if (!_sbNav) return;
+    var q = _norm(_sbSearch ? _sbSearch.value.trim() : '');
+    var any = false;
+    _sbItems.forEach(function (a) {
+        var hay = _norm(a.textContent + ' ' + (a.dataset.title || ''));
+        a.hidden = q !== '' && hay.indexOf(q) < 0;
+        if (!a.hidden) any = true;
+    });
+    _sbNav.querySelectorAll('.nav-section').forEach(function (sec) {
+        sec.hidden = !sec.querySelector('.nav-item:not([hidden])');
+    });
+    var empty = document.getElementById('nav-empty');
+    if (empty) empty.hidden = any;
+    _updateTrack();
+}
+
+if (_sbSearch) {
+    _sbSearch.addEventListener('input', _filterNav);
+    _sbSearch.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            e.stopPropagation();
+            _sbSearch.value = '';
+            _filterNav();
+            _sbSearch.blur();
+        } else if (e.key === 'Enter') {
+            var first = _sbItems.filter(function (a) { return !a.hidden; })[0];
+            if (first) { e.preventDefault(); first.click(); }
+        } else if (e.key === 'ArrowDown') {
+            var next = _sbItems.filter(function (a) { return !a.hidden; })[0];
+            if (next) { e.preventDefault(); next.focus(); }
+        }
+    });
+    var _kbd = document.getElementById('nav-search-kbd');
+    if (_kbd && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) _kbd.textContent = '⌘ K';
+}
+
+var _navSearchBox = document.getElementById('nav-search');
+if (_navSearchBox) _navSearchBox.addEventListener('click', function () {
+    if (_sb && _sb.classList.contains('collapsed') && !_isPhone()) {
+        setSidebarCollapsed(false);
+        setTimeout(function () { if (_sbSearch) _sbSearch.focus(); }, 350);
+    } else if (_sbSearch) {
+        _sbSearch.focus();
+    }
+});
+
+document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key || '').toLowerCase() === 'k' && _sbSearch) {
+        e.preventDefault();
+        var wait = _isPhone() ? !_sb.classList.contains('open') : _sb.classList.contains('collapsed');
+        if (_isPhone()) openSidebar();
+        else if (wait) setSidebarCollapsed(false);
+        var go = function () { _sbSearch.focus(); _sbSearch.select(); };
+        if (wait) setTimeout(go, 300); else go();
+    }
+});
+
+// arrow keys walk the visible menu items
+if (_sbNav) _sbNav.addEventListener('keydown', function (e) {
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].indexOf(e.key) < 0) return;
+    var vis = _sbItems.filter(function (a) { return !a.hidden; });
+    var i = vis.indexOf(document.activeElement);
+    if (i < 0) return;
+    e.preventDefault();
+    if (e.key === 'ArrowUp' && i === 0 && _sbSearch) { _sbSearch.focus(); return; }
+    var n = e.key === 'Home' ? 0 : e.key === 'End' ? vis.length - 1
+        : (i + (e.key === 'ArrowDown' ? 1 : -1) + vis.length) % vis.length;
+    vis[n].focus();
+});
+
+// ── tooltips of the collapsed menu: one floating label, so the scrolling
+// list never clips it ──
+var _tip = document.createElement('div');
+_tip.className = 'sb-tip';
+_tip.setAttribute('role', 'tooltip');
+document.body.appendChild(_tip);
+
+function _hideTip() { if (_tip) _tip.classList.remove('show'); }
+
+function _showTip(el) {
+    if (!_sb || !_sb.classList.contains('collapsed') || _isPhone()) return;
+    var lbl = el.querySelector('.nav-label, .uname');
+    var text = (lbl ? lbl.textContent : el.dataset.title || '').trim();
+    if (!text) return;
+    _tip.textContent = text;
+    var r = el.getBoundingClientRect();
+    _tip.style.top = (r.top + r.height / 2) + 'px';
+    _tip.style.right = (window.innerWidth - _sb.getBoundingClientRect().left + 14) + 'px';
+    _tip.classList.add('show');
+}
+
+if (_sb) {
+    _sb.querySelectorAll('.nav-item, .user-pill').forEach(function (el) {
+        el.addEventListener('mouseenter', function () { _showTip(el); });
+        el.addEventListener('mouseleave', _hideTip);
+        el.addEventListener('focus', function () { _showTip(el); });
+        el.addEventListener('blur', _hideTip);
+    });
+    if (_sbNav) _sbNav.addEventListener('scroll', _hideTip, { passive: true });
+    _sb.addEventListener('transitionend', function (e) {
+        if (e.target === _sb && e.propertyName === 'width') _updateTrack();
+    });
+}
+
+// keep the current page in sight in a long menu
+(function () {
+    var cur = _sbNav && _sbNav.querySelector('.nav-item.active');
+    if (cur && cur.offsetTop + cur.offsetHeight > _sbNav.clientHeight)
+        _sbNav.scrollTop = cur.offsetTop - _sbNav.clientHeight / 2 + cur.offsetHeight / 2;
+}());
+
 (function () {
     if (document.documentElement.classList.contains('sb-pre-collapsed')) {
-        document.getElementById('sidebar').classList.add('collapsed');
+        // the stored state, put on without its animation
+        if (_sb) _sb.classList.add('no-anim');
+        setSidebarCollapsed(true, false);
         document.documentElement.classList.remove('sb-pre-collapsed');
+        if (_sb) requestAnimationFrame(function () { requestAnimationFrame(function () { _sb.classList.remove('no-anim'); }); });
     }
 }());
+
+// the first placement jumps straight to the current page; from then on it slides
+if (_sbTrack) {
+    _sbTrack.style.transition = 'none';
+    _updateTrack();
+    void _sbTrack.offsetHeight;
+    _sbTrack.style.transition = '';
+}
+// a tap slides the glow onto the new page while it loads
+_sbItems.forEach(function (a) {
+    a.addEventListener('click', function (e) {
+        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        _sbItems.forEach(function (b) { b.classList.toggle('active', b === a); });
+        _updateTrack();
+    });
+});
+if (_sbNav && window.ResizeObserver) new ResizeObserver(_updateTrack).observe(_sbNav);
+window.addEventListener('resize', _updateTrack);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(_updateTrack);
 
 var _backdrop = document.getElementById('backdrop');
 if (_backdrop) _backdrop.addEventListener('click', closeSidebar);

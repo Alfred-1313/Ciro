@@ -65,21 +65,23 @@ if (!$panelOff && $_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-  <meta name="theme-color" content="#0F172A" id="mtc">
+  <meta name="theme-color" content="#0f0f13" id="mtc">
   <title><?= $textbotlang['panel']['loginPanelTitle'] ?></title>
   <link rel="stylesheet" href="css/style.css?v=<?= (int) @filemtime(__DIR__ . '/css/style.css') ?>">
-  <script>(function () { var t = localStorage.getItem('panel-theme') || 'navy'; document.documentElement.setAttribute('data-theme', t); var c = { navy: '#0F172A', purple: '#180D2E', emerald: '#0A1F1C', sunset: '#1A0D0D', slate: '#080808', light: '#F1F5F9', linen: '#FAF7F2', mint: '#F0FDF4', lavender: '#FAF5FF' }; var m = document.getElementById('mtc'); if (m && c[t]) m.content = c[t]; })();</script>
+  <link rel="stylesheet" href="css/shab.css?v=<?= (int) @filemtime(__DIR__ . '/css/shab.css') ?>">
+  <script src="js/theme-init.js?v=<?= (int) @filemtime(__DIR__ . '/js/theme-init.js') ?>"></script>
 </head>
 
 <body>
+  <div class="scenery" aria-hidden="true"><div class="ribbon ribbon-one"></div><div class="ribbon ribbon-two"></div><div class="ribbon ribbon-three"></div><div class="grain"></div></div>
   <div class="auth">
     <aside class="auth-aside">
       <div class="auth-mark">
-        <div class="dot">M</div>
+        <div class="dot"><?= panel_brand_mark() ?></div>
         <span><?= $textbotlang['panel']['loginHeading'] ?></span>
       </div>
       <div class="auth-quote">
-        <h2><?= $textbotlang['panel']['loginSubtitle'] ?> <a style="color:#a8dafd !important  "
+        <h2><?= $textbotlang['panel']['loginSubtitle'] ?> <a class="auth-link"
             href="https://github.com/mahdiMGF2/mirzabot"><?= $textbotlang['panel']['loginUsernameLabel'] ?></a>
           <?= $textbotlang['panel']['loginUsernamePlaceholder'] ?></h2>
         <cite><?= $textbotlang['panel']['loginPasswordLabel'] ?></cite>
@@ -87,7 +89,7 @@ if (!$panelOff && $_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="auth-foot">© <?= date('Y') ?> <?= $textbotlang['panel']['loginPasswordPlaceholder'] ?></div>
     </aside>
     <main class="auth-main">
-      <div class="auth-box" style="animation:fadeUp .5s ease-out">
+      <div class="auth-box">
         <h1><?= $textbotlang['panel']['loginButton'] ?></h1>
         <p class="lede"><?= $textbotlang['panel']['loginRememberMe'] ?></p>
         <?php if ($panelOff): ?>

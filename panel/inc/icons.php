@@ -32,3 +32,8 @@ function icon(string $name, int $size = 16): string {
     $svg = $icons[$name] ?? '';
     return "<svg xmlns='http://www.w3.org/2000/svg' width='$size' height='$size' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'>$svg</svg>";
 }
+
+// the moon-and-swoosh mark of the «شب» look, in the sidebar and on the login page
+function panel_brand_mark(): string {
+    return '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="currentColor" stroke-width="5"/><path d="M45 17c-9-6-23-2-26 9 7-4 14-1 15 5-10-4-20 4-18 14 5-4 10-4 14-1-2 4-5 7-10 9 20 5 35-12 30-27-1 6-4 8-8 9 3-7 3-12-4-16 3-1 5-1 7-2Z" fill="currentColor"/></svg>';
+}

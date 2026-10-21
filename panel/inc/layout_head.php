@@ -5,6 +5,51 @@ $activeNav = $activeNav ?? '';
 $showPageHead = $showPageHead ?? true;
 $currentUser = $_SESSION['admin_user'] ?? $textbotlang['panel']['layoutDefaultAdminName'];
 $initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
+$L = $textbotlang['panel'];
+// [href, activeNav key, title (tooltip / search), icon, label]
+$navItem = fn(string $href, string $key, string $title, string $icon, string $label) =>
+  ['href' => $href, 'key' => $key, 'title' => $title, 'icon' => $icon, 'label' => $label];
+$manageItems = [
+  $navItem('users.php', 'users', $L['layoutPageTitleUsers'], 'users', $L['layoutMenuSectionMain']),
+  $navItem('invoice.php', 'invoice', $L['layoutPageTitleInvoice'], 'invoice', $L['layoutMenuSectionManagement']),
+  $navItem('service.php', 'service', $L['layoutPageTitleService'], 'server', $L['layoutMenuSectionFinancial']),
+  $navItem('product.php', 'product', $L['layoutPageTitleProduct'], 'package', $L['layoutMenuSectionSystem']),
+  $navItem('servers.php', 'servers', $L['srvPageTitle'], 'server', $L['srvPageTitle']),
+  $navItem('category.php', 'category', $L['categoryPageTitle'], 'folder', $L['categoryPageTitle']),
+  $navItem('payg.php', 'payg', $L['pgPageTitle'], 'chart', $L['pgPageTitle']),
+  $navItem('bulkgift.php', 'bulkgift', $L['bgPageTitle'], 'gift', $L['bgPageTitle']),
+];
+if (bulkspeed_available()) { /* 🚀 only while a panel can hold a speed limit (Rebecca) */
+  $manageItems[] = $navItem('bulkspeed.php', 'bulkspeed', $L['bsPageTitle'], 'zap', $L['bsPageTitle']);
+}
+array_push(
+  $manageItems,
+  $navItem('features.php', 'features', $L['featPageTitle'], 'settings', $L['featPageTitle']),
+  $navItem('referral.php', 'referral', $L['refPageTitle'], 'users', $L['refPageTitle']),
+  $navItem('payment.php', 'payment', $L['layoutPageTitlePayment'], 'card', $L['layoutSearchBoxPlaceholder']),
+  $navItem('channels.php', 'channels', $L['chnPageTitle'], 'eye', $L['chnPageTitle']),
+  $navItem('help.php', 'help', $L['helpPageTitle'], 'edit', $L['helpPageTitle']),
+  $navItem('gateways.php', 'gateways', $L['gwPageTitle'], 'wallet', $L['gwPageTitle']),
+  $navItem('topuplook.php', 'topuplook', $L['tlPageTitle'], 'invoice', $L['tlPageTitle']),
+  $navItem('discounts.php', 'discounts', $L['discPageTitle'], 'chart', $L['discPageTitle']),
+  $navItem('menu.php', 'menu', $L['menuPageTitle'], 'dashboard', $L['menuPageTitle']),
+  $navItem('buttons.php', 'buttons', $L['btnPageTitle'], 'package', $L['btnPageTitle']),
+  $navItem('looks.php', 'looks', $L['looksPageTitle'], 'menu', $L['looksPageTitle']),
+  $navItem('svclook.php', 'svclook', $L['svcPageTitle'], 'package', $L['svcPageTitle']),
+  $navItem('bottext.php', 'bottext', $L['bottextPageTitle'], 'edit', $L['bottextPageTitle']),
+  $navItem('tools.php', 'tools', $L['toolsPageTitle'], 'settings', $L['toolsPageTitle'])
+);
+$navSections = [
+  ['heading' => $L['layoutNavKeyboard'], 'items' => [
+    $navItem('index.php', 'dashboard', $L['layoutPageTitleDashboard'], 'dashboard', $L['layoutNavSettings']),
+  ]],
+  ['heading' => $L['layoutNavLogout'], 'items' => $manageItems],
+  ['heading' => $L['layoutSidebarToggleLabel'], 'items' => [
+    $navItem('settings.php', 'settings', $L['layoutPageTitleSettings'], 'settings', $L['layoutProfileMenuLabel']),
+    $navItem('logout.php', '', $L['layoutPageTitleLogout'], 'logout', $L['layoutNotificationsLabel']),
+  ]],
+];
+$brandMark = panel_brand_mark();
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -12,37 +57,19 @@ $initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-  <meta name="theme-color" content="#0F172A" id="mtc">
+  <meta name="theme-color" content="#0f0f13" id="mtc">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title><?= $textbotlang['panel']['layoutBrandName'] ?></title>
   <link rel="stylesheet" href="css/style.css?v=<?= (int) @filemtime(__DIR__ . '/../css/style.css') ?>">
-  <script>
-    (function () {
-      var t = localStorage.getItem('panel-theme') || 'navy';
-      var bg = {
-        navy: '#0F172A', purple: '#180D2E', emerald: '#0A1F1C',
-        sunset: '#1A0D0D', slate: '#080808', light: '#F1F5F9',
-        linen: '#FAF7F2', mint: '#F0FDF4', lavender: '#FAF5FF'
-      };
-
-      var root = document.documentElement;
-      root.style.backgroundColor = bg[t] || '#0F172A';
-      root.setAttribute('data-theme', t);
-
-      root.style.colorScheme = (t === 'light' || t === 'linen' || t === 'mint' || t === 'lavender') ? 'light' : 'dark';
-      var mtc = document.getElementById('mtc');
-      if (mtc && bg[t]) mtc.content = bg[t];
-      if (localStorage.getItem('panel-sb-collapsed') === '1' && window.innerWidth > 768)
-        root.classList.add('sb-pre-collapsed');
-    }());
-  </script>
+  <link rel="stylesheet" href="css/shab.css?v=<?= (int) @filemtime(__DIR__ . '/../css/shab.css') ?>">
+  <script src="js/theme-init.js?v=<?= (int) @filemtime(__DIR__ . '/../js/theme-init.js') ?>"></script>
   <script>
     window.PANEL_I18N = <?= json_encode(
       array_filter(
         $textbotlang['panel'] ?? [],
-        fn($k) => strncmp($k, 'js_', 3) === 0,
+        fn($k) => preg_match('/^js[A-Z_]/', (string) $k) === 1,
         ARRAY_FILTER_USE_KEY
       ),
       JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
@@ -79,173 +106,63 @@ $initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
     </div>
   </div>
 
-  <div class="app">
-    <div class="sidebar-backdrop" id="backdrop" onclick="closeSidebar()"></div>
+  <div class="scenery" aria-hidden="true"><div class="ribbon ribbon-one"></div><div class="ribbon ribbon-two"></div><div class="ribbon ribbon-three"></div><div class="grain"></div></div>
 
-    <aside class="sidebar" id="sidebar">
+  <div class="app">
+    <div class="sidebar-backdrop" id="backdrop"></div>
+
+    <aside class="sidebar" id="sidebar" aria-label="<?= htmlspecialchars($textbotlang['panel']['layoutBrandName']) ?>">
+      <button type="button" class="sb-collapse" id="sb-collapse" aria-controls="sidebar" aria-expanded="true"
+        aria-label="<?= htmlspecialchars($textbotlang['panel']['jsNavCollapse']) ?>"
+        title="<?= htmlspecialchars($textbotlang['panel']['jsNavCollapse']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
       <div class="sidebar-brand">
-        <div class="brand-mark">M</div>
-        <div class="brand-name"><?= $textbotlang['panel']['layoutNavProducts'] ?><span>
-            <?= $textbotlang['panel']['layoutNavPayments'] ?></span></div>
+        <a class="brand-link" href="index.php">
+          <span class="brand-mark"><?= $brandMark ?></span>
+          <span class="brand-name"><?= $textbotlang['panel']['layoutNavProducts'] ?><span>
+            <?= $textbotlang['panel']['layoutNavPayments'] ?></span></span>
+        </a>
+        <span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span>
       </div>
-      <nav class="sidebar-nav">
-        <div class="nav-section">
-          <div class="nav-heading"><?= $textbotlang['panel']['layoutNavKeyboard'] ?></div>
-          <a href="index.php" class="nav-item <?= $activeNav === 'dashboard' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['layoutPageTitleDashboard'] ?>">
-            <span class="nav-icon"><?= icon('dashboard') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['layoutNavSettings'] ?></span>
-          </a>
-        </div>
-        <div class="nav-section">
-          <div class="nav-heading"><?= $textbotlang['panel']['layoutNavLogout'] ?></div>
-          <a href="users.php" class="nav-item <?= $activeNav === 'users' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['layoutPageTitleUsers'] ?>">
-            <span class="nav-icon"><?= icon('users') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['layoutMenuSectionMain'] ?></span>
-          </a>
-          <a href="invoice.php" class="nav-item <?= $activeNav === 'invoice' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['layoutPageTitleInvoice'] ?>">
-            <span class="nav-icon"><?= icon('invoice') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['layoutMenuSectionManagement'] ?></span>
-          </a>
-          <a href="service.php" class="nav-item <?= $activeNav === 'service' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['layoutPageTitleService'] ?>">
-            <span class="nav-icon"><?= icon('server') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['layoutMenuSectionFinancial'] ?></span>
-          </a>
-          <a href="product.php" class="nav-item <?= $activeNav === 'product' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['layoutPageTitleProduct'] ?>">
-            <span class="nav-icon"><?= icon('package') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['layoutMenuSectionSystem'] ?></span>
-          </a>
-          <a href="servers.php" class="nav-item <?= $activeNav === 'servers' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['srvPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('server') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['srvPageTitle'] ?></span>
-          </a>
-          <a href="category.php" class="nav-item <?= $activeNav === 'category' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['categoryPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('folder') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['categoryPageTitle'] ?></span>
-          </a>
-          <a href="payg.php" class="nav-item <?= $activeNav === 'payg' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['pgPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('chart') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['pgPageTitle'] ?></span>
-          </a>
-          <a href="bulkgift.php" class="nav-item <?= $activeNav === 'bulkgift' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['bgPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('gift') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['bgPageTitle'] ?></span>
-          </a>
-          <?php if (bulkspeed_available()): /* 🚀 only while a panel can hold a speed limit (Rebecca) */ ?>
-          <a href="bulkspeed.php" class="nav-item <?= $activeNav === 'bulkspeed' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['bsPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('zap') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['bsPageTitle'] ?></span>
-          </a>
-          <?php endif; ?>
-          <a href="features.php" class="nav-item <?= $activeNav === 'features' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['featPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('settings') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['featPageTitle'] ?></span>
-          </a>
-          <a href="referral.php" class="nav-item <?= $activeNav === 'referral' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['refPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('users') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['refPageTitle'] ?></span>
-          </a>
-          <a href="payment.php" class="nav-item <?= $activeNav === 'payment' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['layoutPageTitlePayment'] ?>">
-            <span class="nav-icon"><?= icon('card') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['layoutSearchBoxPlaceholder'] ?></span>
-          </a>
-          <a href="channels.php" class="nav-item <?= $activeNav === 'channels' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['chnPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('eye') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['chnPageTitle'] ?></span>
-          </a>
-          <a href="help.php" class="nav-item <?= $activeNav === 'help' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['helpPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('edit') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['helpPageTitle'] ?></span>
-          </a>
-          <a href="gateways.php" class="nav-item <?= $activeNav === 'gateways' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['gwPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('wallet') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['gwPageTitle'] ?></span>
-          </a>
-          <a href="topuplook.php" class="nav-item <?= $activeNav === 'topuplook' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['tlPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('invoice') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['tlPageTitle'] ?></span>
-          </a>
-          <a href="discounts.php" class="nav-item <?= $activeNav === 'discounts' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['discPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('chart') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['discPageTitle'] ?></span>
-          </a>
-          <a href="menu.php" class="nav-item <?= $activeNav === 'menu' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['menuPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('dashboard') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['menuPageTitle'] ?></span>
-          </a>
-          <a href="buttons.php" class="nav-item <?= $activeNav === 'buttons' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['btnPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('package') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['btnPageTitle'] ?></span>
-          </a>
-          <a href="looks.php" class="nav-item <?= $activeNav === 'looks' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['looksPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('menu') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['looksPageTitle'] ?></span>
-          </a>
-          <a href="svclook.php" class="nav-item <?= $activeNav === 'svclook' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['svcPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('package') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['svcPageTitle'] ?></span>
-          </a>
-          <a href="bottext.php" class="nav-item <?= $activeNav === 'bottext' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['bottextPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('edit') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['bottextPageTitle'] ?></span>
-          </a>
-          <a href="tools.php" class="nav-item <?= $activeNav === 'tools' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['toolsPageTitle'] ?>">
-            <span class="nav-icon"><?= icon('settings') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['toolsPageTitle'] ?></span>
-          </a>
-        </div>
-        <div class="nav-section">
-          <div class="nav-heading"><?= $textbotlang['panel']['layoutSidebarToggleLabel'] ?></div>
-          <a href="settings.php" class="nav-item <?= $activeNav === 'settings' ? 'active' : '' ?>"
-            title="<?= $textbotlang['panel']['layoutPageTitleSettings'] ?>">
-            <span class="nav-icon"><?= icon('settings') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['layoutProfileMenuLabel'] ?></span>
-          </a>
-          <a href="logout.php" class="nav-item" title="<?= $textbotlang['panel']['layoutPageTitleLogout'] ?>">
-            <span class="nav-icon"><?= icon('logout') ?></span><span
-              class="nav-label"><?= $textbotlang['panel']['layoutNotificationsLabel'] ?></span>
-          </a>
-        </div>
+      <div class="nav-search" id="nav-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.7" cy="10.7" r="7.3"/><path d="m16 16 4.6 4.6"/></svg>
+        <input type="search" id="nav-search-input" autocomplete="off" spellcheck="false"
+          placeholder="<?= htmlspecialchars($textbotlang['panel']['layoutNavSearch']) ?>"
+          aria-label="<?= htmlspecialchars($textbotlang['panel']['layoutNavSearch']) ?>">
+        <kbd id="nav-search-kbd">Ctrl K</kbd>
+      </div>
+      <nav class="sidebar-nav" id="sidebar-nav">
+        <div class="nav-track" id="nav-track" aria-hidden="true"></div>
+        <?php foreach ($navSections as $section): ?>
+          <div class="nav-section">
+            <div class="nav-heading"><?= $section['heading'] ?></div>
+            <?php foreach ($section['items'] as $item):
+              $isActive = $item['key'] !== '' && $activeNav === $item['key']; ?>
+              <a href="<?= $item['href'] ?>" class="nav-item<?= $isActive ? ' active' : '' ?>"<?= $isActive ? ' aria-current="page"' : '' ?>
+                data-title="<?= htmlspecialchars(strip_tags($item['title'])) ?>">
+                <span class="nav-icon"><?= icon($item['icon']) ?></span><span
+                  class="nav-label"><?= $item['label'] ?></span>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        <?php endforeach; ?>
+        <p class="nav-empty" id="nav-empty" hidden><?= htmlspecialchars($textbotlang['panel']['layoutNavNoResults']) ?></p>
       </nav>
       <div class="sidebar-foot">
-        <div class="user-pill">
+        <a href="settings.php" class="user-pill" data-title="<?= htmlspecialchars($currentUser) ?>">
           <div class="user-mono"><?= htmlspecialchars($initials) ?></div>
           <div class="user-info">
             <div class="uname"><?= htmlspecialchars($currentUser) ?></div>
             <div class="urole"><?= $textbotlang['panel']['layoutMobileMenuLabel'] ?></div>
           </div>
-        </div>
+        </a>
       </div>
     </aside>
 
     <div class="main">
       <header class="topbar">
         <div class="topbar-left">
-          <button class="icon-btn menu-toggle" onclick="openSidebar()"><?= icon('menu', 18) ?></button>
-          <button class="icon-btn sb-toggle" onclick="toggleSidebar()"><?= icon('menu', 17) ?></button>
+          <button type="button" class="icon-btn menu-toggle" onclick="openSidebar()"
+            aria-label="<?= htmlspecialchars($textbotlang['panel']['jsNavExpand']) ?>"><?= icon('menu', 18) ?></button>
           <div>
             <div class="topbar-title"><?= htmlspecialchars($pageTitle) ?></div>
             <div class="crumb"><span><?= $textbotlang['panel']['layoutPageTitleSuffix'] ?></span><span
