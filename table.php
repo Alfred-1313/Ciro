@@ -358,6 +358,7 @@ try {
         $randomString = bin2hex(random_bytes(5));
         $stmt = $pdo->prepare("INSERT INTO admin (id_admin,rule,username,password) VALUES (:mp1,'administrator','admin',:mp2)");
         $stmt->execute([':mp1' => $adminnumber, ':mp2' => $randomString]);
+        $mz_fresh_install = true; // no admin table yet: a new bot, not an updated one
     } else {
         addFieldToTable("admin", "rule", "administrator", "VARCHAR(200)");
         addFieldToTable("admin", "username", null, "VARCHAR(200)");
@@ -1628,7 +1629,7 @@ if ($check && $check->rowCount() != 0) {
 webhook_register();
 // 🆕 tell the admins what this update added (whatsnew.php), once
 try {
-    bot_whatsnew_announce();
+    bot_whatsnew_announce(!empty($mz_fresh_install));
 } catch (\Throwable $e) {
     error_log('whatsnew: ' . $e->getMessage());
 }
