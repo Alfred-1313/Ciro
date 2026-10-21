@@ -77,6 +77,21 @@ function web_lang_checkboxes(string $name, $value, string $idPrefix): string
     return $h . '</div>';
 }
 
+// The currency of a row, as SQL, the way payment_currency() / currency_for_user()
+// find it: the row's own ($ownCol, e.g. 'p.currency'; null for a user), else its
+// user's wallet ($u.currency), else the language's. Amounts of two currencies
+// cannot be compared, so a list sorted by amount goes one currency at a time.
+function web_cur_sql(?string $ownCol, string $u = 'u'): string
+{
+    global $pdo;
+    $cases = '';
+    foreach (array_diff(panel_langs(), ['fa']) as $l) {
+        $cases .= " WHEN {$u}.lang = " . $pdo->quote($l) . ' THEN ' . $pdo->quote((string) currency_for_lang($l));
+    }
+    $own = $ownCol !== null ? "NULLIF({$ownCol}, ''), " : '';
+    return "COALESCE({$own}NULLIF({$u}.currency, ''), CASE{$cases} ELSE " . $pdo->quote((string) currency_for_lang('fa')) . ' END)';
+}
+
 // a language's name with its flag picture in place of the flag emoji
 function web_lang_html(string $code, string $label): string
 {

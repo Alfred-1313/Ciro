@@ -40,14 +40,9 @@ $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 $dirSQL = $sortDir === 'asc' ? 'ASC' : 'DESC';
 $secondsSQL = "(CASE WHEN p.time REGEXP '^[0-9]+$' THEN CAST(p.time AS UNSIGNED)"
   . " ELSE TIMESTAMPDIFF(SECOND, '1970-01-01 00:00:00', STR_TO_DATE(p.time, '%Y/%m/%d %H:%i:%s')) - " . (int) date('Z') . " END)";
-// the currency of a payment, the way payment_currency() finds it: its own,
-// else its payer's, else their language's. Amounts of two currencies are not
-// comparable, so the amount order goes one currency at a time (the default one first).
-$curCases = '';
-foreach (array_diff(panel_langs(), ['fa']) as $l) {
-  $curCases .= ' WHEN u.lang = ' . $pdo->quote($l) . ' THEN ' . $pdo->quote((string) currency_for_lang($l));
-}
-$curSQL = "COALESCE(NULLIF(p.currency, ''), NULLIF(u.currency, ''), CASE" . $curCases . ' ELSE ' . $pdo->quote((string) currency_for_lang('fa')) . ' END)';
+// amounts of two currencies are not comparable, so the amount order goes one
+// currency at a time (the default one first)
+$curSQL = web_cur_sql('p.currency');
 $orderSQL = match ($sortCol) {
   'amount' => "ORDER BY ($curSQL = " . $pdo->quote((string) currency_default_code()) . ") DESC, $curSQL ASC, CAST(p.price AS DECIMAL(20,2)) $dirSQL, p.id DESC",
   'user' => "ORDER BY CAST(p.id_user AS UNSIGNED) $dirSQL, p.id DESC",

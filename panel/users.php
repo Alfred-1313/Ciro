@@ -10,6 +10,10 @@ $role = $_GET['role'] ?? '';
 // a language tab ('' = all): its users, the way the bot counts them
 $lang = web_lang_pick('lang', '');
 [$langSQL, $langParams] = $lang !== '' ? user_lang_where($lang) : ['1 = 1', []];
+// the order: ?sort=new | charge_desc | charge_asc | balance_desc | balance_asc
+$sortOptions = ['new', 'charge_desc', 'charge_asc', 'balance_desc', 'balance_asc'];
+$sort = in_array($_GET['sort'] ?? '', $sortOptions, true) ? $_GET['sort'] : 'new';
+[$sortCol, $sortDir] = array_pad(explode('_', $sort), 2, 'desc');
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $perPage = 25;
 $offset = ($page - 1) * $perPage;
@@ -41,9 +45,27 @@ if ($lang !== '') {
 
 $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
+// What each user has charged: the paid top-ups, in the wallet they are on now -
+// the balance an admin adds or takes off by hand is no top-up (the bot's own
+// report leaves it out too). Amounts of two currencies are not comparable, so
+// an amount order goes one currency at a time, the default one first; a user
+// who never charged comes last in a charge order either way.
+$dirSQL = $sortDir === 'asc' ? 'ASC' : 'DESC';
+$userCur = web_cur_sql(null, 'u');
+$defaultCur = $pdo->quote((string) currency_default_code());
+$chargedSQL = "(SELECT p.id_user AS uid, " . web_cur_sql('p.currency', 'u2') . " AS cur, SUM(CAST(p.price AS DECIMAL(20,2))) AS charged"
+    . " FROM Payment_report p LEFT JOIN `user` u2 ON u2.id = p.id_user"
+    . " WHERE p.payment_Status = 'paid' AND p.Payment_Method NOT IN ('add balance by admin', 'low balance by admin')"
+    . " GROUP BY p.id_user, cur)";
+$orderSQL = match ($sortCol) {
+    'charge' => "ORDER BY (c.charged IS NULL) ASC, ($userCur = $defaultCur) DESC, $userCur ASC, c.charged $dirSQL, u.id DESC",
+    'balance' => "ORDER BY ($userCur = $defaultCur) DESC, $userCur ASC, u.Balance $dirSQL, u.id DESC",
+    default => "ORDER BY u.register DESC",
+};
+$manyCurrencies = count(array_unique(array_map('currency_for_lang', panel_langs()))) > 1;
 try {
     $total = db_count($pdo, "SELECT COUNT(*) FROM user $whereSQL", $params);
-    $users = db_fetchAll($pdo, "SELECT * FROM user $whereSQL ORDER BY register DESC LIMIT $perPage OFFSET $offset", $params);
+    $users = db_fetchAll($pdo, "SELECT u.*, c.charged FROM `user` u LEFT JOIN $chargedSQL c ON c.uid = u.id AND c.cur = $userCur $whereSQL $orderSQL LIMIT $perPage OFFSET $offset", $params);
 } catch (Exception $e) {
     $total = 0;
     $users = [];
@@ -66,6 +88,27 @@ try {
 } catch (Exception $e) {
 }
 // a link of this page that keeps the language tab
+// the page's address for an order, keeping the filters
+$sortUrl = fn(string $order) => 'users.php?' . http_build_query(array_filter(
+    ['q' => $search, 'status' => $status, 'role' => $role, 'lang' => $lang, 'sort' => $order === 'new' ? '' : $order],
+    fn($v) => $v !== '' && $v !== null
+));
+// a column's header that sorts: a tap puts the highest first, the next tap the opposite
+$sortTh = function (string $col, string $label) use ($sortCol, $sortDir, $sortUrl) {
+    $on = $sortCol === $col;
+    $next = $on && $sortDir === 'desc' ? $col . '_asc' : $col . '_desc';
+    $ico = $on ? ($sortDir === 'desc' ? 'sort-desc' : 'sort-asc') : 'sort';
+    return '<th' . ($on ? ' aria-sort="' . ($sortDir === 'desc' ? 'descending' : 'ascending') . '"' : '') . '>'
+        . '<a class="th-sort' . ($on ? ' on' : '') . '" href="' . htmlspecialchars($sortUrl($next)) . '">'
+        . htmlspecialchars($label) . icon($ico, 14) . '</a></th>';
+};
+$sortLabels = [
+    'new' => $textbotlang['panel']['usersSortNewest'],
+    'charge_desc' => $textbotlang['panel']['usersSortChargeDesc'],
+    'charge_asc' => $textbotlang['panel']['usersSortChargeAsc'],
+    'balance_desc' => $textbotlang['panel']['usersSortBalanceDesc'],
+    'balance_asc' => $textbotlang['panel']['usersSortBalanceAsc'],
+];
 $here = fn(array $q = []) => 'users.php?' . http_build_query(array_filter(['lang' => $lang] + $q, fn($v) => $v !== '' && $v !== null));
 
 $pageTitle = $textbotlang['panel']['usersTitle'];
@@ -95,6 +138,13 @@ echo web_lang_assets();
 
         <form method="GET" id="usersForm" class="toolbar-end">
             <?php if ($lang !== ''): ?><input type="hidden" name="lang" value="<?= htmlspecialchars($lang) ?>"><?php endif; ?>
+            <select name="sort" class="select" style="width:auto"
+                aria-label="<?= htmlspecialchars($textbotlang['panel']['usersSortLabel']) ?>"
+                onchange="document.getElementById('usersForm').submit()">
+                <?php foreach ($sortLabels as $k => $lbl): ?>
+                    <option value="<?= $k ?>" <?= $sort === $k ? 'selected' : '' ?>><?= htmlspecialchars($lbl) ?></option>
+                <?php endforeach; ?>
+            </select>
             <select name="status" class="select" style="width:auto"
                 onchange="document.getElementById('usersForm').submit()">
                 <option value=""><?= $textbotlang['panel']['usersColBalance'] ?></option>
@@ -118,12 +168,18 @@ echo web_lang_assets();
                 <button type="submit" class="search-btn"><?= $textbotlang['panel']['usersAllGroups'] ?></button>
             </div>
 
-            <?php if ($search || $status || $role): ?>
+            <?php if ($search || $status || $role || $sort !== 'new'): ?>
                 <a href="<?= htmlspecialchars($here()) ?>" class="btn-link" style="font-size:.78rem;white-space:nowrap"><?= $textbotlang['panel']['usersAllStatuses'] ?></a>
             <?php endif; ?>
         </form>
     </div>
 
+    <?php if ($sortCol !== 'new'): ?>
+        <div class="field-hint" style="padding:10px 18px 0">
+            <?= htmlspecialchars($sortCol === 'charge' ? $textbotlang['panel']['usersSortNote'] : '') ?>
+            <?php if ($manyCurrencies && $lang === ''): ?> <?= htmlspecialchars($textbotlang['panel']['paySortCurrencyNote']) ?><?php endif; ?>
+        </div>
+    <?php endif; ?>
     <div class="tbl-wrap">
         <table class="tbl-xl no-stack">
             <thead>
@@ -133,7 +189,8 @@ echo web_lang_assets();
                     <th><?= $textbotlang['panel']['usersClearBtn'] ?></th>
                     <th><?= $textbotlang['panel']['usersGroupFreeUser'] ?></th>
                     <th><?= $textbotlang['panel']['usersGroupNormalAgent'] ?></th>
-                    <th><?= $textbotlang['panel']['usersGroupAdvancedAgent'] ?></th>
+                    <?= $sortTh('balance', $textbotlang['panel']['usersGroupAdvancedAgent']) ?>
+                    <?= $sortTh('charge', $textbotlang['panel']['usersColCharged']) ?>
                     <th><?= $textbotlang['panel']['usersStatusActiveFilter'] ?></th>
                     <th><?= $textbotlang['panel']['usersStatusBlockedFilter'] ?></th>
                     <th><?= $textbotlang['panel']['usersPaginationPrev'] ?></th>
@@ -143,7 +200,7 @@ echo web_lang_assets();
             <tbody>
                 <?php if (empty($users)): ?>
                     <tr>
-                        <td colspan="10">
+                        <td colspan="11">
                             <div class="empty">
                                 <svg class="ill" viewBox="0 0 200 160" fill="none">
                                     <circle cx="100" cy="60" r="40" fill="var(--sf3)" />
@@ -172,7 +229,7 @@ echo web_lang_assets();
                             <td class="cm"><?= htmlspecialchars($u['id']) ?></td>
                             <td>
                                 <?php if ($uname): ?>
-                                    <span class="cm" style="color:var(--ac)">@<?= htmlspecialchars($uname) ?></span>
+                                    <span class="cm" dir="ltr" style="color:var(--ac);display:inline-block">@<?= htmlspecialchars($uname) ?></span>
                                 <?php else: ?>
                                     <span class="cf">—</span>
                                 <?php endif; ?>
@@ -183,6 +240,11 @@ echo web_lang_assets();
                             </td>
                             <td class="cn cs" style="white-space:nowrap">
                                 <?= htmlspecialchars(money($u['Balance'] ?? 0, currency_for_user($u))) ?>
+                            </td>
+                            <td class="cn cs" style="white-space:nowrap">
+                                <?= $u['charged'] !== null
+                                    ? htmlspecialchars(money($u['charged'], currency_for_user($u)))
+                                    : '<span class="cf">—</span>' ?>
                             </td>
                             <td class="cn">
                                 <?= (int) ($u['score'] ?? 0) > 0
@@ -233,6 +295,7 @@ echo web_lang_assets();
             $qs = fn($p) => '?q=' . urlencode($search)
                 . '&status=' . urlencode($status)
                 . '&role=' . urlencode($role)
+                . ($sort !== 'new' ? '&sort=' . urlencode($sort) : '')
                 . ($lang !== '' ? '&lang=' . urlencode($lang) : '')
                 . '&page=' . $p;
             ?>
