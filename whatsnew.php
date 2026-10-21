@@ -36,4 +36,14 @@ return [
             . "📍 Payment settings → 🌐 FrenzyEx\n"
             . "A payment confirmed after its invoice expired is now credited too. Any confirmed payment that is not credited is reported in the report group (errors topic).</blockquote>",
     ],
+    [
+        'n' => 2,
+        'date' => '2026-10-22',
+        'fa' => "<blockquote>✅ <b>«آخرین نسخه را داری»</b>\n"
+            . "📍 /update یا پنل ادمین ← 🔄 آپدیت ربات\n"
+            . "صفحهٔ آپدیت حالا نسخهٔ جدیدتر را از گیت‌هاب می‌پرسد: اگر ربات روی جدیدترین نسخه باشد همین را می‌گوید، و اگر نسخهٔ جدیدتری آماده باشد شمارهٔ آن را نشان می‌دهد.</blockquote>",
+        'en' => "<blockquote>✅ <b>\"You're on the latest version\"</b>\n"
+            . "📍 /update or Admin panel → 🔄 Update bot\n"
+            . "The update screen now asks GitHub for the newest version: if the bot is on it, it says so, and if a newer one is ready it shows its number.</blockquote>",
+    ],
 ];

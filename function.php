@@ -4318,6 +4318,47 @@ if (!function_exists('bot_update_request_path')) {
         }
         return bot_update_progress_now($textbotlang, 'rollback', 0);
     }
+    // The newest version on GitHub (its `version` file), for the update screen to
+    // say «you already have the latest». Asked for at most every ten minutes and
+    // never for long: a GitHub that does not answer must not slow the screen
+    // down, so a failure keeps the last answer (or none) and tries again in a
+    // minute. null when it is not known - the screen then says nothing about it.
+    function bot_update_latest_version()
+    {
+        $dir = __DIR__ . '/storage';
+        $cache = $dir . '/update_latest.json';
+        $c = json_decode((string) @file_get_contents($cache), true);
+        $c = is_array($c) ? $c : [];
+        if (time() - (int) ($c['at'] ?? 0) < 600) {
+            return !empty($c['v']) ? (string) $c['v'] : null;
+        }
+        $ch = curl_init('https://raw.githubusercontent.com/Alfred-1313/Mirza_Pro_Max/master/version');
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 4, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_FOLLOWLOCATION => true]);
+        $body = curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $v = trim((string) $body);
+        $ok = $code === 200 && preg_match('/^[0-9][0-9A-Za-z._-]{0,20}$/', $v);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+        @file_put_contents($cache, json_encode([
+            'v' => $ok ? $v : ($c['v'] ?? null),
+            // a failed ask is tried again in a minute, not in ten
+            'at' => $ok ? time() : time() - 540,
+        ]), LOCK_EX);
+        return $ok ? $v : (!empty($c['v']) ? (string) $c['v'] : null);
+    }
+    // true: this is the newest version; false: a newer one exists; null: unknown
+    function bot_update_is_latest()
+    {
+        $ver = trim((string) @file_get_contents(__DIR__ . '/version'));
+        $latest = bot_update_latest_version();
+        if ($ver === '' || $latest === null) {
+            return null;
+        }
+        return version_compare($ver, $latest, '>=');
+    }
     function bot_update_caption($lang = 'fa', $textbotlang = null)
     {
         $ver = trim((string) @file_get_contents(__DIR__ . '/version'));
@@ -4331,11 +4372,26 @@ if (!function_exists('bot_update_request_path')) {
             $out .= bot_update_text($textbotlang, 'lastUpdate', 'آخرین به‌روزرسانی') . ": <b>"
                 . bot_update_when($st['at'], $lang) . "</b>\n";
         }
-        $out .= "\n" . bot_update_text(
-            $textbotlang,
-            'intro',
-            'با زدن دکمه پایین، ربات آخرین نسخه را از گیت‌هاب می‌گیرد و خودش را آپدیت می‌کند. دیگر لازم نیست به سرور وصل شوی.'
-        ) . "\n\n";
+        $isLatest = bot_update_is_latest();
+        if ($isLatest === true) {
+            $notes = is_file(__DIR__ . '/whatsnew.php') ? require __DIR__ . '/whatsnew.php' : [];
+            $notes = is_array($notes) && $notes ? array_values($notes) : [];
+            $lastDate = $notes ? (string) (end($notes)['date'] ?? '') : '';
+            $out .= "\n✅ <b>" . bot_update_text($textbotlang, 'latestTitle', 'آخرین نسخه را داری') . "</b>\n"
+                . bot_update_text($textbotlang, 'latestText', 'ربات روی جدیدترین نسخهٔ موجود است و فعلاً چیزی برای آپدیت وجود ندارد.')
+                . ($lastDate !== '' ? "\n" . bot_update_text($textbotlang, 'latestDate', 'تاریخ آخرین تغییرات') . ": <b>" . htmlspecialchars($lastDate, ENT_QUOTES) . "</b>" : '')
+                . "\n\n";
+        } else {
+            if ($isLatest === false) {
+                $out .= "🆕 <b>" . bot_update_text($textbotlang, 'newerTitle', 'نسخهٔ جدید آماده است') . ": "
+                    . htmlspecialchars((string) bot_update_latest_version(), ENT_QUOTES) . "</b>\n";
+            }
+            $out .= "\n" . bot_update_text(
+                $textbotlang,
+                'intro',
+                'با زدن دکمه پایین، ربات آخرین نسخه را از گیت‌هاب می‌گیرد و خودش را آپدیت می‌کند. دیگر لازم نیست به سرور وصل شوی.'
+            ) . "\n\n";
+        }
         $out .= "<blockquote>" . bot_update_text(
             $textbotlang,
             'safety',
@@ -4352,10 +4408,16 @@ if (!function_exists('bot_update_request_path')) {
     {
         $rows = [];
         if (!bot_update_busy()) {
+            // on the newest version the button is still there - a push that
+            // did not bump the version would otherwise leave no way to take it -
+            // but it no longer pretends there is something to update
+            $latest = bot_update_is_latest() === true;
             $rows[] = [[
-                'text' => bot_update_text($textbotlang, 'startBtn', '🚀 شروع آپدیت'),
+                'text' => $latest
+                    ? bot_update_text($textbotlang, 'reinstallBtn', '🔁 نصب دوباره‌ی همین نسخه')
+                    : bot_update_text($textbotlang, 'startBtn', '🚀 شروع آپدیت'),
                 'callback_data' => 'botupdatego',
-                'style' => 'primary',
+                'style' => $latest ? 'success' : 'primary',
             ]];
         }
         // Red, because it throws away the version that is running right now.
@@ -4463,6 +4525,8 @@ if (!function_exists('bot_update_request_path')) {
     {
         $lang = is_string($lang) && $lang !== '' ? $lang : 'fa';
         $t = languagechange(null, $lang);
+        // the answer kept from before the update would still say a newer one exists
+        @unlink(__DIR__ . '/storage/update_latest.json');
         $cap = bot_update_caption($lang, $t);
         if ($ok) {
             $backup = trim((string) $backup);
