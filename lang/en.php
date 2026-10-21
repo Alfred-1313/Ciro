@@ -2995,6 +2995,10 @@ Send your number of days.',
                         'askButton' => '📌 If you want a button to be shown under the message, choose an option from the list below; otherwise, click the Send Without Button button',
                         'textOnlyInactive' => '📌 In the section for users who have not used the bot for the specified number of days, only sending text is possible.',
                         'textOnlyBroadcast' => '📌 In the broadcast section, only sending text is possible.',
+                        'copyFailed' => '❌ Telegram would not copy this message (%s).
+
+Send another one, or use «forward to everyone».',
+                        'copyNote' => '👆 This message goes to the users exactly as it is (all its formatting and emoji). The tab\'s 🎨 broadcast wrapping is not applied to it.',
                         'targetInactiveUsers' => 'Users who have not used it for the specified number of days',
                         'targetAllUsers' => 'Send to all users',
                         'targetCustomers' => 'Customers',

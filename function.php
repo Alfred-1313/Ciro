@@ -5162,6 +5162,121 @@ if (!function_exists('topup_caption_text_from_update')) {
         return trim((string) $text);
     }
 }
+if (!function_exists('entities_to_html')) {
+    // A message's text with ALL its formatting as Telegram HTML: bold, italic,
+    // underline, strikethrough, spoiler, code, pre, links, mentions by id,
+    // premium emoji, quotes (also the collapsed kind) - nested or overlapping as
+    // they came. Entity offsets count UTF-16 units, so that is what is walked.
+    // The plain text is escaped (&, <, >). Types that come with no tag of their
+    // own because Telegram finds them itself (links, @names, #tags, e-mails,
+    // numbers, commands) are left as written; any OTHER type - something newer
+    // than this code - is listed in 'unknown', and the caller copies the
+    // message as it is instead. [html, unknown types]
+    function entities_to_html($text, $entities)
+    {
+        $tags = [
+            'bold' => ['<b>', '</b>'],
+            'italic' => ['<i>', '</i>'],
+            'underline' => ['<u>', '</u>'],
+            'strikethrough' => ['<s>', '</s>'],
+            'spoiler' => ['<tg-spoiler>', '</tg-spoiler>'],
+            'code' => ['<code>', '</code>'],
+            'blockquote' => ['<blockquote>', '</blockquote>'],
+            'expandable_blockquote' => ['<blockquote expandable>', '</blockquote>'],
+        ];
+        $plain = ['mention', 'hashtag', 'cashtag', 'bot_command', 'url', 'email', 'phone_number', 'bank_card_number'];
+        $text = (string) $text;
+        $unknown = [];
+        $list = [];
+        foreach ((is_array($entities) ? $entities : []) as $i => $e) {
+            $type = (string) ($e['type'] ?? '');
+            if (!isset($e['offset'], $e['length']) || (int) $e['length'] <= 0) {
+                continue;
+            }
+            if (isset($tags[$type])) {
+                $open = $tags[$type][0];
+                $close = $tags[$type][1];
+            } elseif ($type === 'pre') {
+                $lang = preg_replace('/[^A-Za-z0-9_+#.-]/', '', (string) ($e['language'] ?? ''));
+                $open = $lang !== '' ? '<pre><code class="language-' . $lang . '">' : '<pre>';
+                $close = $lang !== '' ? '</code></pre>' : '</pre>';
+            } elseif ($type === 'text_link' && !empty($e['url'])) {
+                $open = '<a href="' . htmlspecialchars((string) $e['url'], ENT_QUOTES) . '">';
+                $close = '</a>';
+            } elseif ($type === 'text_mention' && !empty($e['user']['id'])) {
+                $open = '<a href="tg://user?id=' . (int) $e['user']['id'] . '">';
+                $close = '</a>';
+            } elseif ($type === 'custom_emoji' && !empty($e['custom_emoji_id'])) {
+                $open = '<tg-emoji emoji-id="' . htmlspecialchars((string) $e['custom_emoji_id'], ENT_QUOTES) . '">';
+                $close = '</tg-emoji>';
+            } elseif (in_array($type, $plain, true)) {
+                continue;
+            } else {
+                $unknown[$type] = true;
+                continue;
+            }
+            $list[] = ['s' => (int) $e['offset'], 'e' => (int) $e['offset'] + (int) $e['length'], 'o' => $open, 'c' => $close, 'n' => $i];
+        }
+        $u16 = mb_convert_encoding($text, 'UTF-16LE', 'UTF-8');
+        $len = intdiv(strlen($u16), 2);
+        $unit = function ($from, $to) use ($u16) {
+            $chunk = substr($u16, $from * 2, ($to - $from) * 2);
+            $utf8 = mb_convert_encoding($chunk, 'UTF-8', 'UTF-16LE');
+            return str_replace(['&', '<', '>'], ['&amp;', '&lt;', '&gt;'], (string) $utf8);
+        };
+        // outer first at one offset: the longer one opens first
+        usort($list, function ($a, $b) {
+            return [$a['s'], $b['e'], $a['n']] <=> [$b['s'], $a['e'], $b['n']];
+        });
+        $out = '';
+        $stack = [];
+        $pos = 0;
+        $points = [];
+        foreach ($list as $en) {
+            $points[$en['s']] = true;
+            $points[min($en['e'], $len)] = true;
+        }
+        ksort($points);
+        foreach (array_keys($points) as $p) {
+            if ($p > $len) {
+                continue;
+            }
+            $out .= $unit($pos, $p);
+            $pos = $p;
+            // close what ends here; whatever sits above it on the stack is closed
+            // too and opened again after, so the tags stay properly nested
+            foreach ($list as $en) {
+                if (min($en['e'], $len) !== $p || !in_array($en['n'], array_column($stack, 'n'), true)) {
+                    continue;
+                }
+                $reopen = [];
+                while ($stack) {
+                    $top = array_pop($stack);
+                    $out .= $top['c'];
+                    if ($top['n'] === $en['n']) {
+                        break;
+                    }
+                    $reopen[] = $top;
+                }
+                foreach (array_reverse($reopen) as $r) {
+                    $out .= $r['o'];
+                    $stack[] = $r;
+                }
+            }
+            foreach ($list as $en) {
+                if ($en['s'] === $p && $en['s'] < min($en['e'], $len)) {
+                    $out .= $en['o'];
+                    $stack[] = $en;
+                }
+            }
+        }
+        $out .= $unit($pos, $len);
+        while ($stack) {
+            $out .= array_pop($stack)['c'];
+        }
+        return [trim($out), array_keys($unknown)];
+    }
+}
 if (!function_exists('sticker_value_from_update')) {
     // What a 🎨 sticker prompt takes: a sticker of any kind (a premium pack's
     // included) - its file_id - or one premium emoji on its own, which Telegram

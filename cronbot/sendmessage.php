@@ -17,6 +17,19 @@ if(count($userid) == 0){
     if(isset($info['id_admin'])){
     deletemessage($info['id_admin'], $info['id_message']);
     sendmessage($info['id_admin'], $textbotlang['hardcoded']['bulkMessageDone'], null, 'HTML');
+    // how it went: sent, blocked the bot, failed - and why (the commonest reasons)
+    $bm_sent = (int) ($info['sent'] ?? 0);
+    $bm_blocked = (int) ($info['blocked'] ?? 0);
+    $bm_failed = (int) ($info['failed'] ?? 0);
+    if ($bm_sent + $bm_blocked + $bm_failed > 0 && isset($textbotlang['hardcoded']['bulkMessageStats'])) {
+        $bm_reasons = (array) ($info['reasons'] ?? []);
+        arsort($bm_reasons);
+        $bm_why = '';
+        foreach (array_slice($bm_reasons, 0, 3, true) as $bm_r => $bm_n) {
+            $bm_why .= "\n• " . htmlspecialchars((string) $bm_r) . ' × ' . (int) $bm_n;
+        }
+        sendmessage($info['id_admin'], sprintf($textbotlang['hardcoded']['bulkMessageStats'], $bm_sent, $bm_blocked, $bm_failed, $bm_why), null, 'HTML');
+    }
     unlink('info');
     unlink('users.json');
     }
@@ -56,9 +69,19 @@ $bm_hint = !empty($info['hint']) ? $info['hint'] : 'users.broadcast.message';
 if (empty($info['hint']) && ($info['type'] == "sendmessage" or $info['type'] == "xdaynotmessage")) {
     $info['message'] = um_bcast_wrap($bm_tx, $info['message']);
 }
-// a forwarded message cannot be wrapped, but its sticker can go before it
+$bm_kbFor = [
+    'none' => null,
+    'buy' => $keyboardbuy,
+    'start' => $keyboardstart,
+    'usertestbtn' => $keyboardusertest,
+    'helpbtn' => $keyboardhelpbtn,
+    'affiliatesbtn' => $keyboardaffiliates,
+    'addbalance' => $keyboardaddbalance,
+];
+$bm_copy = !empty($info['copy']) && ($info['type'] == "sendmessage" or $info['type'] == "xdaynotmessage");
+// a forwarded or copied message cannot be wrapped, but its sticker can go before it
 $bm_fwdSticker = '';
-if ($info['type'] == "forwardmessage" && function_exists('bt_effective_sticker')) {
+if (($info['type'] == "forwardmessage" || $bm_copy) && function_exists('bt_effective_sticker')) {
     $bm_layout = json_decode((string) (select("setting", "*", null, null, "select")['keyboardmain'] ?? ''), true);
     $bm_fwdSticker = bt_effective_sticker(is_array($bm_layout['text_stickers'] ?? null) ? $bm_layout['text_stickers'] : [], 'users.broadcast.message', $bm_lang);
 }
@@ -69,8 +92,26 @@ for ($i = 0; $i < 20; $i++) {
         break;
     }
     $iduser = array_shift($userid);
+    $meesage = null;
     if ($info['type'] == "unpinmessage") {
         unpinmessage($iduser->id);
+    } elseif ($bm_copy) {
+        // the admin's own message, as it is: any kind, its formatting kept
+        if ($bm_fwdSticker !== '') {
+            sticker_value_send($iduser->id, $bm_fwdSticker);
+        }
+        $meesage = copyMessage($iduser->id, $info['id_admin'], $info['message'], $bm_kbFor[$info['btnmessage'] ?? 'none'] ?? null);
+        if (is_array($meesage) && ($meesage['description'] ?? '') == "Forbidden: bot was blocked by the user") {
+            $invoicecount = select("invoice", "*", "id_user", $iduser->id, "count");
+            $userinfo = select("user", "Balance", "id", $iduser->id, "select");
+            if ($invoicecount == 0 and $userinfo['Balance'] == 0) {
+                $stmt = $pdo->prepare("DELETE FROM user WHERE id = :mp1");
+                $stmt->execute([':mp1' => $iduser->id]);
+            }
+        }
+        if (!empty($meesage['ok']) && ($info['pingmessage'] ?? 'no') == "yes") {
+            pinmessage($iduser->id, $meesage['result']['message_id']);
+        }
     } elseif ($info['type'] == "sendmessage" or $info['type'] == "xdaynotmessage") {
         // its 🎨 sticker, in each reader's language
         if (function_exists('bottext_extras_key_hint')) {
@@ -114,6 +155,23 @@ for ($i = 0; $i < 20; $i++) {
             pinmessage($iduser->id, $meesage['result']['message_id']);
         }
     }
+    if (is_array($meesage)) {
+        if (!empty($meesage['ok'])) {
+            $info['sent'] = (int) ($info['sent'] ?? 0) + 1;
+        } elseif (stripos((string) ($meesage['description'] ?? ''), 'blocked by the user') !== false
+            || stripos((string) ($meesage['description'] ?? ''), 'user is deactivated') !== false) {
+            $info['blocked'] = (int) ($info['blocked'] ?? 0) + 1;
+        } else {
+            $info['failed'] = (int) ($info['failed'] ?? 0) + 1;
+            $bm_why = mb_substr((string) ($meesage['description'] ?? 'error'), 0, 120);
+            $info['reasons'][$bm_why] = (int) ($info['reasons'][$bm_why] ?? 0) + 1;
+        }
+    }
+}
+// the counts go back into the run's own file - unless the admin cancelled
+// meanwhile (that deletes it, and it must stay deleted)
+if (is_file('info')) {
+    file_put_contents('info', json_encode($info, JSON_UNESCAPED_UNICODE));
 }
 
 file_put_contents('users.json',json_encode($userid,true));

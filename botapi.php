@@ -432,6 +432,20 @@ function getFileddire($photoid){
 'file_id' => $photoid, 
 ]);
  }
+// a message of any kind sent on as a new one - no «forwarded from» line, its
+// own text, formatting, premium emoji, media and caption kept exactly - with
+// buttons of ours under it when given
+function copyMessage($chat_id, $from_chat_id, $message_id, $keyboard = null){
+    $datas = [
+        'chat_id' => $chat_id,
+        'from_chat_id' => $from_chat_id,
+        'message_id' => $message_id,
+    ];
+    if ($keyboard !== null) {
+        $datas['reply_markup'] = $keyboard;
+    }
+    return telegram('copyMessage', $datas);
+}
 function pinmessage($from_id,$message_id){
   return telegram('pinChatMessage', [
 'chat_id' => $from_id, 

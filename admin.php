@@ -10859,16 +10859,42 @@ elseif ($datain == "systemsms") {
     // <tg-emoji> tag, or every user would get the plain one
     if ($userdata['typeservice'] == "forwardmessage") {
         savedata("save", "message", $message_id);
-    } elseif ($userdata['typeservice'] == "xdaynotmessage") {
-        if ($text) {
-            savedata("save", "message", topup_caption_text_from_update($text, $update));
-        } else {
-            sendmessage($from_id, $textbotlang['Admin']['messageBulk']['textOnlyInactive'], $backadmin, 'HTML');
-            return;
+    } elseif ($userdata['typeservice'] == "xdaynotmessage" || $userdata['typeservice'] == "sendmessage") {
+        // What the admin sent goes out one of two ways. A text whose formatting
+        // can be written as HTML (bold, quotes, links, premium emoji...) is
+        // sent as text, so the tab's 🎨 wrapping and the button still apply.
+        // Anything else - a poll, a checklist, a picture or video with its
+        // caption, a sticker, a text with a kind of formatting this bot does not
+        // know - is COPIED: the very message, as it is, to every user.
+        $bm_in = $update['message'] ?? [];
+        $bm_ents = (array) ($bm_in['entities'] ?? []);
+        $bm_onlyEmoji = true;
+        foreach ($bm_ents as $bm_e) {
+            if (($bm_e['type'] ?? '') !== 'custom_emoji') {
+                $bm_onlyEmoji = false;
+            }
         }
-    } elseif ($userdata['typeservice'] == "sendmessage") {
-        if ($text) {
-            savedata("save", "message", topup_caption_text_from_update($text, $update));
+        $bm_unknown = [];
+        $bm_html = null;
+        $bm_copyNow = false;
+        if ($text !== '' && !isset($bm_in['poll']) && !isset($bm_in['checklist'])) {
+            if ($bm_onlyEmoji) {
+                // plain text, or text with premium emoji: as before (a typed <b> tag works)
+                $bm_html = topup_caption_text_from_update($text, $update);
+            } else {
+                [$bm_html, $bm_unknown] = entities_to_html($bm_in['text'] ?? $text, $bm_ents);
+                if ($bm_unknown) {
+                    $bm_html = null;
+                }
+            }
+        }
+        if ($bm_html !== null) {
+            savedata("save", "message", $bm_html);
+            savedata("save", "copymode", "0");
+        } elseif (isset($update['message'])) {
+            savedata("save", "message", $message_id);
+            savedata("save", "copymode", "1");
+            $bm_copyNow = true;
         } else {
             sendmessage($from_id, $textbotlang['Admin']['messageBulk']['textOnlyBroadcast'], $backadmin, 'HTML');
             return;
@@ -10903,8 +10929,21 @@ elseif ($datain == "systemsms") {
     if ($userdata['typeservice'] != "forwardmessage") {
         $pv_lang = in_array($userdata['lang'] ?? '', panel_langs(), true) ? $userdata['lang'] : um_tab($user);
         $pv_alias = ['buy' => 'b1', 'start' => 'b2', 'usertestbtn' => 'b3', 'helpbtn' => 'b4', 'affiliatesbtn' => 'b5', 'addbalance' => 'b6'][$userdata['btntypemessage'] ?? 'none'] ?? null;
-        list($pv_cap, $pv_kb) = um_preview_payload($pv_lang, 'users.broadcast.message', um_bcast_wrap(lang_tab_texts($pv_lang), $text), $pv_alias, $textbotlang);
-        sendmessage($from_id, $pv_cap, $pv_kb, 'HTML');
+        $bm_copy = !empty($bm_copyNow);
+        if ($bm_copy) {
+            // a copied message is shown as it will arrive - and if Telegram will
+            // not copy this kind, the admin hears it now, not after the run
+            list($pv_cap, $pv_kb) = um_preview_payload($pv_lang, 'users.broadcast.message', '', $pv_alias, $textbotlang);
+            $pv_copy = copyMessage($from_id, $from_id, $message_id, $pv_kb);
+            if (empty($pv_copy['ok'])) {
+                sendmessage($from_id, sprintf($textbotlang['Admin']['messageBulk']['copyFailed'], htmlspecialchars((string) ($pv_copy['description'] ?? '?'))), $backadmin, 'HTML');
+                return;
+            }
+            sendmessage($from_id, $textbotlang['Admin']['messageBulk']['copyNote'], null, 'HTML');
+        } else {
+            list($pv_cap, $pv_kb) = um_preview_payload($pv_lang, 'users.broadcast.message', um_bcast_wrap(lang_tab_texts($pv_lang), $text), $pv_alias, $textbotlang);
+            sendmessage($from_id, $pv_cap, $pv_kb, 'HTML');
+        }
     }
     sendmessage($from_id, $textconfirm, $startaction, 'HTML');
     sendmessage($from_id, $textbotlang['Admin']['messageBulk']['confirmStart'], $keyboardadmin, 'HTML');
@@ -10962,6 +11001,8 @@ elseif ($datain == "systemsms") {
     }
     if ($typeservice == "sendmessage" || $typeservice == "xdaynotmessage") {
         $bm_info["btnmessage"] = $userdata['btntypemessage'] ?? 'none';
+        // the very message, copied to each user (a poll, a picture, a quote...)
+        $bm_info["copy"] = (($userdata['copymode'] ?? '0') === '1') ? 1 : 0;
     }
     file_put_contents("cronbot/users.json", $userslist);
     file_put_contents('cronbot/info', json_encode($bm_info));
