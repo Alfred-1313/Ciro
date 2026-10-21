@@ -4486,6 +4486,52 @@ if (!function_exists('bot_update_request_path')) {
         ]);
     }
 }
+// 🆕 what the latest update added: whatsnew.php (shipped with the code, rewritten
+// for each update) holds the notes, and table.php - which every update runs,
+// from the bot's button and from `mirza update` alike - calls this once at the
+// end. Each admin gets the notes once, in their language; the id of the notes
+// last sent is kept in storage/whatsnew_seen, so running table.php again, or
+// updating to a version with the same notes, says nothing.
+if (!function_exists('bot_whatsnew_announce')) {
+    function bot_whatsnew_announce()
+    {
+        $notes = is_file(__DIR__ . '/whatsnew.php') ? require __DIR__ . '/whatsnew.php' : null;
+        if (!is_array($notes) || empty($notes['id'])) {
+            return 0;
+        }
+        $dir = __DIR__ . '/storage';
+        $mark = $dir . '/whatsnew_seen';
+        if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+            return 0;
+        }
+        if (trim((string) @file_get_contents($mark)) === (string) $notes['id']) {
+            return 0;
+        }
+        $admins = select("admin", "id_admin", null, null, "FETCH_COLUMN");
+        if (!is_array($admins) || !$admins) {
+            return 0; // a fresh install: nobody to tell yet, and nothing marked
+        }
+        // marked before sending: if this cannot be written the notes would go
+        // out again on every run
+        if (@file_put_contents($mark, (string) $notes['id'], LOCK_EX) === false) {
+            return 0;
+        }
+        $sent = 0;
+        foreach ($admins as $adminId) {
+            $row = select("user", "lang", "id", $adminId, "select");
+            $lang = is_array($row) && ($row['lang'] ?? '') === 'en' ? 'en' : 'fa';
+            $text = (string) ($notes[$lang] ?? $notes['fa'] ?? '');
+            if ($text === '') {
+                continue;
+            }
+            $r = telegram('sendMessage', ['chat_id' => $adminId, 'text' => $text, 'parse_mode' => 'HTML']);
+            if (is_array($r) && !empty($r['ok'])) {
+                $sent++;
+            }
+        }
+        return $sent;
+    }
+}
 if (!function_exists('sms_forward_webhook_url')) {
     function sms_forward_webhook_url()
     {

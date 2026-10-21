@@ -239,6 +239,34 @@ if (!function_exists('um_tab')) {
         $id = $st->fetchColumn();
         return $id !== false ? (string) $id : $s;
     }
+    // Took a service out of its panel? [true, ''] when it is gone - or was
+    // never there, or its panel is no longer in the bot, so there is nothing
+    // left to delete - and [false, reason] when the panel refused or did not
+    // answer. Marking a service «removed» in the bot used to ignore this, so a
+    // timeout left it deleted here and alive in the panel.
+    function um_panel_remove(array $inv)
+    {
+        global $ManagePanel;
+        $r = $ManagePanel->RemoveUser($inv['Service_location'], $inv['username']);
+        if (is_array($r) && ($r['status'] ?? '') === 'successful') {
+            return [true, ''];
+        }
+        $msg = is_array($r) ? ($r['msg'] ?? $r) : 'no answer';
+        $msg = is_string($msg) || is_numeric($msg) ? (string) $msg : json_encode($msg, JSON_UNESCAPED_UNICODE);
+        if (preg_match('/not\s*found|no such|does not exist|doesn.t exist|404/i', $msg)) {
+            return [true, ''];
+        }
+        return [false, mb_substr($msg, 0, 160)];
+    }
+    // a user's services that still exist: every invoice that is not unpaid and
+    // not already removed (removebyadmin, removebyuser, removeTime, ...)
+    function um_live_services($userId)
+    {
+        global $pdo;
+        $st = $pdo->prepare("SELECT * FROM invoice WHERE id_user = ? AND Status <> 'Unpaid' AND Status NOT LIKE 'remove%'");
+        $st->execute([(string) $userId]);
+        return $st->fetchAll(PDO::FETCH_ASSOC);
+    }
     // 👀 a user's screen: its 24 rows were too many to find anything in. 'main'
     // is an index of sections; each section brings its own buttons and a 🔙 to
     // it, under the same message (um_info_kb_edit). An on/off pair shows the
@@ -283,6 +311,7 @@ if (!function_exists('um_tab')) {
             $rows = [
                 [strtolower((string) ($u['User_Status'] ?? '')) === 'block'
                     ? $b($m['unbanUserList'], "unbanuserr_{$id}", 'success') : $b($m['banUserList'], "banuserlist_{$id}", 'danger')],
+                [$b($t['purgeBtn'], "umpurge_{$id}", 'danger')],
                 [(string) ($u['verify'] ?? '0') === '1'
                     ? $b($k['unauthUser'], "unverify-{$id}", 'danger') : $b($k['authenticateUser'], "verify_{$id}", 'success')],
                 [(string) ($u['cardpayment'] ?? '0') === '1'
@@ -15974,6 +16003,57 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
             'parse_mode' => "HTML"
         ]);
     }
+} elseif (preg_match('/^umpurge_(\w+)$/', $datain, $dataget)) {
+    // ☠️ block + delete every service, asked once before it runs
+    $iduser = $dataget[1];
+    if (in_array($iduser, $admin_ids) || (string) $iduser === (string) $from_id) {
+        sendmessage($from_id, $textbotlang['Admin']['UserMgmt']['purgeAdmin'], null, 'HTML');
+        return;
+    }
+    $Response = json_encode([
+        'inline_keyboard' => [
+            [
+                ['text' => $textbotlang['Admin']['UserMgmt']['purgeGo'], 'callback_data' => 'umpurgego_' . $iduser, 'style' => 'danger'],
+            ],
+        ]
+    ]);
+    sendmessage($from_id, sprintf($textbotlang['Admin']['UserMgmt']['purgeAsk'], $iduser, count(um_live_services($iduser))), $Response, 'HTML');
+} elseif (preg_match('/^umpurgego_(\w+)$/', $datain, $dataget)) {
+    $iduser = $dataget[1];
+    if (in_array($iduser, $admin_ids) || (string) $iduser === (string) $from_id) {
+        sendmessage($from_id, $textbotlang['Admin']['UserMgmt']['purgeAdmin'], null, 'HTML');
+        return;
+    }
+    // the button goes first: a second tap while the panels answer must not
+    // start a second run
+    Editmessagetext($from_id, $message_id, $text_inline, json_encode(['inline_keyboard' => []]));
+    update("user", "User_Status", "block", "id", $iduser);
+    update("user", "description_blocking", $textbotlang['Admin']['UserMgmt']['purgeBlockNote'], "id", $iduser);
+    sendmessage($from_id, $textbotlang['Admin']['UserMgmt']['purgeRunning'], null, 'HTML');
+    @set_time_limit(600);
+    $purged = 0;
+    $failedLines = '';
+    $failedCount = 0;
+    foreach (um_live_services($iduser) as $purgeInv) {
+        [$purgeOk, $purgeWhy] = um_panel_remove($purgeInv);
+        if ($purgeOk) {
+            update('invoice', 'status', 'removebyadmin', 'id_invoice', $purgeInv['id_invoice']);
+            $purged++;
+        } else {
+            $failedCount++;
+            $failedLines .= "\n• <code>" . htmlspecialchars((string) $purgeInv['username']) . '</code> (' . htmlspecialchars((string) $purgeInv['Service_location']) . '): ' . htmlspecialchars($purgeWhy);
+        }
+    }
+    sendmessage($from_id, sprintf($textbotlang['Admin']['UserMgmt']['purgeDone'], $iduser, $purged, $failedCount ? sprintf($textbotlang['Admin']['UserMgmt']['purgeFailedHead'], $failedCount) . $failedLines : ''), $keyboardadmin, 'HTML');
+    if (strlen($setting['Channel_Report']) > 0) {
+        telegram('sendmessage', [
+            'chat_id' => $setting['Channel_Report'],
+            'message_thread_id' => $otherservice,
+            'text' => sprintf($textbotlang['Admin']['UserMgmt']['purgeReport'], $iduser, $from_id, $purged),
+            'parse_mode' => "HTML",
+            'reply_markup' => json_encode(['inline_keyboard' => [[['text' => $textbotlang['Admin']['manageUser']['manageUserBtn'], 'callback_data' => 'manageuser_' . $iduser]]]]),
+        ]);
+    }
 } elseif ((preg_match('/banuserlist_(\w+)/', $datain, $dataget) || preg_match('/blockuserfake_(\w+)/', $datain, $dataget))) {
     $iduser = $dataget[1];
     $userdata = select("user", "*", "id", $iduser, "select");
@@ -16111,8 +16191,15 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
 } elseif (preg_match('/removeservice-(.*)/', $datain, $dataget)) {
     $username = $dataget[1];
     $info_product = select("invoice", "*", "id_invoice", $username, "select");
-    $DataUserOut = $ManagePanel->DataUser($info_product['Service_location'], $info_product['username']);
-    $ManagePanel->RemoveUser($info_product['Service_location'], $info_product['username']);
+    if (!is_array($info_product)) {
+        return;
+    }
+    // only «removed» once the panel has really let go of it
+    [$rmOk, $rmWhy] = um_panel_remove($info_product);
+    if (!$rmOk) {
+        sendmessage($from_id, sprintf($textbotlang['Admin']['UserMgmt']['removeFailed'], htmlspecialchars((string) $info_product['Service_location']), htmlspecialchars($rmWhy)), $keyboardadmin, 'HTML');
+        return;
+    }
     update('invoice', 'status', 'removebyadmin', 'id_invoice', $username);
     sendmessage($from_id, $textbotlang['Admin']['manageUser']['removedService'], $keyboardadmin, 'HTML');
     Editmessagetext($from_id, $message_id, $text_inline, json_encode(['inline_keyboard' => []]));
@@ -16132,7 +16219,12 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
             sendmessage($from_id, $textbotlang['Admin']['errorOccurred'], $keyboardadmin, 'HTML');
         }
     }
-    $ManagePanel->RemoveUser($info_product['Service_location'], $info_product['username']);
+    [$rmOk, $rmWhy] = um_panel_remove($info_product);
+    if (!$rmOk) {
+        // nothing refunded and nothing marked: it is still in the panel
+        sendmessage($from_id, sprintf($textbotlang['Admin']['UserMgmt']['removeFailed'], htmlspecialchars((string) $info_product['Service_location']), htmlspecialchars($rmWhy)), $keyboardadmin, 'HTML');
+        return;
+    }
     update('invoice', 'status', 'removebyadmin', 'id_invoice', $username);
     // back into the wallet the service was bought from
     wallet_credit($info_product['id_user'], $info_product['price_product'], invoice_currency($info_product));

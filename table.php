@@ -1626,3 +1626,9 @@ if ($check && $check->rowCount() != 0) {
 }
 // with its secret, and asking for chat_member too
 webhook_register();
+// 🆕 tell the admins what this update added (whatsnew.php), once
+try {
+    bot_whatsnew_announce();
+} catch (\Throwable $e) {
+    error_log('whatsnew: ' . $e->getMessage());
+}
