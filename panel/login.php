@@ -59,73 +59,113 @@ if (!$panelOff && $_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 ?>
+<?php
+// the title's last word is the one that glows gold
+$title = trim((string) $textbotlang['panel']['loginButton']);
+$cut = mb_strrpos($title, ' ');
+$titleHtml = $cut === false ? '<span>' . htmlspecialchars($title) . '</span>'
+  : htmlspecialchars(mb_substr($title, 0, $cut)) . ' <span>' . htmlspecialchars(mb_substr($title, $cut + 1)) . '</span>';
+$L = $textbotlang['panel'];
+?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-  <meta name="theme-color" content="#0f0f13" id="mtc">
-  <title><?= $textbotlang['panel']['loginPanelTitle'] ?></title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#09080a">
+  <title><?= $L['loginPanelTitle'] ?></title>
   <link rel="icon" href="img/icon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/vazirmatn.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=<?= (int) @filemtime(__DIR__ . '/css/style.css') ?>">
-  <link rel="stylesheet" href="css/shab.css?v=<?= (int) @filemtime(__DIR__ . '/css/shab.css') ?>">
-  <script src="js/theme-init.js?v=<?= (int) @filemtime(__DIR__ . '/js/theme-init.js') ?>"></script>
+  <link rel="stylesheet" href="css/fonts.css?v=<?= (int) @filemtime(__DIR__ . '/css/fonts.css') ?>">
+  <link rel="stylesheet" href="css/login.css?v=<?= (int) @filemtime(__DIR__ . '/css/login.css') ?>">
 </head>
 
 <body>
-  <div class="scenery" aria-hidden="true"><div class="ribbon ribbon-one"></div><div class="ribbon ribbon-two"></div><div class="ribbon ribbon-three"></div><div class="grain"></div></div>
-  <div class="auth">
-    <aside class="auth-aside">
-      <div class="auth-mark">
-        <div class="dot"><?= panel_brand_mark() ?></div>
-        <span><?= $textbotlang['panel']['loginHeading'] ?></span>
-      </div>
-      <div class="auth-quote">
-        <h2><?= $textbotlang['panel']['loginSubtitle'] ?> <a class="auth-link"
-            href="https://github.com/mahdiMGF2/mirzabot"><?= $textbotlang['panel']['loginUsernameLabel'] ?></a>
-          <?= $textbotlang['panel']['loginUsernamePlaceholder'] ?></h2>
-        <cite><?= $textbotlang['panel']['loginPasswordLabel'] ?></cite>
-      </div>
-      <div class="auth-foot">© <?= date('Y') ?> <?= $textbotlang['panel']['loginPasswordPlaceholder'] ?></div>
-    </aside>
-    <main class="auth-main">
-      <div class="auth-box">
-        <h1><?= $textbotlang['panel']['loginButton'] ?></h1>
-        <p class="lede"><?= $textbotlang['panel']['loginRememberMe'] ?></p>
-        <?php if ($panelOff): ?>
-          <div class="notice notice-no" style="margin-bottom:20px"><?= htmlspecialchars($textbotlang['panel']['loginPanelOff']) ?></div>
-        <?php else: ?>
+  <svg class="backdrop" viewBox="0 0 1500 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+<defs>
+<linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0c0805"/><stop offset=".22" stop-color="#453018"/><stop offset=".39" stop-color="#a07438"/><stop offset=".48" stop-color="#f4d28b"/><stop offset=".54" stop-color="#9d6a29"/><stop offset=".64" stop-color="#22150a"/><stop offset=".78" stop-color="#8b5b27"/><stop offset=".83" stop-color="#d7a05a"/><stop offset=".88" stop-color="#4c3014"/><stop offset="1" stop-color="#050405"/></linearGradient>
+<linearGradient id="silver" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#020204"/><stop offset=".26" stop-color="#16171c"/><stop offset=".42" stop-color="#63646c"/><stop offset=".48" stop-color="#c4c4ca"/><stop offset=".53" stop-color="#44454d"/><stop offset=".62" stop-color="#08090c"/><stop offset=".8" stop-color="#767880"/><stop offset=".85" stop-color="#282930"/><stop offset="1" stop-color="#020203"/></linearGradient>
+<radialGradient id="glow"><stop stop-color="#5d2d04" stop-opacity=".4"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+<filter id="soft"><feGaussianBlur stdDeviation="5"/></filter>
+</defs>
+<path fill="#050405" d="M0 0h1500v1000H0z"/>
+<ellipse cx="1350" cy="760" rx="500" ry="280" fill="url(#glow)"/>
+<path d="M240 -140 Q790 355 1610 390" fill="none" stroke="#0b0806" stroke-width="160"/>
+<path d="M240 -140 Q790 355 1610 390" fill="none" stroke="url(#gold)" stroke-width="112"/>
+<path d="M242 -110 Q850 405 1610 414" fill="none" stroke="#dca955" stroke-opacity=".55" stroke-width="3"/>
+<path d="M265 -125 Q850 380 1610 392" fill="none" stroke="#f0d39a" stroke-opacity=".5" stroke-width="2"/>
+<path d="M715 -180 Q1060 90 1590 99" fill="none" stroke="url(#silver)" stroke-width="66"/>
+<path d="M730 -190 Q1090 118 1570 120" fill="none" stroke="#a4a1a3" stroke-opacity=".5" stroke-width="2"/>
+<path d="M-150 0 Q600 800 1250 1120" fill="none" stroke="#1c1108" stroke-width="54"/>
+<path d="M-150 0 Q600 800 1250 1120" fill="none" stroke="url(#gold)" stroke-width="40"/>
+<path d="M-155 4 Q595 805 1245 1125" fill="none" stroke="#d5a05b" stroke-opacity=".65" stroke-width="2"/>
+<path d="M-300 330 Q90 610 580 1190" fill="none" stroke="url(#silver)" stroke-width="137"/>
+<path d="M-300 410 Q90 690 580 1270" fill="none" stroke="url(#silver)" stroke-width="13"/>
+<path d="M-300 300 Q90 580 580 1160" fill="none" stroke="#b3b5c0" stroke-opacity=".38" stroke-width="2"/>
+</svg>
+  <main class="shell" id="shell">
+    <svg class="frame" id="frame" aria-hidden="true">
+      <defs>
+        <linearGradient id="edge" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dbdadd" stop-opacity=".7"/><stop offset=".3" stop-color="#a29d94" stop-opacity=".23"/><stop offset=".7" stop-color="#b6a889" stop-opacity=".3"/><stop offset="1" stop-color="#e0cf9e" stop-opacity=".7"/></linearGradient>
+        <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d9d7e5" stop-opacity=".15"/><stop offset=".48" stop-color="#514954" stop-opacity=".13"/><stop offset="1" stop-color="#2b202b" stop-opacity=".22"/></linearGradient>
+      </defs>
+      <path id="frame-path" fill="url(#glass)" stroke="url(#edge)" stroke-width="1.7"/>
+    </svg>
+    <div class="piece piece-one" aria-hidden="true"><svg viewBox="0 0 100 100"><path d="M26 3H88Q103 3 91 17L17 91Q3 104 3 86V27Q3 3 26 3Z"/></svg></div>
+    <div class="piece piece-two" aria-hidden="true"><svg viewBox="0 0 100 100"><path d="M74 97H12Q-3 97 9 83L83 9Q97-4 97 14V73Q97 97 74 97Z"/></svg></div>
+    <div class="glow" aria-hidden="true"></div>
+
+    <section class="content">
+      <header>
+        <h1><?= $titleHtml ?></h1>
+        <p class="lede"><?= htmlspecialchars($L['loginRememberMe']) ?></p>
+      </header>
+      <?php if ($panelOff): ?>
+        <p class="note off" role="status"><?= htmlspecialchars($L['loginPanelOff']) ?></p>
+      <?php else: ?>
         <?php if ($error): ?>
-          <div class="notice notice-no" style="margin-bottom:20px"><?= htmlspecialchars($error) ?></div>
+          <p class="note" role="alert"><?= htmlspecialchars($error) ?></p>
         <?php endif; ?>
-        <form class="auth-form" method="POST" autocomplete="on">
-          <?php ?>
+        <form id="login-form" method="POST" autocomplete="on">
           <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
           <div class="field">
-            <label for="username"><?= $textbotlang['panel']['loginFooter'] ?></label>
-            <input type="text" id="username" name="username" class="input" placeholder="admin"
-              value="<?= htmlspecialchars($_POST['username'] ?? '') ?>" autocomplete="username" required autofocus
-              maxlength="100">
+            <label for="username"><?= htmlspecialchars($L['loginFooter']) ?></label>
+            <div class="input">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>
+              <input type="text" id="username" name="username" placeholder="admin" dir="ltr"
+                value="<?= htmlspecialchars($_POST['username'] ?? '') ?>" autocomplete="username" autocapitalize="none"
+                spellcheck="false" required autofocus maxlength="100">
+            </div>
           </div>
           <div class="field">
-            <label for="password"><?= $textbotlang['panel']['loginErrorTitle'] ?></label>
-            <input type="password" id="password" name="password" class="input" placeholder="••••••••"
-              autocomplete="current-password" required maxlength="200">
+            <label for="password"><?= htmlspecialchars($L['loginErrorTitle']) ?></label>
+            <div class="input">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <input type="password" id="password" name="password" placeholder="••••••••" dir="ltr"
+                autocomplete="current-password" required maxlength="200">
+              <button type="button" class="eye" id="eye" aria-pressed="false"
+                aria-label="<?= htmlspecialchars($L['loginPwShow']) ?>"
+                data-show="<?= htmlspecialchars($L['loginPwShow']) ?>" data-hide="<?= htmlspecialchars($L['loginPwHide']) ?>">
+                <svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3.2 3.9M6.6 6.6C3.6 8.4 2 12 2 12s3.5 6 10 6c1.7 0 3.2-.4 4.5-1M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+              </button>
+            </div>
           </div>
-          <button type="submit" class="btn btn-primary" id="loginBtn">
-            <span id="loginText"><?= $textbotlang['panel']['loginShowPassword'] ?></span>
-            <span id="loginSpin"
-              style="display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite"></span>
+          <button type="submit" class="submit" id="submit">
+            <span><?= htmlspecialchars($L['loginShowPassword']) ?></span>
+            <span class="spin" aria-hidden="true"></span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>
           </button>
         </form>
-        <?php endif; ?>
-        <div class="auth-bottom"><?= $textbotlang['panel']['loginHidePassword'] ?></div>
-      </div>
-    </main>
-  </div>
-  <?php if (!$panelOff): ?><script src="js/login.js"></script><?php endif; ?>
+      <?php endif; ?>
+      <p class="foot"><?= htmlspecialchars($L['loginHidePassword']) ?></p>
+    </section>
+  </main>
+  <p class="aside credit"><?= htmlspecialchars(trim($L['loginSubtitle'])) ?>
+    <a href="https://github.com/mahdiMGF2/mirzabot" target="_blank" rel="noopener"><?= htmlspecialchars($L['loginUsernameLabel']) ?></a>
+    <?= htmlspecialchars(trim($L['loginUsernamePlaceholder'])) ?> · © <?= date('Y') ?> <?= htmlspecialchars(trim($L['loginPasswordLabel'])) ?></p>
+  <script src="js/login.js?v=<?= (int) @filemtime(__DIR__ . '/js/login.js') ?>"></script>
 </body>
 
 </html>

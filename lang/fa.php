@@ -10038,6 +10038,8 @@ nowpayments.io
     'loginPanelTitle' => 'ورود — پنل مدیریت میرزا',
     'loginPasswordLabel' => 'پنل مدیریت میرزا',
     'loginPasswordPlaceholder' => '· نسخه 1.0 میرزا',
+    'loginPwShow' => 'نمایش رمز عبور',
+    'loginPwHide' => 'پنهان کردن رمز عبور',
     'loginRememberMe' => 'برای مدیریت ربات، اطلاعات حساب خود را وارد کنید.',
     'loginShowPassword' => 'ورود به پنل',
     'loginSubtitle' => 'برای حمایت لطفا به',

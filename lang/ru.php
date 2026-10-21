@@ -4448,6 +4448,8 @@ ID пользователя : %s
                 'loginPanelTitle' => 'Вход — Панель администратора Mirza',
                 'loginPasswordLabel' => 'Панель администратора Mirza',
                 'loginPasswordPlaceholder' => '· Версия 1.0 Mirza',
+                'loginPwShow' => 'Показать пароль',
+                'loginPwHide' => 'Скрыть пароль',
                 'loginRememberMe' => 'Чтобы управлять ботом, введите данные вашего аккаунта.',
                 'loginShowPassword' => 'Вход в панель',
                 'loginSubtitle' => 'Для поддержки, пожалуйста ',
