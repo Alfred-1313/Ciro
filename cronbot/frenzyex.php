@@ -31,9 +31,25 @@ if ($apiKey === '' || $apiKey === '0') {
 
 $rows = $pdo->query("SELECT * FROM Payment_report WHERE payment_Status = 'Unpaid' AND Payment_Method = 'frenzyex'")
     ->fetchAll(PDO::FETCH_ASSOC);
+// An invoice the bot closed ('expire', cronbot/payment_expire.php) can still
+// be paid: FrenzyEx settles through a forex/crypto processor, and a callback
+// that was dropped meanwhile would leave a paid order never credited. So the
+// last two days of expired ones are asked about too - one run in five (every
+// fifteen minutes) and newest first, so the polling stays small.
+if ((int) floor(time() / 180) % 5 === 0) {
+    $expired = $pdo->query("SELECT * FROM Payment_report WHERE payment_Status = 'expire' AND Payment_Method = 'frenzyex' ORDER BY id DESC LIMIT 200")
+        ->fetchAll(PDO::FETCH_ASSOC);
+    $since = time() - 2 * 86400;
+    $expired = array_filter($expired, function ($r) use ($since) {
+        $t = strtotime((string) ($r['time'] ?? ''));
+        return $t !== false && $t >= $since;
+    });
+    $rows = array_merge($rows, array_slice(array_values($expired), 0, 40));
+}
 if (empty($rows)) {
     return;
 }
+$fxHttpLogged = false;
 
 foreach ($rows as $row) {
     $requestId = (string) ($row['dec_not_confirmed'] ?? '');
@@ -54,10 +70,18 @@ foreach ($rows as $row) {
     $httpCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
     curl_close($curl);
     if ($httpCode < 200 || $httpCode >= 300) {
-        continue; // could not check right now - try again next tick
+        // could not check right now - try again next tick. A wrong or revoked
+        // API key shows up here as 401/403 on every row, and used to leave no
+        // trace anywhere: say so once per run.
+        if (!$fxHttpLogged && $httpCode !== 404) {
+            error_log('frenzyex cron: status check answered HTTP ' . $httpCode . ' for request_id=' . $requestId . ($httpCode === 0 ? ' (no answer)' : ''));
+            $fxHttpLogged = true;
+        }
+        continue;
     }
     $body = json_decode((string) $response, true);
-    if (!is_array($body) || ($body['status'] ?? '') !== 'paid') {
+    // the same two ways the callback recognises a paid request
+    if (!is_array($body) || (($body['status'] ?? '') !== 'paid' && ($body['payment_status'] ?? '') !== 'finished')) {
         // pending stays pending; an expired/canceled request is left for
         // cronbot/payment_expire.php's own generic cutoff to mark - nothing
         // to credit either way
@@ -65,16 +89,31 @@ foreach ($rows as $row) {
     }
     $priceAmount = $body['price_amount'] ?? ($body['amount'] ?? null);
     if ($priceAmount === null || (float) $priceAmount != (float) $row['price']) {
+        error_log(sprintf('frenzyex cron: paid but the amount differs - request_id=%s order=%s asked=%s confirmed=%s', $requestId, $row['id_order'], (string) $row['price'], (string) $priceAmount));
         continue; // same amount guard the callback itself applies
     }
     // claim before crediting - identical guard payment/frenzyex.php's own
     // callback uses
-    $claim = $pdo->prepare("UPDATE Payment_report SET payment_Status = 'paid' WHERE id_order = ? AND payment_Status = 'Unpaid'");
+    $claim = $pdo->prepare("UPDATE Payment_report SET payment_Status = 'paid' WHERE id_order = ? AND payment_Status IN ('Unpaid', 'expire')");
     $claim->execute([$row['id_order']]);
     if ($claim->rowCount() !== 1) {
         continue;
     }
-    DirectPayment($row['id_order'], "../images.jpg");
+    try {
+        DirectPayment($row['id_order'], "../images.jpg");
+    } catch (\Throwable $e) {
+        // already 'paid' - a later run cannot credit it twice, nor finish it
+        error_log(sprintf('frenzyex cron: DirectPayment failed - order=%s: %s', $row['id_order'], $e->getMessage()));
+        if (strlen((string) ($setting['Channel_Report'] ?? '')) > 0) {
+            telegram('sendmessage', [
+                'chat_id' => $setting['Channel_Report'],
+                'message_thread_id' => select("topicid", "idreport", "report", "errorreport", "select")['idreport'] ?? null,
+                'text' => sprintf("❌ FrenzyEx: پرداخت تایید شد ولی شارژ با خطا روبه‌رو شد.\nسفارش: %s\nrequest_id: %s\nخطا: %s", $row['id_order'], $requestId, htmlspecialchars($e->getMessage())),
+                'parse_mode' => "HTML",
+            ]);
+        }
+        continue;
+    }
     $pricecashback = select("PaySetting", "ValuePay", "NamePay", "chashbackfrenzyex", "select")['ValuePay'];
     $reportUser = select("user", "*", "id", $row['id_user'], "select");
     if ($pricecashback != "0") {
