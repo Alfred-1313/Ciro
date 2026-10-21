@@ -67,6 +67,8 @@ if (!$panelOff && $_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
   <meta name="theme-color" content="#0f0f13" id="mtc">
   <title><?= $textbotlang['panel']['loginPanelTitle'] ?></title>
+  <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/vazirmatn.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/style.css?v=<?= (int) @filemtime(__DIR__ . '/css/style.css') ?>">
   <link rel="stylesheet" href="css/shab.css?v=<?= (int) @filemtime(__DIR__ . '/css/shab.css') ?>">
   <script src="js/theme-init.js?v=<?= (int) @filemtime(__DIR__ . '/js/theme-init.js') ?>"></script>

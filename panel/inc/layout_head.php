@@ -8,7 +8,8 @@ $initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
 $L = $textbotlang['panel'];
 // [href, activeNav key, title (tooltip / search), icon, label]
 $navItem = fn(string $href, string $key, string $title, string $icon, string $label) =>
-  ['href' => $href, 'key' => $key, 'title' => $title, 'icon' => $icon, 'label' => $label];
+  ['href' => $href, 'key' => $key, 'title' => ui_plain($title), 'icon' => $icon, 'label' => ui_plain($label)];
+$pageTitlePlain = ui_plain((string) $pageTitle);
 $manageItems = [
   $navItem('users.php', 'users', $L['layoutPageTitleUsers'], 'users', $L['layoutMenuSectionMain']),
   $navItem('invoice.php', 'invoice', $L['layoutPageTitleInvoice'], 'invoice', $L['layoutMenuSectionManagement']),
@@ -62,6 +63,8 @@ $brandMark = panel_brand_mark();
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title><?= $textbotlang['panel']['layoutBrandName'] ?></title>
+  <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/vazirmatn.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/style.css?v=<?= (int) @filemtime(__DIR__ . '/../css/style.css') ?>">
   <link rel="stylesheet" href="css/shab.css?v=<?= (int) @filemtime(__DIR__ . '/../css/shab.css') ?>">
   <script src="js/theme-init.js?v=<?= (int) @filemtime(__DIR__ . '/../js/theme-init.js') ?>"></script>
@@ -164,9 +167,9 @@ $brandMark = panel_brand_mark();
           <button type="button" class="icon-btn menu-toggle" onclick="openSidebar()"
             aria-label="<?= htmlspecialchars($textbotlang['panel']['jsNavExpand']) ?>"><?= icon('menu', 18) ?></button>
           <div>
-            <div class="topbar-title"><?= htmlspecialchars($pageTitle) ?></div>
+            <div class="topbar-title"><?= htmlspecialchars($pageTitlePlain) ?></div>
             <div class="crumb"><span><?= $textbotlang['panel']['layoutPageTitleSuffix'] ?></span><span
-                style="opacity:.4;margin:0 3px">/</span><span><?= htmlspecialchars($pageTitle) ?></span></div>
+                style="opacity:.4;margin:0 3px">/</span><span><?= htmlspecialchars($pageTitlePlain) ?></span></div>
           </div>
         </div>
         <div class="topbar-tools">
@@ -189,7 +192,7 @@ $brandMark = panel_brand_mark();
           <div class="notice notice-warn"><?= htmlspecialchars($w) ?></div><?php endif;
         if ($showPageHead): ?>
           <div class="page-head fade-up">
-            <h1><?= htmlspecialchars($pageTitle) ?></h1>
+            <h1><?= htmlspecialchars($pageTitlePlain) ?></h1>
             <?php if ($pageLede): ?>
               <p><?= htmlspecialchars($pageLede) ?></p><?php endif; ?>
           </div>

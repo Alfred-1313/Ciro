@@ -332,6 +332,59 @@ if (_sb) {
     }
 }());
 
+// 🇮🇷 / 🇬🇧 written anywhere on the page (a bot button's name, a language in a
+// sentence) show as the panel's own rounded flag pictures; a list's options
+// cannot hold a picture, so there the flag is only left out. The text the
+// bot sends is not touched - this is how the page draws it.
+var _FLAG_RE = /\uD83C\uDDEE\uD83C\uDDF7|\uD83C\uDDEC\uD83C\uDDE7/g;
+var _FLAG_OF = { '\uD83C\uDDEE\uD83C\uDDF7': 'fa', '\uD83C\uDDEC\uD83C\uDDE7': 'en' };
+var _FLAG_SKIP = /^(SCRIPT|STYLE|TEXTAREA|INPUT|SELECT|OPTION|CODE|PRE|NOSCRIPT|TITLE)$/;
+
+function _flagText(node) {
+    var text = node.nodeValue, frag = document.createDocumentFragment(), last = 0, m;
+    _FLAG_RE.lastIndex = 0;
+    while ((m = _FLAG_RE.exec(text))) {
+        if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+        var img = document.createElement('img');
+        img.className = 'flag';
+        img.src = 'img/flags/' + _FLAG_OF[m[0]] + '.svg';
+        img.alt = m[0];
+        img.width = 21; img.height = 14;
+        frag.appendChild(img);
+        last = m.index + m[0].length;
+    }
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    node.parentNode.replaceChild(frag, node);
+}
+
+function _flagify(root) {
+    if (!root) return;
+    if (root.nodeType === 3) { root = root.parentNode; if (!root) return; }
+    if (root.nodeType !== 1 && root.nodeType !== 9) return;
+    var opts = root.nodeName === 'OPTION' ? [root] : (root.querySelectorAll ? root.querySelectorAll('option') : []);
+    Array.prototype.forEach.call(opts, function (o) {
+        _FLAG_RE.lastIndex = 0;
+        if (_FLAG_RE.test(o.textContent)) o.textContent = o.textContent.replace(_FLAG_RE, '').replace(/^\s+/, '');
+        _FLAG_RE.lastIndex = 0;
+    });
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: function (n) {
+            var p = n.parentNode;
+            if (!p || _FLAG_SKIP.test(p.nodeName) || p.isContentEditable) return NodeFilter.FILTER_REJECT;
+            _FLAG_RE.lastIndex = 0;
+            return _FLAG_RE.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        }
+    });
+    var found = [], n;
+    while ((n = walker.nextNode())) found.push(n);
+    found.forEach(_flagText);
+}
+
+_flagify(document.body);
+if (window.MutationObserver) new MutationObserver(function (list) {
+    list.forEach(function (m) { Array.prototype.forEach.call(m.addedNodes, _flagify); });
+}).observe(document.body, { childList: true, subtree: true });
+
 // the first placement jumps straight to the current page; from then on it slides
 if (_sbTrack) {
     _sbTrack.style.transition = 'none';

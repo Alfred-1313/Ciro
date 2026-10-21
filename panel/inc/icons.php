@@ -28,6 +28,7 @@ function icon(string $name, int $size = 16): string {
         'gift'      => '<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>',
         'arrow-left'=> '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
         'zap'       => '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+        'globe'     => '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
     ];
     $svg = $icons[$name] ?? '';
     return "<svg xmlns='http://www.w3.org/2000/svg' width='$size' height='$size' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'>$svg</svg>";
@@ -36,4 +37,19 @@ function icon(string $name, int $size = 16): string {
 // the moon-and-swoosh mark of the «شب» look, in the sidebar and on the login page
 function panel_brand_mark(): string {
     return '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="currentColor" stroke-width="5"/><path d="M45 17c-9-6-23-2-26 9 7-4 14-1 15 5-10-4-20 4-18 14 5-4 10-4 14-1-2 4-5 7-10 9 20 5 35-12 30-27-1 6-4 8-8 9 3-7 3-12-4-16 3-1 5-1 7-2Z" fill="currentColor"/></svg>';
+}
+
+// a label of the panel's own chrome (menu, page titles, tabs) without its
+// emoji - there the line icons stand in for them
+function ui_plain(string $s): string {
+    $s = preg_replace('/[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{2300}-\x{23FF}\x{FE0F}\x{200D}\x{20E3}\x{E0020}-\x{E007F}]/u', '', $s) ?? $s;
+    return trim(preg_replace('/\s{2,}/u', ' ', $s) ?? $s);
+}
+
+// the flag of one of the bot's languages, a rounded vector (img/flags/<code>.svg)
+function panel_flag(string $code): string {
+    if (!preg_match('/^[a-z]{2}$/', $code) || !is_file(__DIR__ . '/../img/flags/' . $code . '.svg')) {
+        return '';
+    }
+    return '<img class="flag" src="img/flags/' . $code . '.svg" alt="" width="21" height="14">';
 }

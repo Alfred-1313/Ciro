@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/icons.php';
 // What the bot keeps per language (products, categories, texts, referral
 // plans, ...) the web panel edits in the very same place, through the bot's
 // own helpers - a value set here is the value the bot uses, and the other way
@@ -71,9 +72,16 @@ function web_lang_checkboxes(string $name, $value, string $idPrefix): string
         . (!$picked ? ' checked' : '') . '> ' . htmlspecialchars($textbotlang['panel']['langAll']) . '</label>';
     foreach (web_langs() as $code => $label) {
         $h .= '<label class="lang-chip"><input type="checkbox" name="' . htmlspecialchars($name) . '[]" value="' . $code . '" id="' . htmlspecialchars($idPrefix . '_' . $code) . '"'
-            . (in_array($code, $picked, true) ? ' checked' : '') . '> ' . htmlspecialchars($label) . '</label>';
+            . (in_array($code, $picked, true) ? ' checked' : '') . '> ' . web_lang_html($code, $label) . '</label>';
     }
     return $h . '</div>';
+}
+
+// a language's name with its flag picture in place of the flag emoji
+function web_lang_html(string $code, string $label): string
+{
+    $flag = panel_flag($code);
+    return $flag !== '' ? $flag . htmlspecialchars(ui_plain($label)) : htmlspecialchars($label);
 }
 
 // the language tabs over a page; $url builds a tab's link from its code ('' = all),
@@ -86,7 +94,8 @@ function web_lang_tabs(string $current, callable $url, bool $withAll = false, ar
     foreach ($tabs as $code => $label) {
         $on = (string) $current === (string) $code;
         $n = isset($counts[$code]) ? ' <small style="opacity:.75">(' . number_format((int) $counts[$code]) . ')</small>' : '';
-        $h .= '<a href="' . htmlspecialchars($url((string) $code)) . '" class="lang-tab' . ($on ? ' on' : '') . '">' . htmlspecialchars($label) . $n . '</a>';
+        $face = (string) $code === '' ? icon('globe', 15) . htmlspecialchars(ui_plain($label)) : web_lang_html((string) $code, $label);
+        $h .= '<a href="' . htmlspecialchars($url((string) $code)) . '" class="lang-tab' . ($on ? ' on' : '') . '">' . $face . $n . '</a>';
     }
     return $h . '</div>';
 }
