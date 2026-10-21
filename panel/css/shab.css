@@ -936,35 +936,208 @@
   font-size: 1.7rem;
 }
 
-/* ── bottom bar of a phone ── */
-.bottom-nav {
-  left: 10px;
+/* ── bottom bar of a phone: a bead on a spring (js/toolbar.js) ── */
+.mtb {
+  --mtb-s1: var(--sf);
+  --mtb-s2: var(--sf2);
+  --mtb-r1: var(--bds);
+  --mtb-r2: transparent;
+  --mtb-bead: linear-gradient(
+    140deg,
+    var(--ach) 0%,
+    var(--ac) 55%,
+    var(--ac) 100%
+  );
+  --mtb-bead-bd: var(--ach);
+  --mtb-glow: var(--acg);
+  --mtb-label: var(--ach);
+  --mtb-icon: var(--mute);
+  --mtb-ink: var(--btn-ac-text, #fff);
+  display: none;
+  position: fixed;
   right: 10px;
-  bottom: 10px;
-  border: 1px solid var(--bd);
-  border-radius: 24px;
-  padding: 5px 4px;
-  background: color-mix(in srgb, var(--sf) 88%, transparent);
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 14px 40px #0005;
-  margin-bottom: env(safe-area-inset-bottom, 0);
+  left: 10px;
+  bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 90;
+  height: 140px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+  isolation: isolate;
 }
-[data-theme="shab"] .bottom-nav {
-  background: #1a1b23e0;
-  border-color: #ffffff14;
+[data-theme="shab"] .mtb {
+  --mtb-s1: #1b1525;
+  --mtb-s2: #110d1a;
+  --mtb-r1: rgba(163, 154, 175, 0.7);
+  --mtb-r2: rgba(96, 83, 111, 0.17);
+  --mtb-bead: linear-gradient(
+    140deg,
+    #ff9d80 0%,
+    #ff7c6b 38%,
+    #f66a5b 80%,
+    #df554d 100%
+  );
+  --mtb-bead-bd: #ffc0a5aa;
+  --mtb-glow: #ff735b2b;
+  --mtb-label: #ffa18e;
+  --mtb-icon: #9e92ac;
+  --mtb-ink: #693731;
 }
-.bnav-item {
-  border-radius: 16px;
+.mtb-fill-a {
+  stop-color: var(--mtb-s1);
 }
-.bnav-item.active {
-  color: var(--ach);
-  background: var(--acs);
+.mtb-fill-b {
+  stop-color: var(--mtb-s2);
 }
-.bnav-item.active::before {
-  top: auto;
-  bottom: -5px;
-  border-radius: 4px 4px 0 0;
+.mtb-rim-a {
+  stop-color: var(--mtb-r1);
+}
+.mtb-rim-b {
+  stop-color: var(--mtb-r2);
+}
+.mtb-surface {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 140px;
+  overflow: visible;
+  filter: drop-shadow(0 12px 12px #0003);
+  pointer-events: none;
+}
+.mtb-ambient {
+  position: absolute;
+  top: 65px;
+  left: var(--bead-x, 50%);
+  z-index: -1;
+  width: 200px;
+  height: 130px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, var(--mtb-glow), transparent 70%);
+  filter: blur(20px);
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.mtb-bead {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  width: 58px;
+  height: 58px;
+  border: 1.6px solid var(--mtb-bead-bd);
+  border-radius: 50%;
+  background: var(--mtb-bead);
+  box-shadow:
+    inset 0 2px 3px #ffffff40,
+    inset 0 -3px 5px #00000030,
+    0 0 0 5px var(--acs),
+    0 0 30px var(--mtb-glow),
+    0 7px 16px #0003;
+  will-change: transform;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+[data-theme="shab"] .mtb-bead {
+  box-shadow:
+    inset 0 2px 3px #ffd3b755,
+    inset 0 -3px 5px #b33e3a38,
+    0 0 0 5px #f4786810,
+    0 0 30px #ff735b2b,
+    0 7px 16px #0003;
+}
+.mtb-sheen {
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  background: linear-gradient(145deg, #fff2, transparent 50%);
+}
+.mtb-none .mtb-bead,
+.mtb-none .mtb-ambient {
+  opacity: 0;
+}
+.mtb-tabs {
+  position: absolute;
+  inset: 0 49px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+.mtb-tab {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  position: relative;
+  min-width: 0;
+  height: 126px;
+  color: var(--mtb-icon);
+  cursor: pointer;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+.mtb-tab svg {
+  position: absolute;
+  top: 73px;
+  left: calc(50% - 11.5px);
+  width: 23px;
+  height: 23px;
+  stroke-width: 1.7;
+  transition: color 0.25s;
+  will-change: transform;
+}
+.mtb-tab:hover {
+  color: var(--text);
+}
+.mtb:has(.mtb-tab:focus-visible) .mtb-bead::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 1px solid var(--mtb-bead-bd);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.mtb-label {
+  position: absolute;
+  top: 105px;
+  left: 50%;
+  transform: translate(-50%, 4px);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--mtb-label);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s,
+    transform 0.3s;
+}
+.mtb-tab.sel .mtb-label {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.mtb.is-dragging,
+.mtb.is-dragging .mtb-tab {
+  cursor: grabbing;
+}
+@media (max-width: 768px) {
+  .mtb {
+    display: block;
+  }
+  .bottom-nav {
+    display: none !important;
+  }
+}
+@media (max-width: 420px) {
+  .mtb-tabs {
+    inset-inline: 22px;
+  }
+  .mtb-bead {
+    top: 13px;
+    width: 52px;
+    height: 52px;
+  }
+  .mtb-label {
+    font-size: 10px;
+  }
 }
 
 @keyframes shabBreathe {
@@ -1112,10 +1285,10 @@
     border-radius: 18px;
   }
   body {
-    padding-bottom: 92px;
+    padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
   }
   #toast-area {
-    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(146px + env(safe-area-inset-bottom, 0px));
   }
   .ribbon {
     width: 240vw;
@@ -1156,7 +1329,9 @@
   .nav-track::after,
   .toast,
   .auth-box,
-  .sb-tip {
+  .sb-tip,
+  .mtb-tab svg,
+  .mtb-label {
     animation: none !important;
     transition: none !important;
   }
