@@ -10039,6 +10039,7 @@ nowpayments.io
     'loginPasswordLabel' => 'پنل مدیریت میرزا',
     'loginPasswordPlaceholder' => '· نسخه 1.0 میرزا',
     'loginPwShow' => 'نمایش رمز عبور',
+    'loginRemember' => 'ذخیره ورود · ۲۴ ساعت روی همین آی‌پی',
     'loginPwHide' => 'پنهان کردن رمز عبور',
     'loginRememberMe' => 'برای مدیریت ربات، اطلاعات حساب خود را وارد کنید.',
     'loginShowPassword' => 'ورود به پنل',

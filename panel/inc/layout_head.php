@@ -5,49 +5,49 @@ $activeNav = $activeNav ?? '';
 $showPageHead = $showPageHead ?? true;
 $currentUser = $_SESSION['admin_user'] ?? $textbotlang['panel']['layoutDefaultAdminName'];
 $initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
-$L = $textbotlang['panel'];
+$navT = $textbotlang['panel'];
 // [href, activeNav key, title (tooltip / search), icon, label]
 $navItem = fn(string $href, string $key, string $title, string $icon, string $label) =>
   ['href' => $href, 'key' => $key, 'title' => ui_plain($title), 'icon' => $icon, 'label' => ui_plain($label)];
 $pageTitlePlain = ui_plain((string) $pageTitle);
 $manageItems = [
-  $navItem('users.php', 'users', $L['layoutPageTitleUsers'], 'users', $L['layoutMenuSectionMain']),
-  $navItem('invoice.php', 'invoice', $L['layoutPageTitleInvoice'], 'invoice', $L['layoutMenuSectionManagement']),
-  $navItem('service.php', 'service', $L['layoutPageTitleService'], 'server', $L['layoutMenuSectionFinancial']),
-  $navItem('product.php', 'product', $L['layoutPageTitleProduct'], 'package', $L['layoutMenuSectionSystem']),
-  $navItem('servers.php', 'servers', $L['srvPageTitle'], 'server', $L['srvPageTitle']),
-  $navItem('category.php', 'category', $L['categoryPageTitle'], 'folder', $L['categoryPageTitle']),
-  $navItem('payg.php', 'payg', $L['pgPageTitle'], 'chart', $L['pgPageTitle']),
-  $navItem('bulkgift.php', 'bulkgift', $L['bgPageTitle'], 'gift', $L['bgPageTitle']),
+  $navItem('users.php', 'users', $navT['layoutPageTitleUsers'], 'users', $navT['layoutMenuSectionMain']),
+  $navItem('invoice.php', 'invoice', $navT['layoutPageTitleInvoice'], 'invoice', $navT['layoutMenuSectionManagement']),
+  $navItem('service.php', 'service', $navT['layoutPageTitleService'], 'server', $navT['layoutMenuSectionFinancial']),
+  $navItem('product.php', 'product', $navT['layoutPageTitleProduct'], 'package', $navT['layoutMenuSectionSystem']),
+  $navItem('servers.php', 'servers', $navT['srvPageTitle'], 'server', $navT['srvPageTitle']),
+  $navItem('category.php', 'category', $navT['categoryPageTitle'], 'folder', $navT['categoryPageTitle']),
+  $navItem('payg.php', 'payg', $navT['pgPageTitle'], 'chart', $navT['pgPageTitle']),
+  $navItem('bulkgift.php', 'bulkgift', $navT['bgPageTitle'], 'gift', $navT['bgPageTitle']),
 ];
 if (bulkspeed_available()) { /* 🚀 only while a panel can hold a speed limit (Rebecca) */
-  $manageItems[] = $navItem('bulkspeed.php', 'bulkspeed', $L['bsPageTitle'], 'zap', $L['bsPageTitle']);
+  $manageItems[] = $navItem('bulkspeed.php', 'bulkspeed', $navT['bsPageTitle'], 'zap', $navT['bsPageTitle']);
 }
 array_push(
   $manageItems,
-  $navItem('features.php', 'features', $L['featPageTitle'], 'settings', $L['featPageTitle']),
-  $navItem('referral.php', 'referral', $L['refPageTitle'], 'users', $L['refPageTitle']),
-  $navItem('payment.php', 'payment', $L['layoutPageTitlePayment'], 'card', $L['layoutSearchBoxPlaceholder']),
-  $navItem('channels.php', 'channels', $L['chnPageTitle'], 'eye', $L['chnPageTitle']),
-  $navItem('help.php', 'help', $L['helpPageTitle'], 'edit', $L['helpPageTitle']),
-  $navItem('gateways.php', 'gateways', $L['gwPageTitle'], 'wallet', $L['gwPageTitle']),
-  $navItem('topuplook.php', 'topuplook', $L['tlPageTitle'], 'invoice', $L['tlPageTitle']),
-  $navItem('discounts.php', 'discounts', $L['discPageTitle'], 'chart', $L['discPageTitle']),
-  $navItem('menu.php', 'menu', $L['menuPageTitle'], 'dashboard', $L['menuPageTitle']),
-  $navItem('buttons.php', 'buttons', $L['btnPageTitle'], 'package', $L['btnPageTitle']),
-  $navItem('looks.php', 'looks', $L['looksPageTitle'], 'menu', $L['looksPageTitle']),
-  $navItem('svclook.php', 'svclook', $L['svcPageTitle'], 'package', $L['svcPageTitle']),
-  $navItem('bottext.php', 'bottext', $L['bottextPageTitle'], 'edit', $L['bottextPageTitle']),
-  $navItem('tools.php', 'tools', $L['toolsPageTitle'], 'settings', $L['toolsPageTitle'])
+  $navItem('features.php', 'features', $navT['featPageTitle'], 'settings', $navT['featPageTitle']),
+  $navItem('referral.php', 'referral', $navT['refPageTitle'], 'users', $navT['refPageTitle']),
+  $navItem('payment.php', 'payment', $navT['layoutPageTitlePayment'], 'card', $navT['layoutSearchBoxPlaceholder']),
+  $navItem('channels.php', 'channels', $navT['chnPageTitle'], 'eye', $navT['chnPageTitle']),
+  $navItem('help.php', 'help', $navT['helpPageTitle'], 'edit', $navT['helpPageTitle']),
+  $navItem('gateways.php', 'gateways', $navT['gwPageTitle'], 'wallet', $navT['gwPageTitle']),
+  $navItem('topuplook.php', 'topuplook', $navT['tlPageTitle'], 'invoice', $navT['tlPageTitle']),
+  $navItem('discounts.php', 'discounts', $navT['discPageTitle'], 'chart', $navT['discPageTitle']),
+  $navItem('menu.php', 'menu', $navT['menuPageTitle'], 'dashboard', $navT['menuPageTitle']),
+  $navItem('buttons.php', 'buttons', $navT['btnPageTitle'], 'package', $navT['btnPageTitle']),
+  $navItem('looks.php', 'looks', $navT['looksPageTitle'], 'menu', $navT['looksPageTitle']),
+  $navItem('svclook.php', 'svclook', $navT['svcPageTitle'], 'package', $navT['svcPageTitle']),
+  $navItem('bottext.php', 'bottext', $navT['bottextPageTitle'], 'edit', $navT['bottextPageTitle']),
+  $navItem('tools.php', 'tools', $navT['toolsPageTitle'], 'settings', $navT['toolsPageTitle'])
 );
 $navSections = [
-  ['heading' => $L['layoutNavKeyboard'], 'items' => [
-    $navItem('index.php', 'dashboard', $L['layoutPageTitleDashboard'], 'dashboard', $L['layoutNavSettings']),
+  ['heading' => $navT['layoutNavKeyboard'], 'items' => [
+    $navItem('index.php', 'dashboard', $navT['layoutPageTitleDashboard'], 'dashboard', $navT['layoutNavSettings']),
   ]],
-  ['heading' => $L['layoutNavLogout'], 'items' => $manageItems],
-  ['heading' => $L['layoutSidebarToggleLabel'], 'items' => [
-    $navItem('settings.php', 'settings', $L['layoutPageTitleSettings'], 'settings', $L['layoutProfileMenuLabel']),
-    $navItem('logout.php', '', $L['layoutPageTitleLogout'], 'logout', $L['layoutNotificationsLabel']),
+  ['heading' => $navT['layoutNavLogout'], 'items' => $manageItems],
+  ['heading' => $navT['layoutSidebarToggleLabel'], 'items' => [
+    $navItem('settings.php', 'settings', $navT['layoutPageTitleSettings'], 'settings', $navT['layoutProfileMenuLabel']),
+    $navItem('logout.php', '', $navT['layoutPageTitleLogout'], 'logout', $navT['layoutNotificationsLabel']),
   ]],
 ];
 $brandMark = panel_brand_mark();
@@ -135,15 +135,15 @@ $brandMark = panel_brand_mark();
       </div>
       <nav class="sidebar-nav" id="sidebar-nav">
         <div class="nav-track" id="nav-track" aria-hidden="true"></div>
-        <?php foreach ($navSections as $section): ?>
+        <?php foreach ($navSections as $navGroup): ?>
           <div class="nav-section">
-            <div class="nav-heading"><?= $section['heading'] ?></div>
-            <?php foreach ($section['items'] as $item):
-              $isActive = $item['key'] !== '' && $activeNav === $item['key']; ?>
-              <a href="<?= $item['href'] ?>" class="nav-item<?= $isActive ? ' active' : '' ?>"<?= $isActive ? ' aria-current="page"' : '' ?>
-                data-title="<?= htmlspecialchars(strip_tags($item['title'])) ?>">
-                <span class="nav-icon"><?= icon($item['icon']) ?></span><span
-                  class="nav-label"><?= $item['label'] ?></span>
+            <div class="nav-heading"><?= $navGroup['heading'] ?></div>
+            <?php foreach ($navGroup['items'] as $navEntry):
+              $navActive = $navEntry['key'] !== '' && $activeNav === $navEntry['key']; ?>
+              <a href="<?= $navEntry['href'] ?>" class="nav-item<?= $navActive ? ' active' : '' ?>"<?= $navActive ? ' aria-current="page"' : '' ?>
+                data-title="<?= htmlspecialchars(strip_tags($navEntry['title'])) ?>">
+                <span class="nav-icon"><?= icon($navEntry['icon']) ?></span><span
+                  class="nav-label"><?= $navEntry['label'] ?></span>
               </a>
             <?php endforeach; ?>
           </div>
@@ -172,12 +172,12 @@ $brandMark = panel_brand_mark();
           <p class="page-lede fade-up"><?= htmlspecialchars($pageLede) ?></p>
         <?php endif; ?>
         <?php
-        $s = get_flash('success');
-        $e = get_flash('error');
-        $w = get_flash('warning');
-        if ($s): ?>
-          <div class="notice notice-ok"><?= htmlspecialchars($s) ?></div><?php endif;
-        if ($e): ?>
-          <div class="notice notice-no"><?= htmlspecialchars($e) ?></div><?php endif;
-        if ($w): ?>
-          <div class="notice notice-warn"><?= htmlspecialchars($w) ?></div><?php endif; ?>
+        $flashOk = get_flash('success');
+        $flashNo = get_flash('error');
+        $flashWarn = get_flash('warning');
+        if ($flashOk): ?>
+          <div class="notice notice-ok"><?= htmlspecialchars($flashOk) ?></div><?php endif;
+        if ($flashNo): ?>
+          <div class="notice notice-no"><?= htmlspecialchars($flashNo) ?></div><?php endif;
+        if ($flashWarn): ?>
+          <div class="notice notice-warn"><?= htmlspecialchars($flashWarn) ?></div><?php endif; ?>

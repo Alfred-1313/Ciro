@@ -112,7 +112,7 @@ echo web_lang_assets();
 <form method="POST" action="buttons.php?<?= http_build_query(['lang' => $lang]) ?>" class="card fade-up" id="g-<?= htmlspecialchars($alias) ?>" style="margin-bottom:14px">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
   <input type="hidden" name="alias" value="<?= htmlspecialchars($alias) ?>">
-  <div class="card-head"><div><div class="card-title"><?= htmlspecialchars($itemLabels[$key] ?? $key) ?></div>
+  <div class="card-head"><div><div class="card-title"><?= htmlspecialchars($itemLabels[$key] ?? implode(' · ', array_column($defs, 'name'))) ?></div>
     <div class="card-subtitle"><?= $shared ? $t['btnSharedLook'] : ($textOnly ? $t['btnTextOnly'] : '') ?></div></div></div>
   <div class="card-body">
     <?php foreach ($defs as $idx => $def): $ov = genbtn_override($lang, $key, $idx); $n = "b[$idx]";

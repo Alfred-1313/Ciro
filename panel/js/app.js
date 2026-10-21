@@ -385,6 +385,32 @@ if (window.MutationObserver) new MutationObserver(function (list) {
     list.forEach(function (m) { Array.prototype.forEach.call(m.addedNodes, _flagify); });
 }).observe(document.body, { childList: true, subtree: true });
 
+// A table of five columns or more is a card per row on a phone (css/shab.css):
+// each cell named after its column, the row's own name as the card's title
+// (a cell marked data-title, else its first .cs cell, else the first cell that
+// is not the row number), and a cell with a text to type, or a row of boxes,
+// the card's full width. Four columns or fewer stay a table: they fit.
+document.querySelectorAll('.tbl-wrap > table:not(.no-stack)').forEach(function (t) {
+    var heads = Array.prototype.map.call(t.querySelectorAll('thead th'), function (th) { return th.textContent.trim(); });
+    if (!t.classList.contains('tbl-xl') && heads.length < 5) return;
+    t.parentElement.classList.add('stk-wrap');
+    t.querySelectorAll('tbody tr').forEach(function (tr) {
+        var cells = Array.prototype.slice.call(tr.children);
+        var title = tr.querySelector('td[data-title], td.stk-title, td.cs');
+        if (!title && cells.length > 1) title = cells.filter(function (td, i) { return heads[i] !== '#' && td.getAttribute('colspan') === null; })[0];
+        if (title) title.classList.add('stk-title');
+        var col = 0;
+        cells.forEach(function (td) {
+            var span = parseInt(td.getAttribute('colspan') || '1', 10);
+            if (span === 1 && heads[col]) td.setAttribute('data-label', heads[col]);
+            if (span > 1 || td.querySelector('textarea, .lang-chips, input.input:not([style*="width"])')) td.classList.add('stk-wide');
+            // a field with nothing in it (a dash) is left out of the card
+            if (span === 1 && td !== title && /^[\s—–-]*$/.test(td.textContent) && !td.querySelector('a, button, input, select, textarea, img, svg')) td.classList.add('stk-empty');
+            col += span;
+        });
+    });
+});
+
 // the first placement jumps straight to the current page; from then on it slides
 if (_sbTrack) {
     var _prevY = null;

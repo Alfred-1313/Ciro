@@ -181,7 +181,7 @@ echo web_lang_assets();
         </div>
     <?php endif; ?>
     <div class="tbl-wrap">
-        <table class="tbl-xl no-stack">
+        <table class="tbl-xl">
             <thead>
                 <tr>
                     <th style="width:36px">#</th>
@@ -227,7 +227,7 @@ echo web_lang_assets();
                         <tr>
                             <td class="cf"><?= $i++ ?></td>
                             <td class="cm"><?= htmlspecialchars($u['id']) ?></td>
-                            <td>
+                            <td data-title>
                                 <?php if ($uname): ?>
                                     <span class="cm" dir="ltr" style="color:var(--ac);display:inline-block">@<?= htmlspecialchars($uname) ?></span>
                                 <?php else: ?>

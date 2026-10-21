@@ -4449,6 +4449,7 @@ ID пользователя : %s
                 'loginPasswordLabel' => 'Панель администратора Mirza',
                 'loginPasswordPlaceholder' => '· Версия 1.0 Mirza',
                 'loginPwShow' => 'Показать пароль',
+                'loginRemember' => 'Запомнить вход · 24 часа с этого IP',
                 'loginPwHide' => 'Скрыть пароль',
                 'loginRememberMe' => 'Чтобы управлять ботом, введите данные вашего аккаунта.',
                 'loginShowPassword' => 'Вход в панель',

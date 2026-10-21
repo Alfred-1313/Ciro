@@ -50,8 +50,15 @@ function require_auth(): void
         exit;
     }
     if (empty($_SESSION['admin_user'])) {
-        header('Location: login.php');
-        exit;
+        // no session (it was swept, or the browser was closed): the saved login
+        $name = remember_restore();
+        if ($name === null) {
+            header('Location: login.php');
+            exit;
+        }
+        session_regenerate_id(true);
+        $_SESSION['admin_user'] = $name;
+        $_SESSION['login_time'] = time();
     }
     try {
         $admin = db_fetch($pdo, "SELECT id_admin, rule FROM admin WHERE username = ?", [$_SESSION['admin_user']]);
@@ -65,6 +72,81 @@ function require_auth(): void
         header('Location: login.php');
         exit;
     }
+}
+
+// ── «ذخیره ورود»: stay signed in for 24 hours, from the same IP ──
+// A signed cookie, not a PHP session: the server's session files are swept
+// after 24 idle minutes (Debian's cron does it whatever the script asks), so a
+// session cannot hold a day. The cookie carries the admin's name, its expiry
+// and the IP it was given to, signed with a key made from the bot's token and
+// the admin's own password hash - a changed password, a moved IP, a deleted
+// admin or a forged cookie each end it.
+const PANEL_REMEMBER_COOKIE = 'panel_remember';
+const PANEL_REMEMBER_SECONDS = 86400;
+
+function panel_client_ip(): string
+{
+    return (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+}
+
+function panel_cookie_options(int $expires): array
+{
+    return [
+        'expires' => $expires,
+        'path' => '/',
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ];
+}
+
+function remember_key(string $pwHash): string
+{
+    global $APIKEY;
+    return hash_hmac('sha256', $pwHash, (string) $APIKEY . '|panel-remember');
+}
+
+function remember_issue(string $username, string $pwHash): void
+{
+    $exp = time() + PANEL_REMEMBER_SECONDS;
+    $payload = rtrim(strtr(base64_encode(json_encode(['u' => $username, 'e' => $exp, 'ip' => panel_client_ip()])), '+/', '-_'), '=');
+    $sig = hash_hmac('sha256', $payload, remember_key($pwHash));
+    setcookie(PANEL_REMEMBER_COOKIE, $payload . '.' . $sig, panel_cookie_options($exp));
+}
+
+function remember_forget(): void
+{
+    setcookie(PANEL_REMEMBER_COOKIE, '', panel_cookie_options(time() - 3600));
+    unset($_COOKIE[PANEL_REMEMBER_COOKIE]);
+}
+
+// the admin's name when the cookie is whole, unexpired, for this IP and for an
+// administrator who still has the password it was signed with; otherwise null
+function remember_restore(): ?string
+{
+    global $pdo;
+    $cookie = (string) ($_COOKIE[PANEL_REMEMBER_COOKIE] ?? '');
+    if ($cookie === '' || substr_count($cookie, '.') !== 1) {
+        return null;
+    }
+    [$payload, $sig] = explode('.', $cookie, 2);
+    $data = json_decode((string) base64_decode(strtr($payload, '-_', '+/'), true), true);
+    if (!is_array($data) || !is_string($data['u'] ?? null) || (int) ($data['e'] ?? 0) < time()
+        || !hash_equals((string) ($data['ip'] ?? ''), panel_client_ip())) {
+        remember_forget();
+        return null;
+    }
+    try {
+        $admin = db_fetch($pdo, "SELECT username, password, rule FROM admin WHERE username = ?", [$data['u']]);
+    } catch (Exception $e) {
+        return null;
+    }
+    if (!$admin || $admin['rule'] !== 'administrator'
+        || !hash_equals(hash_hmac('sha256', $payload, remember_key((string) $admin['password'])), $sig)) {
+        remember_forget();
+        return null;
+    }
+    return (string) $admin['username'];
 }
 
 function csrf_token(): string

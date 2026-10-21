@@ -5,6 +5,12 @@ session_start();
 // «🤖 پنل تحت وب: خاموش ❌» in the bot: no form and no login, only how to turn it on
 $panelOff = !webpanel_enabled();
 
+// a saved login (the «ذخیره ورود» box, 24 hours, same IP) skips the form
+if (!$panelOff && empty($_SESSION['admin_user']) && ($saved = remember_restore()) !== null) {
+    session_regenerate_id(true);
+    $_SESSION['admin_user'] = $saved;
+    $_SESSION['login_time'] = time();
+}
 if (!$panelOff && !empty($_SESSION['admin_user'])) {
   header('Location: index.php');
   exit;
@@ -41,14 +47,21 @@ if (!$panelOff && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($isCorrect && $admin && $admin['rule'] === 'administrator') {
 
+      $storedNow = (string) $admin['password'];
       if (!str_starts_with($admin['password'], '$2')) {
         $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
         update("admin", "password", $hash, "username", $username);
+        $storedNow = $hash;
       }
       clear_login_rate($ip);
       session_regenerate_id(true);
       $_SESSION['admin_user'] = $admin['username'];
       $_SESSION['login_time'] = time();
+      if (!empty($_POST['remember'])) {
+        remember_issue($admin['username'], $storedNow);
+      } else {
+        remember_forget();
+      }
       flash('success', $textbotlang['panel']['loginWelcomeBack'] . $admin['username']);
       header('Location: index.php');
       exit;
@@ -152,6 +165,11 @@ $L = $textbotlang['panel'];
               </button>
             </div>
           </div>
+          <label class="remember">
+            <input type="checkbox" name="remember" value="1"<?= ($_SERVER['REQUEST_METHOD'] !== 'POST' || !empty($_POST['remember'])) ? ' checked' : '' ?>>
+            <span class="box" aria-hidden="true"></span>
+            <span><?= htmlspecialchars($L['loginRemember']) ?></span>
+          </label>
           <button type="submit" class="submit" id="submit">
             <span><?= htmlspecialchars($L['loginShowPassword']) ?></span>
             <span class="spin" aria-hidden="true"></span>

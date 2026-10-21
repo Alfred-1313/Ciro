@@ -288,6 +288,58 @@ h1 span {
   display: block;
 }
 
+/* «ذخیره ورود» */
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.remember input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.remember .box {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border: 1px solid #ffffff33;
+  border-radius: 6px;
+  background: #ffffff08;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.remember .box::after {
+  content: "";
+  width: 9px;
+  height: 5px;
+  margin-top: -2px;
+  border: solid #2c260d;
+  border-width: 0 0 2px 2px;
+  transform: rotate(-45deg) scale(0);
+  transition: transform 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.remember input:checked + .box {
+  border-color: #fff18b;
+  background: var(--gold);
+}
+.remember input:checked + .box::after {
+  transform: rotate(-45deg) scale(1);
+}
+.remember input:focus-visible + .box {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
 .submit {
   display: flex;
   align-items: center;

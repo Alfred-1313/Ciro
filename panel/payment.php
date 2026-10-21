@@ -220,7 +220,7 @@ echo web_lang_assets();
               <td class="cell-mono" style="color:var(--accent)">
                 <?= htmlspecialchars(trunc((string) ($p['id_order'] ?? '—'), 18)) ?>
               </td>
-              <td class="cell-strong cell-num"><?= htmlspecialchars(money($p['price'] ?? 0, payment_currency($p))) ?></td>
+              <td class="cs cell-strong cell-num"><?= htmlspecialchars(money($p['price'] ?? 0, payment_currency($p))) ?></td>
               <td style="font-size:.8rem"><?= htmlspecialchars($method) ?></td>
               <td style="font-size:.78rem;color:var(--text-dim);white-space:nowrap">
                 <?= safe_date($p['time'] ?? null, 'Y/m/d H:i') ?>
