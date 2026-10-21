@@ -9,6 +9,10 @@ $status = $_GET['status'] ?? '';
 // a language tab ('' = all): its payments, the way the bot's 📊 counts them
 $lang = web_lang_pick('lang', '');
 [$langSQL, $langParams] = $lang !== '' ? stats_lang_where($lang, 'p') : ['1 = 1', []];
+// the order: ?sort=<column>_<desc|asc>; the newest first when nothing is asked
+$sortOptions = ['date_desc', 'date_asc', 'amount_desc', 'amount_asc', 'user_desc', 'user_asc'];
+$sort = in_array($_GET['sort'] ?? '', $sortOptions, true) ? $_GET['sort'] : 'date_desc';
+[$sortCol, $sortDir] = explode('_', $sort);
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $perPage = 30;
 $offset = ($page - 1) * $perPage;
@@ -16,11 +20,11 @@ $offset = ($page - 1) * $perPage;
 $where = [];
 $params = [];
 if ($search !== '') {
-  $where[] = "(`id_user` LIKE ? OR `id_order` LIKE ?)";
+  $where[] = "(p.id_user LIKE ? OR p.id_order LIKE ?)";
   $params = ["%$search%", "%$search%"];
 }
 if ($status !== '') {
-  $where[] = "payment_Status = ?";
+  $where[] = "p.payment_Status = ?";
   $params[] = $status;
 }
 if ($lang !== '') {
@@ -29,12 +33,32 @@ if ($lang !== '') {
 }
 $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
-$orderSQL = "ORDER BY time DESC";
+// price, time and id_user are text columns: sorted as they are, 900 would
+// come after 250000. And a payment an admin added by hand has its time as
+// «2026/10/21 10:00:00» where every other one has a unix time, so both are
+// read as seconds (PHP's own zone, the one the dates are shown in).
+$dirSQL = $sortDir === 'asc' ? 'ASC' : 'DESC';
+$secondsSQL = "(CASE WHEN p.time REGEXP '^[0-9]+$' THEN CAST(p.time AS UNSIGNED)"
+  . " ELSE TIMESTAMPDIFF(SECOND, '1970-01-01 00:00:00', STR_TO_DATE(p.time, '%Y/%m/%d %H:%i:%s')) - " . (int) date('Z') . " END)";
+// the currency of a payment, the way payment_currency() finds it: its own,
+// else its payer's, else their language's. Amounts of two currencies are not
+// comparable, so the amount order goes one currency at a time (the default one first).
+$curCases = '';
+foreach (array_diff(panel_langs(), ['fa']) as $l) {
+  $curCases .= ' WHEN u.lang = ' . $pdo->quote($l) . ' THEN ' . $pdo->quote((string) currency_for_lang($l));
+}
+$curSQL = "COALESCE(NULLIF(p.currency, ''), NULLIF(u.currency, ''), CASE" . $curCases . ' ELSE ' . $pdo->quote((string) currency_for_lang('fa')) . ' END)';
+$orderSQL = match ($sortCol) {
+  'amount' => "ORDER BY ($curSQL = " . $pdo->quote((string) currency_default_code()) . ") DESC, $curSQL ASC, CAST(p.price AS DECIMAL(20,2)) $dirSQL, p.id DESC",
+  'user' => "ORDER BY CAST(p.id_user AS UNSIGNED) $dirSQL, p.id DESC",
+  default => "ORDER BY $secondsSQL $dirSQL, p.id $dirSQL",
+};
+$manyCurrencies = count(array_unique(array_map('currency_for_lang', panel_langs()))) > 1;
 
 $langCounts = [];
 try {
   $total = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p $whereSQL", $params);
-  $payments = db_fetchAll($pdo, "SELECT * FROM Payment_report p $whereSQL $orderSQL LIMIT $perPage OFFSET $offset", $params);
+  $payments = db_fetchAll($pdo, "SELECT p.* FROM Payment_report p LEFT JOIN `user` u ON u.id = p.id_user $whereSQL $orderSQL LIMIT $perPage OFFSET $offset", $params);
   $langCounts[''] = db_count($pdo, "SELECT COUNT(*) FROM Payment_report");
   foreach (panel_langs() as $l) {
     [$lw, $lp] = stats_lang_where($l, 'p');
@@ -50,7 +74,7 @@ $totalPages = max(1, (int) ceil($total / $perPage));
 $totalSuccess = [];
 $todayCount = 0;
 try {
-  $totalSuccess = web_sum_by_currency("SELECT COALESCE(SUM(p.price),0) FROM Payment_report p WHERE p.payment_Status = 'paid' AND {lang}", [], 'p', $lang);
+  $totalSuccess = web_sum_by_currency("SELECT COALESCE(SUM(p.price),0) FROM Payment_report p WHERE p.payment_Status = 'paid' AND p.Payment_Method NOT IN ('add balance by admin', 'low balance by admin') AND {lang}", [], 'p', $lang);
   $todayCount = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p WHERE p.time > ? AND $langSQL", array_merge([strtotime('today')], $langParams));
 } catch (Exception $e) {
 }
@@ -81,6 +105,29 @@ $methodMap = [
   'variza' => $textbotlang['panel']['paymentMethodVariza'],
 ];
 
+// the page's own address for an order, keeping the filters
+$sortUrl = fn(string $order) => 'payment.php?' . http_build_query(array_filter(
+  ['q' => $search, 'status' => $status, 'lang' => $lang, 'sort' => $order === 'date_desc' ? '' : $order],
+  fn($v) => $v !== '' && $v !== null
+));
+// a column's header: a tap puts the highest (newest) first, the next tap the opposite
+$sortTh = function (string $col, string $label) use ($sortCol, $sortDir, $sortUrl) {
+  $on = $sortCol === $col;
+  $next = $on && $sortDir === 'desc' ? $col . '_asc' : $col . '_desc';
+  $ico = $on ? ($sortDir === 'desc' ? 'sort-desc' : 'sort-asc') : 'sort';
+  return '<th' . ($on ? ' aria-sort="' . ($sortDir === 'desc' ? 'descending' : 'ascending') . '"' : '') . '>'
+    . '<a class="th-sort' . ($on ? ' on' : '') . '" href="' . htmlspecialchars($sortUrl($next)) . '">'
+    . htmlspecialchars($label) . icon($ico, 14) . '</a></th>';
+};
+$sortLabels = [
+  'date_desc' => $textbotlang['panel']['paySortNewest'],
+  'date_asc' => $textbotlang['panel']['paySortOldest'],
+  'amount_desc' => $textbotlang['panel']['paySortAmountDesc'],
+  'amount_asc' => $textbotlang['panel']['paySortAmountAsc'],
+  'user_desc' => $textbotlang['panel']['paySortUserDesc'],
+  'user_asc' => $textbotlang['panel']['paySortUserAsc'],
+];
+
 $pageTitle = $textbotlang['panel']['paymentTransactionsTitle'];
 $pageLede = $textbotlang['panel']['paymentTransactionsSubtitle'];
 $activeNav = 'payment';
@@ -94,7 +141,7 @@ echo web_lang_assets();
   <div class="stat success">
     <div class="stat-label"><?= $textbotlang['panel']['paymentTransactionsHeading'] ?></div>
     <div class="stat-num"<?= count($totalSuccess) > 1 ? ' style="font-size:1.15rem;line-height:1.6"' : '' ?>><?= web_money_lines($totalSuccess) ?></div>
-    <div class="stat-meta"><?= $textbotlang['panel']['paymentAllMethods'] ?></div>
+    <div class="stat-meta"><?= $textbotlang['panel']['paymentAllMethods'] ?> · <?= $textbotlang['panel']['paySumNote'] ?></div>
   </div>
   <div class="stat">
     <div class="stat-label"><?= $textbotlang['panel']['paymentSearchBtn'] ?></div>
@@ -113,6 +160,12 @@ echo web_lang_assets();
     <div class="toolbar-title"><?= $textbotlang['panel']['paymentColMethod'] ?> <small>(<?= number_format($total) ?>)</small></div>
     <form method="GET" class="toolbar-end">
       <?php if ($lang !== ''): ?><input type="hidden" name="lang" value="<?= htmlspecialchars($lang) ?>"><?php endif; ?>
+      <select name="sort" class="select" style="width:auto" onchange="this.form.submit()"
+        aria-label="<?= htmlspecialchars($textbotlang['panel']['paySortLabel']) ?>">
+        <?php foreach ($sortLabels as $k => $lbl): ?>
+          <option value="<?= $k ?>" <?= $sort === $k ? 'selected' : '' ?>><?= htmlspecialchars($lbl) ?></option>
+        <?php endforeach; ?>
+      </select>
       <select name="status" class="select" style="width:auto" onchange="this.form.submit()">
         <option value=""><?= $textbotlang['panel']['paymentColStatus'] ?></option>
         <?php foreach ($statusMap as $k => [$_, $lbl]): ?>
@@ -126,22 +179,25 @@ echo web_lang_assets();
         <button type="button" class="search-clear">✕</button>
         <button type="submit" class="search-btn"><?= $textbotlang['panel']['paymentColTrackingCode'] ?></button>
       </div>
-      <?php if ($search || $status): ?>
+      <?php if ($search || $status || $sort !== 'date_desc'): ?>
         <a href="payment.php<?= $lang !== '' ? '?lang=' . urlencode($lang) : '' ?>" class="btn-link" style="font-size:.78rem"><?= $textbotlang['panel']['paymentColDate'] ?></a>
       <?php endif; ?>
     </form>
   </div>
 
+  <?php if ($sortCol === 'amount' && $manyCurrencies && $lang === ''): ?>
+    <div class="field-hint" style="padding:10px 18px 0"><?= htmlspecialchars($textbotlang['panel']['paySortCurrencyNote']) ?></div>
+  <?php endif; ?>
   <div class="tbl-wrap">
     <table class="tbl-lg">
       <thead>
         <tr>
           <th>#</th>
-          <th><?= $textbotlang['panel']['paymentColAuthority'] ?></th>
+          <?= $sortTh('user', $textbotlang['panel']['paymentColAuthority']) ?>
           <th><?= $textbotlang['panel']['paymentColDescription'] ?></th>
-          <th><?= $textbotlang['panel']['paymentDetailsTitle'] ?></th>
+          <?= $sortTh('amount', $textbotlang['panel']['paymentDetailsTitle']) ?>
           <th><?= $textbotlang['panel']['paymentDetailUser'] ?></th>
-          <th><?= $textbotlang['panel']['paymentDetailAmount'] ?></th>
+          <?= $sortTh('date', $textbotlang['panel']['paymentDetailAmount']) ?>
           <th><?= $textbotlang['panel']['paymentDetailMethod'] ?></th>
         </tr>
       </thead>
@@ -184,7 +240,7 @@ echo web_lang_assets();
   <div class="tbl-foot">
     <span><?= number_format($total) ?> <?= $textbotlang['panel']['paymentDetailDate'] ?> <?= $page ?> <?= $textbotlang['panel']['paymentCloseBtn'] ?> <?= $totalPages ?></span>
     <div class="pager">
-      <?php $qs = fn($p) => '?q=' . urlencode($search) . '&status=' . urlencode($status) . ($lang !== '' ? '&lang=' . urlencode($lang) : '') . '&page=' . $p; ?>
+      <?php $qs = fn($p) => '?q=' . urlencode($search) . '&status=' . urlencode($status) . ($sort !== 'date_desc' ? '&sort=' . urlencode($sort) : '') . ($lang !== '' ? '&lang=' . urlencode($lang) : '') . '&page=' . $p; ?>
       <a class="<?= $page <= 1 ? 'disabled' : '' ?>" href="<?= $qs(max(1, $page - 1)) ?>">‹</a>
       <?php for ($p2 = max(1, $page - 2); $p2 <= min($totalPages, $page + 2); $p2++): ?>
         <a class="<?= $p2 === $page ? 'active' : '' ?>" href="<?= $qs($p2) ?>"><?= $p2 ?></a>

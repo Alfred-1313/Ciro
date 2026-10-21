@@ -1267,3 +1267,24 @@
   margin-inline-end: 0.4em;
   opacity: 0.9;
 }
+
+/* a table header that sorts: its name, and the arrow of the order it is in */
+.th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+  transition: color 0.2s;
+}
+.th-sort svg {
+  opacity: 0.45;
+  transition: opacity 0.2s;
+}
+.th-sort:hover,
+.th-sort.on {
+  color: var(--ach);
+}
+.th-sort:hover svg,
+.th-sort.on svg {
+  opacity: 1;
+}
