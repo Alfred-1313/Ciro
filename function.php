@@ -4551,78 +4551,117 @@ if (!function_exists('bot_update_request_path')) {
     }
 }
 // 🆕 what the updates added: whatsnew.php is a history of entries (shipped with
-// the code, one added per update), and table.php - which every update runs,
-// from the bot's button and from `mirza update` alike - calls this once at the
-// end. Each admin is told, in their language, about every entry newer than the
-// last one told (storage/whatsnew_seen holds its number): an admin who skipped
-// updates gets each one he missed, oldest first. Running table.php again, or
-// updating to the same notes, says nothing.
-if (!function_exists('bot_whatsnew_announce')) {
-    function bot_whatsnew_announce($freshInstall = false)
+// the code, one added per update). Each admin is told, in their language, about
+// every entry newer than the last one told (storage/whatsnew_seen holds its
+// number): an admin who skipped updates gets each one he missed, oldest first.
+//
+// Two ways it reaches them. `mirza update` (and the bot's own button, which runs
+// the same script) ends with bot_update_notify_admins(): ONE message - the
+// «ربات آپدیت شد» notice with the notes under it - and sets MIRZA_WHATSNEW_MERGE
+// so that table.php, which runs earlier in the same update, stays quiet. Where
+// that is not set (an older install.sh, table.php opened in a browser) table.php
+// sends the notes by itself, as messages of their own.
+if (!function_exists('bot_whatsnew_pending')) {
+    // the entries an admin has not been told yet: ['new' => [...], 'hidden' => n,
+    // 'latest' => n], or null when there is nothing to say. Marks nothing, except
+    // the cases that say nothing: a rollback (forget the newer ones, so updating
+    // again tells about them again) and a brand-new bot (no history to catch up on)
+    function bot_whatsnew_pending($freshInstall = false)
     {
         $entries = is_file(__DIR__ . '/whatsnew.php') ? require __DIR__ . '/whatsnew.php' : null;
         if (!is_array($entries) || !$entries) {
-            return 0;
+            return null;
         }
         $entries = array_values(array_filter($entries, fn($e) => is_array($e) && isset($e['n'])));
         usort($entries, fn($x, $y) => (int) $x['n'] <=> (int) $y['n']);
         if (!$entries) {
-            return 0;
+            return null;
         }
         $latest = (int) end($entries)['n'];
-        $dir = __DIR__ . '/storage';
-        $mark = $dir . '/whatsnew_seen';
-        if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
-            return 0;
+        $mark = __DIR__ . '/storage/whatsnew_seen';
+        if (!is_dir(dirname($mark)) && !@mkdir(dirname($mark), 0775, true) && !is_dir(dirname($mark))) {
+            return null;
         }
         $raw = trim((string) @file_get_contents($mark));
         // the first version of this kept the entry's id, '2026-10-21-a'
         $seen = $raw === '' ? 0 : (ctype_digit($raw) ? (int) $raw : ($raw === '2026-10-21-a' ? 1 : 0));
         if ($raw !== '' && $seen > $latest) {
-            // rolled back to an older version: forget the newer ones, so
-            // updating again tells about them again
             @file_put_contents($mark, (string) $latest, LOCK_EX);
-            return 0;
+            return null;
         }
         if ($seen === $latest) {
+            return null;
+        }
+        if ($freshInstall) {
+            @file_put_contents($mark, (string) $latest, LOCK_EX);
+            return null;
+        }
+        $new = array_values(array_filter($entries, fn($e) => (int) $e['n'] > $seen));
+        return ['new' => array_slice($new, -8), 'hidden' => max(0, count($new) - 8), 'latest' => $latest];
+    }
+    function bot_whatsnew_mark($latest)
+    {
+        return @file_put_contents(__DIR__ . '/storage/whatsnew_seen', (string) (int) $latest, LOCK_EX) !== false;
+    }
+    // the notes as message texts, in the admin's language: one entry says «what
+    // is new in this update»; several say how many were missed, then each by date
+    function bot_whatsnew_messages(array $pending, $en)
+    {
+        $new = $pending['new'];
+        $many = count($new) > 1;
+        $msgs = [];
+        if ($many) {
+            $n = count($new) + (int) $pending['hidden'];
+            $msgs[] = $en
+                ? sprintf("📦 <b>You missed %d updates</b> - here is what each one added, oldest first:", $n)
+                : sprintf("📦 <b>%d آپدیت را نداشتی</b> - هر کدام چه چیزی اضافه کرده، از قدیمی به جدید:", $n);
+        }
+        foreach ($new as $e) {
+            $body = (string) ($e[$en ? 'en' : 'fa'] ?? $e['fa'] ?? '');
+            if ($body === '') {
+                continue;
+            }
+            $head = $many
+                ? ($en ? "🆕 <b>Update " : "🆕 <b>آپدیت ") . htmlspecialchars((string) ($e['date'] ?? $e['n'])) . '</b>'
+                : ($en ? "🆕 <b>What's new in this update</b>" : '🆕 <b>تغییرات این آپدیت</b>');
+            $msgs[] = $head . "\n\n" . $body;
+        }
+        return $msgs;
+    }
+    function bot_whatsnew_admin_ids()
+    {
+        $ids = [];
+        foreach ((array) select("admin", "id_admin", null, null, "FETCH_COLUMN") as $id) {
+            $id = trim((string) $id);
+            if ($id !== '' && ctype_digit($id)) {
+                $ids[$id] = true;
+            }
+        }
+        return array_keys($ids);
+    }
+    function bot_whatsnew_announce($freshInstall = false)
+    {
+        if (getenv('MIRZA_WHATSNEW_MERGE') === '1' && !$freshInstall) {
+            return 0; // the updater says it in its own closing message
+        }
+        $p = bot_whatsnew_pending($freshInstall);
+        $admins = bot_whatsnew_admin_ids();
+        if ($p === null) {
             return 0;
         }
-        $admins = select("admin", "id_admin", null, null, "FETCH_COLUMN");
-        if ($freshInstall || !is_array($admins) || !$admins) {
-            // a new bot has no history to catch up on
-            @file_put_contents($mark, (string) $latest, LOCK_EX);
+        if (!$admins) {
+            bot_whatsnew_mark($p['latest']);
             return 0;
         }
         // marked before sending: if this cannot be written the notes would go
         // out again on every run
-        if (@file_put_contents($mark, (string) $latest, LOCK_EX) === false) {
+        if (!bot_whatsnew_mark($p['latest'])) {
             return 0;
         }
-        $new = array_values(array_filter($entries, fn($e) => (int) $e['n'] > $seen));
-        $hidden = max(0, count($new) - 8);
-        $new = array_slice($new, -8);
         $sent = 0;
         foreach ($admins as $adminId) {
             $row = select("user", "lang", "id", $adminId, "select");
-            $en = is_array($row) && ($row['lang'] ?? '') === 'en';
-            $many = count($new) > 1;
-            $msgs = [];
-            if ($many) {
-                $msgs[] = $en
-                    ? sprintf("📦 <b>You missed %d updates</b> - here is what each one added, oldest first:", count($new) + $hidden)
-                    : sprintf("📦 <b>%d آپدیت را نداشتی</b> - هر کدام چه چیزی اضافه کرده، از قدیمی به جدید:", count($new) + $hidden);
-            }
-            foreach ($new as $e) {
-                $body = (string) ($e[$en ? 'en' : 'fa'] ?? $e['fa'] ?? '');
-                if ($body === '') {
-                    continue;
-                }
-                $head = $many
-                    ? ($en ? "🆕 <b>Update " : "🆕 <b>آپدیت ") . htmlspecialchars((string) ($e['date'] ?? $e['n'])) . '</b>'
-                    : ($en ? "🆕 <b>What's new in this update</b>" : '🆕 <b>تغییرات این آپدیت</b>');
-                $msgs[] = $head . "\n\n" . $body;
-            }
-            foreach ($msgs as $text) {
+            foreach (bot_whatsnew_messages($p, is_array($row) && ($row['lang'] ?? '') === 'en') as $text) {
                 $r = telegram('sendMessage', ['chat_id' => $adminId, 'text' => $text, 'parse_mode' => 'HTML']);
                 if (is_array($r) && !empty($r['ok'])) {
                     $sent++;
@@ -4630,6 +4669,61 @@ if (!function_exists('bot_whatsnew_announce')) {
             }
         }
         return $sent;
+    }
+    // The closing message of an update, to every admin, in their language:
+    //   ✅ ربات آپدیت شد
+    //   🤖 @bot
+    //   دامنه / نسخه / زمان (Jalali | Gregorian) / مسیر بکاپ نسخه‌ی قبلی
+    //   🆕 تغییرات این آپدیت - what each missed update added, and where
+    // all in ONE message when it fits Telegram's limit. Returns how many admins
+    // it reached; the notes count as told once any of them has them.
+    function bot_update_notify_admins($domain, $version, $backup)
+    {
+        global $usernamebot;
+        $esc = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+        $p = bot_whatsnew_pending();
+        $ver = ltrim(trim((string) $version), 'vV');
+        $who = ltrim(trim((string) ($usernamebot ?? '')), '@');
+        $reached = 0;
+        foreach (bot_whatsnew_admin_ids() as $adminId) {
+            $row = select("user", "lang", "id", $adminId, "select");
+            $en = is_array($row) && ($row['lang'] ?? '') === 'en';
+            $when = $en || !function_exists('jdate')
+                ? date('d-m-Y')
+                : jdate('Y/n/j', time(), '', 'Asia/Tehran', 'en') . ' | ' . date('d-m-Y');
+            $head = $en ? "✅ <b>Bot updated</b>" : "✅ <b>ربات آپدیت شد</b>";
+            if ($who !== '') {
+                $head .= "\n<blockquote>🤖 @" . $esc($who) . "</blockquote>";
+            }
+            $head .= "\n";
+            if (trim((string) $domain) !== '') {
+                $head .= "\n" . ($en ? 'Domain' : 'دامنه') . ": <code>" . $esc($domain) . "</code>";
+            }
+            if ($ver !== '') {
+                $head .= "\n" . ($en ? 'Version' : 'نسخه') . ": <b>v" . $esc($ver) . "</b>";
+            }
+            $head .= "\n" . ($en ? 'Time' : 'زمان') . ": <b>" . $when . "</b>";
+            if (trim((string) $backup) !== '') {
+                $head .= "\n\n" . ($en ? 'Backup of the previous version:' : 'مسیر بکاپ نسخه‌ی قبلی:')
+                    . "\n<blockquote>" . $esc($backup) . "</blockquote>";
+            }
+            $parts = $p ? bot_whatsnew_messages($p, $en) : [];
+            $texts = [$head];
+            if ($parts) {
+                $joined = $head . "\n\n" . implode("\n\n", $parts);
+                $texts = mb_strlen($joined) <= 4000 ? [$joined] : array_merge([$head], $parts);
+            }
+            $ok = false;
+            foreach ($texts as $text) {
+                $r = telegram('sendMessage', ['chat_id' => $adminId, 'text' => $text, 'parse_mode' => 'HTML']);
+                $ok = $ok || (is_array($r) && !empty($r['ok']));
+            }
+            $reached += $ok ? 1 : 0;
+        }
+        if ($p !== null && $reached > 0) {
+            bot_whatsnew_mark($p['latest']);
+        }
+        return $reached;
     }
 }
 if (!function_exists('sms_forward_webhook_url')) {

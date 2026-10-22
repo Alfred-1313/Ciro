@@ -3469,6 +3469,9 @@ function update_bot() {
         return 1
     fi
     BOT_DIR="$PICKED_DIR"
+    # table.php runs in this update and would announce what is new by itself;
+    # the closing message (step 10) says it instead, in the same message
+    export MIRZA_WHATSNEW_MERGE=1
     local BOT_LABEL="$PICKED_NAME"
     [ -n "$PICKED_DOMAIN" ] && [ "$PICKED_DOMAIN" != "null" ] && BOT_LABEL="$PICKED_NAME · $PICKED_DOMAIN"
     if [ ! -d "$BOT_DIR" ]; then
@@ -3679,71 +3682,19 @@ function update_bot() {
     # Best effort on purpose: the update has already succeeded by this point,
     # so a message that cannot be delivered must never turn it into a failure.
     if [ -f "$BOT_DIR/config.php" ]; then
+        # the closing message is built by the bot's own code (function.php,
+        # bot_update_notify_admins): the notice, and under it what each update
+        # the admin missed added - one message, in the admin's language
         cat > /tmp/mirza_notify.php <<'NOTIFYEOF'
 <?php
-// Announce a finished update to every admin in the bot's own admin table.
-// Run from inside the bot directory so config.php resolves; every value it
-// reports comes in through the environment, so nothing needs quoting twice.
+// the same set, in the same order, every cronbot entry point takes
 require 'config.php';
-
-$old    = getenv('MIRZA_OLD') ?: '?';
-$new    = getenv('MIRZA_NEW') ?: '?';
-$domain = getenv('MIRZA_DOMAIN') ?: '';
-$db     = getenv('MIRZA_DB') ?: '';
-$backup = getenv('MIRZA_BACKUP') ?: '';
-$esc = function ($v) { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); };
-
-$lines = ["✅ <b>ربات آپدیت شد</b>"];
-// which bot: with two on one server the same admin may hear from both
-$who = ltrim(trim((string) ($usernamebot ?? '')), '@');
-if ($who !== '') {
-    $lines[] = "<blockquote>🤖 @" . $esc($who) . "</blockquote>";
-}
-$lines[] = "";
-if ($domain !== '') {
-    $lines[] = "دامنه: <code>" . $esc($domain) . "</code>";
-}
-$lines[] = "نسخه: <b>" . $esc($old) . "</b> ← <b>" . $esc($new) . "</b>";
-$lines[] = "زمان: " . date('Y-m-d H:i');
-if ($db !== '') {
-    $lines[] = "دیتابیس: " . $esc($db);
-}
-if ($backup !== '') {
-    $lines[] = "";
-    $lines[] = "بکاپ نسخه‌ی قبلی:";
-    $lines[] = "<code>" . $esc($backup) . "</code>";
-}
-$text = implode("\n", $lines);
-
-$ids = [];
-try {
-    foreach ($pdo->query("SELECT id_admin FROM admin") as $row) {
-        $id = trim((string) ($row['id_admin'] ?? ''));
-        if ($id !== '' && ctype_digit($id)) {
-            $ids[$id] = true;
-        }
-    }
-} catch (Exception $e) {
-    // no admin table, or no database: there is simply nobody to tell
-}
-
-$sent = 0;
-foreach (array_keys($ids) as $id) {
-    $ch = curl_init("https://api.telegram.org/bot{$APIKEY}/sendMessage");
-    if ($ch === false) {
-        continue;
-    }
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, ['chat_id' => $id, 'text' => $text, 'parse_mode' => 'HTML']);
-    $res = json_decode((string) curl_exec($ch), true);
-    curl_close($ch);
-    if (!empty($res['ok'])) {
-        $sent++;
-    }
-}
-echo $sent;
+require 'botapi.php';
+require 'panels.php';
+require 'function.php';
+require 'jdf.php';
+require 'vendor/autoload.php';
+echo bot_update_notify_admins(getenv('MIRZA_DOMAIN') ?: '', getenv('MIRZA_NEW') ?: '', getenv('MIRZA_BACKUP') ?: '');
 NOTIFYEOF
         local SENT
         SENT=$( cd "$BOT_DIR" && MIRZA_OLD="$flavour" MIRZA_NEW="$newver" \
