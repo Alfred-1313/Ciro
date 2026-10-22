@@ -56,4 +56,18 @@ return [
             . "📍 🎨 Customize messages → Config display (purchase / test account / invite gift)\n"
             . "After changing the column order or editing a button, 🔙 sometimes went to the \"config caption\" page. It now always returns to the page you came from.</blockquote>",
     ],
+    [
+        'n' => 4,
+        'date' => '2026-10-22',
+        'fa' => "<blockquote>🏬 <b>دستور سریع /shop</b>\n"
+            . "📍 هر جا بفرستی ← «🏬 تنظیمات فروشگاه» باز می‌شود. در راهنمای پنل مدیریت هم هست.</blockquote>\n\n"
+            . "<blockquote>✅ <b>پیام پایان آپدیت</b>\n"
+            . "📍 بعد از هر آپدیت\n"
+            . "اعلان آپدیت (دامنه، نسخه، زمان، مسیر بکاپ) و همین «تغییرات این آپدیت» حالا در یک پیام می‌آید.</blockquote>",
+        'en' => "<blockquote>🏬 <b>Quick command /shop</b>\n"
+            . "📍 Send it anywhere → \"🏬 Shop settings\" opens. It is in the admin panel help too.</blockquote>\n\n"
+            . "<blockquote>✅ <b>Update-finished message</b>\n"
+            . "📍 After every update\n"
+            . "The update notice (domain, version, time, backup path) and this \"What's new\" now arrive in one message.</blockquote>",
+    ],
 ];
