@@ -4960,6 +4960,7 @@ if (!function_exists('topup_card_invoice_generate')) {
         $payment_Status = "Unpaid";
         $Payment_Method = "cart to cart";
         $stmt->execute([$from_id, $randomString, $dateacc, $amount, $payment_Status, $Payment_Method, $idInvoice]);
+        topup_disc_promise_save($randomString, $from_id, $lang, 'card', $amount);
         // 📋 the amount, on a row of its own above the card numbers, like every
         // other gateway's - in rials and digits only (100,863 toman → 1008630),
         // what bank apps take; white unless the admin colours it
@@ -14967,6 +14968,34 @@ if (!function_exists('topup_disc_auto_user_count')) {
         return intval($st->fetchColumn());
     }
 }
+if (!function_exists('topup_disc_promise_save')) {
+    // 🎁 What an invoice promised, written down when it is created. A card
+    // receipt waits for a person - minutes, or hours - and by the time it is
+    // confirmed the discount may have run out its date, or the customer's quota
+    // may have been used by another invoice, so asking again at that moment gave
+    // nothing for a payment the invoice had said would earn a gift. The invoice's
+    // own promise is kept (Payment_report.disc_promise) and honoured when the
+    // live check no longer finds the discount. Never lets a failure here touch
+    // the invoice being created.
+    function topup_disc_promise_save($orderId, $userId, $lang, $gatewayKey, $amount)
+    {
+        try {
+            $eff = topup_disc_effective($userId, $lang, $gatewayKey, $amount, $orderId);
+            if ($eff === null || (float) $eff['bonus'] <= 0) {
+                return;
+            }
+            update("Payment_report", "disc_promise", json_encode([
+                'source' => $eff['source'],
+                'bonus' => round((float) $eff['bonus'], 2),
+                'code' => (string) ($eff['code'] ?? ''),
+                'at' => time(),
+            ]), "id_order", $orderId);
+        } catch (\Throwable $e) {
+            // the column is added by table.php; before it has run there is
+            // simply nothing to remember
+        }
+    }
+}
 if (!function_exists('topup_disc_award')) {
     // Called at the single shared moment a top-up actually credits the wallet
     // (DirectPayment). Returns the extra amount to add on top of what was paid,
@@ -14985,6 +15014,15 @@ if (!function_exists('topup_disc_award')) {
         }
         $lang = (is_array($userRow) && !empty($userRow['lang'])) ? $userRow['lang'] : 'fa';
         $eff = topup_disc_effective($userId, $lang, $gw, $paid, $paymentReport['id_order'] ?? null);
+        // the gift the invoice itself promised, if the live check now says less
+        $promise = json_decode((string) ($paymentReport['disc_promise'] ?? ''), true);
+        if (is_array($promise) && (float) ($promise['bonus'] ?? 0) > 0 && ($eff === null || (float) $eff['bonus'] < (float) $promise['bonus'])) {
+            $eff = [
+                'source' => ($promise['source'] ?? '') === 'code' ? 'code' : 'auto',
+                'bonus' => (float) $promise['bonus'],
+                'code' => (string) ($promise['code'] ?? ''),
+            ];
+        }
         if ($eff === null || $eff['bonus'] <= 0) {
             return 0;
         }

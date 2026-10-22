@@ -70,4 +70,14 @@ return [
             . "📍 After every update\n"
             . "The update notice (domain, version, time, backup path) and this \"What's new\" now arrive in one message.</blockquote>",
     ],
+    [
+        'n' => 5,
+        'date' => '2026-10-22',
+        'fa' => "<blockquote>🎁 <b>هدیهٔ شارژ در تأیید دستی رسید</b>\n"
+            . "📍 💵 رسیدهای تأییدنشده ← ✅\n"
+            . "فاکتور کارت‌به‌کارت (و ارز دیجیتال آفلاین) هدیه‌ای را که موقع ساخته‌شدنش وعده داده یادداشت می‌کند. اگر رسید دیر تأیید شود و تخفیف در این فاصله تمام شده یا سهمیه‌اش پر شده باشد، ✅ باز هم همان مبلغ + همان هدیه را اضافه می‌کند. «افزودن مبلغ دستی» مثل قبل دقیقاً همان مبلغ را بدون هدیه می‌دهد.</blockquote>",
+        'en' => "<blockquote>🎁 <b>Top-up gift on manual receipt approval</b>\n"
+            . "📍 💵 Unconfirmed receipts → ✅\n"
+            . "A card-to-card (and offline crypto) invoice now remembers the gift it promised when it was created. If the receipt is approved late and the discount has ended or its quota is used up meanwhile, ✅ still adds the amount + that gift. \"Add a manual amount\" works as before: exactly the typed amount, no gift.</blockquote>",
+    ],
 ];

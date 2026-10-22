@@ -545,6 +545,7 @@ if (!isset($from_id, $datain)) {
         $payment_Status = "Unpaid";
         $Payment_Method = "arze digital offline";
         $stmt->execute([$from_id, $randomString, $dateacc, $user['Processing_value'], $payment_Status, $Payment_Method, $invoice]);
+        topup_disc_promise_save($randomString, $from_id, $user['lang'] ?? 'fa', 'digitaltron', $user['Processing_value']);
         $affilnecurrency = pay_value("walletaddress", $user['lang'] ?? null);
         $paymentkeyboard = json_encode([
             'inline_keyboard' => [
