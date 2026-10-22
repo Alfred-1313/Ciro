@@ -12247,7 +12247,7 @@ elseif ($datain == "systemsms") {
     sendmessage($from_id, $textbotlang['Admin']['Channel']['setChannelReport'], $setting_panel, 'HTML');
     update("setting", "Channel_Report", $text);
     step('home', $from_id);
-} elseif ($text == $textbotlang['keyboard']['shopSettings'] && $adminrulecheck['rule'] == "administrator") {
+} elseif (($text == $textbotlang['keyboard']['shopSettings'] || $text == "/shop") && $adminrulecheck['rule'] == "administrator") {
     sendmessage($from_id, $textbotlang['Admin']['shopSettingsCaption'], $shopkeyboard, 'HTML');
 } elseif ($datain == "gwlang_hub" && $adminrulecheck['rule'] == "administrator") {
     gateway_lang_map(true);

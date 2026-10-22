@@ -3249,6 +3249,7 @@ Current amount: %s',
 👤 <b>User by username:</b> ‎<code>/user @username</code>
 🔎 <b>Find a service:</b> ‎<code>/config service_name</code>
 ⏳ <b>Extend a service:</b> ‎<code>/extend service_name</code>
+🏬 <b>Shop settings:</b> ‎<code>/shop</code>
 💾 <b>Backup now:</b> ‎<code>/backup</code>
 🔄 <b>Update the bot:</b> ‎<code>/update</code></blockquote>
 💡 <i>Tap a command to copy it; change the number or name and send it.</i>

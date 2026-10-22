@@ -4930,6 +4930,7 @@ f,n.n2',
 👤 <b>کاربر با یوزرنیم:</b> ‎<code>/user @username</code>
 🔎 <b>پیدا کردن سرویس:</b> ‎<code>/config نام_سرویس</code>
 ⏳ <b>تمدید سرویس:</b> ‎<code>/extend نام_سرویس</code>
+🏬 <b>تنظیمات فروشگاه:</b> ‎<code>/shop</code>
 💾 <b>بکاپ فوری:</b> ‎<code>/backup</code>
 🔄 <b>آپدیت ربات:</b> ‎<code>/update</code></blockquote>
 💡 <i>روی هر دستور بزنی کپی می‌شه؛ عدد یا نام رو عوض کن و بفرست.</i>
