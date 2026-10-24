@@ -114,7 +114,7 @@ echo web_lang_assets();
 
 <?= web_lang_tabs($lang, fn($code) => 'subapps.php?' . http_build_query(['lang' => $code])) ?>
 
-<form method="POST" action="subapps.php?<?= http_build_query(['lang' => $lang]) ?>" class="card fade-up" id="look" style="margin-bottom:14px">
+<form method="POST" action="subapps.php?<?= http_build_query(['lang' => $lang]) ?>" class="card fade-up" id="look" data-autosave data-ajax="quiet" style="margin-bottom:14px">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
   <input type="hidden" name="action" value="look">
   <div class="card-head"><div><div class="card-title">🖼 <?= $t['saLookLabel'] ?></div><div class="card-subtitle"><?= $t['saLookHint'] ?></div></div></div>

@@ -430,4 +430,14 @@ return [
             . "📍 🎨 Customize → 📲 Add service to app → «🖼 The look of the page»; Web panel → Add service to app\n"
             . "You can now choose, per language, whether the app-opening page (both looks, A and B) is dark, light, or follows the customer's browser or phone. The default is «Match the device». This replaces the previous note: B is no longer forced white and follows the device by default like A; for an always-white page, set the theme to «Light». «Reset all to default» puts the theme back to «Match the device» too.</blockquote>",
     ],
+    [
+        'n' => 30,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>⚡️ <b>وب‌پنل: ذخیره بدون رفرش صفحه</b>\n"
+            . "📍 همه‌ی صفحه‌های وب‌پنل\n"
+            . "دیگر با هر ذخیره یا انتخاب، کل صفحه دوباره باز نمی‌شود و اسکرول به بالا نمی‌پرد: فرم در پس‌زمینه ارسال می‌شود، پیام نتیجه به‌صورت یک نوار کوچک پایین صفحه می‌آید و فقط همان فرم با اطلاعات تازه‌ی سرور جایگزین می‌شود. انتخاب‌هایی مثل طرح و تم صفحه‌ی «افزودن سرویس به برنامه» همان لحظه‌ی انتخاب ذخیره می‌شوند و دکمه‌ی ذخیره ندارند. اگر ذخیره جایی صفحه‌ی دیگری را نشان بدهد یا ردیفی اضافه/حذف شود، مثل قبل صفحه باز می‌شود و پیام همراهش می‌آید. انیمیشن ورود صفحه‌ها هم کوتاه‌تر و آرام‌تر شد.</blockquote>",
+        'en' => "<blockquote>⚡️ <b>Web panel: saving without a page refresh</b>\n"
+            . "📍 Every page of the web panel\n"
+            . "A save or a choice no longer reloads the whole page and throws the scroll back to the top: the form is sent in the background, the result comes up as a small bar at the bottom, and only that form is swapped for the server's fresh copy. Choices such as the look and theme of the «Add service to app» page are saved the moment you pick them and have no save button. If a save leads to another page, or a row is added or removed, the page loads as before with the message carried over. The pages' entrance animation is also shorter and calmer.</blockquote>",
+    ],
 ];

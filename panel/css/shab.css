@@ -996,13 +996,13 @@ body {
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   box-shadow: 0 15px 40px #0004;
-  animation: shabToastIn 0.4s var(--ease);
+  animation: shabToastIn 240ms var(--ease-out);
 }
 [data-theme="shab"] .toast {
   background: #24202be8;
 }
 .toast.closing {
-  animation: shabToastOut 0.26s ease-in forwards;
+  animation: shabToastOut 180ms var(--ease-out) forwards;
 }
 
 /* ── bottom bar of a phone: a bead on a spring (js/toolbar.js) ── */
@@ -1222,7 +1222,7 @@ body {
 @keyframes shabToastIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(12px) scale(0.97);
   }
   to {
     opacity: 1;
@@ -1232,8 +1232,50 @@ body {
 @keyframes shabToastOut {
   to {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(8px) scale(0.98);
   }
+}
+
+/* ── saving in the background (js/ajaxform.js) ── */
+form.is-busy {
+  cursor: progress;
+}
+form.is-busy .btn-primary:disabled {
+  opacity: 0.8;
+}
+form.is-busy .btn-primary:disabled::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-inline-end: 7px;
+  vertical-align: -2px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: ajaxSpin 700ms linear infinite;
+}
+@keyframes ajaxSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* buttons name what they move (style.css says «all») */
+.btn {
+  transition:
+    background-color var(--tf),
+    border-color var(--tf),
+    color var(--tf),
+    opacity var(--tf),
+    filter var(--tf),
+    transform 120ms var(--ease-out);
+}
+/* a choice answers at once: the chip you pick takes its colour in a blink, not after a reload */
+.lang-chip {
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
 }
 
 /* short screens: a tighter menu */
@@ -1630,7 +1672,7 @@ button,
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -1639,22 +1681,20 @@ button,
 }
 .fade-up,
 .content > * {
-  animation: rise 300ms var(--ease-out) backwards;
+  animation: rise 220ms var(--ease-out) backwards;
 }
 .content > :nth-child(2) {
-  animation-delay: 40ms;
+  animation-delay: 25ms;
 }
 .content > :nth-child(3) {
-  animation-delay: 80ms;
+  animation-delay: 50ms;
 }
-.content > :nth-child(4) {
-  animation-delay: 120ms;
+.content > :nth-child(n + 4) {
+  animation-delay: 70ms;
 }
-.content > :nth-child(5) {
-  animation-delay: 160ms;
-}
-.content > :nth-child(n + 6) {
-  animation-delay: 200ms;
+/* a block the page swapped in after a save is not an arrival */
+.no-rise {
+  animation: none !important;
 }
 .toast {
   animation-timing-function: var(--ease-out);
@@ -1733,6 +1773,16 @@ span.cm,
   .confirm-box {
     animation: none !important;
     transition-duration: 0.01ms !important;
+  }
+  form.is-busy .btn-primary:disabled::before {
+    animation: none;
+  }
+  .toast {
+    animation: none;
+  }
+  .toast.closing {
+    animation: none;
+    opacity: 0;
   }
 }
 

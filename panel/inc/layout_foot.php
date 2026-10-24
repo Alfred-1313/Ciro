@@ -37,6 +37,7 @@ $bottomTabs = [
 </div>
 
 <script src="js/app.js?v=<?= (int) @filemtime(__DIR__ . '/../js/app.js') ?>"></script>
+<script src="js/ajaxform.js?v=<?= (int) @filemtime(__DIR__ . '/../js/ajaxform.js') ?>"></script>
 <script src="js/toolbar.js?v=<?= (int) @filemtime(__DIR__ . '/../js/toolbar.js') ?>"></script>
 </body>
 </html>

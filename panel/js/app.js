@@ -81,12 +81,13 @@ window.toast = function (msg, type, dur) {
     area.appendChild(el);
     var timer = setTimeout(function () {
         el.classList.add('closing');
-        setTimeout(function () { el.remove(); }, 260);
+        setTimeout(function () { el.remove(); }, 200);
     }, dur);
     el.querySelector('.toast-close').addEventListener('click', function () {
         clearTimeout(timer);
         el.remove();
     });
+    return el;
 };
 
 var _confirmCb = null;
