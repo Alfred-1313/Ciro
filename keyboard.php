@@ -2719,6 +2719,7 @@ function keyboard_list_text($lang, $groupFilter = null)
         $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['btn_close'], 'callback_data' => 'bt_close', 'style' => 'danger']];
         $bt_captionKey = [
             'myservices' => 'groupServicesCaption',
+            'subapps' => 'groupSubappsCaption',
             'topup' => 'groupTopupCaption',
             'topupdisc' => 'groupTopupDiscCaption',
             'account' => 'groupAccountCaption',
@@ -2813,6 +2814,18 @@ function keyboard_list_text($lang, $groupFilter = null)
                     }
                 }
                 $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupServicesLabel'], 'callback_data' => "bt_group|$lang|myservices", 'style' => 'primary']];
+            }
+            // 📲 افزودن سرویس به برنامه: one place for the five that show it
+            if (!empty($bt_grouped['subapps'])) {
+                $bt_sa_custom = false;
+                foreach ($bt_grouped['subapps'] as $bt_g) {
+                    list(, $bt_g_style) = $bt_decorate($bt_g['key'], $bt_g['label']);
+                    if ($bt_g_style !== '') {
+                        $bt_sa_custom = true;
+                        break;
+                    }
+                }
+                $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupSubappsLabel'], 'callback_data' => "bt_group|$lang|subapps", 'style' => $bt_sa_custom ? 'success' : 'primary']];
             }
             // 💰 افزایش موجودی gets its own divider + entry directly under the
             // services row: its messages used to sit inside 🛒 مراحل خرید even

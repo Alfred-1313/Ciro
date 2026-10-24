@@ -13079,8 +13079,6 @@ if (!function_exists('bt_myservices_plan')) {
             // no group of its own: the bot puts it at the head of the screen's
             // section by hand, the panel by this line
             'users.status.infoFull' => 'myservices_screen',
-            'users.subapps.entryBuy' => 'myservices_screen',
-            'users.subapps.listBuy' => 'myservices_screen',
             'keyboard.infoRefreshed' => 'myservices_actions',
             'users.status.linksubCaption' => 'myservices_actions',
             'users.status.subscriptionFile' => 'myservices_actions',
@@ -13094,7 +13092,6 @@ if (!function_exists('bt_myservices_plan')) {
             'users.status.panelNotConnected' => 'myservices_errors',
             'users.status.notConnectedCannotChangeStatus' => 'myservices_errors',
             'users.serviceNotYours' => 'myservices_errors',
-            'users.subapps.noLink' => 'myservices_errors',
         ];
     }
 }
@@ -13243,9 +13240,29 @@ if (!function_exists('bt_section_meta')) {
                 'label' => '🌐 سابسکریپشن و 📲 افزودن به برنامه',
                 'alert' => '🌐 صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه؛ 📲 لیست برنامه‌ها رو میاره تا با یه لمس، برنامه باز بشه و سابسکریپشن اضافه بشه. یه تنظیم برای همه‌ی جاهایی که نشون داده می‌شه (خرید، تست، هدیه، ساعتی و «🛍 سرویس‌های من») - برای هر زبان جدا.',
             ],
+            'subapps_entry' => [
+                'label' => '🌐 / 📲 دکمه‌های زیر هر سرویس',
+                'alert' => 'دکمه‌ی «🌐 سابسکریپشن» و «📲 افزودن به برنامه» که بالای دکمه‌های سرویس می‌آن: اسم، ایموجی، رنگ، جا و مخفی بودنشون. یکی برای ۵ جا.',
+            ],
+            'subapps_list' => [
+                'label' => '📲 لیست برنامه‌ها',
+                'alert' => 'پیامی که با زدن «📲 افزودن به برنامه» میاد و دکمه‌ی هر برنامه‌ش (v2rayNG، Hiddify، ...). یکی برای ۵ جا.',
+            ],
             'subapps_page' => [
-                'label' => '🌐 صفحه‌ی باز کردن برنامه (همه‌ی بخش‌ها)',
+                'label' => '🌐 صفحه‌ی باز کردن برنامه',
                 'alert' => 'متن‌های صفحه‌ی وبی که با زدن یه برنامه از لیست 📲 باز می‌شه و برنامه رو با سابسکریپشن باز می‌کنه. برای خرید، تست، هدیه و ساعتی یکیه.',
+            ],
+            'subapps_missing' => [
+                'label' => '📥 وقتی برنامه روی گوشی نیست',
+                'alert' => 'چیزی که صفحه نشون می‌ده وقتی برنامه باز نشد: تیتر، توضیح و دکمه‌ی «دوباره امتحان کن».',
+            ],
+            'subapps_stores' => [
+                'label' => '⬇️ دانلود و فروشگاه‌ها',
+                'alert' => 'دکمه‌ی دانلود صفحه و لینک‌های زیرش: Google Play، آخرین نسخه‌ی GitHub، App Store و سایت رسمی برنامه.',
+            ],
+            'subapps_errors' => [
+                'label' => '⚠️ خطاها و پاپ‌آپ‌ها',
+                'alert' => 'پاپ‌آپ «لینک سابسکریپشن در دسترس نیست» توی ربات و متن صفحه‌ی خطا وقتی لینک دیگه کار نمی‌کنه.',
             ],
             'notice_vol' => [
                 'label' => '📦 هشدارهای حجم',
@@ -19715,7 +19732,7 @@ if (!function_exists('bt_button')) {
             'bottext.bcAffBtn' => 'usermgmt',
             'bottext.bcTopupBtn' => 'usermgmt',
             'users.payg.listLabel' => 'paygsvc',
-            'users.subapps.entryBuy' => 'myservices',
+            'users.subapps.entryBuy' => 'subapps',
         ];
         $group = $groups[$key] ?? '';
         return $group !== '' ? "bt_group|{$lang}|{$group}" : "btact|back|{$lang}";

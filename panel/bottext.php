@@ -20,7 +20,7 @@ $labels = [];
 foreach ($bt['items'] as $it) {
     if (!empty($it['key'])) {
         $g = $it['group'] ?? '';
-        $labels[$it['key']] = ['label' => $it['label'] ?? $it['key'], 'group' => isset($paygSubs[$g]) ? 'payg' : $g, 'sub' => isset($paygSubs[$g]) ? $g : '', 'sec' => $g === 'myservices' ? (string) ($it['section'] ?? '') : ''];
+        $labels[$it['key']] = ['label' => $it['label'] ?? $it['key'], 'group' => isset($paygSubs[$g]) ? 'payg' : $g, 'sub' => isset($paygSubs[$g]) ? $g : '', 'sec' => in_array($g, ['myservices', 'subapps'], true) ? (string) ($it['section'] ?? '') : ''];
     }
 }
 foreach (bottext_all_item_keys($textbotlang) as $key) {
@@ -147,7 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // each group named as its screen in the bot names it
-$captionOf = ['myservices' => 'groupServicesCaption', 'topup' => 'groupTopupCaption', 'topupdisc' => 'groupTopupDiscCaption', 'account' => 'groupAccountCaption',
+$captionOf = ['myservices' => 'groupServicesCaption', 'subapps' => 'groupSubappsCaption', 'topup' => 'groupTopupCaption', 'topupdisc' => 'groupTopupDiscCaption', 'account' => 'groupAccountCaption',
     'help' => 'groupHelpCaption', 'verify' => 'groupVerifyCaption', 'wheel' => 'groupWheelCaption', 'referral' => 'groupReferralCaption', 'usermgmt' => 'groupUserMgmtCaption', 'buyflow' => 'groupBuyflowCaption',
     'payg' => 'groupPaygCaption'];
 $groupName = function ($g) use ($bt, $captionOf, $t) {
@@ -181,7 +181,7 @@ foreach ($labels as $key => $meta) {
     }
     $groupCounts[$meta['group']] = ($groupCounts[$meta['group']] ?? 0) + 1;
     if ($group === '*' || $meta['group'] === $group) {
-        $visible[$key] = ['label' => $meta['label'], 'sub' => $meta['sub'], 'sec' => $group === 'myservices' ? ($meta['sec'] ?? '') : '', 'current' => $current, 'default' => $default, 'textChanged' => $own !== null, 'changed' => $changed,
+        $visible[$key] = ['label' => $meta['label'], 'sub' => $meta['sub'], 'sec' => in_array($group, ['myservices', 'subapps'], true) ? ($meta['sec'] ?? '') : '', 'current' => $current, 'default' => $default, 'textChanged' => $own !== null, 'changed' => $changed,
             'sticker' => $ownSticker, 'reaction' => $ownReaction];
     }
 }
@@ -259,6 +259,10 @@ echo web_lang_assets();
                         <h3 style="margin:6px 2px -6px;font-size:.95rem"><?= htmlspecialchars($bt['msSections'][$sec] ?? bt_section_meta($sec)['label']) ?></h3>
                         <?php if ($sec === 'myservices_screen'): ?>
                             <div class="field-hint">🔘 <a href="svclook.php?<?= http_build_query(['lang' => $lang, 'part' => 'status']) ?>"><?= htmlspecialchars($bt['msSections']['myservices_screenBtns']) ?></a></div>
+                        <?php elseif ($sec === 'subapps_entry'): ?>
+                            <div class="field-hint">🔘 <?= $t['saEntryBtnsHint'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-gb"><?= $t['saEntryBtnsLink'] ?></a></div>
+                        <?php elseif ($sec === 'subapps_list'): ?>
+                            <div class="field-hint">🔘 <?= $t['saListBtnsHint'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-kb"><?= $t['saListBtnsLink'] ?></a></div>
                         <?php endif; ?>
                     <?php endif; ?>
                     <div class="field">

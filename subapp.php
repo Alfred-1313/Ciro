@@ -7,7 +7,7 @@
 // it does, and - when the app is not on the phone - the stores to get it
 // from (Google Play, else the latest GitHub release, the App Store, the app's
 // own site), in the service owner's language, its words from 🎨
-// (🛍 سرویس‌های من → 🌐 صفحه‌ی باز کردن برنامه). The font and the icons are
+// (📲 افزودن سرویس به برنامه). The font and the icons are
 // served from subapp_assets/ - nothing is fetched from another host, as the
 // bot's customers are often where Google Fonts and CDNs do not load.
 ini_set('error_log', 'error_log');

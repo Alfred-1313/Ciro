@@ -7,6 +7,7 @@ return array (
     'resetAllLabel' => '🔁 ریست همه به پیش‌فرض',
     'groupBuyflowLabel' => '🛒 پیام‌ها و ظاهر مراحل خرید',
     'groupServicesLabel' => '🛍 پیام‌ها و ظاهر سرویس‌های من',
+    'groupSubappsLabel' => '📲 افزودن سرویس به برنامه',
     'groupTopupLabel' => '💰 پیام‌ها و ظاهر افزایش موجودی',
     'groupTopupDiscLabel' => '🎁 پیام‌های تخفیف',
     'groupAccountLabel' => '👤 پیام و دکمه‌های حساب کاربری',
@@ -27,7 +28,12 @@ return array (
       'myservices_screenBtns' => 'دکمه‌های همین صفحه (💊 تمدید، 💡 روشن/خاموش، ...) توی «🔘 دکمه‌های وضعیت سرویس» تنظیم می‌شن',
       'myservices_actions' => '3️⃣ صفحه‌هایی که دکمه‌ها باز می‌کنن',
       'myservices_errors' => '⚠️ خطاها و پاپ‌آپ‌ها',
-      'subapps_page' => '🌐 صفحه‌ی باز کردن برنامه (همه‌ی بخش‌ها)',
+      'subapps_entry' => '🌐 / 📲 دکمه‌های زیر هر سرویس',
+      'subapps_list' => '📲 لیست برنامه‌ها',
+      'subapps_page' => '🌐 صفحه‌ی باز کردن برنامه',
+      'subapps_missing' => '📥 وقتی برنامه روی گوشی نیست',
+      'subapps_stores' => '⬇️ دانلود و فروشگاه‌ها',
+      'subapps_errors' => '⚠️ خطاها و پاپ‌آپ‌ها',
     ),
     // ⏱'s screen is only an index: each of these opens one sub-screen, whose
     // items are the bottext items with that 'group'
@@ -56,6 +62,19 @@ return array (
 1️⃣ لیست سرویس‌ها - پیامی که با زدن «🛍 سرویس‌های من» میاد
 2️⃣ صفحه‌ی هر سرویس - کپشنش و دکمه‌هاش
 3️⃣ صفحه‌هایی که هر دکمه باز می‌کنه - به همون ترتیب دکمه‌ها
+⚠️ خطاها و پاپ‌آپ‌ها
+
+✅ رنگ سبز یعنی اون مورد از قبل تغییر کرده.',
+    'groupSubappsCaption' => '📲 <b>افزودن سرویس به برنامه</b> — {lang}
+
+🌐 الان داری تب <b>{lang}</b> رو ویرایش می‌کنی؛ هر زبان تنظیمات خودش رو داره.
+
+📌 این بخش برای ۵ جا یکیه: پیام بعد از خرید، اکانت تست، هدیه‌ی دعوت، اشتراک ساعتی و «🛍 سرویس‌های من». هرچی اینجا عوض کنی همه‌ی اون ۵ جا عوض می‌شن.
+
+🔘 دکمه‌های «🌐 سابسکریپشن» و «📲 افزودن به برنامه»
+📲 لیست برنامه‌ها و دکمه‌هاش
+🌐 صفحه‌ی وبی که با زدن یه برنامه باز می‌شه
+⬇️ دکمه‌ی دانلود و لینک فروشگاه‌ها
 ⚠️ خطاها و پاپ‌آپ‌ها
 
 ✅ رنگ سبز یعنی اون مورد از قبل تغییر کرده.',
@@ -458,123 +477,123 @@ return array (
         'group' => 'myservices',
         'section' => 'myservices_linksub',
       ),
-      // 🌐 / 📲 on top of a bought service's screen and the app list 📲
-      // opens; a test account, a 🎁 gift config and ⏱ have their own
-      // (subapp_kind). The popup and the page an app opens through are one
-      // for all four, so they are here only
+      // 📲 افزودن سرویس به برنامه: a group of its own, one for the five places
+      // that show it (a bought service, a test account, a 🎁 gift config, ⏱
+      // and 🛍 سرویس‌های من). Its buttons, its list, the popup and the page an
+      // app opens through (subapp.php) are each ONE setting for all of them
       array (
-        'label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (همه‌ی بخش‌ها)',
+        'label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه',
         'key' => 'users.subapps.entryBuy',
-        'group' => 'myservices',
-        'section' => 'subapps',
+        'group' => 'subapps',
+        'section' => 'subapps_entry',
       ),
       array (
-        'label' => '📲 لیست برنامه‌ها + دکمه‌هاش (همه‌ی بخش‌ها)',
+        'label' => '📲 پیام لیست برنامه‌ها + دکمه‌هاش',
         'key' => 'users.subapps.listBuy',
-        'group' => 'myservices',
-        'section' => 'subapps',
+        'group' => 'subapps',
+        'section' => 'subapps_list',
       ),
       array (
-        'label' => '⚠️ پاپ‌آپ «لینک سابسکریپشن در دسترس نیست» (همه‌ی بخش‌ها)',
-        'key' => 'users.subapps.noLink',
-        'group' => 'myservices',
-        'section' => 'subapps',
+        'label' => '🏷 برچسب «سرویس» (کنار اسم سرویس)',
+        'key' => 'users.subapps.pageService',
+        'group' => 'subapps',
+        'section' => 'subapps_page',
       ),
       array (
         'label' => '⏳ خط «داره ... باز می‌شه»',
         'key' => 'users.subapps.pageOpening',
-        'group' => 'myservices',
+        'group' => 'subapps',
         'section' => 'subapps_page',
       ),
       array (
         'label' => '📲 دکمه‌ی «باز کردن ...»',
         'key' => 'users.subapps.pageButton',
-        'group' => 'myservices',
+        'group' => 'subapps',
         'section' => 'subapps_page',
       ),
       array (
         'label' => '💡 راهنمای «اگه باز نشد»',
         'key' => 'users.subapps.pageHint',
-        'group' => 'myservices',
-        'section' => 'subapps_page',
-      ),
-      array (
-        'label' => '⬇️ دکمه‌ی «دانلود ...»',
-        'key' => 'users.subapps.pageDownload',
-        'group' => 'myservices',
-        'section' => 'subapps_page',
-      ),
-      array (
-        'label' => '⛔️ «این لینک دیگه کار نمی‌کنه»',
-        'key' => 'users.subapps.pageError',
-        'group' => 'myservices',
-        'section' => 'subapps_page',
-      ),
-      array (
-        'label' => '🏷 برچسب «سرویس» (کنار اسم سرویس)',
-        'key' => 'users.subapps.pageService',
-        'group' => 'myservices',
-        'section' => 'subapps_page',
-      ),
-      array (
-        'label' => '⚠️ تیتر «برنامه روی گوشیت پیدا نشد»',
-        'key' => 'users.subapps.pageMissingTitle',
-        'group' => 'myservices',
-        'section' => 'subapps_page',
-      ),
-      array (
-        'label' => '📝 متن زیر تیتر «برنامه پیدا نشد» (اول نصبش کن)',
-        'key' => 'users.subapps.pageMissing',
-        'group' => 'myservices',
-        'section' => 'subapps_page',
-      ),
-      array (
-        'label' => '🔁 دکمه‌ی «دوباره امتحان کن»',
-        'key' => 'users.subapps.pageRetry',
-        'group' => 'myservices',
+        'group' => 'subapps',
         'section' => 'subapps_page',
       ),
       array (
         'label' => '✅ متن بعد از برگشتن از برنامه',
         'key' => 'users.subapps.pageOpened',
-        'group' => 'myservices',
+        'group' => 'subapps',
         'section' => 'subapps_page',
+      ),
+      array (
+        'label' => '⚠️ تیتر «برنامه روی گوشیت پیدا نشد»',
+        'key' => 'users.subapps.pageMissingTitle',
+        'group' => 'subapps',
+        'section' => 'subapps_missing',
+      ),
+      array (
+        'label' => '📝 متن زیر تیتر «برنامه پیدا نشد» (اول نصبش کن)',
+        'key' => 'users.subapps.pageMissing',
+        'group' => 'subapps',
+        'section' => 'subapps_missing',
+      ),
+      array (
+        'label' => '🔁 دکمه‌ی «دوباره امتحان کن»',
+        'key' => 'users.subapps.pageRetry',
+        'group' => 'subapps',
+        'section' => 'subapps_missing',
+      ),
+      array (
+        'label' => '⬇️ دکمه‌ی «دانلود ...»',
+        'key' => 'users.subapps.pageDownload',
+        'group' => 'subapps',
+        'section' => 'subapps_stores',
       ),
       array (
         'label' => '⬇️ عنوان «دانلود از»',
         'key' => 'users.subapps.pageStoreCaption',
-        'group' => 'myservices',
-        'section' => 'subapps_page',
+        'group' => 'subapps',
+        'section' => 'subapps_stores',
       ),
       array (
         'label' => '🟢 لینک Google Play',
         'key' => 'users.subapps.pageStoreGoogle',
-        'group' => 'myservices',
-        'section' => 'subapps_page',
+        'group' => 'subapps',
+        'section' => 'subapps_stores',
       ),
       array (
         'label' => '🐙 لینک GitHub (آخرین نسخه)',
         'key' => 'users.subapps.pageStoreGithub',
-        'group' => 'myservices',
-        'section' => 'subapps_page',
+        'group' => 'subapps',
+        'section' => 'subapps_stores',
       ),
       array (
         'label' => '🍎 لینک App Store',
         'key' => 'users.subapps.pageStoreApple',
-        'group' => 'myservices',
-        'section' => 'subapps_page',
+        'group' => 'subapps',
+        'section' => 'subapps_stores',
       ),
       array (
         'label' => '🌐 لینک سایت رسمی',
         'key' => 'users.subapps.pageStoreSite',
-        'group' => 'myservices',
-        'section' => 'subapps_page',
+        'group' => 'subapps',
+        'section' => 'subapps_stores',
       ),
       array (
         'label' => '📵 متن «نسخه‌ی گوشی تو نیست»',
         'key' => 'users.subapps.pageNoPlatform',
-        'group' => 'myservices',
-        'section' => 'subapps_page',
+        'group' => 'subapps',
+        'section' => 'subapps_stores',
+      ),
+      array (
+        'label' => '⚠️ پاپ‌آپ «لینک سابسکریپشن در دسترس نیست»',
+        'key' => 'users.subapps.noLink',
+        'group' => 'subapps',
+        'section' => 'subapps_errors',
+      ),
+      array (
+        'label' => '⛔️ «این لینک دیگه کار نمی‌کنه»',
+        'key' => 'users.subapps.pageError',
+        'group' => 'subapps',
+        'section' => 'subapps_errors',
       ),
       array (
         'label' => '⏳ پیام «در حال ساخت لینک پرداخت»',
@@ -9435,6 +9454,10 @@ nowpayments.io
     'svcBtnShopOff' => 'در تنظیمات فروشگاه خاموش است',
     'svcBuyBtnsPair' => 'دکمه‌های «ورود به سابسکریپشن» و «افزودن به برنامه» که بالای این دکمه‌ها می‌آیند، یکی‌اند برای همه‌ی بخش‌ها (پیام خرید، تست، هدیه، صفحه‌ی ساعتی و سرویس‌های من) و برای هر زبان جدا تنظیم می‌شوند:',
     'svcBuyBtnsPairLink' => 'ظاهر دکمه‌ها ← سابسکریپشن و افزودن به برنامه',
+    'saEntryBtnsHint' => 'اسم، ایموجی، رنگ، جا و مخفی بودنِ دکمه‌ی «🌐 سابسکریپشن» و «📲 افزودن به برنامه» (یکی برای ۵ جا، برای هر زبان جدا):',
+    'saEntryBtnsLink' => 'ظاهر دکمه‌ها ← سابسکریپشن و افزودن به برنامه',
+    'saListBtnsHint' => 'اسم، ایموجی و رنگ دکمه‌ی هر برنامه و دکمه‌ی برگشتِ همین لیست:',
+    'saListBtnsLink' => 'ظاهر دکمه‌ها ← لیست برنامه‌ها',
     'svcBtnOrderInvalid' => 'ترتیب هر دکمه باید عددی بین ۱ تا ۹۹ باشد',
     'svcDelivery' => 'نحوه‌ی نمایش کانفیگ',
     'svcDeliverySub' => 'برای هر پنل: حالت ۱ = یک پیام کامل (با QR اگر روشن باشد)، حالت ۲ = صفحه‌ی انتخاب کانفیگ',
