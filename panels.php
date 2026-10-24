@@ -612,6 +612,15 @@ class ManagePanel
     }
     function DataUser($name_panel, $username)
     {
+        // An answer a caller has just got from this panel (and changed the
+        // status in, after switching the service) is used up here once, so the
+        // screen it then draws does not ask the panel the same thing again -
+        // each DataUser() is up to three requests to a Marzban panel.
+        $handed = $GLOBALS['mz_datauser_handover'][$name_panel . '|' . $username] ?? null;
+        if (is_array($handed)) {
+            unset($GLOBALS['mz_datauser_handover'][$name_panel . '|' . $username]);
+            return $handed;
+        }
         $Output = array();
         global $pdo, $domainhosts;
         $Get_Data_Panel = select("marzban_panel", "*", "name_panel", $name_panel, "select");
@@ -2029,23 +2038,29 @@ class ManagePanel
             );
         }
     }
-    function Change_status($username, $name_panel)
+    // $known: the answer DataUser() just gave the caller, when it has one -
+    // asking the panel again for the same thing only makes the switch slower
+    function Change_status($username, $name_panel, $known = null)
     {
-        $DataUserOut = $this->DataUser($name_panel, $username);
+        $DataUserOut = is_array($known) ? $known : $this->DataUser($name_panel, $username);
+        $Output = array(
+            'status' => 'Unsuccessful',
+            'msg' => 'unsupported panel'
+        );
         $Get_Data_Panel = select("marzban_panel", "*", "name_panel", $name_panel, "select");
         if ($DataUserOut['status'] == "Unsuccessful") {
             $Output = array(
                 'status' => 'Unsuccessful',
                 'msg' => $DataUserOut['detail']
             );
-            return;
+            return $Output;
         }
         if (!in_array($DataUserOut['status'], ["active", "disabled"])) {
             $Output = array(
                 'status' => 'Unsuccessful',
                 'msg' => "status invalid"
             );
-            return;
+            return $Output;
         }
         if ($Get_Data_Panel['type'] == "marzban") {
             if ($DataUserOut['status'] == "active") {
@@ -2054,11 +2069,10 @@ class ManagePanel
                 $status = "active";
             }
             $configs = array("status" => $status);
-            $this->Modifyuser($username, $name_panel, $configs);
-            $Output = array(
-                'status' => 'successful',
-                'msg' => null
-            );
+            $modified = $this->Modifyuser($username, $name_panel, $configs);
+            $Output = (is_array($modified) && ($modified['status'] ?? null) === false)
+                ? array('status' => 'Unsuccessful', 'msg' => $modified['msg'] ?? null)
+                : array('status' => 'successful', 'msg' => null);
         } elseif ($Get_Data_Panel['type'] == "marzneshin") {
             if ($DataUserOut['status'] == "active") {
                 disableduser($name_panel, $username);
@@ -2078,11 +2092,10 @@ class ManagePanel
             $configs = array(
                 "enable" => $status,
             );
-            $this->Modifyuser($username, $name_panel, $configs);
-            $Output = array(
-                'status' => 'successful',
-                'msg' => null
-            );
+            $modified = $this->Modifyuser($username, $name_panel, $configs);
+            $Output = (is_array($modified) && ($modified['status'] ?? null) === false)
+                ? array('status' => 'Unsuccessful', 'msg' => $modified['msg'] ?? null)
+                : array('status' => 'successful', 'msg' => null);
         } elseif ($Get_Data_Panel['type'] == "alireza_single") {
             if ($DataUserOut['status'] == "active") {
                 $status = false;
@@ -2098,11 +2111,10 @@ class ManagePanel
                     ),
                 )),
             );
-            $this->Modifyuser($username, $name_panel, $configs);
-            $Output = array(
-                'status' => 'successful',
-                'msg' => null
-            );
+            $modified = $this->Modifyuser($username, $name_panel, $configs);
+            $Output = (is_array($modified) && ($modified['status'] ?? null) === false)
+                ? array('status' => 'Unsuccessful', 'msg' => $modified['msg'] ?? null)
+                : array('status' => 'successful', 'msg' => null);
         } elseif ($Get_Data_Panel['type'] == "hiddify") {
             $Output = array(
                 'status' => 'Unsuccessful',
@@ -2115,11 +2127,10 @@ class ManagePanel
                 $status = true;
             }
             $configs = array("enable" => $status);
-            $this->Modifyuser($username, $name_panel, $configs);
-            $Output = array(
-                'status' => 'successful',
-                'msg' => null
-            );
+            $modified = $this->Modifyuser($username, $name_panel, $configs);
+            $Output = (is_array($modified) && ($modified['status'] ?? null) === false)
+                ? array('status' => 'Unsuccessful', 'msg' => $modified['msg'] ?? null)
+                : array('status' => 'successful', 'msg' => null);
         } elseif (in_array($Get_Data_Panel['type'], ["rebecca", "remnawave"], true)) {
             if ($DataUserOut['status'] == "active") {
                 $status = "disabled";
@@ -2127,11 +2138,10 @@ class ManagePanel
                 $status = "active";
             }
             $configs = array("status" => $status);
-            $this->Modifyuser($username, $name_panel, $configs);
-            $Output = array(
-                'status' => 'successful',
-                'msg' => null
-            );
+            $modified = $this->Modifyuser($username, $name_panel, $configs);
+            $Output = (is_array($modified) && ($modified['status'] ?? null) === false)
+                ? array('status' => 'Unsuccessful', 'msg' => $modified['msg'] ?? null)
+                : array('status' => 'successful', 'msg' => null);
         }
 
         return $Output;

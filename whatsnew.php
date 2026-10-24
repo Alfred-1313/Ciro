@@ -302,4 +302,16 @@ return [
             . "One tap on «💡 On/off» switches the service right away; the «are you sure?» question and its separate confirm screen are gone. A short note (turned on / turned off) is shown and the button itself changes on the spot: 🟢 green while it is on, 🔴 red while it is off. In 🛍 My services the whole screen (status line included) is refreshed too; in the purchase, test and gift messages only the button changes.\n"
             . "Confirm buttons on older messages still work. The confirmation in the admin panel (managing a user's order) is unchanged.</blockquote>",
     ],
+    [
+        'n' => 19,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>⚡️ <b>روشن/خاموش کردن اشتراک سریع‌تر شد</b>\n"
+            . "📍 پیام خرید، اکانت تست، هدیهٔ رفرال و 🛍 سرویس‌های من\n"
+            . "قبلاً هر بار زدن 💡 پنل را چند بار از اول صدا می‌زد (چهار بار وضعیت سرویس را می‌پرسید). حالا یک بار وضعیت را می‌پرسد، همان را برای تغییر و برای رسم دوبارهٔ صفحه به کار می‌برد و فقط یک درخواست تغییر می‌فرستد. پیام «روشن/خاموش شد» و رنگ تازهٔ دکمه اول می‌آید و بعد صفحهٔ کامل در همان پیام تازه می‌شود.\n"
+            . "اگر پنل تغییر را قبول نکند، دکمه عوض نمی‌شود و پیام «امکان تغییر وجود ندارد» می‌آید (قبلاً گاهی خطای پنل دیده نمی‌شد).</blockquote>",
+        'en' => "<blockquote>⚡️ <b>Turning a subscription on/off is faster</b>\n"
+            . "📍 Purchase message, test account, referral gift and 🛍 My services\n"
+            . "Every tap on 💡 used to call the panel over and over (it asked for the service's status four times). Now it asks once, uses that answer for the switch and for redrawing the screen, and sends a single change request. The «turned on/off» note and the button's new colour come first, then the full screen is refreshed in the same message.\n"
+            . "If the panel refuses the change, the button stays as it was and a «could not be changed» note is shown (a panel error used to go unnoticed at times).</blockquote>",
+    ],
 ];

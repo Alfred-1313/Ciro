@@ -11461,10 +11461,11 @@ if (!function_exists('svc_flip_status_button')) {
     // After 💡 was tapped on a message that is not the service's own screen (a
     // purchase / test / gift message): the same keyboard with only 💡 drawn for
     // the service's new state - its name, colour and emoji from svc_action_rows().
+    // $kind: 'mine' for the service's own screen, else the message's own kind.
     // null when that message has no such button.
-    function svc_flip_status_button(array $keyboard, array $inv, array $panel, $status, $userRow, $tx)
+    function svc_flip_status_button(array $keyboard, array $inv, array $panel, $status, $userRow, $tx, $kind = null)
     {
-        $kind = ['b' => 'buy', 't' => 'test', 'r' => 'ref'][subapp_kind($inv)] ?? 'buy';
+        $kind = $kind ?? (['b' => 'buy', 't' => 'test', 'r' => 'ref'][subapp_kind($inv)] ?? 'buy');
         $fresh = null;
         foreach (svc_action_rows($kind, $inv, $panel, $status, '', $userRow, $tx) as $row) {
             foreach ($row as $btn) {

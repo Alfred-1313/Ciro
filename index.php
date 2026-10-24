@@ -636,12 +636,17 @@ if (preg_match('/^changestatus_(\w+)$/', (string) $datain, $cs_m)) {
         sendmessage($from_id, $textbotlang['users']['status']['error'], null, 'html');
         return;
     }
-    $dataoutput = $ManagePanel->Change_status($nameloc['username'], $nameloc['Service_location']);
-    if ($dataoutput['status'] == "Unsuccessful") {
+    // The panel is asked once before (above) and once to switch: what the
+    // service is now is worked out from what it was, so the answer reaches the
+    // customer after two requests instead of five. The screen redrawn after
+    // that is told the same, and the panel's own word replaces it on the next
+    // refresh.
+    $dataoutput = $ManagePanel->Change_status($nameloc['username'], $nameloc['Service_location'], $DataUserOut);
+    if (!is_array($dataoutput) || $dataoutput['status'] == "Unsuccessful") {
         $cs_toast($textbotlang['users']['status']['notchanged'], true);
         return;
     }
-    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    $DataUserOut['status'] = $DataUserOut['status'] == "active" ? "disabled" : "active";
     $cs_now = $DataUserOut['status'] == "active";
     $cs_toast($cs_now ? $textbotlang['users']['status']['activedconfig'] : $textbotlang['users']['status']['disabledconfig']);
     $cs_kb = (array) ($update['callback_query']['message']['reply_markup']['inline_keyboard'] ?? []);
@@ -653,18 +658,19 @@ if (preg_match('/^changestatus_(\w+)$/', (string) $datain, $cs_m)) {
             }
         }
     }
-    if ($cs_mine) {
-        // the service's own screen: drawn again in place, status line and all
-        $datain = 'updateproduct_' . $id_invoice;
-        $cs_answered = true;
-    } else {
-        $cs_panel = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
-        $cs_new = is_array($cs_panel) ? svc_flip_status_button($cs_kb, $nameloc, $cs_panel, $DataUserOut['status'], $user, $textbotlang) : null;
-        if ($cs_new !== null) {
-            telegram('editMessageReplyMarkup', ['chat_id' => $from_id, 'message_id' => $message_id, 'reply_markup' => json_encode(['inline_keyboard' => $cs_new])]);
-        }
+    // the button first - it is what the customer is looking at
+    $cs_panel = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
+    $cs_new = is_array($cs_panel) ? svc_flip_status_button($cs_kb, $nameloc, $cs_panel, $DataUserOut['status'], $user, $textbotlang, $cs_mine ? 'mine' : null) : null;
+    if ($cs_new !== null) {
+        telegram('editMessageReplyMarkup', ['chat_id' => $from_id, 'message_id' => $message_id, 'reply_markup' => json_encode(['inline_keyboard' => $cs_new])]);
+    }
+    if (!$cs_mine) {
         return;
     }
+    // the service's own screen: drawn again in place, status line and all
+    $GLOBALS['mz_datauser_handover'][$nameloc['Service_location'] . '|' . $nameloc['username']] = $DataUserOut;
+    $datain = 'updateproduct_' . $id_invoice;
+    $cs_answered = true;
 }
 if ($text == "/start" || $datain == "start" || $text == "start") {
     update("user", "Processing_value", "0", "id", $from_id);
