@@ -410,4 +410,14 @@ return [
             . "📍 🎨 Customize → 📲 Add service to app → «🖼 The look of the page»\n"
             . "On phones in light mode, look A was almost white and looked like B. The app's own colour now washes across the page like an aurora with a frosted glass card over it; B stays plain and flat. Dark mode did not change.</blockquote>",
     ],
+    [
+        'n' => 28,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>⚪ <b>طرح B همیشه سفید است</b>\n"
+            . "📍 🎨 شخصی‌سازی ← 📲 افزودن سرویس به برنامه ← «🖼 طرح صفحه»\n"
+            . "طرح B مینیمال تا حالا مثل A پوسته‌ی تیره/روشنِ گوشی یا مرورگر را دنبال می‌کرد و روی دستگاهِ تیره مشکی می‌شد. حالا همیشه سفید است، حتی اگر دستگاه تیره باشد. A همچنان خودکار با تیره/روشنِ دستگاه عوض می‌شود.</blockquote>",
+        'en' => "<blockquote>⚪ <b>Look B is always white</b>\n"
+            . "📍 🎨 Customize → 📲 Add service to app → «🖼 The look of the page»\n"
+            . "The Minimal look B used to follow the phone's or browser's light/dark theme like A, so it went black on a dark device. It is now always white, even when the device is dark. A still follows the device's light/dark by itself.</blockquote>",
+    ],
 ];

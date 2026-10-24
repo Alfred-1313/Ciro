@@ -119,9 +119,14 @@ $sa_min = $sa_look === 'minimal';
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<?php if ($sa_min): ?>
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#ffffff">
+<?php else: ?>
 <meta name="color-scheme" content="dark light">
-<meta name="theme-color" content="<?= $sa_min ? '#0b0b10' : '#0a0e16' ?>" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="<?= $sa_min ? '#f3f5f9' : '#f1f4fa' ?>" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a0e16" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f1f4fa" media="(prefers-color-scheme: light)">
+<?php endif; ?>
 <title><?= $sa_ok ? htmlspecialchars($sa_app['name']) : '⛔️' ?></title>
 <link rel="preload" href="subapp_assets/fonts/estedad-<?= $sa_rtl ? 'arabic' : 'latin' ?>.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -225,10 +230,10 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
 .store:active{transform:scale(.96)}
 @media (hover:hover) and (pointer:fine){.btn:hover,.store:hover{background-color:var(--glass)}.primary:hover,[data-state=missing] .dl:hover{filter:brightness(1.06);background-color:transparent}}
 
-/* B - minimal: flat colours instead of the glass, a pill for the main button, a
-   row for the download. The same font, words, stage and motion as A. */
-[data-look=minimal]{--bg:#0b0b10;--chip:#17171e;--line:rgba(255,255,255,.09);--text:#f4f4f8;--muted:#a0a0ae;--soft:rgba(255,255,255,.08);--accentText:<?= $sa_mix($sa_app['accent'], '#ffffff', .5) ?>;--ico:112px;--rad:32px;background:var(--bg)}
-@media (prefers-color-scheme:light){[data-look=minimal]{--bg:#f3f5f9;--chip:#fff;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#586377;--soft:<?= $sa_mix($sa_app['accent'], '#ffffff', .12) ?>;--accentText:<?= $sa_app['accent'] ?>}}
+/* B - minimal: white, whatever the phone's theme is - flat colours instead of the
+   glass, a pill for the main button, a row for the download. The same font, words,
+   stage and motion as A (which follows the phone's light / dark). */
+[data-look=minimal]{--bg:#fff;--chip:#f4f6fa;--line:rgba(15,23,42,.09);--text:#0f172a;--muted:#586377;--warn:#b86e00;--ok:#0f9d63;--soft:<?= $sa_mix($sa_app['accent'], '#ffffff', .12) ?>;--accentText:<?= $sa_app['accent'] ?>;--ico:112px;--rad:32px;background:var(--bg);color-scheme:light}
 [data-look=minimal] .card{background:none;border:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;padding:8px 2px}
 [data-look=minimal] .node{background:var(--soft);border-color:transparent}
 [data-look=minimal] .app{font-size:46px;background:linear-gradient(150deg,var(--accent2),var(--accent));box-shadow:inset 0 1.5px 0 rgba(255,255,255,.38),0 22px 40px -16px var(--accent)}
