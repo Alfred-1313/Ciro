@@ -1583,6 +1583,14 @@ try {
 } catch (Throwable $e) {
     error_log('subapps merge: ' . $e->getMessage());
 }
+// the warnings' button looks (🔋, and the test-account-ended button) are per
+// language now: each tab keeps a copy of what it showed
+try {
+    volumepct_unshare_looks();
+    genbtn_unshare_looks();
+} catch (Throwable $e) {
+    error_log('unshare looks: ' . $e->getMessage());
+}
 // Russian, Chinese and Turkmen are not languages of the bot any more (only fa
 // and en have a lang/ file). Whoever was on one is on Persian - the language
 // every missing text already falls back to - and the picker's list and the

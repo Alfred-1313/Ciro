@@ -9306,7 +9306,7 @@ if (preg_match('/^volpct\|sticker\|([a-z]{2})\|(\d+)$/', $datain, $vp_m) && $adm
     return;
 }
 if (preg_match('/^volpct\|style\|([a-z]{2})\|(\d+)\|(primary|success|danger)$/', $datain, $vp_m) && $adminrulecheck['rule'] == "administrator") {
-    volumepct_tier_set_style((int) $vp_m[2], $vp_m[3]);
+    volumepct_tier_set_style((int) $vp_m[2], $vp_m[3], null, null, null, null, null, $vp_m[1]);
     list($vp_text, $vp_kb) = volumepct_tier_detail_payload((int) $vp_m[2], $vp_m[1], $textbotlang);
     Editmessagetext($from_id, $message_id, $vp_text, $vp_kb, 'HTML');
     return;
@@ -9323,22 +9323,22 @@ if (preg_match('/^volpct\|emoji\|([a-z]{2})\|(\d+)$/', $datain, $vp_m) && $admin
     return;
 }
 if (preg_match('/^volpct\|simple\|([a-z]{2})\|(\d+)$/', $datain, $vp_m) && $adminrulecheck['rule'] == "administrator") {
-    $vp_cur = !empty(volumepct_tier_get((int) $vp_m[2])['simple']);
-    volumepct_tier_set_style((int) $vp_m[2], null, null, null, null, !$vp_cur);
+    $vp_cur = !empty(volumepct_tier_look(volumepct_tier_get((int) $vp_m[2]), $vp_m[1])['simple']);
+    volumepct_tier_set_style((int) $vp_m[2], null, null, null, null, !$vp_cur, null, $vp_m[1]);
     list($vp_text, $vp_kb) = volumepct_tier_detail_payload((int) $vp_m[2], $vp_m[1], $textbotlang);
     Editmessagetext($from_id, $message_id, $vp_text, $vp_kb, 'HTML');
     return;
 }
 if (preg_match('/^volpct\|hide\|([a-z]{2})\|(\d+)$/', $datain, $vp_m) && $adminrulecheck['rule'] == "administrator") {
     // the notice itself still goes out - only its button is dropped
-    $vp_cur = !empty(volumepct_tier_get((int) $vp_m[2])['hidden']);
-    volumepct_tier_set_style((int) $vp_m[2], null, null, null, null, null, !$vp_cur);
+    $vp_cur = !empty(volumepct_tier_look(volumepct_tier_get((int) $vp_m[2]), $vp_m[1])['hidden']);
+    volumepct_tier_set_style((int) $vp_m[2], null, null, null, null, null, !$vp_cur, $vp_m[1]);
     list($vp_text, $vp_kb) = volumepct_tier_detail_payload((int) $vp_m[2], $vp_m[1], $textbotlang);
     Editmessagetext($from_id, $message_id, $vp_text, $vp_kb, 'HTML');
     return;
 }
 if (preg_match('/^volpct\|pos\|([a-z]{2})\|(\d+)\|(left|right)$/', $datain, $vp_m) && $adminrulecheck['rule'] == "administrator") {
-    volumepct_tier_set_style((int) $vp_m[2], null, null, null, $vp_m[3], null);
+    volumepct_tier_set_style((int) $vp_m[2], null, null, null, $vp_m[3], null, null, $vp_m[1]);
     list($vp_text, $vp_kb) = volumepct_tier_detail_payload((int) $vp_m[2], $vp_m[1], $textbotlang);
     Editmessagetext($from_id, $message_id, $vp_text, $vp_kb, 'HTML');
     return;
@@ -10051,7 +10051,7 @@ if (preg_match('/^volpcttxt-btn-([a-z]{2})-(\d+)$/', (string) $user['step'], $vp
     }
     volumepct_tier_set_btnlabel($vp_index, $vp_lang, $vp_newtext);
     if ($vp_icon !== '') {
-        volumepct_tier_set_style($vp_index, null, null, $vp_icon);
+        volumepct_tier_set_style($vp_index, null, null, $vp_icon, null, null, null, $vp_lang);
     }
     step('home', $from_id);
     list($vp_text, $vp_kb) = volumepct_tier_detail_payload($vp_index, $vp_lang, $textbotlang);
@@ -10099,7 +10099,7 @@ if (preg_match('/^volpctemo-([a-z]{2})-(\d+)$/', (string) $user['step'], $vp_m) 
         }
     }
     if ($vp_icon_id !== '') {
-        volumepct_tier_set_style($vp_index, null, null, $vp_icon_id, null, null);
+        volumepct_tier_set_style($vp_index, null, null, $vp_icon_id, null, null, null, $vp_lang);
         $vp_msg = "✅ ایموجی پریمیوم ذخیره شد! 💎";
     } else {
         preg_match('/^\X/u', trim((string) $text), $vp_em);
@@ -10108,7 +10108,7 @@ if (preg_match('/^volpctemo-([a-z]{2})-(\d+)$/', (string) $user['step'], $vp_m) 
             sendmessage($from_id, "⚠️ لطفاً فقط یه ایموجی بفرست 😅", $btpromptcancel, 'HTML');
             return;
         }
-        volumepct_tier_set_style($vp_index, null, $vp_emoji, null, null, null);
+        volumepct_tier_set_style($vp_index, null, $vp_emoji, null, null, null, null, $vp_lang);
         $vp_msg = "✅ ایموجی {$vp_emoji} ذخیره شد!";
     }
     step('home', $from_id);

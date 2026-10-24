@@ -204,22 +204,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($label !== (string) ($tier['btnLabel'][$lang] ?? '')) {
                 $writes[] = fn() => svc_tier_word($i, 'btnLabel', $lang, $label);
             }
-            // the look is one for every language, as in the bot
+            // the look is this language's own, as in the bot
+            $look = volumepct_tier_look($tier, $lang);
             $emoji = trim((string) ($p['emoji'] ?? ''));
             if (!$emojiOk($emoji)) {
                 $err = $t['menuEmojiInvalid'];
                 break;
             }
             $style = in_array($p['style'] ?? '', ['primary', 'success', 'danger'], true) ? $p['style'] : null;
-            $emojiArg = !empty($p['emoji_del']) ? '' : ($emoji !== (string) ($tier['emoji'] ?? '') ? $emoji : null);
+            $emojiArg = !empty($p['emoji_del']) ? '' : ($emoji !== (string) ($look['emoji'] ?? '') ? $emoji : null);
             $pos = ($p['pos'] ?? '') === 'left' ? 'left' : 'right';
-            $posArg = $pos !== ((($tier['pos'] ?? '') === 'left') ? 'left' : 'right') ? $pos : null;
+            $posArg = $pos !== ((($look['pos'] ?? '') === 'left') ? 'left' : 'right') ? $pos : null;
             $simple = ($p['simple'] ?? '') === '1';
             $hidden = ($p['hidden'] ?? '') === '1';
-            $styleArg = ($style !== null && $style !== (string) ($tier['style'] ?? '')) ? $style : null;
-            if ($styleArg !== null || $emojiArg !== null || $posArg !== null || $simple !== !empty($tier['simple']) || $hidden !== !empty($tier['hidden'])) {
+            $styleArg = ($style !== null && $style !== (string) ($look['style'] ?? '')) ? $style : null;
+            if ($styleArg !== null || $emojiArg !== null || $posArg !== null || $simple !== !empty($look['simple']) || $hidden !== !empty($look['hidden'])) {
                 // an emoji given (or '' to remove) also drops a premium one
-                $writes[] = fn() => volumepct_tier_set_style($i, $styleArg, $emojiArg, null, $posArg, $simple, $hidden);
+                $writes[] = fn() => volumepct_tier_set_style($i, $styleArg, $emojiArg, null, $posArg, $simple, $hidden, $lang);
             }
         }
         // a new tier: the bot's «new threshold» step
@@ -372,15 +373,14 @@ $saveBtn = '<div class="modal-foot" style="border-radius:0 0 10px 10px"><button 
           <input type="text" class="input" name="single[<?= $mk ?>][label]" placeholder="<?= $t['svcTierLabel'] ?>" maxlength="64" style="margin-top:6px">
         </div>
       <?php endif; ?>
-      <?php foreach ($list as $i => $tier): $n = "tier[$i]"; ?>
+      <?php foreach ($list as $i => $tier): $n = "tier[$i]"; $look = volumepct_tier_look($tier, $lang); ?>
         <div class="set-row" style="flex-direction:column;align-items:stretch">
           <input type="hidden" name="<?= $n ?>[kind]" value="<?= $mk ?>">
           <div class="lang-chips" style="align-items:center">
             <?php if (!$m['single']): ?><b><?= htmlspecialchars(sprintf($m['rowLabel'], (int) ($tier['pct'] ?? 0))) ?></b>
               <input type="text" class="input" name="<?= $n ?>[pct]" value="<?= (int) ($tier['pct'] ?? 0) ?>" inputmode="numeric" style="width:90px" title="<?= htmlspecialchars($m['thresholdBtn'] !== '' ? sprintf($m['thresholdBtn'], (int) ($tier['pct'] ?? 0)) : '') ?>"><?php endif; ?>
-            <span class="field-hint">🌐 <?= $t['svcTierLookShared'] ?></span>
-            <?= $emojiIn($n, $tier) ?><?= $posSel($n . '[pos]', (string) ($tier['pos'] ?? '')) ?><?= $colorSel($n . '[style]', (string) ($tier['style'] ?? ''), '') ?>
-            <?= $chk($n . '[simple]', !empty($tier['simple']), $t['menuSimple']) ?><?= $chk($n . '[hidden]', !empty($tier['hidden']), $t['menuHidden']) ?>
+            <?= $emojiIn($n, $look) ?><?= $posSel($n . '[pos]', (string) ($look['pos'] ?? '')) ?><?= $colorSel($n . '[style]', (string) ($look['style'] ?? ''), '') ?>
+            <?= $chk($n . '[simple]', !empty($look['simple']), $t['menuSimple']) ?><?= $chk($n . '[hidden]', !empty($look['hidden']), $t['menuHidden']) ?>
             <?php if (!$m['single']): ?><label class="lang-chip"><input type="checkbox" name="<?= $n ?>[del]" value="1"> <?= $t['svcTierDel'] ?></label><?php endif; ?>
           </div>
           <textarea class="textarea" name="<?= $n ?>[text]" rows="3" style="margin-top:6px" placeholder="<?= htmlspecialchars(mb_substr(strip_tags((string) volumepct_tier_default_text($tx, $mk)), 0, 300)) ?>"><?= htmlspecialchars((string) ($tier['text'][$lang] ?? '')) ?></textarea>

@@ -12489,7 +12489,7 @@ if (!function_exists('bt_reset_picker_payload')) {
             }
         }
         $info = "🔁 <b>ریست به پیش‌فرض</b>" . mainmenu_tab_note($lang) . "\n➖➖➖➖➖➖➖➖➖➖\n";
-        $info .= "📌 فقط تنظیمات همین تب ریست می‌شه. تنظیمات مشترک بین همه‌ی زبان‌ها (ظاهر دکمه‌های 🔋، ظاهر دکمه‌ی پیام اتمام اکانت تست، 🌐 تغییر زبان و 🛡 دسترسی ادمین) دست نمی‌خورن.\n\n";
+        $info .= "📌 فقط تنظیمات همین تب ریست می‌شه. تنظیمات مشترک بین همه‌ی زبان‌ها (آستانه‌های 🔋، 🌐 تغییر زبان و 🛡 دسترسی ادمین) دست نمی‌خورن.\n\n";
         if ($total === 0) {
             $info .= "✨ هیچ تنظیم سفارشی‌ای پیدا نشد - همه‌چیز همین الان روی حالت پیش‌فرضه.\n";
         } else {
@@ -12546,9 +12546,8 @@ if (!function_exists('bt_reset_apply_mask')) {
             bottext_reset_keys(bottext_all_item_keys($textbotlang), $lang, $parts, true);
         }
         if ($mask & $sections['warnings']['bit']) {
-            // the tab's own wording, label and sticker - the warnings' button
-            // looks are every tab's, so they stay
-            volumepct_tiers_reset_all_style($lang, null, false);
+            // the tab's own wording, label, sticker and button look
+            volumepct_tiers_reset_all_style($lang, null);
         }
         $hlRows = array_filter(['shop_look', 'help_look', 'gw_look'], fn($row) => ($mask & $sections[$row]['bit']) !== 0);
         if (!empty($hlRows)) {
@@ -13831,12 +13830,13 @@ if (!function_exists('genbtn_override')) {
         return $ov;
     }
     // Buttons whose look - colour, emoji, its side, simple mode, hidden - is
-    // one for every language tab; only their text is per tab. The look is kept
-    // on Persian's entry, the tab it was set up on. 🔋 پیام‌های هشدار و اتمام
-    // سرویس's rule: what is set is shared, only the wording differs.
+    // one for every language tab. None now: every tab has its own look (the
+    // test-account-ended button was the last one; genbtn_unshare_looks() gave
+    // each tab a copy of the look it was showing). Kept so the shared-look
+    // code below still has something to ask.
     function genbtn_shared_look_keys()
     {
-        return ['textbot.testExpired'];
+        return [];
     }
     function genbtn_look_fields()
     {
@@ -14488,7 +14488,7 @@ if (!function_exists('genbtn_hub_payload')) {
             'pu' => 'این ۲ دکمه، زیر سؤال نام کاربری اکانت ساعتی میان (وقتی «💡 روش ساخت نام کاربری» دلخواه باشه): 🔴 برمی‌گرده به صفحه‌ی تعرفه، 🟢 با اسم پیش‌فرض اکانت ساعتی می‌سازه. جدا از دکمه‌های نام‌گذاری خرید معمولی‌ان.',
             'cf' => 'این ۲ دکمه، زیر صفحه‌ی تأیید نهایی خرید نشون داده می‌شن - هر سه حالت (عادی/تخفیف‌دار/حجم دلخواه) از این یکی استفاده می‌کنن، پس ویرایششون روی هر سه اثر می‌ذاره.',
             'ns' => 'این ۱ دکمه، زیر پیامِ «سرویس فعالی ندارید» (وقتی 🛍 سرویس‌های من خالیه) به کاربر نشون داده می‌شه.',
-            'te' => 'این ۱ دکمه، زیر پیامِ «اکانت تست شما به پایان رسید» به کاربر نشون داده می‌شه (همون پیامی که کرون موقع تموم‌شدن اعتبار اکانت تست می‌فرسته). رنگ، ایموجی و مخفی بودنش برای همه‌ی زبان‌ها یکیه؛ فقط متنش مال هر زبانه.',
+            'te' => 'این ۱ دکمه، زیر پیامِ «اکانت تست شما به پایان رسید» به کاربر نشون داده می‌شه (همون پیامی که کرون موقع تموم‌شدن اعتبار اکانت تست می‌فرسته). متن، رنگ، ایموجی و مخفی بودنش مال هر زبان جداست.',
             'sc' => 'این دکمه‌ها زیر لیست سرویس‌های کاربر (🛍 سرویس‌های من) میان و توی همه‌ی صفحه‌ها یکی‌ان: ❌ بستن همیشه؛ و وقتی سرویس‌ها از یه صفحه (۲۰ تا) بیشتر باشن، 🔎 جستجو سریع و دکمه‌های صفحه - توی صفحه‌ی اول «صفحه بعد»، توی صفحه‌های بعد «بعدی / قبلی».',
             'bc' => 'این ۱ دکمه، زیر پیام تایید نهاییِ شارژ کیف پول (هر روش پرداختی) نشون داده می‌شه.',
             'rn' => 'دکمه‌ی ۱ و ۲ زیر فاکتور تمدید سرویس نشون داده می‌شن (دکمه‌ی «افزایش موجودی» بینشون از تنظیمات مشترک همون دکمه میاد، جدا نیست). دکمه‌ی ۳ وقتی کاربر روی «افزایش موجودی» بزنه، زیر لیست روش‌های پرداخت میاد و با تپ روش، برمی‌گردونه به همون فاکتور تمدید.',
@@ -17965,58 +17965,137 @@ if (!function_exists('volumepct_tier_set_pct')) {
 }
 if (!function_exists('volumepct_tier_set_style')) {
     // A tier's button looks - colour, emoji, its side, simple mode, hidden -
-    // are one for every language tab. 🔋 پیام‌های هشدار و اتمام سرویس's rule:
-    // what is set is shared, only the wording (caption, sticker, button text)
-    // is per language.
+    // are kept per language tab ($tier['looks'][$lang]) like everything else
+    // on a tab: what is set on Persian's is Persian's, English has its own.
+    // (Only the threshold itself - when the notice goes out - is one.)
     function volumepct_look_fields()
     {
         return ['style', 'emoji', 'emojiIcon', 'pos', 'simple', 'hidden'];
     }
-    function volumepct_tier_look($tier)
+    // $lang's look of the tier; with $lang null, the old one-for-all look a
+    // tier may still carry until volumepct_unshare_looks() has run
+    function volumepct_tier_look($tier, $lang = null)
     {
-        return is_array($tier) ? array_intersect_key($tier, array_flip(volumepct_look_fields())) : [];
+        if (!is_array($tier)) {
+            return [];
+        }
+        $src = $lang === null ? $tier : (is_array($tier['looks'][$lang] ?? null) ? $tier['looks'][$lang] : []);
+        return array_intersect_key($src, array_flip(volumepct_look_fields()));
     }
     // null = leave that field untouched, matches topup_packages_set_style's
     // established sentinel convention - pass '' explicitly to clear one
-    function volumepct_tier_set_style($index, $style = null, $emoji = null, $emojiIcon = null, $pos = null, $simple = null, $hidden = null)
+    function volumepct_tier_set_style($index, $style = null, $emoji = null, $emojiIcon = null, $pos = null, $simple = null, $hidden = null, $lang = 'fa')
     {
         $tiers = volumepct_tiers_map();
         if (!isset($tiers[$index])) {
             return;
         }
+        $look = volumepct_tier_look($tiers[$index], $lang);
         if ($style !== null && in_array($style, ['primary', 'success', 'danger'], true)) {
-            $tiers[$index]['style'] = $style;
+            $look['style'] = $style;
         }
         if ($emoji !== null) {
             if ($emoji === '') {
-                unset($tiers[$index]['emoji']);
+                unset($look['emoji']);
             } else {
-                $tiers[$index]['emoji'] = $emoji;
+                $look['emoji'] = $emoji;
             }
-            unset($tiers[$index]['emojiIcon']);
+            unset($look['emojiIcon']);
         }
         if ($emojiIcon !== null) {
             if ($emojiIcon === '') {
-                unset($tiers[$index]['emojiIcon']);
+                unset($look['emojiIcon']);
             } else {
-                $tiers[$index]['emojiIcon'] = $emojiIcon;
-                unset($tiers[$index]['emoji']);
+                $look['emojiIcon'] = $emojiIcon;
+                unset($look['emoji']);
             }
         }
         if ($pos !== null && in_array($pos, ['left', 'right'], true)) {
-            $tiers[$index]['pos'] = $pos;
+            $look['pos'] = $pos;
         }
         if ($simple !== null) {
-            $tiers[$index]['simple'] = (bool) $simple;
+            $look['simple'] = (bool) $simple;
         }
         if ($hidden !== null) {
             if ($hidden) {
-                $tiers[$index]['hidden'] = true;
+                $look['hidden'] = true;
             } else {
-                unset($tiers[$index]['hidden']);
+                unset($look['hidden']);
             }
         }
+        if (empty($look)) {
+            unset($tiers[$index]['looks'][$lang]);
+            if (empty($tiers[$index]['looks'])) {
+                unset($tiers[$index]['looks']);
+            }
+        } else {
+            $tiers[$index]['looks'][$lang] = $look;
+        }
         volumepct_tiers_save($tiers);
+    }
+}
+if (!function_exists('genbtn_unshare_looks')) {
+    // The look of the 🔋 «اکانت تست تموم شد» button was kept on Persian's entry
+    // and shown on every tab. Each tab gets a copy of what it was showing and
+    // owns it from then on. Safe to run again.
+    function genbtn_unshare_looks()
+    {
+        $setting = select("setting", "*", null, null, "select");
+        $be = json_decode((string) ($setting['button_edit'] ?? ''), true);
+        if (!is_array($be) || !is_array($be['fa']['textbot.testExpired'] ?? null)) {
+            return;
+        }
+        $changed = false;
+        foreach ($be['fa']['textbot.testExpired'] as $idx => $entry) {
+            $look = is_array($entry) ? array_intersect_key($entry, array_flip(genbtn_look_fields())) : [];
+            if (empty($look)) {
+                continue;
+            }
+            foreach (panel_langs() as $l) {
+                if ($l === 'fa') {
+                    continue;
+                }
+                $mine = is_array($be[$l]['textbot.testExpired'][$idx] ?? null) ? $be[$l]['textbot.testExpired'][$idx] : [];
+                // what the tab showed was Persian's look, whatever it held itself
+                $be[$l]['textbot.testExpired'][$idx] = array_merge(array_diff_key($mine, array_flip(genbtn_look_fields())), $look);
+                $changed = true;
+            }
+        }
+        if ($changed) {
+            update("setting", "button_edit", json_encode($be, JSON_UNESCAPED_UNICODE), null, null);
+        }
+    }
+}
+if (!function_exists('volumepct_unshare_looks')) {
+    // The warnings' button looks used to be one for every language; each tab
+    // has its own now. What a tier carried is copied to every language, so
+    // nothing a customer sees changes on its own, and then the tab's can differ.
+    // Safe to run again.
+    function volumepct_unshare_looks()
+    {
+        $tiers = volumepct_tiers_map();
+        $changed = false;
+        foreach ($tiers as $i => $tier) {
+            if (!is_array($tier)) {
+                continue;
+            }
+            $old = volumepct_tier_look($tier);
+            if (empty($old)) {
+                continue;
+            }
+            foreach (panel_langs() as $l) {
+                if (!is_array($tiers[$i]['looks'][$l] ?? null)) {
+                    $tiers[$i]['looks'][$l] = $old;
+                }
+            }
+            foreach (volumepct_look_fields() as $fld) {
+                unset($tiers[$i][$fld]);
+            }
+            $changed = true;
+        }
+        if ($changed) {
+            volumepct_tiers_save($tiers);
+        }
     }
 }
 if (!function_exists('volumepct_tier_set_text')) {
@@ -18223,11 +18302,11 @@ if (!function_exists('notice_section_keys')) {
         return false;
     }
     // this tab's own part of the section back to how it ships: texts,
-    // stickers, button texts and on/off. What both tabs share - the
-    // thresholds, the buttons' colour and emoji - stays.
+    // stickers, button texts and looks, and on/off. What both tabs share - the
+    // thresholds - stays.
     function notice_section_reset($lang)
     {
-        volumepct_tiers_reset_all_style($lang, null, false);
+        volumepct_tiers_reset_all_style($lang, null);
         bottext_reset_keys(notice_section_keys(), $lang, ['text', 'media']);
         $setting = select("setting", "*", null, null, "select");
         $be = json_decode((string) ($setting['button_edit'] ?? ''), true);
@@ -18306,8 +18385,8 @@ if (!function_exists('notice_section_keys')) {
                     $tiers[$idx]['btnLabel'][$l] = $btn['text'];
                 }
                 foreach (volumepct_look_fields() as $f) {
-                    if ($l === 'fa' && isset($btn[$f])) {
-                        $tiers[$idx][$f] = $btn[$f];
+                    if (isset($btn[$f])) {
+                        $tiers[$idx]['looks'][$l][$f] = $btn[$f];
                     }
                 }
             }
@@ -18349,7 +18428,7 @@ if (!function_exists('volumepct_tier_is_custom')) {
         if (!is_array($tier)) {
             return false;
         }
-        foreach (['text', 'btnLabel', 'sticker'] as $perLang) {
+        foreach (['text', 'btnLabel', 'sticker', 'looks'] as $perLang) {
             if (!empty($tier[$perLang][$lang])) {
                 return true;
             }
@@ -18371,8 +18450,8 @@ if (!function_exists('volumepct_has_custom')) {
 }
 if (!function_exists('volumepct_tier_reset_style')) {
     // resets ONE tier's caption/button customization back to default WITHOUT
-    // deleting the tier itself (its threshold survives): $lang's wording, and
-    // - unless $withLook is false - the button looks every tab shares
+    // deleting the tier itself (its threshold survives): $lang's wording and -
+    // unless $withLook is false - $lang's button look. Another tab keeps its own.
     function volumepct_tier_reset_style($index, $lang, $withLook = true)
     {
         $tiers = volumepct_tiers_map();
@@ -18381,8 +18460,9 @@ if (!function_exists('volumepct_tier_reset_style')) {
         }
         unset($tiers[$index]['text'][$lang], $tiers[$index]['btnLabel'][$lang], $tiers[$index]['sticker'][$lang]);
         if ($withLook) {
-            foreach (volumepct_look_fields() as $f) {
-                unset($tiers[$index][$f]);
+            unset($tiers[$index]['looks'][$lang]);
+            if (empty($tiers[$index]['looks'])) {
+                unset($tiers[$index]['looks']);
             }
         }
         volumepct_tiers_save($tiers);
@@ -18402,12 +18482,12 @@ if (!function_exists('volumepct_tiers_reset_all_style')) {
 if (!function_exists('volumepct_tier_kb')) {
     // renders the tier's own renew/top-up button - reuses the exact
     // 'extend_{invoiceId}' callback the renewal flow listens for, so tapping
-    // it still triggers the real extend flow. Its text is $lang's, its looks
-    // are every tab's. null when hidden; $ignoreHidden is for the admin preview
+    // it still triggers the real extend flow. Its text and its look are
+    // $lang's. null when hidden; $ignoreHidden is for the admin preview
     function volumepct_tier_kb($index, $lang, $textbotlang, $invoiceId, $ignoreHidden = false)
     {
         $tier = volumepct_tier_get($index);
-        $look = volumepct_tier_look($tier);
+        $look = volumepct_tier_look($tier, $lang);
         if (!$ignoreHidden && !empty($look['hidden'])) {
             return null;
         }
@@ -18454,8 +18534,8 @@ if (!function_exists('volumepct_hub_payload')) {
         $info = "🔋 <b>پیام‌های هشدار و اتمام سرویس</b>" . mainmenu_tab_note($lang) . "\n➖➖➖➖➖➖➖➖➖➖\n";
         $info .= "پیام‌هایی که ربات خودش درباره‌ی تموم شدن حجم یا زمان سرویس برای کاربر می‌فرسته.\n\n";
         $info .= "<b>قانون تنظیم‌ها:</b>\n";
-        $info .= "🔗 <b>مشترک بین همه‌ی زبان‌ها:</b> آستانه‌ها (درصد، گیگ، روز) و رنگ/ایموجی/جای دکمه‌ها - اینجا عوضشون کنی، تب زبان دیگه هم همونو داره.\n";
-        $info .= "🌐 <b>جدا برای هر زبان:</b> کپشن، استیکر و متن دکمه - کاربر فارسی نسخه‌ی فارسی رو می‌گیره، کاربر انگلیسی نسخه‌ی انگلیسی رو.\n";
+        $info .= "🔗 <b>مشترک بین همه‌ی زبان‌ها:</b> فقط آستانه‌ها (درصد، گیگ، روز) - اینکه پیام کی فرستاده بشه.\n";
+        $info .= "🌐 <b>جدا برای هر زبان:</b> کپشن، استیکر، متن دکمه و رنگ/ایموجی/جای دکمه - کاربر فارسی نسخه‌ی فارسی رو می‌گیره، کاربر انگلیسی نسخه‌ی انگلیسی رو.\n";
         $info .= "🔔 <b>روشن/خاموش هم جدا برای هر زبانه</b> - مثلاً می‌تونی برای کاربرهای انگلیسی هیچ پیامی نفرستی.\n\n";
         $info .= "🔕 = برای این زبان خاموشه\n";
         $info .= "➖➖➖➖➖➖➖➖➖➖\n👇 پیامی که می‌خوای تنظیم کنی رو انتخاب کن:";
@@ -18499,7 +18579,7 @@ if (!function_exists('volumepct_section_payload')) {
         } else {
             $info .= "وقتی کاربر به هرکدوم از این آستانه‌های درصد مصرف برسه، پیام سفارشی همون آستانه براش ارسال می‌شه.\n";
         }
-        $info .= "🔗 آستانه‌ها بین همه‌ی زبان‌ها مشترکن؛ کپشن و متن دکمه‌ی هرکدوم برای هر زبان جداست.\n";
+        $info .= "🔗 آستانه‌ها بین همه‌ی زبان‌ها مشترکن؛ کپشن، متن و ظاهر دکمه‌ی هرکدوم برای هر زبان جداست.\n";
         $info .= "➖➖➖➖➖➖➖➖➖➖\n";
         $info .= empty($tiers) ? "فعلاً هیچ آستانه‌ای تعریف نشده." : "👇 روی هر آستانه بزن تا ویرایشش کنی:";
         $kb = ['inline_keyboard' => []];
@@ -18507,7 +18587,7 @@ if (!function_exists('volumepct_section_payload')) {
         foreach ($order as $i) {
             $tier = $tiers[$i];
             $custom = !empty($tier['text'][$lang]);
-            $look = volumepct_tier_look($tier);
+            $look = volumepct_tier_look($tier, $lang);
             $label = sprintf($meta['rowLabel'], intval($tier['pct'] ?? 0)) . ($custom ? ' ✏️' : '');
             $style = (isset($look['style']) && in_array($look['style'], ['primary', 'success', 'danger'], true)) ? $look['style'] : ($custom ? 'success' : 'primary');
             $kb['inline_keyboard'][] = [['text' => $label, 'callback_data' => "volpct|open|{$lang}|{$i}", 'style' => $style]];
@@ -18530,7 +18610,7 @@ if (!function_exists('volumepct_tier_detail_payload')) {
         // the tab's own words: its default text and its default button label
         $tabTexts = function_exists('lang_tab_texts') ? lang_tab_texts($lang) : $textbotlang;
         $tier = $tiers[$index];
-        $look = volumepct_tier_look($tier);
+        $look = volumepct_tier_look($tier, $lang);
         $pct = intval($tier['pct'] ?? 0);
         $hasCustomText = !empty($tier['text'][$lang]);
         $curStyle = (isset($look['style']) && in_array($look['style'], ['primary', 'success', 'danger'], true)) ? $look['style'] : 'primary';
@@ -18570,7 +18650,7 @@ if (!function_exists('volumepct_tier_detail_payload')) {
         if ($isHidden) {
             $info .= "🚫 دکمه مخفیه - این پیام بدون دکمه فرستاده می‌شه.\n";
         }
-        $info .= "🔗 " . ($meta['single'] ? '' : 'آستانه و ') . "رنگ/ایموجی/جای دکمه برای همه‌ی زبان‌ها یکیه؛ کپشن، استیکر و متن دکمه مال همین زبانه.\n";
+        $info .= $meta['single'] ? "🌐 کپشن، استیکر و متن و ظاهر دکمه (رنگ، ایموجی، جا) مال همین زبانه.\n" : "🔗 آستانه برای همه‌ی زبان‌ها یکیه؛ کپشن، استیکر و متن و ظاهر دکمه (رنگ، ایموجی، جا) مال همین زبانه.\n";
         $info .= "➖➖➖➖➖➖➖➖➖➖\n👁 پیش‌نمایش دکمه (سفید = فقط برای دیدن؛ رنگش همونیه که پایین ✅ خورده) 👇";
 
         $kb = ['inline_keyboard' => []];

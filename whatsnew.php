@@ -340,4 +340,16 @@ return [
             . "Each message (after purchase, test account, gift, the referral group and the hourly one) has just one row that opens this shared setting, and 🔙 goes back to the screen you came from.\n"
             . "What you had saved separately for each place was moved to that language's shared setting.</blockquote>",
     ],
+    [
+        'n' => 22,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>🌐 <b>ظاهر دکمه‌های هشدار و اتمام: جدا برای هر زبان</b>\n"
+            . "📍 🎨 شخصی‌سازی ← 🔋 پیام‌های هشدار و اتمام سرویس؛ وب‌پنل ← ظاهر سرویس ← هشدارها\n"
+            . "رنگ، ایموجی، جای دکمه، حالت ساده و مخفی بودنِ دکمهٔ هر هشدار (و دکمهٔ «اکانت تست تمام شد») قبلاً بین فارسی و انگلیسی مشترک بود؛ حالا هر زبان ظاهر خودش را دارد. چیزی که تا حالا نمایش داده می‌شد برای هر دو زبان کپی شد، پس تا وقتی عوضش نکنی تغییری نمی‌بینی.\n"
+            . "فقط آستانه‌ها (درصد، گیگ، روز) بین زبان‌ها مشترک مانده‌اند، چون تعیین می‌کنند پیام کی فرستاده شود.</blockquote>",
+        'en' => "<blockquote>🌐 <b>Warning and end-of-service button looks: separate per language</b>\n"
+            . "📍 🎨 Customize → 🔋 Warning and end-of-service messages; Web panel → Service look → Warnings\n"
+            . "The colour, emoji, side, simple mode and hiding of each warning's button (and the «test account ended» button) used to be shared by Persian and English; each language has its own look now. What was showing was copied to both languages, so nothing changes until you change it.\n"
+            . "Only the thresholds (percent, GB, days) stay shared between languages, since they decide when a message is sent.</blockquote>",
+    ],
 ];

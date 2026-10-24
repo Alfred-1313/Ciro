@@ -110,14 +110,13 @@ echo web_lang_assets();
 <?= web_lang_tabs($lang, fn($code) => 'buttons.php?' . http_build_query(['lang' => $code])) ?>
 
 <?php foreach ($groups as $alias => [$key, $defs]):
-  $shared = in_array($key, genbtn_shared_look_keys(), true);
   $textOnly = genbtn_text_only($alias);
 ?>
 <form method="POST" action="buttons.php?<?= http_build_query(['lang' => $lang]) ?>" class="card fade-up" id="g-<?= htmlspecialchars($alias) ?>" style="margin-bottom:14px">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
   <input type="hidden" name="alias" value="<?= htmlspecialchars($alias) ?>">
   <div class="card-head"><div><div class="card-title"><?= htmlspecialchars($itemLabels[$key] ?? implode(' · ', array_column($defs, 'name'))) ?></div>
-    <div class="card-subtitle"><?= $shared ? $t['btnSharedLook'] : ($textOnly ? $t['btnTextOnly'] : (in_array($alias, ['gb', 'kb'], true) ? $t['btnAllPlaces'] : '')) ?></div></div></div>
+    <div class="card-subtitle"><?= $textOnly ? $t['btnTextOnly'] : (in_array($alias, ['gb', 'kb'], true) ? $t['btnAllPlaces'] : '') ?></div></div></div>
   <div class="card-body">
     <?php foreach ($defs as $idx => $def): $ov = genbtn_override($lang, $key, $idx); $n = "b[$idx]";
       $isHidden = array_key_exists('hidden', $ov) ? (bool) $ov['hidden'] : !empty($def['hidden']); ?>
