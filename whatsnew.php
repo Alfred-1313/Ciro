@@ -290,4 +290,16 @@ return [
             . "🟢 Green while the subscription is on, 🔴 red once it is off (or an hourly subscription ran out of balance) and 🔵 blue while it has not connected to the config yet (OnHold). The delivery messages (purchase, test, gift) now ask the panel for the real state too, so an OnHold service is blue from the first moment.\n"
             . "A colour you picked for this button in 🎨 still wins.</blockquote>",
     ],
+    [
+        'n' => 18,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>💡 <b>روشن/خاموش بدون تاییدیه</b>\n"
+            . "📍 پیام خرید، اکانت تست، هدیهٔ رفرال و 🛍 سرویس‌های من (اشتراک ساعتی از قبل بدون تاییدیه بود)\n"
+            . "با یک بار زدن روی «💡 روشن/خاموش» سرویس همان لحظه روشن یا خاموش می‌شود؛ سؤال «مطمئنی؟» و صفحهٔ جداگانهٔ تایید حذف شد. یک پیام کوتاه (روشن شد / خاموش شد) نشان داده می‌شود و خود دکمه همان‌جا عوض می‌شود: 🟢 سبز وقتی روشن است، 🔴 قرمز وقتی خاموش. در 🛍 سرویس‌های من کل صفحه (از جمله خط وضعیت) هم تازه می‌شود و در پیام خرید، تست و هدیه فقط خود دکمه عوض می‌شود.\n"
+            . "دکمه‌های تایید در پیام‌های قدیمی هنوز کار می‌کنند. تایید در پنل مدیر (مدیریت سفارش کاربر) تغییری نکرده است.</blockquote>",
+        'en' => "<blockquote>💡 <b>On/off without a confirmation</b>\n"
+            . "📍 Purchase message, test account, referral gift and 🛍 My services (the hourly subscription already had none)\n"
+            . "One tap on «💡 On/off» switches the service right away; the «are you sure?» question and its separate confirm screen are gone. A short note (turned on / turned off) is shown and the button itself changes on the spot: 🟢 green while it is on, 🔴 red while it is off. In 🛍 My services the whole screen (status line included) is refreshed too; in the purchase, test and gift messages only the button changes.\n"
+            . "Confirm buttons on older messages still work. The confirmation in the admin panel (managing a user's order) is unchanged.</blockquote>",
+    ],
 ];

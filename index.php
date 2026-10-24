@@ -596,6 +596,76 @@ if ($user['step'] === 'affrwname' && $datain === '' && is_string($text) && $text
         return;
     }
 }
+// 💡 روشن/خاموش: no question first - the tap is the answer. The service is
+// switched, a short note says what happened, and the screen it was tapped on
+// is drawn again so the button shows the new state (green on, red off): the
+// service's own screen in full, a purchase / test / gift message by its 💡
+// alone (its text is the config, not the status).
+if (preg_match('/^changestatus_(\w+)$/', (string) $datain, $cs_m)) {
+    $cs_toast = function ($t, $alert = false) use ($callback_query_id) {
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $t, 'show_alert' => $alert, 'cache_time' => 1]);
+    };
+    $statuschangeservice = shop_feature_value('changgestatus', $user['lang'] ?? 'fa', select("shopSetting", "*", "Namevalue", "statuschangeservice", "select")['value']);
+    if ($statuschangeservice == "offstatus") {
+        sendmessage($from_id, $textbotlang['users']['featureUnavailable'], null, 'html');
+        return;
+    }
+    $id_invoice = $cs_m[1];
+    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
+    if (!is_array($nameloc) || $nameloc['Status'] == "disablebyadmin") {
+        sendmessage($from_id, $textbotlang['users']['featureUnavailable'], null, 'html');
+        return;
+    }
+    // 🚪 a free config paused because invitees left its channel: only
+    // inviting again (or them coming back) turns it on
+    $rw_missing = affrw_paused_missing($nameloc);
+    if ($rw_missing !== null) {
+        bottext_extras_key_hint('users.affiliates.rewardPausedLocked');
+        sendmessage($from_id, strtr($textbotlang['users']['affiliates']['rewardPausedLocked'], ['{missing}' => $rw_missing]), null, 'html');
+        return;
+    }
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    if ($DataUserOut['status'] == "on_hold") {
+        // not connected yet: a popup over the screen it was tapped on, not a
+        // new message under it - the same in a bought service, a test account,
+        // a referral gift and 🛍 سرویس‌های من (⏱'s own: paygpause_)
+        $cs_toast($textbotlang['users']['status']['notConnectedCannotChangeStatus'], true);
+        return;
+    }
+    if ($DataUserOut['status'] == "Unsuccessful") {
+        sendmessage($from_id, $textbotlang['users']['status']['error'], null, 'html');
+        return;
+    }
+    $dataoutput = $ManagePanel->Change_status($nameloc['username'], $nameloc['Service_location']);
+    if ($dataoutput['status'] == "Unsuccessful") {
+        $cs_toast($textbotlang['users']['status']['notchanged'], true);
+        return;
+    }
+    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
+    $cs_now = $DataUserOut['status'] == "active";
+    $cs_toast($cs_now ? $textbotlang['users']['status']['activedconfig'] : $textbotlang['users']['status']['disabledconfig']);
+    $cs_kb = (array) ($update['callback_query']['message']['reply_markup']['inline_keyboard'] ?? []);
+    $cs_mine = false;
+    foreach ($cs_kb as $cs_row) {
+        foreach ((array) $cs_row as $cs_btn) {
+            if (($cs_btn['callback_data'] ?? '') === 'backorder') {
+                $cs_mine = true;
+            }
+        }
+    }
+    if ($cs_mine) {
+        // the service's own screen: drawn again in place, status line and all
+        $datain = 'updateproduct_' . $id_invoice;
+        $cs_answered = true;
+    } else {
+        $cs_panel = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
+        $cs_new = is_array($cs_panel) ? svc_flip_status_button($cs_kb, $nameloc, $cs_panel, $DataUserOut['status'], $user, $textbotlang) : null;
+        if ($cs_new !== null) {
+            telegram('editMessageReplyMarkup', ['chat_id' => $from_id, 'message_id' => $message_id, 'reply_markup' => json_encode(['inline_keyboard' => $cs_new])]);
+        }
+        return;
+    }
+}
 if ($text == "/start" || $datain == "start" || $text == "start") {
     update("user", "Processing_value", "0", "id", $from_id);
     update("user", "Processing_value_one", "0", "id", $from_id);
@@ -1208,12 +1278,15 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         $stmt->bindParam(':username', $username);
         $stmt->bindParam(':id_user', $from_id);
         $stmt->execute();
-        telegram('answerCallbackQuery', array(
-            'callback_query_id' => $callback_query_id,
-            'text' => $textbotlang['keyboard']['infoRefreshed'],
-            'show_alert' => false,
-            'cache_time' => 5,
-        ));
+        // (a 💡 that redraws this screen has already answered the tap)
+        if (empty($cs_answered)) {
+            telegram('answerCallbackQuery', array(
+                'callback_query_id' => $callback_query_id,
+                'text' => $textbotlang['keyboard']['infoRefreshed'],
+                'show_alert' => false,
+                'cache_time' => 5,
+            ));
+        }
     } else {
         $username = $dataget[1];
         $sql = "SELECT * FROM invoice WHERE id_invoice = :username AND id_user = :id_user";
@@ -1722,69 +1795,9 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         'parse_mode' => "HTML",
     ]);
     unlink($urlimage);
-} elseif (preg_match('/changestatus_(\w+)/', $datain, $dataget)) {
-    $statuschangeservice = shop_feature_value('changgestatus', $user['lang'] ?? 'fa', select("shopSetting", "*", "Namevalue", "statuschangeservice", "select")['value']);
-    if ($statuschangeservice == "offstatus") {
-        sendmessage($from_id, $textbotlang['users']['featureUnavailable'], null, 'html');
-        return;
-    }
-    $id_invoice = $dataget[1];
-    $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
-    if ($nameloc['Status'] == "disablebyadmin") {
-        sendmessage($from_id, $textbotlang['users']['featureUnavailable'], null, 'html');
-        return;
-    }
-    // 🚪 a free config paused because invitees left its channel: only
-    // inviting again (or them coming back) turns it on
-    $rw_missing = affrw_paused_missing($nameloc);
-    if ($rw_missing !== null) {
-        bottext_extras_key_hint('users.affiliates.rewardPausedLocked');
-        sendmessage($from_id, strtr($textbotlang['users']['affiliates']['rewardPausedLocked'], ['{missing}' => $rw_missing]), null, 'html');
-        return;
-    }
-    $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
-    if ($DataUserOut['status'] == "on_hold") {
-        // not connected yet: a popup over the screen it was tapped on, not a
-        // new message under it - the same in a bought service, a test account,
-        // a referral gift and 🛍 سرویس‌های من (⏱'s own: paygpause_)
-        telegram('answerCallbackQuery', [
-            'callback_query_id' => $callback_query_id,
-            'text' => $textbotlang['users']['status']['notConnectedCannotChangeStatus'],
-            'show_alert' => true,
-            'cache_time' => 1,
-        ]);
-        return;
-    }
-    if ($DataUserOut['status'] == "Unsuccessful") {
-        sendmessage($from_id, $textbotlang['users']['status']['error'], null, 'html');
-        return;
-    }
-    if ($DataUserOut['status'] == "active") {
-        $confirmdisableaccount = json_encode([
-            'inline_keyboard' => [
-                [
-                    ['text' => $textbotlang['users']['status']['btnConfirmDisableAlt'], 'callback_data' => "confirmaccountdisable_" . $id_invoice],
-                ],
-                [
-                    ['text' => $textbotlang['users']['status']['backinfo'], 'callback_data' => "product_" . $nameloc['id_invoice']],
-                ]
-            ]
-        ]);
-        Editmessagetext($from_id, $message_id, $textbotlang['users']['status']['confirmDisableConfig'], $confirmdisableaccount);
-    } else {
-        $confirmdisableaccount = json_encode([
-            'inline_keyboard' => [
-                [
-                    ['text' => $textbotlang['users']['status']['btnConfirmEnableAlt'], 'callback_data' => "confirmaccountdisable_" . $id_invoice],
-                ],
-                [
-                    ['text' => $textbotlang['users']['status']['backinfo'], 'callback_data' => "product_" . $nameloc['id_invoice']],
-                ]
-            ]
-        ]);
-        Editmessagetext($from_id, $message_id, $textbotlang['users']['status']['confirmEnableConfig'], $confirmdisableaccount);
-    }
 } elseif (preg_match('/confirmaccountdisable_(\w+)/', $datain, $dataget)) {
+    // 💡 itself no longer asks (it is handled before this chain); this answers
+    // the confirm button of a message sent before that change
     $id_invoice = $dataget[1];
     $nameloc = select("invoice", "*", "id_invoice", $id_invoice, "select");
     // 🚪 a free config paused because invitees left its channel: only

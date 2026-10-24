@@ -11457,6 +11457,37 @@ if (!function_exists('delivery_action_rows')) {
         return $rows;
     }
 }
+if (!function_exists('svc_flip_status_button')) {
+    // After 💡 was tapped on a message that is not the service's own screen (a
+    // purchase / test / gift message): the same keyboard with only 💡 drawn for
+    // the service's new state - its name, colour and emoji from svc_action_rows().
+    // null when that message has no such button.
+    function svc_flip_status_button(array $keyboard, array $inv, array $panel, $status, $userRow, $tx)
+    {
+        $kind = ['b' => 'buy', 't' => 'test', 'r' => 'ref'][subapp_kind($inv)] ?? 'buy';
+        $fresh = null;
+        foreach (svc_action_rows($kind, $inv, $panel, $status, '', $userRow, $tx) as $row) {
+            foreach ($row as $btn) {
+                if (($btn['callback_data'] ?? '') === 'changestatus_' . $inv['id_invoice']) {
+                    $fresh = $btn;
+                }
+            }
+        }
+        if ($fresh === null) {
+            return null;
+        }
+        $changed = false;
+        foreach ($keyboard as $i => $row) {
+            foreach ((array) $row as $j => $btn) {
+                if (($btn['callback_data'] ?? '') === $fresh['callback_data']) {
+                    $keyboard[$i][$j] = $fresh;
+                    $changed = true;
+                }
+            }
+        }
+        return $changed ? $keyboard : null;
+    }
+}
 if (!function_exists('bottext_key_touched')) {
     function bottext_key_touched($key, $lang)
     {
