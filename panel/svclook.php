@@ -5,15 +5,16 @@ require_once __DIR__ . '/inc/langsync.php';
 require_auth();
 
 // 🎨 what a customer's services look like after buying, one language at a
-// time: the buttons under a service's status, how a new config is delivered
-// (per panel) and its buttons, the 🔋 warnings before a service runs out, and
+// time: the buttons under a service's status and under the message that
+// delivers a new config (the same buttons, each set apart), how a new config
+// is delivered (per panel) and its buttons, the 🔋 warnings before a service runs out, and
 // the sticker the ❌ بستن buttons play. The bot's own stores and setters
 // (statusbtn_*, config_delivery_*, configdisplay_*, volumepct_*,
 // close_sticker_*), by its rules.
 $t = $textbotlang['panel'];
 $lang = web_lang_pick();
 $tx = lang_tab_texts($lang);
-$parts = ['status' => '🔘 ' . $t['svcStatus'], 'delivery' => '📦 ' . $t['svcDelivery'], 'tiers' => '🔋 ' . $t['svcTiers'], 'close' => '🖼 ' . $t['svcClose']];
+$parts = ['status' => '🔘 ' . $t['svcStatus'], 'buybtn' => '🛒 ' . $t['svcBuyBtns'], 'delivery' => '📦 ' . $t['svcDelivery'], 'tiers' => '🔋 ' . $t['svcTiers'], 'close' => '🖼 ' . $t['svcClose']];
 $part = (string) ($_GET['part'] ?? $_POST['part'] ?? '');
 $part = isset($parts[$part]) ? $part : 'status';
 $kinds = ['purchase' => '🛒 ' . $t['svcKindBuy'], 'usertest' => '🎁 ' . $t['svcKindTest'], 'affrw' => '👥 ' . $t['svcKindReward']];
@@ -22,6 +23,14 @@ $kind = isset($kinds[$kind]) ? $kind : 'purchase';
 // the config-columns store names the purchase kind «buy»
 $cdKind = ['purchase' => 'buy', 'usertest' => 'usertest', 'affrw' => 'affrw'][$kind];
 $here = 'svclook.php?' . http_build_query(['lang' => $lang, 'part' => $part, 'kind' => $part === 'delivery' ? $kind : null]);
+// the service buttons are kept for two places: the service's own screen and the
+// message that delivers a new config (statusbtn_* kind 'mine' / 'buy')
+$sbKind = $part === 'buybtn' ? 'buy' : 'mine';
+$sbDefs = statusbtn_defs($tx);
+if ($sbKind === 'buy') {
+    // the buttons inside گزارش مصرف are not on that message
+    $sbDefs = array_intersect_key($sbDefs, array_flip(statusbtn_screen_keys($tx)));
+}
 $colorNames = ['primary' => '🔵 ' . $t['menuColorBlue'], 'success' => '🟢 ' . $t['menuColorGreen'], 'danger' => '🔴 ' . $t['menuColorRed']];
 $emojiOk = fn($e) => $e === '' || (preg_match('/^\X$/u', $e) && !preg_match('/^[0-9a-zA-Z]$/', $e));
 $nameOk = fn($s) => !containsHtmlMarkup($s) && mb_strlen($s) <= 64;
@@ -50,10 +59,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check_post();
     $err = null;
     $writes = [];
-    if ($part === 'status') {
-        foreach (statusbtn_defs($tx) as $key => $def) {
+    if ($part === 'status' || $part === 'buybtn') {
+        foreach ($sbDefs as $key => $def) {
             $p = (array) ($_POST['sb'][$key] ?? []);
-            $ov = statusbtn_override($lang, $key);
+            $ov = statusbtn_override($lang, $key, $sbKind);
             $text = trim((string) ($p['text'] ?? ''));
             $emoji = trim((string) ($p['emoji'] ?? ''));
             if (!$nameOk($text)) {
@@ -65,27 +74,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
             }
             if ($text !== (string) ($ov['text'] ?? '')) {
-                $writes[] = fn() => statusbtn_set_field($lang, $key, 'text', $text);
+                $writes[] = fn() => statusbtn_set_field($lang, $key, 'text', $text, $sbKind);
             }
             if (!empty($p['emoji_del'])) {
                 if (!empty($ov['emoji']) || !empty($ov['emojiIcon'])) {
-                    $writes[] = fn() => statusbtn_set_field($lang, $key, 'emoji', '');
+                    $writes[] = fn() => statusbtn_set_field($lang, $key, 'emoji', '', $sbKind);
                 }
             } elseif ($emoji !== (string) ($ov['emoji'] ?? '')) {
                 // a plain emoji replaces a premium one, as in the bot
-                $writes[] = fn() => statusbtn_set_field($lang, $key, 'emoji', $emoji);
+                $writes[] = fn() => statusbtn_set_field($lang, $key, 'emoji', $emoji, $sbKind);
             }
             $pos = ($p['pos'] ?? '') === 'left' ? 'left' : 'right';
             if ($pos !== ((($ov['pos'] ?? '') === 'left') ? 'left' : 'right')) {
-                $writes[] = fn() => statusbtn_set_field($lang, $key, 'pos', $pos);
+                $writes[] = fn() => statusbtn_set_field($lang, $key, 'pos', $pos, $sbKind);
             }
             $style = in_array($p['style'] ?? '', ['primary', 'success', 'danger'], true) ? $p['style'] : '';
             if ($style !== (string) ($ov['style'] ?? '')) {
-                $writes[] = fn() => statusbtn_set_field($lang, $key, 'style', $style);
+                $writes[] = fn() => statusbtn_set_field($lang, $key, 'style', $style, $sbKind);
             }
             $simple = ($p['simple'] ?? '') === '1';
             if ($simple !== !empty($ov['simple'])) {
-                $writes[] = fn() => statusbtn_set_field($lang, $key, 'simple', $simple);
+                $writes[] = fn() => statusbtn_set_field($lang, $key, 'simple', $simple, $sbKind);
+            }
+            if ($sbKind === 'buy') {
+                $hidden = ($p['hidden'] ?? '') === '1';
+                if ($hidden !== !empty($ov['hidden'])) {
+                    $writes[] = fn() => statusbtn_set_field($lang, $key, 'hidden', $hidden, $sbKind);
+                }
+            }
+        }
+        // the order, as the bot's 📐 چیدمان: a button takes the place of the number it is given
+        if ($sbKind === 'buy' && $err === null) {
+            $cur = array_values(array_filter(statusbtn_ordered_keys($lang, $tx, $sbKind), fn($k) => isset($sbDefs[$k])));
+            $at = [];
+            foreach ($cur as $i => $k) {
+                $o = trim((string) ($_POST['sb'][$k]['order'] ?? ''));
+                if (!ctype_digit($o) || (int) $o < 1 || (int) $o > 99) {
+                    $err = $t['svcBtnOrderInvalid'];
+                    break;
+                }
+                $at[$k] = [(int) $o, $i];
+            }
+            if ($err === null) {
+                asort($at);
+                $new = array_keys($at);
+                if ($new !== $cur) {
+                    $writes[] = fn() => statusbtn_set_order($lang, $new, $sbKind);
+                }
             }
         }
     } elseif ($part === 'delivery') {
@@ -280,12 +315,13 @@ $saveBtn = '<div class="modal-foot" style="border-radius:0 0 10px 10px"><button 
 
 <form method="POST" action="<?= $here ?>" class="card fade-up">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>"><input type="hidden" name="part" value="<?= $part ?>"><input type="hidden" name="kind" value="<?= $kind ?>">
-<?php if ($part === 'status'): ?>
-  <div class="card-head"><div><div class="card-title">🔘 <?= $t['svcStatus'] ?></div><div class="card-subtitle"><?= $t['svcStatusSub'] ?></div></div></div>
+<?php if ($part === 'status' || $part === 'buybtn'): $isBuy = $sbKind === 'buy'; ?>
+  <div class="card-head"><div><div class="card-title"><?= $isBuy ? '🛒 ' . $t['svcBuyBtns'] : '🔘 ' . $t['svcStatus'] ?></div><div class="card-subtitle"><?= $isBuy ? $t['svcBuyBtnsSub'] : $t['svcStatusSub'] ?></div></div></div>
   <div class="card-body"><div class="tbl-wrap"><table class="tbl-xl">
-    <thead><tr><th><?= $t['menuColButton'] ?></th><th><?= $t['menuColName'] ?></th><th><?= $t['menuColEmoji'] ?></th><th><?= $t['menuEmojiPos'] ?></th><th><?= $t['menuColColor'] ?></th><th><?= $t['menuSimple'] ?></th></tr></thead>
+    <thead><tr><th><?= $t['menuColButton'] ?></th><th><?= $t['menuColName'] ?></th><th><?= $t['menuColEmoji'] ?></th><th><?= $t['menuEmojiPos'] ?></th><th><?= $t['menuColColor'] ?></th><th><?= $t['menuSimple'] ?></th><?php if ($isBuy): ?><th><?= $t['menuHidden'] ?></th><th><?= $t['svcBtnOrder'] ?></th><?php endif; ?></tr></thead>
     <tbody>
-    <?php foreach (statusbtn_defs($tx) as $key => $def): $ov = statusbtn_override($lang, $key); $n = 'sb[' . htmlspecialchars($key) . ']'; ?>
+    <?php $sbRows = $isBuy ? array_values(array_filter(statusbtn_ordered_keys($lang, $tx, $sbKind), fn($k) => isset($sbDefs[$k]))) : array_keys($sbDefs);
+    foreach ($sbRows as $sbPos => $key): $def = $sbDefs[$key]; $ov = statusbtn_override($lang, $key, $sbKind); $n = 'sb[' . htmlspecialchars($key) . ']'; ?>
       <tr>
         <td class="cs"><?= htmlspecialchars($def['name']) ?></td>
         <td><input type="text" class="input" name="<?= $n ?>[text]" value="<?= htmlspecialchars((string) ($ov['text'] ?? '')) ?>" placeholder="<?= htmlspecialchars((string) $def['text']) ?>" maxlength="64"></td>
@@ -293,6 +329,8 @@ $saveBtn = '<div class="modal-foot" style="border-radius:0 0 10px 10px"><button 
         <td><?= $posSel($n . '[pos]', (string) ($ov['pos'] ?? '')) ?></td>
         <td><?= $colorSel($n . '[style]', (string) ($ov['style'] ?? ''), (string) $def['style']) ?></td>
         <td><?= $chk($n . '[simple]', !empty($ov['simple']), $t['refOn']) ?></td>
+        <?php if ($isBuy): ?><td><?= $chk($n . '[hidden]', !empty($ov['hidden']), $t['refOn']) ?></td>
+        <td><input type="text" class="input" name="<?= $n ?>[order]" value="<?= $sbPos + 1 ?>" inputmode="numeric" style="width:64px;text-align:center"></td><?php endif; ?>
       </tr>
     <?php endforeach; ?>
     </tbody></table></div>

@@ -10734,22 +10734,43 @@ if (!function_exists('statusbtn_defs')) {
         ));
     }
 }
-if (!function_exists('statusbtn_override')) {
-    function statusbtn_override($lang, $key)
+if (!function_exists('statusbtn_bucket')) {
+    // The service buttons' customizations are kept per place they appear:
+    // 'mine' is the service screen in 🛍 سرویس‌های من, 'buy' the message that
+    // carries a new service's config. Same buttons, two separate sets of
+    // overrides - editing one never touches the other.
+    function statusbtn_bucket($kind = 'mine')
     {
+        return $kind === 'buy' ? 'textbot.afterPay.svcbtn' : 'users.status.infoFull';
+    }
+    // the callback prefix of that place's editor screens in 🎨
+    function statusbtn_prefix($kind = 'mine')
+    {
+        return $kind === 'buy' ? 'buybtn' : 'statusbtn';
+    }
+    // the message text (caption) the buttons sit under - its own 🎨 entry
+    function statusbtn_text_key($kind = 'mine')
+    {
+        return $kind === 'buy' ? 'textbot.afterPay' : 'users.status.infoFull';
+    }
+}
+if (!function_exists('statusbtn_override')) {
+    function statusbtn_override($lang, $key, $kind = 'mine')
+    {
+        $sb_b = statusbtn_bucket($kind);
         $setting = select("setting", "*", null, null, "select");
         $be = json_decode((string) ($setting['button_edit'] ?? ''), true);
-        return (is_array($be) && isset($be[$lang]['users.status.infoFull'][$key]) && is_array($be[$lang]['users.status.infoFull'][$key]))
-            ? $be[$lang]['users.status.infoFull'][$key]
+        return (is_array($be) && isset($be[$lang][$sb_b][$key]) && is_array($be[$lang][$sb_b][$key]))
+            ? $be[$lang][$sb_b][$key]
             : [];
     }
 }
 if (!function_exists('statusbtn_current')) {
-    function statusbtn_current($lang, $key, $textbotlang)
+    function statusbtn_current($lang, $key, $textbotlang, $kind = 'mine')
     {
         $defs = statusbtn_defs($textbotlang);
         $d = $defs[$key] ?? ['name' => $key, 'text' => $key, 'style' => 'primary'];
-        $ov = statusbtn_override($lang, $key);
+        $ov = statusbtn_override($lang, $key, $kind);
         $text = (isset($ov['text']) && $ov['text'] !== '') ? $ov['text'] : $d['text'];
         $style = (isset($ov['style']) && in_array($ov['style'], ['primary', 'success', 'danger'], true)) ? $ov['style'] : $d['style'];
         return ['text' => $text, 'style' => $style, 'name' => $d['name']];
@@ -10760,14 +10781,14 @@ if (!function_exists('statusbtn_render')) {
     // differs from statusbtn_defs() for 'changestatus', whose real default
     // depends on the service's current on/off state) - an explicit text
     // override still wins over it either way
-    function statusbtn_render($lang, $key, $textbotlang, $fallbackText = null)
+    function statusbtn_render($lang, $key, $textbotlang, $fallbackText = null, $kind = 'mine')
     {
         $defs = statusbtn_defs($textbotlang);
         $d = $defs[$key] ?? ['name' => $key, 'text' => $fallbackText ?? $key, 'style' => 'primary'];
         if ($fallbackText !== null) {
             $d['text'] = $fallbackText;
         }
-        $ov = statusbtn_override($lang, $key);
+        $ov = statusbtn_override($lang, $key, $kind);
         $text = (isset($ov['text']) && $ov['text'] !== '') ? $ov['text'] : $d['text'];
         $style = (isset($ov['style']) && in_array($ov['style'], ['primary', 'success', 'danger'], true)) ? $ov['style'] : $d['style'];
         $pos = (isset($ov['pos']) && $ov['pos'] === 'left') ? 'left' : 'right';
@@ -10792,31 +10813,33 @@ if (!function_exists('statusbtn_render')) {
     }
 }
 if (!function_exists('statusbtn_set_field')) {
-    function statusbtn_set_field($lang, $key, $field, $value)
+    function statusbtn_set_field($lang, $key, $field, $value, $kind = 'mine')
     {
+        $sb_b = statusbtn_bucket($kind);
         $setting = select("setting", "*", null, null, "select");
         $be = json_decode((string) ($setting['button_edit'] ?? ''), true);
         if (!is_array($be)) {
             $be = [];
         }
-        $be[$lang]['users.status.infoFull'][$key][$field] = $value;
+        $be[$lang][$sb_b][$key][$field] = $value;
         if ($field === 'emoji') {
-            unset($be[$lang]['users.status.infoFull'][$key]['emojiIcon']);
+            unset($be[$lang][$sb_b][$key]['emojiIcon']);
         } elseif ($field === 'emojiIcon') {
-            unset($be[$lang]['users.status.infoFull'][$key]['emoji']);
+            unset($be[$lang][$sb_b][$key]['emoji']);
         }
         update("setting", "button_edit", json_encode($be, JSON_UNESCAPED_UNICODE), null, null);
     }
 }
 if (!function_exists('statusbtn_reset')) {
-    function statusbtn_reset($lang, $key)
+    function statusbtn_reset($lang, $key, $kind = 'mine')
     {
+        $sb_b = statusbtn_bucket($kind);
         $setting = select("setting", "*", null, null, "select");
         $be = json_decode((string) ($setting['button_edit'] ?? ''), true);
-        if (is_array($be) && isset($be[$lang]['users.status.infoFull'][$key])) {
-            unset($be[$lang]['users.status.infoFull'][$key]);
-            if (empty($be[$lang]['users.status.infoFull'])) {
-                unset($be[$lang]['users.status.infoFull']);
+        if (is_array($be) && isset($be[$lang][$sb_b][$key])) {
+            unset($be[$lang][$sb_b][$key]);
+            if (empty($be[$lang][$sb_b])) {
+                unset($be[$lang][$sb_b]);
             }
             if (empty($be[$lang])) {
                 unset($be[$lang]);
@@ -10826,12 +10849,13 @@ if (!function_exists('statusbtn_reset')) {
     }
 }
 if (!function_exists('statusbtn_reset_all')) {
-    function statusbtn_reset_all($lang)
+    function statusbtn_reset_all($lang, $kind = 'mine')
     {
+        $sb_b = statusbtn_bucket($kind);
         $setting = select("setting", "*", null, null, "select");
         $be = json_decode((string) ($setting['button_edit'] ?? ''), true);
-        if (is_array($be) && isset($be[$lang]['users.status.infoFull'])) {
-            unset($be[$lang]['users.status.infoFull']);
+        if (is_array($be) && isset($be[$lang][$sb_b])) {
+            unset($be[$lang][$sb_b]);
             if (empty($be[$lang])) {
                 unset($be[$lang]);
             }
@@ -10840,20 +10864,25 @@ if (!function_exists('statusbtn_reset_all')) {
     }
 }
 if (!function_exists('statusbtn_list_payload')) {
-    function statusbtn_list_payload($lang, $textbotlang)
+    function statusbtn_list_payload($lang, $textbotlang, $kind = 'mine')
     {
-        $info = "🔘 <b>دکمه‌های صفحه‌ی وضعیت سرویس</b>\n➖➖➖➖➖➖➖➖➖➖\n";
-        $info .= "این دکمه‌ها زیر پیام «وضعیت سرویس» نشون داده می‌شن (وقتی کاربر داخل «🛍 سرویس‌های من» روی یکی از سرویس‌هاش می‌زنه).\n";
+        $sb_p = statusbtn_prefix($kind);
+        $sb_tk = statusbtn_text_key($kind);
+        $sb_scr = $kind === 'buy' ? 'پیام خرید' : 'صفحه‌ی وضعیت';
+        $info = "🔘 <b>دکمه‌های {$sb_scr} سرویس</b>\n➖➖➖➖➖➖➖➖➖➖\n";
+        $info .= $kind === 'buy'
+            ? "این دکمه‌ها زیر پیام «خرید سرویس» (همون پیامی که بعد از خرید، کانفیگ رو برای کاربر می‌فرسته) نشون داده می‌شن. همون دکمه‌های «🛍 سرویس‌های من» هستن، ولی تنظیمشون جداست و با تنظیمات اون صفحه یکی نیست.\n"
+            : "این دکمه‌ها زیر پیام «وضعیت سرویس» نشون داده می‌شن (وقتی کاربر داخل «🛍 سرویس‌های من» روی یکی از سرویس‌هاش می‌زنه).\n";
         $info .= "ℹ️ کدوم‌هاشون واقعاً نشون داده بشن به نوع پنل و تنظیمات فروشگاه بستگی داره - همیشه همه‌شون با هم نیستن.\n";
         $info .= "➖➖➖➖➖➖➖➖➖➖\nکدوم بخش رو می‌خوای تنظیم کنی؟ 👇";
         $kb = ['inline_keyboard' => []];
-        $kb['inline_keyboard'][] = [['text' => '🎨 رنگ‌بندی دکمه‌ها', 'callback_data' => "statusbtn|cat|{$lang}|color", 'style' => 'primary']];
-        $kb['inline_keyboard'][] = [['text' => '🎭 ایموجی دکمه‌ها', 'callback_data' => "statusbtn|cat|{$lang}|emoji", 'style' => 'primary']];
-        $kb['inline_keyboard'][] = [['text' => '📐 چیدمان دکمه‌ها', 'callback_data' => "statusbtn|cat|{$lang}|layout", 'style' => 'primary']];
-        $kb['inline_keyboard'][] = [['text' => '✏️ نام و نمایش دکمه‌ها', 'callback_data' => "statusbtn|cat|{$lang}|text", 'style' => 'primary']];
-        $kb['inline_keyboard'][] = [['text' => '✏️ ویرایش کپشن پیام وضعیت سرویس', 'callback_data' => "bt_edit|{$lang}|users.status.infoFull", 'style' => 'primary']];
-        $kb['inline_keyboard'][] = [['text' => '🔁 ریست همه‌ی دکمه‌ها به پیش‌فرض', 'callback_data' => "statusbtn|rstall|{$lang}", 'style' => 'danger']];
-        $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => "bt_edit|{$lang}|users.status.infoFull", 'style' => 'danger']];
+        $kb['inline_keyboard'][] = [['text' => '🎨 رنگ‌بندی دکمه‌ها', 'callback_data' => "{$sb_p}|cat|{$lang}|color", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [['text' => '🎭 ایموجی دکمه‌ها', 'callback_data' => "{$sb_p}|cat|{$lang}|emoji", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [['text' => '📐 چیدمان دکمه‌ها', 'callback_data' => "{$sb_p}|cat|{$lang}|layout", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [['text' => '✏️ نام و نمایش دکمه‌ها', 'callback_data' => "{$sb_p}|cat|{$lang}|text", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [['text' => '✏️ ویرایش کپشن ' . ($kind === 'buy' ? 'پیام خرید سرویس' : 'پیام وضعیت سرویس'), 'callback_data' => "bt_edit|{$lang}|{$sb_tk}", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [['text' => '🔁 ریست همه‌ی دکمه‌ها به پیش‌فرض', 'callback_data' => "{$sb_p}|rstall|{$lang}", 'style' => 'danger']];
+        $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => "bt_edit|{$lang}|{$sb_tk}", 'style' => 'danger']];
         $kb['inline_keyboard'][] = [['text' => '❌ بستن', 'callback_data' => 'bt_close', 'style' => 'danger']];
         return [$info, json_encode($kb)];
     }
@@ -10863,38 +10892,44 @@ if (!function_exists('statusbtn_cat_payload')) {
     // emoji_sticker_editor_payload: every row already reflects every OTHER
     // category's overrides too (honest live preview), tapping a row acts
     // immediately - cycle in place for color, prompt for emoji/text
-    function statusbtn_cat_payload($lang, $cat, $textbotlang)
+    function statusbtn_cat_payload($lang, $cat, $textbotlang, $kind = 'mine')
     {
+        $sb_p = statusbtn_prefix($kind);
+        $sb_scr = $kind === 'buy' ? 'پیام خرید' : 'صفحه‌ی وضعیت';
         $defs = statusbtn_defs($textbotlang);
         $kb = ['inline_keyboard' => []];
         foreach ($defs as $key => $d) {
-            $rendered = statusbtn_render($lang, $key, lang_tab_texts($lang));
-            $hiddenMark = statusbtn_is_hidden($lang, $key) ? '🚫 ' : '';
+            // the buttons inside گزارش مصرف belong to the service's screen only
+            if ($kind === 'buy' && strpos($key, 'ur_') === 0) {
+                continue;
+            }
+            $rendered = statusbtn_render($lang, $key, lang_tab_texts($lang), null, $kind);
+            $hiddenMark = statusbtn_is_hidden($lang, $key, $kind) ? '🚫 ' : '';
             if ($cat === 'color') {
-                $kb['inline_keyboard'][] = [['text' => $hiddenMark . $rendered['text'], 'callback_data' => "statusbtn|colorcyc|{$lang}|{$key}", 'style' => $rendered['style']]];
+                $kb['inline_keyboard'][] = [['text' => $hiddenMark . $rendered['text'], 'callback_data' => "{$sb_p}|colorcyc|{$lang}|{$key}", 'style' => $rendered['style']]];
             } elseif ($cat === 'emoji') {
-                $ov = statusbtn_override($lang, $key);
+                $ov = statusbtn_override($lang, $key, $kind);
                 $pos = (isset($ov['pos']) && $ov['pos'] === 'left') ? 'left' : 'right';
-                $mainBtn = ['text' => $hiddenMark . $rendered['text'], 'callback_data' => "statusbtn|emoji|{$lang}|{$key}", 'style' => $rendered['style']];
+                $mainBtn = ['text' => $hiddenMark . $rendered['text'], 'callback_data' => "{$sb_p}|emoji|{$lang}|{$key}", 'style' => $rendered['style']];
                 if (isset($rendered['icon_custom_emoji_id'])) {
                     $mainBtn['icon_custom_emoji_id'] = $rendered['icon_custom_emoji_id'];
                 }
-                $posBtn = ['text' => ($pos === 'left') ? '⬅️' : '➡️', 'callback_data' => "statusbtn|postoggle|{$lang}|{$key}"];
+                $posBtn = ['text' => ($pos === 'left') ? '⬅️' : '➡️', 'callback_data' => "{$sb_p}|postoggle|{$lang}|{$key}"];
                 $kb['inline_keyboard'][] = [$mainBtn, $posBtn];
             } else {
-                $hidden = statusbtn_is_hidden($lang, $key);
-                $mainBtn = ['text' => $hiddenMark . $rendered['text'], 'callback_data' => "statusbtn|text|{$lang}|{$key}", 'style' => $rendered['style']];
-                $hideBtn = ['text' => $hidden ? '👁' : '🚫', 'callback_data' => "statusbtn|hidetog|{$lang}|{$key}", 'style' => $hidden ? 'danger' : 'primary'];
+                $hidden = statusbtn_is_hidden($lang, $key, $kind);
+                $mainBtn = ['text' => $hiddenMark . $rendered['text'], 'callback_data' => "{$sb_p}|text|{$lang}|{$key}", 'style' => $rendered['style']];
+                $hideBtn = ['text' => $hidden ? '👁' : '🚫', 'callback_data' => "{$sb_p}|hidetog|{$lang}|{$key}", 'style' => $hidden ? 'danger' : 'primary'];
                 $kb['inline_keyboard'][] = [$mainBtn, $hideBtn];
             }
         }
         $captions = [
-            'color' => "🎨 <b>رنگ‌بندی دکمه‌های صفحه‌ی وضعیت</b>\n\nاین لیست، پیش‌نمایش زنده‌ست 👁\nروی هر دکمه بزن تا رنگش عوض بشه 👇\n🔵 آبی ← 🟢 سبز ← 🔴 قرمز ← ⚪️ پیش‌فرض\n🚫 = دکمه‌ی پنهان‌شده",
-            'emoji' => "🎭 <b>ایموجی دکمه‌های صفحه‌ی وضعیت</b>\n\nروی هر دکمه بزن و ایموجی جدیدش رو بفرست 👇\n📍 دکمه‌ی کوچیک کنارش (⬅️/➡️) جای ایموجی رو (چپ یا راست متن) عوض می‌کنه\n💎 ایموجی پریمیوم همیشه سمت راست میاد (محدودیت خود تلگرامه)\n🚫 = دکمه‌ی پنهان‌شده",
-            'text' => "✏️ <b>نام و نمایش دکمه‌های صفحه‌ی وضعیت</b>\n\n🔹 روی متن دکمه بزن تا متنش رو عوض کنی\n🔹 دکمه‌ی کوچیک کنارش، اون دکمه رو کلاً از دید کاربر پنهان یا آشکار می‌کنه\n🚫 = دکمه‌ی پنهان‌شده (کاربر اصلاً نمی‌بینتش) | 👁 = دوباره آشکارش می‌کنه",
+            'color' => "🎨 <b>رنگ‌بندی دکمه‌های {$sb_scr}</b>\n\nاین لیست، پیش‌نمایش زنده‌ست 👁\nروی هر دکمه بزن تا رنگش عوض بشه 👇\n🔵 آبی ← 🟢 سبز ← 🔴 قرمز ← ⚪️ پیش‌فرض\n🚫 = دکمه‌ی پنهان‌شده",
+            'emoji' => "🎭 <b>ایموجی دکمه‌های {$sb_scr}</b>\n\nروی هر دکمه بزن و ایموجی جدیدش رو بفرست 👇\n📍 دکمه‌ی کوچیک کنارش (⬅️/➡️) جای ایموجی رو (چپ یا راست متن) عوض می‌کنه\n💎 ایموجی پریمیوم همیشه سمت راست میاد (محدودیت خود تلگرامه)\n🚫 = دکمه‌ی پنهان‌شده",
+            'text' => "✏️ <b>نام و نمایش دکمه‌های {$sb_scr}</b>\n\n🔹 روی متن دکمه بزن تا متنش رو عوض کنی\n🔹 دکمه‌ی کوچیک کنارش، اون دکمه رو کلاً از دید کاربر پنهان یا آشکار می‌کنه\n🚫 = دکمه‌ی پنهان‌شده (کاربر اصلاً نمی‌بینتش) | 👁 = دوباره آشکارش می‌کنه",
         ];
         $info = $captions[$cat] ?? $captions['color'];
-        $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبلی', 'callback_data' => "statusbtn|list|{$lang}", 'style' => 'danger']];
+        $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبلی', 'callback_data' => "{$sb_p}|list|{$lang}", 'style' => 'danger']];
         $kb['inline_keyboard'][] = [['text' => '❌ بستن', 'callback_data' => 'bt_close', 'style' => 'danger']];
         return [$info, json_encode($kb)];
     }
@@ -10904,93 +10939,97 @@ if (!function_exists('statusbtn_cycle_style')) {
     // - "none" clears just the style field, falling back to that button's
     // own hardcoded default, same granular per-field unset the rest of this
     // family already uses
-    function statusbtn_cycle_style($lang, $key)
+    function statusbtn_cycle_style($lang, $key, $kind = 'mine')
     {
+        $sb_b = statusbtn_bucket($kind);
         $setting = select("setting", "*", null, null, "select");
         $be = json_decode((string) ($setting['button_edit'] ?? ''), true);
         if (!is_array($be)) {
             $be = [];
         }
         $order = ['', 'primary', 'success', 'danger'];
-        $cur = $be[$lang]['users.status.infoFull'][$key]['style'] ?? '';
+        $cur = $be[$lang][$sb_b][$key]['style'] ?? '';
         if (!in_array($cur, $order, true)) {
             $cur = '';
         }
         $idx = array_search($cur, $order, true);
         $next = $order[($idx + 1) % count($order)];
         if ($next === '') {
-            unset($be[$lang]['users.status.infoFull'][$key]['style']);
-            if (empty($be[$lang]['users.status.infoFull'][$key])) {
-                unset($be[$lang]['users.status.infoFull'][$key]);
+            unset($be[$lang][$sb_b][$key]['style']);
+            if (empty($be[$lang][$sb_b][$key])) {
+                unset($be[$lang][$sb_b][$key]);
             }
-            if (empty($be[$lang]['users.status.infoFull'])) {
-                unset($be[$lang]['users.status.infoFull']);
+            if (empty($be[$lang][$sb_b])) {
+                unset($be[$lang][$sb_b]);
             }
             if (empty($be[$lang])) {
                 unset($be[$lang]);
             }
         } else {
-            $be[$lang]['users.status.infoFull'][$key]['style'] = $next;
+            $be[$lang][$sb_b][$key]['style'] = $next;
         }
         update("setting", "button_edit", empty($be) ? null : json_encode($be, JSON_UNESCAPED_UNICODE), null, null);
     }
 }
 if (!function_exists('statusbtn_toggle_pos')) {
-    function statusbtn_toggle_pos($lang, $key)
+    function statusbtn_toggle_pos($lang, $key, $kind = 'mine')
     {
-        $ov = statusbtn_override($lang, $key);
+        $ov = statusbtn_override($lang, $key, $kind);
         $cur = (isset($ov['pos']) && $ov['pos'] === 'left') ? 'left' : 'right';
-        statusbtn_set_field($lang, $key, 'pos', ($cur === 'left') ? 'right' : 'left');
+        statusbtn_set_field($lang, $key, 'pos', ($cur === 'left') ? 'right' : 'left', $kind);
     }
 }
 if (!function_exists('statusbtn_is_hidden')) {
-    function statusbtn_is_hidden($lang, $key)
+    function statusbtn_is_hidden($lang, $key, $kind = 'mine')
     {
-        $ov = statusbtn_override($lang, $key);
+        $ov = statusbtn_override($lang, $key, $kind);
         return !empty($ov['hidden']);
     }
 }
 if (!function_exists('statusbtn_toggle_hidden')) {
-    function statusbtn_toggle_hidden($lang, $key)
+    function statusbtn_toggle_hidden($lang, $key, $kind = 'mine')
     {
-        statusbtn_set_field($lang, $key, 'hidden', !statusbtn_is_hidden($lang, $key));
+        statusbtn_set_field($lang, $key, 'hidden', !statusbtn_is_hidden($lang, $key, $kind), $kind);
     }
 }
 if (!function_exists('statusbtn_order')) {
-    // the order lives at $be[$lang]['users.status.infoFull']['__order'] - a
+    // the order lives at $be[$lang][<the place's bucket>]['__order'] - a
     // sibling of the per-key override entries, using a reserved key none of
     // the 13 real $keyboarddate keys can ever collide with (they're all
     // plain identifiers, never double-underscore-prefixed)
-    function statusbtn_order($lang)
+    function statusbtn_order($lang, $kind = 'mine')
     {
+        $sb_b = statusbtn_bucket($kind);
         $setting = select("setting", "*", null, null, "select");
         $be = json_decode((string) ($setting['button_edit'] ?? ''), true);
-        return (is_array($be) && isset($be[$lang]['users.status.infoFull']['__order']) && is_array($be[$lang]['users.status.infoFull']['__order']))
-            ? $be[$lang]['users.status.infoFull']['__order']
+        return (is_array($be) && isset($be[$lang][$sb_b]['__order']) && is_array($be[$lang][$sb_b]['__order']))
+            ? $be[$lang][$sb_b]['__order']
             : [];
     }
 }
 if (!function_exists('statusbtn_set_order')) {
-    function statusbtn_set_order($lang, array $order)
+    function statusbtn_set_order($lang, array $order, $kind = 'mine')
     {
+        $sb_b = statusbtn_bucket($kind);
         $setting = select("setting", "*", null, null, "select");
         $be = json_decode((string) ($setting['button_edit'] ?? ''), true);
         if (!is_array($be)) {
             $be = [];
         }
-        $be[$lang]['users.status.infoFull']['__order'] = array_values($order);
+        $be[$lang][$sb_b]['__order'] = array_values($order);
         update("setting", "button_edit", json_encode($be, JSON_UNESCAPED_UNICODE), null, null);
     }
 }
 if (!function_exists('statusbtn_reset_order')) {
-    function statusbtn_reset_order($lang)
+    function statusbtn_reset_order($lang, $kind = 'mine')
     {
+        $sb_b = statusbtn_bucket($kind);
         $setting = select("setting", "*", null, null, "select");
         $be = json_decode((string) ($setting['button_edit'] ?? ''), true);
-        if (is_array($be) && isset($be[$lang]['users.status.infoFull']['__order'])) {
-            unset($be[$lang]['users.status.infoFull']['__order']);
-            if (empty($be[$lang]['users.status.infoFull'])) {
-                unset($be[$lang]['users.status.infoFull']);
+        if (is_array($be) && isset($be[$lang][$sb_b]['__order'])) {
+            unset($be[$lang][$sb_b]['__order']);
+            if (empty($be[$lang][$sb_b])) {
+                unset($be[$lang][$sb_b]);
             }
             if (empty($be[$lang])) {
                 unset($be[$lang]);
@@ -11021,59 +11060,62 @@ if (!function_exists('statusbtn_apply_order')) {
     }
 }
 if (!function_exists('statusbtn_ordered_keys')) {
-    function statusbtn_ordered_keys($lang, $textbotlang)
+    function statusbtn_ordered_keys($lang, $textbotlang, $kind = 'mine')
     {
-        return statusbtn_apply_order(array_keys(statusbtn_defs($textbotlang)), statusbtn_order($lang));
+        return statusbtn_apply_order(array_keys(statusbtn_defs($textbotlang)), statusbtn_order($lang, $kind));
     }
 }
 if (!function_exists('statusbtn_layout_payload')) {
     // pick-then-swap, index-addressed exactly like help_lay_pick/help_lay_swap:
     // first tap marks an item selected (🔵), second tap on any OTHER item
     // swaps their positions in the saved order and clears the selection
-    function statusbtn_layout_payload($lang, $textbotlang, $selectedIdx = null)
+    function statusbtn_layout_payload($lang, $textbotlang, $selectedIdx = null, $kind = 'mine')
     {
+        $sb_p = statusbtn_prefix($kind);
+        $sb_scr = $kind === 'buy' ? 'پیام خرید' : 'صفحه‌ی وضعیت';
         // only the service screen's own buttons can be reordered here - the
         // گزارش مصرف sub-screen's rows are edited elsewhere in this same tool
         $orderedKeys = array_values(array_filter(
-            statusbtn_ordered_keys($lang, $textbotlang),
+            statusbtn_ordered_keys($lang, $textbotlang, $kind),
             fn($k) => strpos($k, 'ur_') !== 0
         ));
         $kb = ['inline_keyboard' => []];
         foreach ($orderedKeys as $idx => $key) {
-            $rendered = statusbtn_render($lang, $key, lang_tab_texts($lang));
-            $label = (statusbtn_is_hidden($lang, $key) ? '🚫 ' : '') . $rendered['text'];
+            $rendered = statusbtn_render($lang, $key, lang_tab_texts($lang), null, $kind);
+            $label = (statusbtn_is_hidden($lang, $key, $kind) ? '🚫 ' : '') . $rendered['text'];
             $isSel = ($selectedIdx !== null && (int) $selectedIdx === $idx);
             if ($isSel) {
-                $btn = ['text' => '🔵 ' . $label, 'callback_data' => "statusbtn|laycancel|{$lang}"];
+                $btn = ['text' => '🔵 ' . $label, 'callback_data' => "{$sb_p}|laycancel|{$lang}"];
             } elseif ($selectedIdx !== null) {
-                $btn = ['text' => $label, 'callback_data' => "statusbtn|layswap|{$lang}|{$selectedIdx}|{$idx}"];
+                $btn = ['text' => $label, 'callback_data' => "{$sb_p}|layswap|{$lang}|{$selectedIdx}|{$idx}"];
             } else {
-                $btn = ['text' => $label, 'callback_data' => "statusbtn|laypick|{$lang}|{$idx}"];
+                $btn = ['text' => $label, 'callback_data' => "{$sb_p}|laypick|{$lang}|{$idx}"];
             }
             $btn['style'] = $rendered['style'];
             $kb['inline_keyboard'][] = [$btn];
         }
-        $kb['inline_keyboard'][] = [['text' => '🔁 ریست چیدمان', 'callback_data' => "statusbtn|layreset|{$lang}"]];
-        $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبلی', 'callback_data' => "statusbtn|list|{$lang}", 'style' => 'danger']];
+        $kb['inline_keyboard'][] = [['text' => '🔁 ریست چیدمان', 'callback_data' => "{$sb_p}|layreset|{$lang}"]];
+        $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبلی', 'callback_data' => "{$sb_p}|list|{$lang}", 'style' => 'danger']];
         $kb['inline_keyboard'][] = [['text' => '❌ بستن', 'callback_data' => 'bt_close', 'style' => 'danger']];
-        $info = "📐 <b>چیدمان دکمه‌های صفحه‌ی وضعیت</b>\n\nروی یه دکمه بزن تا انتخاب بشه 🔵، بعد روی دکمه‌ی مقصد بزن تا جاشون با هم عوض بشه 👇\nرنگ و ایموجی دکمه‌ها همراهشون منتقل می‌شن\n🚫 = دکمه‌ی پنهان‌شده";
+        $info = "📐 <b>چیدمان دکمه‌های {$sb_scr}</b>\n\nروی یه دکمه بزن تا انتخاب بشه 🔵، بعد روی دکمه‌ی مقصد بزن تا جاشون با هم عوض بشه 👇\nرنگ و ایموجی دکمه‌ها همراهشون منتقل می‌شن\n🚫 = دکمه‌ی پنهان‌شده";
         return [$info, json_encode($kb)];
     }
 }
 if (!function_exists('statusbtn_detail_payload')) {
-    function statusbtn_detail_payload($lang, $key, $textbotlang)
+    function statusbtn_detail_payload($lang, $key, $textbotlang, $kind = 'mine')
     {
+        $sb_p = statusbtn_prefix($kind);
         $defs = statusbtn_defs($textbotlang);
         if (!isset($defs[$key])) {
-            return statusbtn_list_payload($lang, $textbotlang);
+            return statusbtn_list_payload($lang, $textbotlang, $kind);
         }
         $d = $defs[$key];
-        $cur = statusbtn_current($lang, $key, lang_tab_texts($lang));
-        $ov = statusbtn_override($lang, $key);
+        $cur = statusbtn_current($lang, $key, lang_tab_texts($lang), $kind);
+        $ov = statusbtn_override($lang, $key, $kind);
         $curPos = (isset($ov['pos']) && $ov['pos'] === 'left') ? 'left' : 'right';
         $curSimple = !empty($ov['simple']);
         $hasEmoji = !empty($ov['emoji']) || !empty($ov['emojiIcon']);
-        $previewBtn = statusbtn_render($lang, $key, lang_tab_texts($lang));
+        $previewBtn = statusbtn_render($lang, $key, lang_tab_texts($lang), null, $kind);
         $previewBtn['callback_data'] = 'none';
         $info = "🔘 <b>ویرایش {$d['name']}</b>\n➖➖➖➖➖➖➖➖➖➖\n";
         if ($key === 'changestatus') {
@@ -11082,22 +11124,219 @@ if (!function_exists('statusbtn_detail_payload')) {
         $info .= "👁 پیش‌نمایش زنده 👇";
         $kb = ['inline_keyboard' => []];
         $kb['inline_keyboard'][] = [$previewBtn];
-        $kb['inline_keyboard'][] = [['text' => '✏️ ویرایش متن', 'callback_data' => "statusbtn|text|{$lang}|{$key}", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [['text' => '✏️ ویرایش متن', 'callback_data' => "{$sb_p}|text|{$lang}|{$key}", 'style' => 'primary']];
         $kb['inline_keyboard'][] = [
-            ['text' => ($cur['style'] === 'primary' ? '✅ ' : '') . '🔵 آبی', 'callback_data' => "statusbtn|style|{$lang}|{$key}|primary", 'style' => 'primary'],
-            ['text' => ($cur['style'] === 'success' ? '✅ ' : '') . '🟢 سبز', 'callback_data' => "statusbtn|style|{$lang}|{$key}|success", 'style' => 'success'],
-            ['text' => ($cur['style'] === 'danger' ? '✅ ' : '') . '🔴 قرمز', 'callback_data' => "statusbtn|style|{$lang}|{$key}|danger", 'style' => 'danger'],
+            ['text' => ($cur['style'] === 'primary' ? '✅ ' : '') . '🔵 آبی', 'callback_data' => "{$sb_p}|style|{$lang}|{$key}|primary", 'style' => 'primary'],
+            ['text' => ($cur['style'] === 'success' ? '✅ ' : '') . '🟢 سبز', 'callback_data' => "{$sb_p}|style|{$lang}|{$key}|success", 'style' => 'success'],
+            ['text' => ($cur['style'] === 'danger' ? '✅ ' : '') . '🔴 قرمز', 'callback_data' => "{$sb_p}|style|{$lang}|{$key}|danger", 'style' => 'danger'],
         ];
-        $kb['inline_keyboard'][] = [['text' => ($hasEmoji ? '✅ ' : '') . '💎 ایموجی دکمه', 'callback_data' => "statusbtn|emoji|{$lang}|{$key}", 'style' => 'primary']];
-        $kb['inline_keyboard'][] = [['text' => ($curSimple ? '✅ ' : '') . '🎭 حالت ساده (بدون ایموجی)', 'callback_data' => "statusbtn|simple|{$lang}|{$key}", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [['text' => ($hasEmoji ? '✅ ' : '') . '💎 ایموجی دکمه', 'callback_data' => "{$sb_p}|emoji|{$lang}|{$key}", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [['text' => ($curSimple ? '✅ ' : '') . '🎭 حالت ساده (بدون ایموجی)', 'callback_data' => "{$sb_p}|simple|{$lang}|{$key}", 'style' => 'primary']];
         $kb['inline_keyboard'][] = [
-            ['text' => ($curPos === 'right' ? '✅ ' : '') . '➡️ راست', 'callback_data' => "statusbtn|pos|{$lang}|{$key}|right", 'style' => 'primary'],
-            ['text' => ($curPos === 'left' ? '✅ ' : '') . '⬅️ چپ', 'callback_data' => "statusbtn|pos|{$lang}|{$key}|left", 'style' => 'primary'],
+            ['text' => ($curPos === 'right' ? '✅ ' : '') . '➡️ راست', 'callback_data' => "{$sb_p}|pos|{$lang}|{$key}|right", 'style' => 'primary'],
+            ['text' => ($curPos === 'left' ? '✅ ' : '') . '⬅️ چپ', 'callback_data' => "{$sb_p}|pos|{$lang}|{$key}|left", 'style' => 'primary'],
         ];
-        $kb['inline_keyboard'][] = [['text' => '🔁 ریست این دکمه', 'callback_data' => "statusbtn|rst|{$lang}|{$key}", 'style' => 'danger']];
-        $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => "statusbtn|list|{$lang}", 'style' => 'danger']];
+        $kb['inline_keyboard'][] = [['text' => '🔁 ریست این دکمه', 'callback_data' => "{$sb_p}|rst|{$lang}|{$key}", 'style' => 'danger']];
+        $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => "{$sb_p}|list|{$lang}", 'style' => 'danger']];
         $kb['inline_keyboard'][] = [['text' => '❌ بستن', 'callback_data' => 'bt_close', 'style' => 'danger']];
         return [$info, json_encode($kb)];
+    }
+}
+if (!function_exists('svc_action_rows')) {
+    // The management buttons under a service - 🔗 لینک اشتراک, 🔰 کانفیگ, 💊 تمدید,
+    // ➕ حجم اضافه ... - as inline-keyboard rows, two to a row, in the order and
+    // with the looks 🎨 gave them. Which of them show for THIS service depends on
+    // its panel and on the shop's settings, exactly as it did when this lived in
+    // the service screen. $kind is where the buttons appear: 'mine' - the
+    // service's screen in 🛍 سرویس‌های من - or 'buy' - the message that carries a
+    // new service's config; each keeps its own customizations (statusbtn_*).
+    // $status is the service's live state (it only decides 💡's wording),
+    // $subUrl its subscription address. Rows only - a back button is the
+    // caller's.
+    function svc_action_rows($kind, $nameloc, $marzban, $status, $subUrl, $userRow, $tx)
+    {
+        $lang = (is_array($userRow) && !empty($userRow['lang'])) ? $userRow['lang'] : 'fa';
+        $setting = select("setting", "*", null, null, "select");
+        $statustimeextra = shop_feature_value('statustimeextra', $lang, select("shopSetting", "*", "Namevalue", "statustimeextra", "select")['value']);
+        $marzbanstatusextra = shop_feature_value('extravolunme', $lang, select("shopSetting", "*", "Namevalue", "statusextra", "select")['value']);
+        $statusdisorder = shop_feature_value('disorderss', $lang, select("shopSetting", "*", "Namevalue", "statusdisorder", "select")['value']);
+        $statuschangeservice = shop_feature_value('changgestatus', $lang, select("shopSetting", "*", "Namevalue", "statuschangeservice", "select")['value']);
+        $statusshowconfig = shop_feature_value('showconfig', $lang, select("shopSetting", "*", "Namevalue", "configshow", "select")['value']);
+        $statusremoveserveice = shop_feature_value('removeservicebackbtn', $lang, select("shopSetting", "*", "Namevalue", "backserviecstatus", "select")['value']);
+        // per language: 🔄 تغییر لوکیشن is hidden when there is nowhere to move
+        // to, and "nowhere" depends on which panels THIS customer is offered.
+        // The list behind that button (list_marzban_panel_userschange) filters
+        // by language, so a global count left the button on top of an empty one.
+        $marzbancount = panels_available_count($lang, $userRow['agent'] ?? null);
+        if ($status == "active") {
+            $namestatus = $tx['users']['status']['btnTurnOff'];
+        } else {
+            $namestatus = $tx['users']['status']['btnTurnOn'];
+        }
+        $keyboarddate = array(
+            'updateinfo' => array(
+                'text' => $tx['keyboard']['refreshInfo'],
+                'callback_data' => "updateproduct_"
+            ),
+            'linksub' => array(
+                'text' => $tx['users']['status']['linksub'],
+                'callback_data' => "subscriptionurl_"
+            ),
+            'config' => array(
+                'text' => $tx['users']['status']['config'],
+                'callback_data' => "config_"
+            ),
+            'extend' => array(
+                'text' => $tx['users']['extend']['title'],
+                'callback_data' => "extend_"
+            ),
+            'changelink' => array(
+                'text' => $tx['users']['changeLink']['btnTitle'],
+                'callback_data' => "changelink_"
+            ),
+            'removeservice' => array(
+                'text' => $tx['users']['status']['removeservice'],
+                'callback_data' => "removeserviceuser_"
+            ),
+            'changenameconfig' => array(
+                'text' => $tx['users']['status']['btnEditNote'],
+                'callback_data' => "changenote_"
+            ),
+            'Extra_volume' => array(
+                'text' => $tx['users']['extraVolume']['sellextra'],
+                'callback_data' => "Extra_volume_"
+            ),
+            'Extra_time' => array(
+                'text' => $tx['users']['extraTime']['title'],
+                'callback_data' => "Extra_time_"
+            ),
+            'changestatus' => array(
+                'text' => $namestatus,
+                'callback_data' => "changestatus_"
+            ),
+            'transfor' => array(
+                'text' => $tx['users']['transfer']['title'],
+                'callback_data' => "transfer_"
+            ),
+            'change-location' => array(
+                'text' => $tx['users']['changeLocation']['title'],
+                'callback_data' => "changeloc_"
+            ),
+            'ekhtelal' => array(
+                'text' => $tx['keyboard']['sendDisruptionReport'],
+                'callback_data' => "disorder-"
+            ),
+            'usagereport' => array(
+                'text' => $tx['users']['status']['svcUsageReportBtn'],
+                'callback_data' => "usagereport_"
+            )
+        );
+        if ($nameloc['name_product'] == $tx['common']['labels']['testService1']) {
+            unset($keyboarddate['transfor']);
+            unset($keyboarddate['Extra_time']);
+            unset($keyboarddate['removeservice']);
+        }
+        if ($marzban['type'] == "ibsng" || $marzban['type'] == "mikrotik") {
+            unset($keyboarddate['linksub']);
+            unset($keyboarddate['config']);
+            unset($keyboarddate['extend']);
+            unset($keyboarddate['changestatus']);
+            unset($keyboarddate['change-location']);
+            unset($keyboarddate['changelink']);
+            unset($keyboarddate['Extra_volume']);
+            unset($keyboarddate['Extra_time']);
+        }
+        if ($marzban['type'] == "WGDashboard") {
+            unset($keyboarddate['config']);
+            unset($keyboarddate['changestatus']);
+            unset($keyboarddate['change-location']);
+            unset($keyboarddate['changelink']);
+        }
+        if ($marzban['status_extend'] == "off_extend") {
+            unset($keyboarddate['Extra_time']);
+            unset($keyboarddate['Extra_volume']);
+            unset($keyboarddate['extend']);
+        }
+        // 🎁 a free config its tab does not let be renewed
+        if (affrw_renew_blocked($nameloc)) {
+            unset($keyboarddate['extend']);
+        }
+        if ($statusremoveserveice == "off")
+            unset($keyboarddate['removeservice']);
+        if ($statusshowconfig == "offconfig")
+            unset($keyboarddate['config']);
+        if ($marzban['type'] == "hiddify") {
+            unset($keyboarddate['changelink']);
+            unset($keyboarddate['changestatus']);
+            unset($keyboarddate['config']);
+        }
+        if ($statusdisorder == "offdisorder")
+            unset($keyboarddate['ekhtelal']);
+        if ($nameloc['Service_time'] == "0")
+            unset($keyboarddate['Extra_time']);
+        if ($nameloc['Volume'] == "0") {
+            unset($keyboarddate['Extra_volume']);
+            unset($keyboarddate['Extra_time']);
+        }
+        if ($statuschangeservice == "offstatus")
+            unset($keyboarddate['changestatus']);
+        if (feature_value('statusnamecustom', $lang, $setting['statusnamecustom']) == 'offnamecustom')
+            unset($keyboarddate['changenameconfig']);
+        if ($marzbancount == 1)
+            unset($keyboarddate['change-location']);
+        if ($marzban['changeloc'] == "offchangeloc")
+            unset($keyboarddate['change-location']);
+        if ($statustimeextra == "offtimeextraa")
+            unset($keyboarddate['Extra_time']);
+        if ($marzbanstatusextra == "offextra")
+            unset($keyboarddate['Extra_volume']);
+        $sb_ordered_kd = [];
+        foreach (statusbtn_ordered_keys($lang, $tx, $kind) as $sb_ok) {
+            if (isset($keyboarddate[$sb_ok]) && !statusbtn_is_hidden($lang, $sb_ok, $kind)) {
+                $sb_ordered_kd[$sb_ok] = $keyboarddate[$sb_ok];
+            }
+        }
+        $keyboarddate = $sb_ordered_kd;
+        $tempArray = [];
+        $keyboardsetting = ['inline_keyboard' => []];
+        foreach ($keyboarddate as $sb_key => $keyboardtext) {
+            $sb_btn = statusbtn_render($lang, $sb_key, $tx, $keyboardtext['text'], $kind);
+            $sb_btn['callback_data'] = $keyboardtext['callback_data'] . $nameloc['id_invoice'];
+            $tempArray[] = $sb_btn;
+            if (count($tempArray) == 2 or $keyboardtext['text'] == $tx['users']['status']['btnRefresh']) {
+                $keyboardsetting['inline_keyboard'][] = $tempArray;
+                $tempArray = [];
+            }
+        }
+        if (count($tempArray) > 0) {
+            $keyboardsetting['inline_keyboard'][] = $tempArray;
+        }
+        // 🌐 ورود به سابسکریپشن + 📲 افزودن به برنامه on top: this kind of
+        // service's own pair (subapp_kind - خرید / اکانت تست / 🎁), where the
+        // panel gives the subscription an address (ibsng / mikrotik keep a
+        // password in that field). Only on the service screen: the pair has its
+        // own 🎨 entry per kind, and the purchase message keeps its buttons apart.
+        if ($kind === 'mine' && !in_array($marzban['type'], ['ibsng', 'mikrotik'], true)) {
+            array_splice($keyboardsetting['inline_keyboard'], 0, 0, subapp_entry_rows(subapp_kind($nameloc), $lang, $tx, $subUrl, $nameloc['id_invoice']));
+        }
+        return $keyboardsetting['inline_keyboard'];
+    }
+}
+if (!function_exists('buy_service_action_rows')) {
+    // The management buttons under the message that delivers a new service's
+    // config - the ones 🛍 سرویس‌های من shows under the same service, apart in
+    // 🎨 (statusbtn_* kind 'buy'). Nothing for an invoice that is not the
+    // recipient's, and nothing for a manual sale, whose screen there has none
+    // either. Rows only; the tutorial button is the caller's.
+    function buy_service_action_rows($userId, $invoiceId, $lang, $panel)
+    {
+        $inv = select("invoice", "*", "id_invoice", $invoiceId, "select");
+        if (!is_array($inv) || (string) $inv['id_user'] !== (string) $userId || !is_array($panel) || ($panel['type'] ?? '') === 'Manualsale') {
+            return [];
+        }
+        $userRow = select("user", "*", "id", $userId, "select");
+        // a service that has just been made is on
+        return svc_action_rows('buy', $inv, $panel, 'active', '', $userRow, lang_tab_texts($lang));
     }
 }
 if (!function_exists('bottext_key_touched')) {
@@ -11110,7 +11349,7 @@ if (!function_exists('bottext_key_touched')) {
         $be = json_decode((string) ($setting['button_edit'] ?? ''), true);
         $textCustom = is_array($te) && isset($te[$lang]) && bottext_dotted_isset($te[$lang], $key);
         $stickerCustom = bt_media_lookup($st, $key, $lang) !== '';
-        $btnCustom = is_array($be) && !empty($be[$lang][$key]);
+        $btnCustom = is_array($be) && (!empty($be[$lang][$key]) || ($key === statusbtn_text_key('buy') && !empty($be[$lang][statusbtn_bucket('buy')])));
         return $textCustom || $stickerCustom || $btnCustom;
     }
 }
@@ -21331,6 +21570,15 @@ function sendMessageService($panel_info, $config, $sub_link, $username_service, 
     $sms_lang = $sms_row['lang'] ?? 'fa';
     if (!mainmenu_btn_active($sms_lang, "text_help"))
         $reply_markup = null;
+    // a purchase also carries the buttons the service has in 🛍 سرویس‌های من
+    // (🔗 لینک اشتراک, 💊 تمدید ...), above the tutorial button
+    if ($kind === 'purchase') {
+        $sms_actions = buy_service_action_rows($user_id, $invoice_id, $sms_lang, $panel_info);
+        if ($sms_actions) {
+            $sms_help = is_string($reply_markup) ? (json_decode($reply_markup, true)['inline_keyboard'] ?? []) : [];
+            $reply_markup = json_encode(['inline_keyboard' => array_merge($sms_actions, $sms_help)]);
+        }
+    }
     $configCount = is_array($config) ? count($config) : 0;
     // Mode 2 is the config page INSTEAD of the full message, not as well as it
     // (it used to send both, which read as "mode 1 is still on"). It needs the

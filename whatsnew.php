@@ -152,4 +152,22 @@ return [
             . "📍 Report channel → «A user bought extra time»\n"
             . "When a customer bought extra time through a gateway, the admin report left the number of days empty. It is now filled in, as with card-to-card.</blockquote>",
     ],
+    [
+        'n' => 11,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>🛒 <b>دکمه‌های مدیریت سرویس زیر پیام خرید</b>\n"
+            . "📍 مشتری: بعد از خرید، پیامی که کانفیگ را می‌فرستد\n"
+            . "زیر آن پیام حالا همان دکمه‌های «🛍 سرویس‌های من» هست: 🔗 لینک اشتراک، 🔰 دریافت کانفیگ، 💊 تمدید، ⚙️ تغییر لینک، ➕ حجم/⏳ زمان اضافه و ... — هر کدام فقط اگر برای آن پنل و تنظیمات فروشگاه کاربرد داشته باشد. دکمهٔ 📚 آموزش (اگر روشن باشد) زیر آن‌ها می‌آید.</blockquote>\n\n"
+            . "<blockquote>🎨 <b>تنظیم جدا از «سرویس‌های من»</b>\n"
+            . "📍 🎨 شخصی‌سازی ← 🛍️ پیام بعد از خرید ← «🔘 ویرایش دکمه‌های مدیریت سرویس»\n"
+            . "📍 وب‌پنل ← پیام‌ها و دکمه‌های سرویس ← «دکمه‌های پیام خرید»\n"
+            . "نام، رنگ، ایموجی، ترتیب و پنهان‌کردنِ هر دکمه برای پیام خرید جدا تنظیم می‌شود و با تنظیمات صفحهٔ «وضعیت سرویس» یکی نیست. کپشن همین پیام هم مثل قبل از «✏️ ویرایش کپشن» همان صفحه تنظیم می‌شود.</blockquote>",
+        'en' => "<blockquote>🛒 <b>Service buttons under the purchase message</b>\n"
+            . "📍 Customer: the message that sends the config after buying\n"
+            . "That message now carries the same buttons as «🛍 My services»: 🔗 Subscription link, 🔰 Get config, 💊 Renew, ⚙️ Change link, ➕ Extra volume / ⏳ extra time and so on — each one only where it applies to that panel and the shop's settings. The 📚 tutorial button (when it is on) comes below them.</blockquote>\n\n"
+            . "<blockquote>🎨 <b>Set apart from «My services»</b>\n"
+            . "📍 🎨 Customize → 🛍️ Message after purchase → «🔘 Edit service buttons»\n"
+            . "📍 Web panel → Messages and service buttons → «Purchase message buttons»\n"
+            . "The name, colour, emoji, order and visibility of each button are set for the purchase message on their own and are not the ones on the service status screen. This message's caption is still edited from «✏️ Edit caption» on the same page.</blockquote>",
+    ],
 ];

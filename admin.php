@@ -1513,6 +1513,9 @@ if (!function_exists('bottext_item_menu_payload')) {
             $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های تغییر لینک', 'callback_data' => "gbs|hub|{$bt_lang}|cl", 'style' => 'primary']];
         } elseif ($bt_key === 'textbot.afterPay') {
             $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '📚 ویرایش دکمه مشاهده آموزش', "gbs|hub|{$bt_lang}|ab", $bt_btn_custom)];
+            // the service's own buttons under it, set apart from the ones on its
+            // screen in 🛍 سرویس‌های من
+            $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های مدیریت سرویس (لینک اشتراک، تمدید، ...)', 'callback_data' => "buybtn|list|{$bt_lang}", 'style' => !empty($bt_be[$bt_lang]['textbot.afterPay.svcbtn']) ? 'success' : 'primary']];
         } elseif ($bt_key === 'textbot.afterText') {
             $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '📚 ویرایش دکمه مشاهده آموزش', "gbs|hub|{$bt_lang}|ut", $bt_btn_custom)];
         } elseif ($bt_key === 'users.affiliates.rewardAfterPay') {
@@ -7064,92 +7067,100 @@ if (preg_match('/^cfgdeliv\|cfgcol\|([a-z]{2})\|([^|]+)\|([bur])$/', $datain, $c
     list($cd_text, $cd_kb) = config_col_order_payload($textbotlang, $cd_m[1], null, "cfgdeliv|p|{$cd_m[1]}|{$cd_m[2]}|{$cd_m[3]}", $cd_colKind === 'affrw' ? 'users.affiliates.rewardConfigHint' : null, $cd_colKind);
     Editmessagetext($from_id, $message_id, $cd_text, $cd_kb, 'HTML');
     return;
-}if (preg_match('/^statusbtn\|list\|([a-z]{2})$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    list($sb_text, $sb_kb) = statusbtn_list_payload($sb_m[1], $textbotlang);
+}
+// the service buttons are edited for two places - the service's screen in
+// 🛍 سرویس‌های من (statusbtn|...) and the message that delivers a new
+// service's config (buybtn|...). Same screens, separate settings.
+$sb_kind = strpos((string) $datain, 'buybtn|') === 0 ? 'buy' : 'mine';
+$sb_data = $sb_kind === 'buy' ? 'statusbtn|' . substr($datain, 7) : $datain;
+$sb_pfx = statusbtn_prefix($sb_kind);
+$sb_ks = $sb_kind === 'buy' ? 'buy:' : '';
+if (preg_match('/^statusbtn\|list\|([a-z]{2})$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    list($sb_text, $sb_kb) = statusbtn_list_payload($sb_m[1], $textbotlang, $sb_kind);
     Editmessagetext($from_id, $message_id, $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|cat\|([a-z]{2})\|(color|emoji|text|layout)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^statusbtn\|cat\|([a-z]{2})\|(color|emoji|text|layout)$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
     if ($sb_m[2] === 'layout') {
-        list($sb_text, $sb_kb) = statusbtn_layout_payload($sb_m[1], $textbotlang);
+        list($sb_text, $sb_kb) = statusbtn_layout_payload($sb_m[1], $textbotlang, null, $sb_kind);
     } else {
-        list($sb_text, $sb_kb) = statusbtn_cat_payload($sb_m[1], $sb_m[2], $textbotlang);
+        list($sb_text, $sb_kb) = statusbtn_cat_payload($sb_m[1], $sb_m[2], $textbotlang, $sb_kind);
     }
     Editmessagetext($from_id, $message_id, $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|laypick\|([a-z]{2})\|(\d+)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    list($sb_text, $sb_kb) = statusbtn_layout_payload($sb_m[1], $textbotlang, (int) $sb_m[2]);
+if (preg_match('/^statusbtn\|laypick\|([a-z]{2})\|(\d+)$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    list($sb_text, $sb_kb) = statusbtn_layout_payload($sb_m[1], $textbotlang, (int) $sb_m[2], $sb_kind);
     Editmessagetext($from_id, $message_id, $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|laycancel\|([a-z]{2})$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    list($sb_text, $sb_kb) = statusbtn_layout_payload($sb_m[1], $textbotlang, null);
+if (preg_match('/^statusbtn\|laycancel\|([a-z]{2})$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    list($sb_text, $sb_kb) = statusbtn_layout_payload($sb_m[1], $textbotlang, null, $sb_kind);
     Editmessagetext($from_id, $message_id, $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|layswap\|([a-z]{2})\|(\d+)\|(\d+)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    $sb_ordered = statusbtn_ordered_keys($sb_m[1], $textbotlang);
+if (preg_match('/^statusbtn\|layswap\|([a-z]{2})\|(\d+)\|(\d+)$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    $sb_ordered = statusbtn_ordered_keys($sb_m[1], $textbotlang, $sb_kind);
     $sb_i1 = (int) $sb_m[2];
     $sb_i2 = (int) $sb_m[3];
     if (isset($sb_ordered[$sb_i1], $sb_ordered[$sb_i2]) && $sb_i1 !== $sb_i2) {
         $sb_tmp = $sb_ordered[$sb_i1];
         $sb_ordered[$sb_i1] = $sb_ordered[$sb_i2];
         $sb_ordered[$sb_i2] = $sb_tmp;
-        statusbtn_set_order($sb_m[1], $sb_ordered);
+        statusbtn_set_order($sb_m[1], $sb_ordered, $sb_kind);
     }
-    list($sb_text, $sb_kb) = statusbtn_layout_payload($sb_m[1], $textbotlang, null);
+    list($sb_text, $sb_kb) = statusbtn_layout_payload($sb_m[1], $textbotlang, null, $sb_kind);
     Editmessagetext($from_id, $message_id, $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|layreset\|([a-z]{2})$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    statusbtn_reset_order($sb_m[1]);
-    list($sb_text, $sb_kb) = statusbtn_layout_payload($sb_m[1], $textbotlang, null);
+if (preg_match('/^statusbtn\|layreset\|([a-z]{2})$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    statusbtn_reset_order($sb_m[1], $sb_kind);
+    list($sb_text, $sb_kb) = statusbtn_layout_payload($sb_m[1], $textbotlang, null, $sb_kind);
     Editmessagetext($from_id, $message_id, "🔁 چیدمان به پیش‌فرض برگشت.\n\n" . $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|hidetog\|([a-z]{2})\|([^|]+)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    statusbtn_toggle_hidden($sb_m[1], $sb_m[2]);
-    list($sb_text, $sb_kb) = statusbtn_cat_payload($sb_m[1], 'text', $textbotlang);
+if (preg_match('/^statusbtn\|hidetog\|([a-z]{2})\|([^|]+)$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    statusbtn_toggle_hidden($sb_m[1], $sb_m[2], $sb_kind);
+    list($sb_text, $sb_kb) = statusbtn_cat_payload($sb_m[1], 'text', $textbotlang, $sb_kind);
     Editmessagetext($from_id, $message_id, $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|colorcyc\|([a-z]{2})\|([^|]+)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    statusbtn_cycle_style($sb_m[1], $sb_m[2]);
-    list($sb_text, $sb_kb) = statusbtn_cat_payload($sb_m[1], 'color', $textbotlang);
+if (preg_match('/^statusbtn\|colorcyc\|([a-z]{2})\|([^|]+)$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    statusbtn_cycle_style($sb_m[1], $sb_m[2], $sb_kind);
+    list($sb_text, $sb_kb) = statusbtn_cat_payload($sb_m[1], 'color', $textbotlang, $sb_kind);
     Editmessagetext($from_id, $message_id, $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|postoggle\|([a-z]{2})\|([^|]+)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    statusbtn_toggle_pos($sb_m[1], $sb_m[2]);
-    list($sb_text, $sb_kb) = statusbtn_cat_payload($sb_m[1], 'emoji', $textbotlang);
+if (preg_match('/^statusbtn\|postoggle\|([a-z]{2})\|([^|]+)$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    statusbtn_toggle_pos($sb_m[1], $sb_m[2], $sb_kind);
+    list($sb_text, $sb_kb) = statusbtn_cat_payload($sb_m[1], 'emoji', $textbotlang, $sb_kind);
     Editmessagetext($from_id, $message_id, $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|open\|([a-z]{2})\|([^|]+)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    list($sb_text, $sb_kb) = statusbtn_detail_payload($sb_m[1], $sb_m[2], $textbotlang);
+if (preg_match('/^statusbtn\|open\|([a-z]{2})\|([^|]+)$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    list($sb_text, $sb_kb) = statusbtn_detail_payload($sb_m[1], $sb_m[2], $textbotlang, $sb_kind);
     Editmessagetext($from_id, $message_id, $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|text\|([a-z]{2})\|([^|]+)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^statusbtn\|text\|([a-z]{2})\|([^|]+)$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
     savedata("clear", "bt_msgid", $message_id);
-    step("statusbtntxt-{$sb_m[1]}-{$sb_m[2]}", $from_id);
+    step("statusbtntxt-{$sb_m[1]}-{$sb_ks}{$sb_m[2]}", $from_id);
     $sb_kb = json_encode(['inline_keyboard' => [
-        [['text' => '❌ انصراف', 'callback_data' => "statusbtn|cat|{$sb_m[1]}|text"]],
+        [['text' => '❌ انصراف', 'callback_data' => "{$sb_pfx}|cat|{$sb_m[1]}|text"]],
     ]]);
     Editmessagetext($from_id, $message_id, "✏️ متن جدید دکمه رو بفرست ✍️\n\n💎 اگه اول اسم یه ایموجی پریمیوم بذاری، همون ایموجی پریمیوم دکمه می‌شه.", $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|style\|([a-z]{2})\|([^|]+)\|(primary|success|danger)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    statusbtn_set_field($sb_m[1], $sb_m[2], 'style', $sb_m[3]);
-    list($sb_text, $sb_kb) = statusbtn_detail_payload($sb_m[1], $sb_m[2], $textbotlang);
+if (preg_match('/^statusbtn\|style\|([a-z]{2})\|([^|]+)\|(primary|success|danger)$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    statusbtn_set_field($sb_m[1], $sb_m[2], 'style', $sb_m[3], $sb_kind);
+    list($sb_text, $sb_kb) = statusbtn_detail_payload($sb_m[1], $sb_m[2], $textbotlang, $sb_kind);
     Editmessagetext($from_id, $message_id, $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|emoji\|([a-z]{2})\|([^|]+)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    step("statusbtnemo-{$sb_m[1]}-{$sb_m[2]}", $from_id);
+if (preg_match('/^statusbtn\|emoji\|([a-z]{2})\|([^|]+)$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    step("statusbtnemo-{$sb_m[1]}-{$sb_ks}{$sb_m[2]}", $from_id);
     $sb_kb = json_encode(['inline_keyboard' => [
-        [['text' => '❌ انصراف', 'callback_data' => "statusbtn|cat|{$sb_m[1]}|emoji"]],
+        [['text' => '❌ انصراف', 'callback_data' => "{$sb_pfx}|cat|{$sb_m[1]}|emoji"]],
     ]]);
     $sb_prompt = "💎 یه ایموجی (ساده یا پریمیوم) بفرست، کنار متن دکمه نشون داده می‌شه 👇\n\n";
     $sb_prompt .= "📌 ایموجی پریمیوم به‌خاطر محدودیت تلگرام همیشه سمت راست (ابتدای متن) قرار می‌گیره.\n";
@@ -7157,28 +7168,28 @@ if (preg_match('/^statusbtn\|emoji\|([a-z]{2})\|([^|]+)$/', $datain, $sb_m) && $
     Editmessagetext($from_id, $message_id, $sb_prompt, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|simple\|([a-z]{2})\|([^|]+)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    $sb_ov = statusbtn_override($sb_m[1], $sb_m[2]);
-    statusbtn_set_field($sb_m[1], $sb_m[2], 'simple', empty($sb_ov['simple']));
-    list($sb_text, $sb_kb) = statusbtn_detail_payload($sb_m[1], $sb_m[2], $textbotlang);
+if (preg_match('/^statusbtn\|simple\|([a-z]{2})\|([^|]+)$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    $sb_ov = statusbtn_override($sb_m[1], $sb_m[2], $sb_kind);
+    statusbtn_set_field($sb_m[1], $sb_m[2], 'simple', empty($sb_ov['simple']), $sb_kind);
+    list($sb_text, $sb_kb) = statusbtn_detail_payload($sb_m[1], $sb_m[2], $textbotlang, $sb_kind);
     Editmessagetext($from_id, $message_id, $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|pos\|([a-z]{2})\|([^|]+)\|(left|right)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    statusbtn_set_field($sb_m[1], $sb_m[2], 'pos', $sb_m[3]);
-    list($sb_text, $sb_kb) = statusbtn_detail_payload($sb_m[1], $sb_m[2], $textbotlang);
+if (preg_match('/^statusbtn\|pos\|([a-z]{2})\|([^|]+)\|(left|right)$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    statusbtn_set_field($sb_m[1], $sb_m[2], 'pos', $sb_m[3], $sb_kind);
+    list($sb_text, $sb_kb) = statusbtn_detail_payload($sb_m[1], $sb_m[2], $textbotlang, $sb_kind);
     Editmessagetext($from_id, $message_id, $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|rst\|([a-z]{2})\|([^|]+)$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    statusbtn_reset($sb_m[1], $sb_m[2]);
-    list($sb_text, $sb_kb) = statusbtn_detail_payload($sb_m[1], $sb_m[2], $textbotlang);
+if (preg_match('/^statusbtn\|rst\|([a-z]{2})\|([^|]+)$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    statusbtn_reset($sb_m[1], $sb_m[2], $sb_kind);
+    list($sb_text, $sb_kb) = statusbtn_detail_payload($sb_m[1], $sb_m[2], $textbotlang, $sb_kind);
     Editmessagetext($from_id, $message_id, "🔁 این دکمه به پیش‌فرض برگشت.\n\n" . $sb_text, $sb_kb, 'HTML');
     return;
 }
-if (preg_match('/^statusbtn\|rstall\|([a-z]{2})$/', $datain, $sb_m) && $adminrulecheck['rule'] == "administrator") {
-    statusbtn_reset_all($sb_m[1]);
-    list($sb_text, $sb_kb) = statusbtn_list_payload($sb_m[1], $textbotlang);
+if (preg_match('/^statusbtn\|rstall\|([a-z]{2})$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
+    statusbtn_reset_all($sb_m[1], $sb_kind);
+    list($sb_text, $sb_kb) = statusbtn_list_payload($sb_m[1], $textbotlang, $sb_kind);
     Editmessagetext($from_id, $message_id, "🔁 همه‌ی دکمه‌ها به پیش‌فرض برگشتن.\n\n" . $sb_text, $sb_kb, 'HTML');
     return;
 }
@@ -9539,17 +9550,19 @@ if (preg_match('/^btbtntext-([a-z]{2})-([01])$/', (string) $user['step'], $btm) 
 if (preg_match('/^statusbtntxt-([a-z]{2})-(.+)$/', (string) $user['step'], $sb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $sb_lang = $sb_m[1];
     $sb_key = $sb_m[2];
+    $sb_kind = strpos($sb_key, 'buy:') === 0 ? 'buy' : 'mine';
+    $sb_key = $sb_kind === 'buy' ? substr($sb_key, 4) : $sb_key;
     [$sb_newtext, $sb_icon] = button_name_from_update($text, $update);
     if ($sb_newtext === '' || mb_strlen($sb_newtext) > 64) {
         sendmessage($from_id, "⚠️ متن باید بین ۱ تا ۶۴ حرف باشه 😅", $btpromptcancel, 'HTML');
         return;
     }
-    statusbtn_set_field($sb_lang, $sb_key, 'text', $sb_newtext);
+    statusbtn_set_field($sb_lang, $sb_key, 'text', $sb_newtext, $sb_kind);
     if ($sb_icon !== '') {
-        statusbtn_set_field($sb_lang, $sb_key, 'emojiIcon', $sb_icon);
+        statusbtn_set_field($sb_lang, $sb_key, 'emojiIcon', $sb_icon, $sb_kind);
     }
     step('home', $from_id);
-    list($sb_text, $sb_kb) = statusbtn_cat_payload($sb_lang, 'text', $textbotlang);
+    list($sb_text, $sb_kb) = statusbtn_cat_payload($sb_lang, 'text', $textbotlang, $sb_kind);
     $sb_msgid = intval(json_decode((string) ($user['Processing_value'] ?? ''), true)['bt_msgid'] ?? 0);
     $sb_done_msg = "✅ متن دکمه ذخیره شد!\n\n" . $sb_text;
     deletemessage($from_id, $message_id);
@@ -9563,6 +9576,8 @@ if (preg_match('/^statusbtntxt-([a-z]{2})-(.+)$/', (string) $user['step'], $sb_m
 if (preg_match('/^statusbtnemo-([a-z]{2})-(.+)$/', (string) $user['step'], $sb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $sb_lang = $sb_m[1];
     $sb_key = $sb_m[2];
+    $sb_kind = strpos($sb_key, 'buy:') === 0 ? 'buy' : 'mine';
+    $sb_key = $sb_kind === 'buy' ? substr($sb_key, 4) : $sb_key;
     $sb_icon_id = '';
     if (!empty($update['message']['entities']) && is_array($update['message']['entities'])) {
         foreach ($update['message']['entities'] as $sb_ent) {
@@ -9573,7 +9588,7 @@ if (preg_match('/^statusbtnemo-([a-z]{2})-(.+)$/', (string) $user['step'], $sb_m
         }
     }
     if ($sb_icon_id !== '') {
-        statusbtn_set_field($sb_lang, $sb_key, 'emojiIcon', $sb_icon_id);
+        statusbtn_set_field($sb_lang, $sb_key, 'emojiIcon', $sb_icon_id, $sb_kind);
         $sb_msg = "✅ ایموجی پریمیوم ذخیره شد! 💎";
     } else {
         preg_match('/^\X/u', trim((string) $text), $sb_em);
@@ -9582,11 +9597,11 @@ if (preg_match('/^statusbtnemo-([a-z]{2})-(.+)$/', (string) $user['step'], $sb_m
             sendmessage($from_id, "⚠️ لطفاً فقط یه ایموجی بفرست 😅", $btpromptcancel, 'HTML');
             return;
         }
-        statusbtn_set_field($sb_lang, $sb_key, 'emoji', $sb_emoji);
+        statusbtn_set_field($sb_lang, $sb_key, 'emoji', $sb_emoji, $sb_kind);
         $sb_msg = "✅ ایموجی {$sb_emoji} ذخیره شد!";
     }
     step('home', $from_id);
-    list($sb_text, $sb_kb) = statusbtn_cat_payload($sb_lang, 'emoji', $textbotlang);
+    list($sb_text, $sb_kb) = statusbtn_cat_payload($sb_lang, 'emoji', $textbotlang, $sb_kind);
     deletemessage($from_id, $message_id);
     sendmessage($from_id, $sb_msg . "\n\n" . $sb_text, $sb_kb, 'HTML');
     return;
