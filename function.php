@@ -849,6 +849,29 @@ function menu_tap_cleanup($from_id, $user)
     }
 }
 
+// 🎁 A purchase, renewal, extra volume or extra time paid straight from the payment
+// screen is a top-up the shop spends on the spot - and its invoice quotes the
+// top-up gift like any other. Those branches of DirectPayment_settle() zero the
+// wallet to pay for the service and never asked topup_disc_award(), so the
+// customer read «با این شارژ X هدیه می‌گیری» and was never given it. Called once
+// the service has been delivered: the gift goes into the wallet, with the same
+// message the wallet top-up sends. Returns the gift (0 when there is none).
+function direct_pay_gift($paymentReport, $userRow)
+{
+    $bonus = round((float) topup_disc_award($paymentReport, $userRow, true), 2);
+    if ($bonus <= 0) {
+        return 0;
+    }
+    balance_add($paymentReport['id_user'], $bonus);
+    $lang = (is_array($userRow) && !empty($userRow['lang'])) ? $userRow['lang'] : 'fa';
+    $cur = currency_for_user($userRow);
+    $balance = (select("user", "Balance", "id", $paymentReport['id_user'], "select", ['cache' => false]) ?: [])['Balance'] ?? 0;
+    sendmessage($paymentReport['id_user'], strtr(bottext_resolve_key('users.Balance.chargeSuccessDiscount', $lang), [
+        '{bonus}' => money($bonus, $cur, false),
+        '{balance}' => money($balance, $cur),
+    ]), null, 'HTML');
+    return $bonus;
+}
 // A payment is settled in the wallet it was asked in. When its payer has
 // switched language since, that wallet is brought into Balance for the
 // settlement and put back after, so every branch of DirectPayment_settle()
@@ -1068,6 +1091,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
             $textconfrom = sprintf($textbotlang['hardcoded']['paymentConfirmedNewService'], $username_ac, $get_invoice['Service_location'], $Balance_id['id'], $Payment_report['id_order'], $Balance_id['username'], wallet_amount_text($Balance_id), $format_price_cart, $Payment_report['dec_not_confirmed']);
             Editmessagetext($from_id, $message_id, $textconfrom, $Confirm_pay);
         }
+        direct_pay_gift($Payment_report, $Balance_id);
     } elseif ($steppay[0] == "getextenduser") {
         $balanceformatsell = money(select("user", "Balance", "id", $Balance_id['id'], "select")['Balance'], currency_for_user($Balance_id), false);
         $partsdic = explode("%", $steppay[1]);
@@ -1175,6 +1199,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
             $textconfrom = sprintf($textbotlang['hardcoded']['paymentConfirmedRenew'], $usernamepanel, $prodcut['name_product'], $nameloc['Service_location'], $Balance_id['id'], $Payment_report['id_order'], $Balance_id['username'], wallet_amount_text($Balance_id), $format_price_cart, $Payment_report['dec_not_confirmed']);
             Editmessagetext($from_id, $message_id, $textconfrom, $Confirm_pay);
         }
+        direct_pay_gift($Payment_report, $Balance_id);
     } elseif ($steppay[0] == "getextravolumeuser") {
         $steppay = explode("%", $steppay[1]);
         $volume = $steppay[1];
@@ -1248,6 +1273,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
                 'parse_mode' => "HTML"
             ]);
         }
+        direct_pay_gift($Payment_report, $Balance_id);
     } elseif ($steppay[0] == "getextratimeuser") {
         $steppay = explode("%", $steppay[1]);
         $tmieextra = $steppay[1];
@@ -1322,6 +1348,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
                 'text' => $text_report,
             ]);
         }
+        direct_pay_gift($Payment_report, $Balance_id);
     } else {
         // the "🚀 receipt submitted, pending review" message has done its job
         // once we get here - clean it up. A flow that never sent/tracked one
@@ -14679,7 +14706,10 @@ if (!function_exists('topup_disc_notify_admin')) {
     // fired the moment a discount is actually awarded. Deliberately defensive:
     // this runs inside DirectPayment, which is crediting real money - a failed
     // notification must never be able to disturb the payment.
-    function topup_disc_notify_admin($userId, $codeName, $lang, $gatewayKey, $paid, $bonus)
+    // $direct: the payment bought a service on the spot (renewal, extra volume or
+    // time, a purchase) - only the gift reaches the wallet, so the report must not
+    // say the whole payment did
+    function topup_disc_notify_admin($userId, $codeName, $lang, $gatewayKey, $paid, $bonus, $direct = false)
     {
         if (!function_exists('telegram')) {
             return false;
@@ -14704,11 +14734,16 @@ if (!function_exists('topup_disc_notify_admin')) {
             . "💳 درگاه: " . htmlspecialchars(topup_disc_gateway_label($gatewayKey, $panel)) . " · زبان: " . ($panel['bottext']['langs'][$lang] ?? $lang) . "\n"
             . "💰 پرداختی: " . money($paid, $cur) . "\n"
             . "🎁 تخفیف: " . money($bonus, $cur) . "\n"
-            . "💼 مجموع واریز به کیف پول: " . money(floatval($paid) + floatval($bonus), $cur) . "\n"
-            // this notifier runs from inside topup_disc_award(), i.e. BEFORE
-            // DirectPayment writes the new balance - so the after-figure has to
-            // be computed, never read back from the user row
-            . "💳 موجودی پس از واریز: " . money(floatval(is_array($u) ? ($u['Balance'] ?? 0) : 0) + floatval($paid) + floatval($bonus), $cur);
+            . ($direct
+                // the service has been delivered and the wallet zeroed by now: the
+                // gift is all that goes in
+                ? "🛒 پرداخت مستقیم برای سرویس - فقط هدیه به کیف پول اضافه شد\n"
+                    . "💳 موجودی پس از هدیه: " . money(floatval((select("user", "Balance", "id", $userId, "select", ['cache' => false]) ?: [])['Balance'] ?? 0) + floatval($bonus), $cur)
+                : "💼 مجموع واریز به کیف پول: " . money(floatval($paid) + floatval($bonus), $cur) . "\n"
+                    // this notifier runs from inside topup_disc_award(), i.e. BEFORE
+                    // DirectPayment writes the new balance - so the after-figure has to
+                    // be computed, never read back from the user row
+                    . "💳 موجودی پس از واریز: " . money(floatval(is_array($u) ? ($u['Balance'] ?? 0) : 0) + floatval($paid) + floatval($bonus), $cur));
         telegram('sendmessage', [
             'chat_id' => $setting['Channel_Report'],
             'text' => $txt,
@@ -15011,7 +15046,7 @@ if (!function_exists('topup_disc_award')) {
     // (DirectPayment). Returns the extra amount to add on top of what was paid,
     // 0 when nothing applies. Logs the use and clears the user's activated code
     // so a one-shot code cannot be silently reused.
-    function topup_disc_award($paymentReport, $userRow)
+    function topup_disc_award($paymentReport, $userRow, $direct = false)
     {
         $gw = topup_disc_method_to_gateway($paymentReport['Payment_Method'] ?? '');
         if ($gw === null) {
@@ -15041,7 +15076,7 @@ if (!function_exists('topup_disc_award')) {
         topup_disc_log_use($userId, $codeName, $lang, $gw, $paid, $bonus);
         // never let a notification failure disturb the payment being credited
         try {
-            topup_disc_notify_admin($userId, $codeName, $lang, $gw, $paid, $bonus);
+            topup_disc_notify_admin($userId, $codeName, $lang, $gw, $paid, $bonus, $direct);
         } catch (\Throwable $e) {
             // swallowed on purpose - the money has already been decided
         }
