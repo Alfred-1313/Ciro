@@ -11220,7 +11220,7 @@ if (!function_exists('statusbtn_detail_payload')) {
         $previewBtn['callback_data'] = 'none';
         $info = "🔘 <b>ویرایش {$d['name']}</b>\n➖➖➖➖➖➖➖➖➖➖\n";
         if ($key === 'changestatus') {
-            $info .= "ℹ️ این دکمه بین «روشن کردن» و «خاموش کردن» جابه‌جا می‌شه (بسته به وضعیت فعلی سرویس). اگه متن سفارشی بذاری، همون متن به‌جای هر دو حالت نشون داده می‌شه.\n🎨 رنگش هم خودکاره: 🟢 سبز وقتی سرویس روشنه، 🔴 قرمز وقتی خاموشه و 🔵 آبی وقتی هنوز وصل نشده (OnHold) - تا وقتی خودت رنگ دیگه‌ای براش انتخاب نکنی.\n";
+            $info .= "ℹ️ این دکمه بین «روشن کردن» و «خاموش کردن» جابه‌جا می‌شه (بسته به وضعیت فعلی سرویس). اگه متن سفارشی بذاری، همون متن به‌جای هر دو حالت نشون داده می‌شه.\n🎨 رنگش هم خودکاره: 🔵 آبی وقتی سرویس روشنه (یا هنوز وصل نشده - OnHold)، 🔴 قرمز وقتی خاموشه - تا وقتی خودت رنگ دیگه‌ای براش انتخاب نکنی.\n";
         }
         $info .= "👁 پیش‌نمایش زنده 👇";
         $kb = ['inline_keyboard' => []];
@@ -11386,11 +11386,11 @@ if (!function_exists('svc_action_rows')) {
         $keyboardsetting = ['inline_keyboard' => []];
         foreach ($keyboarddate as $sb_key => $keyboardtext) {
             $sb_btn = statusbtn_render($lang, $sb_key, $tx, $keyboardtext['text'], $kind);
-            // 💡 says the service's state by its colour: green while it is on,
-            // red once it is off, blue while it waits for its first connection
-            // (on_hold) - unless 🎨 gave it a colour of its own
+            // 💡 says the service's state by its colour: blue while it is on (or
+            // still waiting for its first connection, on_hold), red once it is
+            // off - unless 🎨 gave it a colour of its own
             if ($sb_key === 'changestatus' && !isset(statusbtn_override($lang, $sb_key, $kind)['style'])) {
-                $sb_btn['style'] = $status === 'active' ? 'success' : ($status === 'on_hold' ? 'primary' : 'danger');
+                $sb_btn['style'] = in_array($status, ['active', 'on_hold'], true) ? 'primary' : 'danger';
             }
             $sb_btn['callback_data'] = $keyboardtext['callback_data'] . $nameloc['id_invoice'];
             $tempArray[] = $sb_btn;

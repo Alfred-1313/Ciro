@@ -1519,11 +1519,11 @@ if (!function_exists('payg_rates_text')) {
             // ordinary service's screen has them
             $pair = [];
             if (!in_array('changestatus', statusbtn_shop_off($svc['lang']), true)) {
-                // green while it runs, red once it is off (turned off by its
-                // owner, or stopped for lack of balance), blue while it waits
-                // for its first connection
+                // blue while it runs (or waits for its first connection), red
+                // once it is off (turned off by its owner, or stopped for lack
+                // of balance)
                 $off = in_array($svc['status'], ['paused', 'stopped'], true);
-                $pair[] = ['text' => $off ? $w['btnTurnOn'] : $w['btnTurnOff'], 'callback_data' => "paygpause_{$id}", 'style' => $off ? 'danger' : ($svc['status'] === 'waiting' ? 'primary' : 'success')];
+                $pair[] = ['text' => $off ? $w['btnTurnOn'] : $w['btnTurnOff'], 'callback_data' => "paygpause_{$id}", 'style' => $off ? 'danger' : 'primary'];
             }
             $pair[] = ['text' => $w['btnUsage'], 'callback_data' => "usagereport_{$id}", 'style' => 'primary'];
             $rows[] = $pair;

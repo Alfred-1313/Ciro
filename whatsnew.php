@@ -314,4 +314,14 @@ return [
             . "Every tap on 💡 used to call the panel over and over (it asked for the service's status four times). Now it asks once, uses that answer for the switch and for redrawing the screen, and sends a single change request. The «turned on/off» note and the button's new colour come first, then the full screen is refreshed in the same message.\n"
             . "If the panel refuses the change, the button stays as it was and a «could not be changed» note is shown (a panel error used to go unnoticed at times).</blockquote>",
     ],
+    [
+        'n' => 20,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>💡 <b>رنگ دکمهٔ روشن/خاموش: آبی و قرمز</b>\n"
+            . "📍 هر ۵ جا: پیام خرید، اکانت تست، هدیهٔ رفرال، صفحهٔ ساعتی و 🛍 سرویس‌های من\n"
+            . "🔵 آبی وقتی اشتراک روشن است (یا هنوز به کانفیگ وصل نشده، OnHold) و 🔴 قرمز وقتی خاموش شد. رنگ سبز برداشته شد. رنگی که از 🎨 برای این دکمه انتخاب کرده باشی همان می‌ماند.</blockquote>",
+        'en' => "<blockquote>💡 <b>On/off button colour: blue and red</b>\n"
+            . "📍 All 5 places: purchase message, test account, referral gift, hourly screen and 🛍 My services\n"
+            . "🔵 Blue while the subscription is on (or has not connected to the config yet, OnHold) and 🔴 red once it is turned off. Green is gone. A colour you picked for this button in 🎨 still wins.</blockquote>",
+    ],
 ];
