@@ -2510,6 +2510,21 @@ function keyboard_list_text($lang, $groupFilter = null)
         if ($groupFilter === 'usermgmt') {
             $keyboard_text['inline_keyboard'][] = panel_lang_tabs($lang, "bt_group|%s|usermgmt", null);
         }
+        // 🛍 in the customer's own order (bt_myservices_plan()); anything not
+        // named there keeps its place after them
+        if ($groupFilter === 'myservices') {
+            $bt_ms_plan = bt_myservices_plan();
+            $bt_ms_pos = array_flip(array_keys($bt_ms_plan));
+            $bt_ms_items = [];
+            foreach (array_values($bt_grouped['myservices'] ?? []) as $bt_ms_i => $bt_ms_it) {
+                if (isset($bt_ms_plan[$bt_ms_it['key']])) {
+                    $bt_ms_it['section'] = $bt_ms_plan[$bt_ms_it['key']];
+                }
+                $bt_ms_items[] = [$bt_ms_pos[$bt_ms_it['key']] ?? (1000 + $bt_ms_i), $bt_ms_it];
+            }
+            usort($bt_ms_items, fn($a, $b) => $a[0] <=> $b[0]);
+            $bt_grouped['myservices'] = array_column($bt_ms_items, 1);
+        }
         $bt_cur_section = null;
         foreach (($bt_grouped[$groupFilter] ?? []) as $data) {
             // Items a group screen no longer lists because they moved onto a
@@ -2534,6 +2549,13 @@ function keyboard_list_text($lang, $groupFilter = null)
                 // white/default style - a non-navigating label, not an action
                 $keyboard_text['inline_keyboard'][] = [['text' => bt_section_meta($bt_section)['label'], 'callback_data' => "bt_sep|{$bt_section}"]];
                 $bt_cur_section = $bt_section;
+                // a service's own screen leads its section: its caption, then
+                // its buttons, before the 🌐 / 📲 pair on top of them
+                if ($bt_section === 'myservices_screen') {
+                    list($bt_sf_label, $bt_sf_style) = $bt_decorate('users.status.infoFull', '📊 کپشن صفحه‌ی سرویس');
+                    $keyboard_text['inline_keyboard'][] = [['text' => $bt_sf_label, 'callback_data' => "bt_edit|$lang|users.status.infoFull", 'style' => ($bt_sf_style !== '' ? $bt_sf_style : 'primary')]];
+                    $keyboard_text['inline_keyboard'][] = [['text' => '🔘 دکمه‌های صفحه‌ی سرویس (💊 تمدید، 💡 روشن/خاموش، ...)', 'callback_data' => "statusbtn|list|{$lang}", 'style' => !empty($bt_list_be[$lang][statusbtn_bucket('mine')]) ? 'success' : 'primary']];
+                }
             }
             // a button item shows the button itself, as this tab has it now
             $bt_live = in_array($data['key'], bt_btnitem_keys(), true) ? genbtn_row_label($data['key'], $lang) : null;
@@ -2555,11 +2577,6 @@ function keyboard_list_text($lang, $groupFilter = null)
                 $bt_btn['icon_custom_emoji_id'] = $bt_live[1];
             }
             $keyboard_text['inline_keyboard'][] = [$bt_btn];
-            if ($groupFilter === 'myservices' && $data['key'] === 'users.sell.service_sell') {
-                $keyboard_text['inline_keyboard'][] = [['text' => bt_section_meta('myservices_related')['label'], 'callback_data' => 'bt_sep|myservices_related']];
-                list($bt_sf_label, $bt_sf_style) = $bt_decorate('users.status.infoFull', '📊 پیام و دکمه‌های صفحه‌ی وضعیت سرویس');
-                $keyboard_text['inline_keyboard'][] = [['text' => $bt_sf_label, 'callback_data' => "bt_edit|$lang|users.status.infoFull", 'style' => ($bt_sf_style !== '' ? $bt_sf_style : 'primary')]];
-            }
             if ($groupFilter === 'myservices' && $data['key'] === 'users.status.getConfigHintBuy') {
                 // caption is edited via the normal bt_edit button above - this
                 // extra row opens the buy-only column-order/button-styling hub,

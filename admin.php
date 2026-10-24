@@ -31,6 +31,11 @@ if ($datain === 'btpromptcancel' && $adminrulecheck['rule'] == "administrator") 
     deletemessage($from_id, $message_id);
     return;
 }
+// 🎨: which screen each message shows, and where a screen several others open
+// was opened from - its 🔙 goes back there (bt_origin_track)
+if (is_string($datain) && $datain !== '' && $adminrulecheck['rule'] == "administrator") {
+    bt_origin_track($from_id, $message_id, $datain, (array) ($update['callback_query']['message']['reply_markup']['inline_keyboard'] ?? []));
+}
 
 //----------------[  🤖 web panel: address, login, a password of the admin's own, on/off  ]----------------
 // «پنل تحت وب ربات 🤖» (it was «✅ فعالسازی پنل تحت وب») used to make a new
@@ -1553,6 +1558,11 @@ if (!function_exists('bottext_item_menu_payload')) {
         // a sticker set before that item became a caption-only one.
         if (!$bt_inline || $bt_sticker !== '' || $bt_react !== '' || $bt_btn_custom) {
             $kb['inline_keyboard'][] = [['text' => '🔁 ریست همه‌ی تنظیمات این پیام', 'callback_data' => "btact|rstall|{$bt_lang}|{$bt_key}", 'style' => 'danger']];
+        }
+        // opened from another 🎨 screen than its own section: back to that one
+        global $from_id;
+        if ($backOverride === null) {
+            $backOverride = bt_origin_get($from_id, "bt_edit|{$bt_lang}|{$bt_key}");
         }
         if ($backOverride !== null) {
             $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => $backOverride, 'style' => 'danger']];
@@ -6927,8 +6937,10 @@ if (preg_match('/^cfgcolhub-(ut|buy)-([a-z]{2})$/', $datain, $cc_m) && $adminrul
 //                   سرویس‌های من bottext group; separate storage keys via
 //                   the $kind='buy' argument, see function.php ]----------------
 if (preg_match('/^btact\|cfgcolbuy\|([a-z]{2})\|(.+)$/', $datain, $btm) && $adminrulecheck['rule'] == "administrator") {
-    cfgcol_back_set($from_id, 'buy', null);
-    list($cc_info, $cc_kb) = config_col_order_payload($textbotlang, $btm[1], $btm[2], null, 'users.status.getConfigHintBuy', 'buy');
+    // back to the screen it was opened from: 🛍's section or the caption's own
+    $cc_back = bt_origin_get($from_id, $datain);
+    cfgcol_back_set($from_id, 'buy', $cc_back);
+    list($cc_info, $cc_kb) = config_col_order_payload($textbotlang, $btm[1], $btm[2], $cc_back, 'users.status.getConfigHintBuy', 'buy');
     Editmessagetext($from_id, $message_id, $cc_info, $cc_kb, 'HTML');
     return;
 }
@@ -9014,7 +9026,10 @@ if (preg_match('/^gbtn\|[a-z]+\|([a-z]{2})\|([a-z]{2})(\|.*)?$/', $datain, $gb_m
     Editmessagetext($from_id, $message_id, $gb_text, $gb_kb, 'HTML');
     return;
 }
-if (preg_match('/^gbtntxt-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|he|td|hb|hv|ab|ut|sp|ar|mg|sl|lc|pl|pu|gb|gt|gr|gh|kb|kt|kr|kh|rw|ma|b[1-6])-([0-9])(?:-(u))?$/', (string) $user['step'], $gb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
+// any alias genbtn_alias_map() knows: a hardcoded list here fell behind it
+// once already, and the 🌐/📲 pairs of the delivery messages (gp/gu/gw) took
+// a rename that was never saved
+if (preg_match('/^gbtntxt-([a-z]{2})-([a-z][a-z0-9])-([0-9])(?:-(u))?$/', (string) $user['step'], $gb_m) && genbtn_alias_to_key($gb_m[2]) !== null && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $gb_key = genbtn_alias_to_key($gb_m[2]);
     // a label-only button (reply keyboard, link) shows no premium emoji: the
     // name stays as it was sent
@@ -9040,7 +9055,7 @@ if (preg_match('/^gbtntxt-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|
     }
     return;
 }
-if (preg_match('/^gbtnemo-([a-z]{2})-(su|cf|ns|te|sc|bc|rn|cl|rc|rp|bu|tp|ac|ts|he|td|hb|hv|ab|ut|ar|mg|lc|pl|pu|gb|gt|gr|gh|kb|kt|kr|kh|rw|ma|b[1-6])-([0-9])(?:-(u))?$/', (string) $user['step'], $gb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^gbtnemo-([a-z]{2})-([a-z][a-z0-9])-([0-9])(?:-(u))?$/', (string) $user['step'], $gb_m) && genbtn_alias_to_key($gb_m[2]) !== null && !genbtn_text_only($gb_m[2]) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $gb_key = genbtn_alias_to_key($gb_m[2]);
     $gb_idx = (int) $gb_m[3];
     $gb_icon_id = '';
@@ -9464,6 +9479,11 @@ if (preg_match('/^btsticker-([a-z]{2})-(.+)$/', (string) $user['step'], $btm) &&
     }
     $bt_setting = select("setting", "*", null, null, "select");
     $bt_layout = json_decode((string) ($bt_setting['keyboardmain'] ?? ''), true);
+    // a menu that was never saved (or broken) is the factory one: kept
+    // beside it, rather than lost while «✅ ذخیره شد» says otherwise
+    if (!is_array($bt_layout) || !isset($bt_layout['keyboard']) || !is_array($bt_layout['keyboard'])) {
+        $bt_layout = array_merge(is_array($bt_layout) ? $bt_layout : [], ['keyboard' => mainmenu_factory_layout()['keyboard']]);
+    }
     if (is_array($bt_layout) && isset($bt_layout['keyboard'])) {
         if (!isset($bt_layout['text_stickers']) || !is_array($bt_layout['text_stickers'])) {
             $bt_layout['text_stickers'] = [];
@@ -9506,6 +9526,11 @@ if (preg_match('/^btreaction-([a-z]{2})-(.+)$/', (string) $user['step'], $btm) &
     }
     $bt_setting = select("setting", "*", null, null, "select");
     $bt_layout = json_decode((string) ($bt_setting['keyboardmain'] ?? ''), true);
+    // a menu that was never saved (or broken) is the factory one: kept
+    // beside it, rather than lost while «✅ ذخیره شد» says otherwise
+    if (!is_array($bt_layout) || !isset($bt_layout['keyboard']) || !is_array($bt_layout['keyboard'])) {
+        $bt_layout = array_merge(is_array($bt_layout) ? $bt_layout : [], ['keyboard' => mainmenu_factory_layout()['keyboard']]);
+    }
     if (is_array($bt_layout) && isset($bt_layout['keyboard'])) {
         if (!isset($bt_layout['text_reactions']) || !is_array($bt_layout['text_reactions'])) {
             $bt_layout['text_reactions'] = [];
@@ -13018,7 +13043,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['GatewayLang']['plisioBtnStyleCaption'], topup_invoice_btnstyle_hub_payload($gb_m[1], $gb_m[2], $textbotlang), 'HTML');
 } elseif (preg_match('/^gwinvbtncol:([a-z]{2}):([a-z0-9]+)$/', $datain, $gb_m) && $adminrulecheck['rule'] == "administrator") {
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['colorCaption'], topup_invoice_btncolor_payload($gb_m[1], $gb_m[2], $textbotlang), 'HTML');
-} elseif (preg_match('/^gwinvbtncolpick:([a-z]{2}):([a-z0-9]+):([a-z]+)$/', $datain, $gb_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^gwinvbtncolpick:([a-z]{2}):([a-z0-9]+):([A-Za-z0-9]+)$/', $datain, $gb_m) && $adminrulecheck['rule'] == "administrator") {
     $gb_order = ['', 'primary', 'success', 'danger'];
     $gb_items = topup_invoice_btnstyle_items($gb_m[2], $textbotlang, $gb_m[1]);
     if (!isset($gb_items[$gb_m[3]])) {
@@ -13036,7 +13061,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['colorCaption'], topup_invoice_btncolor_payload($gb_m[1], $gb_m[2], $textbotlang), 'HTML');
 } elseif (preg_match('/^gwinvbtnren:([a-z]{2}):([a-z0-9]+)$/', $datain, $gb_m) && $adminrulecheck['rule'] == "administrator") {
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['BtnStyle']['renameCaption'], topup_invoice_btnrename_payload($gb_m[1], $gb_m[2], $textbotlang), 'HTML');
-} elseif (preg_match('/^gwinvbtnrenpick:([a-z]{2}):([a-z0-9]+):([a-z]+)$/', $datain, $gb_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^gwinvbtnrenpick:([a-z]{2}):([a-z0-9]+):([A-Za-z0-9]+)$/', $datain, $gb_m) && $adminrulecheck['rule'] == "administrator") {
     $gb_items = topup_invoice_btnstyle_items($gb_m[2], $textbotlang, $gb_m[1]);
     if (!isset($gb_items[$gb_m[3]])) {
         return;
@@ -13048,11 +13073,11 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     ]]);
     $gb_prompt = sendmessage($from_id, sprintf($textbotlang['Admin']['BtnStyle']['askRenameForItem'], $gb_label), $gb_cancelKb, 'HTML');
     step("gwinvbtnreni:{$gb_m[1]}:{$gb_m[2]}:{$gb_m[3]}:{$message_id}:" . (int) ($gb_prompt['result']['message_id'] ?? 0), $from_id);
-} elseif (preg_match('/^gwinvbtnrencancel:([a-z]{2}):([a-z0-9]+):([a-z]+):([0-9]+)$/', $datain, $gb_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^gwinvbtnrencancel:([a-z]{2}):([a-z0-9]+):([A-Za-z0-9]+):([0-9]+)$/', $datain, $gb_m) && $adminrulecheck['rule'] == "administrator") {
     step('home', $from_id);
     deletemessage($from_id, $message_id);
     Editmessagetext($from_id, (int) $gb_m[4], $textbotlang['Admin']['BtnStyle']['renameCaption'], topup_invoice_btnrename_payload($gb_m[1], $gb_m[2], $textbotlang), 'HTML');
-} elseif (preg_match('/^gwinvbtnreni:([a-z]{2}):([a-z0-9]+):([a-z]+):([0-9]+):([0-9]+)$/', (string) $user['step'], $gb_m) && $datain == '') {
+} elseif (preg_match('/^gwinvbtnreni:([a-z]{2}):([a-z0-9]+):([A-Za-z0-9]+):([0-9]+):([0-9]+)$/', (string) $user['step'], $gb_m) && $datain == '') {
     deletemessage($from_id, $message_id);
     $gb_style = topup_invoice_btnstyle_for($gb_m[1], $gb_m[2], $gb_m[3]);
     $gb_style['label'] = trim((string) $text) === '0' ? '' : trim((string) $text);
@@ -23537,8 +23562,21 @@ if ($datain == "linkappsetting") {
         return;
     }
     $bt_new = (string) ($update['message']['text'] ?? $text);
-    // bake premium (custom) emoji into <tg-emoji> HTML tags so the bot re-sends them rendered
-    if (!empty($update['message']['entities']) && is_array($update['message']['entities'])) {
+    // Formatting made with Telegram's own tools (bold, italic, a quote, a
+    // link...) arrives as entities, not as the tags the prompt lists - it was
+    // dropped. A text with no typed tags of its own takes it all as HTML,
+    // premium emoji included; one with typed tags keeps them, as before.
+    $bt_ents_all = is_array($update['message']['entities'] ?? null) ? $update['message']['entities'] : [];
+    $bt_has_format = false;
+    foreach ($bt_ents_all as $bt_ent) {
+        if (in_array($bt_ent['type'] ?? '', ['bold', 'italic', 'underline', 'strikethrough', 'spoiler', 'code', 'pre', 'text_link', 'text_mention', 'blockquote', 'expandable_blockquote'], true)) {
+            $bt_has_format = true;
+        }
+    }
+    if ($bt_has_format && strpos($bt_new, '<') === false) {
+        [$bt_new] = entities_to_html($bt_new, $bt_ents_all);
+    } elseif (!empty($update['message']['entities']) && is_array($update['message']['entities'])) {
+        // bake premium (custom) emoji into <tg-emoji> HTML tags so the bot re-sends them rendered
         $bt_ents = [];
         foreach ($update['message']['entities'] as $bt_ent) {
             if (($bt_ent['type'] ?? '') === 'custom_emoji' && !empty($bt_ent['custom_emoji_id']) && isset($bt_ent['offset'], $bt_ent['length'])) {

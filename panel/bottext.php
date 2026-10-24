@@ -20,11 +20,21 @@ $labels = [];
 foreach ($bt['items'] as $it) {
     if (!empty($it['key'])) {
         $g = $it['group'] ?? '';
-        $labels[$it['key']] = ['label' => $it['label'] ?? $it['key'], 'group' => isset($paygSubs[$g]) ? 'payg' : $g, 'sub' => isset($paygSubs[$g]) ? $g : ''];
+        $labels[$it['key']] = ['label' => $it['label'] ?? $it['key'], 'group' => isset($paygSubs[$g]) ? 'payg' : $g, 'sub' => isset($paygSubs[$g]) ? $g : '', 'sec' => $g === 'myservices' ? (string) ($it['section'] ?? '') : ''];
     }
 }
 foreach (bottext_all_item_keys($textbotlang) as $key) {
     $labels[$key] = $labels[$key] ?? ['label' => $key, 'group' => '', 'sub' => ''];
+}
+// 🛍 in the bot's own order and sections: the service screen's caption has no
+// group of its own, the bot lists it there and so does this tab. What the plan
+// does not name comes after, under its own section like in the bot.
+$msPlan = bt_myservices_plan();
+foreach ($msPlan as $key => $sec) {
+    if (isset($labels[$key])) {
+        $labels[$key]['group'] = 'myservices';
+        $labels[$key]['sec'] = $sec;
+    }
 }
 // what the language says before any change: its own file, Persian where it has no word
 $defaults = require dirname(__DIR__) . '/lang/' . $lang . '.php';
@@ -171,9 +181,14 @@ foreach ($labels as $key => $meta) {
     }
     $groupCounts[$meta['group']] = ($groupCounts[$meta['group']] ?? 0) + 1;
     if ($group === '*' || $meta['group'] === $group) {
-        $visible[$key] = ['label' => $meta['label'], 'sub' => $meta['sub'], 'current' => $current, 'default' => $default, 'textChanged' => $own !== null, 'changed' => $changed,
+        $visible[$key] = ['label' => $meta['label'], 'sub' => $meta['sub'], 'sec' => $group === 'myservices' ? ($meta['sec'] ?? '') : '', 'current' => $current, 'default' => $default, 'textChanged' => $own !== null, 'changed' => $changed,
             'sticker' => $ownSticker, 'reaction' => $ownReaction];
     }
+}
+if ($group === 'myservices') {
+    $msPos = array_flip(array_keys($msPlan));
+    $msOrder = array_flip(array_keys($visible));
+    uksort($visible, fn($a, $b) => ($msPos[$a] ?? 1000 + $msOrder[$a]) <=> ($msPos[$b] ?? 1000 + $msOrder[$b]));
 }
 $changedCount = count(array_filter($visible, fn($v) => $v['changed']));
 $tabUrl = fn($g) => 'bottext.php?' . http_build_query(['lang' => $lang, 'group' => $g, 'q' => $query ?: null, 'changed' => $onlyChanged ? 1 : null]);
@@ -236,9 +251,15 @@ echo web_lang_assets();
                         </div>
                     </div>
                 <?php endif; ?>
-                <?php $sub = ''; foreach ($visible as $key => $v): $k = htmlspecialchars($key); ?>
+                <?php $sub = ''; $sec = ''; foreach ($visible as $key => $v): $k = htmlspecialchars($key); ?>
                     <?php if ($v['sub'] !== '' && $v['sub'] !== $sub): $sub = $v['sub']; ?>
                         <h3 style="margin:6px 2px -6px;font-size:.95rem"><?= htmlspecialchars($paygSubs[$sub]['label']) ?></h3>
+                    <?php endif; ?>
+                    <?php if ($v['sec'] !== '' && $v['sec'] !== $sec): $sec = $v['sec']; ?>
+                        <h3 style="margin:6px 2px -6px;font-size:.95rem"><?= htmlspecialchars($bt['msSections'][$sec] ?? bt_section_meta($sec)['label']) ?></h3>
+                        <?php if ($sec === 'myservices_screen'): ?>
+                            <div class="field-hint">🔘 <a href="svclook.php?<?= http_build_query(['lang' => $lang, 'part' => 'status']) ?>"><?= htmlspecialchars($bt['msSections']['myservices_screenBtns']) ?></a></div>
+                        <?php endif; ?>
                     <?php endif; ?>
                     <div class="field">
                         <label style="display:flex;justify-content:space-between;align-items:center;gap:8px">

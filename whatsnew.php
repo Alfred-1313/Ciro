@@ -216,4 +216,38 @@ return [
             . "📍 Web panel → Messages and service buttons → «Delivery message buttons» (purchase / test account / referral gift)\n"
             . "In «✏️ Names and visibility» the mark next to each button now shows its real state: 👁 shown, 🚫 hidden. 🔒 means its feature is off in the shop settings.</blockquote>",
     ],
+    [
+        'n' => 14,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>💡 <b>رنگ دکمهٔ روشن/خاموش</b>\n"
+            . "📍 هر ۵ جا: پیام خرید، اکانت تست، هدیهٔ رفرال، صفحهٔ ساعتی و 🛍 سرویس‌های من\n"
+            . "وقتی اشتراک روشن است دکمه آبی است و وقتی خاموش شد قرمز می‌شود. اگر از 🎨 برای این دکمه رنگ دیگری انتخاب کرده باشی، همان رنگ می‌ماند.</blockquote>\n\n"
+            . "<blockquote>🛍 <b>چیدمان تازهٔ «پیام‌ها و ظاهر سرویس‌های من»</b>\n"
+            . "📍 🎨 شخصی‌سازی ← پیام‌ها و ظاهر سرویس‌های من\n"
+            . "📍 وب‌پنل ← متن‌های ربات ← 🛍 پیام‌ها و ظاهر سرویس‌های من\n"
+            . "موارد به ترتیبی که مشتری می‌بیند مرتب شدند: 1️⃣ لیست سرویس‌ها، 2️⃣ صفحهٔ هر سرویس (کپشن، دکمه‌ها و 🌐 / 📲)، 3️⃣ صفحه‌هایی که دکمه‌ها باز می‌کنند و ⚠️ خطاها و پاپ‌آپ‌ها.</blockquote>\n\n"
+            . "<blockquote>🔙 <b>بازگشت به منوی قبل</b>\n"
+            . "صفحه‌هایی که از دو جا باز می‌شوند (مثل کپشن‌های درگاه، فاکتور خرید و دکمه‌های دریافت کانفیگ) حالا با 🔙 به همان صفحه‌ای برمی‌گردند که از آن آمده بودی، حتی بعد از ذخیرهٔ تغییر.</blockquote>\n\n"
+            . "<blockquote>🛠 <b>رفع اشکال‌های 🎨</b>\n"
+            . "• متنی که با فرمت تلگرام (بولد، ایتالیک، لینک، نقل‌قول و...) فرستاده شود، با همان فرمت ذخیره می‌شود.\n"
+            . "• ذخیرهٔ استیکر و ری‌اکشن روی بعضی پیام‌ها بی‌صدا شکست می‌خورد؛ درست شد.\n"
+            . "• تغییر نام و ایموجی 🌐 / 📲 در پیام خرید، اکانت تست و هدیهٔ رفرال ذخیره نمی‌شد؛ درست شد.\n"
+            . "• چهار دکمهٔ رنگ و نام دکمه‌های فاکتور کارت‌به‌کارت کار نمی‌کردند؛ درست شدند.\n"
+            . "• وقتی تنظیمی بلند می‌شد ربات خطا می‌داد؛ حالا جای ذخیره خودش بزرگ‌تر می‌شود.</blockquote>",
+        'en' => "<blockquote>💡 <b>On/off button colour</b>\n"
+            . "📍 All 5 places: purchase message, test account, referral gift, hourly screen and 🛍 My services\n"
+            . "The button is blue while the subscription is on and turns red once it is off. A colour you picked for it in 🎨 still wins.</blockquote>\n\n"
+            . "<blockquote>🛍 <b>«My services messages and look», reordered</b>\n"
+            . "📍 🎨 Customize → My services messages and look\n"
+            . "📍 Web panel → Bot Texts → 🛍 My services messages and look\n"
+            . "Items now follow what the customer sees: 1️⃣ the list of services, 2️⃣ one service's screen (caption, buttons and 🌐 / 📲), 3️⃣ the screens its buttons open, and ⚠️ errors and popups.</blockquote>\n\n"
+            . "<blockquote>🔙 <b>Back to the previous menu</b>\n"
+            . "Screens that open from two places (gateway captions, the purchase invoice, the get-config buttons and more) now go 🔙 back to the screen you came from, even after saving a change.</blockquote>\n\n"
+            . "<blockquote>🛠 <b>🎨 fixes</b>\n"
+            . "• Text sent with Telegram formatting (bold, italic, links, quotes...) is saved with that formatting.\n"
+            . "• Saving a sticker or reaction on some messages failed silently; fixed.\n"
+            . "• Renaming 🌐 / 📲 or changing their emoji on the purchase, test account and referral gift messages was not saved; fixed.\n"
+            . "• Four colour and name buttons of the card-to-card invoice did nothing; fixed.\n"
+            . "• The bot errored once a setting grew long; its storage now grows by itself.</blockquote>",
+    ],
 ];

@@ -333,6 +333,28 @@ function ensureColumnExistsForUpdate($tableName, $fieldName, $valueSample = null
         error_log('Failed to ensure column exists: ' . $e->getMessage());
     }
 }
+// A column ensureColumnExistsForUpdate() made is as wide as the first value
+// written to it. A settings blob that starts as «{}» outgrows VARCHAR(191) as
+// soon as a few things are customized, and the write then failed outright
+// ("Data too long") - widen it once instead, and write again.
+function widenColumnForUpdate($table, $field)
+{
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare('SELECT DATA_TYPE FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?');
+        $stmt->execute([$table, $field]);
+        $type = strtolower((string) $stmt->fetchColumn());
+        $to = in_array($type, ['char', 'varchar', 'tinytext'], true) ? 'TEXT' : ($type === 'text' ? 'MEDIUMTEXT' : null);
+        if ($to === null) {
+            return false;
+        }
+        $pdo->exec("ALTER TABLE `$table` MODIFY `$field` $to CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL");
+        return true;
+    } catch (PDOException $e) {
+        error_log('Failed to widen column: ' . $e->getMessage());
+        return false;
+    }
+}
 function update($table, $field, $newValue, $whereField = null, $whereValue = null)
 {
     global $pdo, $user;
@@ -376,6 +398,8 @@ function update($table, $field, $newValue, $whereField = null, $whereValue = nul
                 }
                 $executeUpdate($fallbackValue);
             }
+        } elseif ((strpos($e->getMessage(), 'Data too long') !== false || (string) $e->getCode() === '22001') && widenColumnForUpdate($table, $field)) {
+            $executeUpdate($valueToStore);
         } else {
             throw $e;
         }
@@ -10955,7 +10979,9 @@ if (!function_exists('statusbtn_list_payload')) {
         $kb['inline_keyboard'][] = [['text' => '✏️ نام و نمایش دکمه‌ها', 'callback_data' => "{$sb_p}|cat|{$lang}|text", 'style' => 'primary']];
         $kb['inline_keyboard'][] = [['text' => '✏️ ویرایش کپشن ' . ($kind === 'mine' ? 'پیام وضعیت سرویس' : statusbtn_kind_name($kind)), 'callback_data' => "bt_edit|{$lang}|{$sb_tk}", 'style' => 'primary']];
         $kb['inline_keyboard'][] = [['text' => '🔁 ریست همه‌ی دکمه‌ها به پیش‌فرض', 'callback_data' => "{$sb_p}|rstall|{$lang}", 'style' => 'danger']];
-        $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => "bt_edit|{$lang}|{$sb_tk}", 'style' => 'danger']];
+        // back to its message's own screen - or to 🛍's section, when opened there
+        global $from_id;
+        $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => bt_origin_get($from_id, "{$sb_p}|list|{$lang}") ?? "bt_edit|{$lang}|{$sb_tk}", 'style' => 'danger']];
         $kb['inline_keyboard'][] = [['text' => '❌ بستن', 'callback_data' => 'bt_close', 'style' => 'danger']];
         return [$info, json_encode($kb)];
     }
@@ -11198,7 +11224,7 @@ if (!function_exists('statusbtn_detail_payload')) {
         $previewBtn['callback_data'] = 'none';
         $info = "🔘 <b>ویرایش {$d['name']}</b>\n➖➖➖➖➖➖➖➖➖➖\n";
         if ($key === 'changestatus') {
-            $info .= "ℹ️ این دکمه بین «روشن کردن» و «خاموش کردن» جابه‌جا می‌شه (بسته به وضعیت فعلی سرویس). اگه متن سفارشی بذاری، همون متن به‌جای هر دو حالت نشون داده می‌شه.\n";
+            $info .= "ℹ️ این دکمه بین «روشن کردن» و «خاموش کردن» جابه‌جا می‌شه (بسته به وضعیت فعلی سرویس). اگه متن سفارشی بذاری، همون متن به‌جای هر دو حالت نشون داده می‌شه.\n🎨 رنگش هم خودکاره: آبی وقتی سرویس روشنه، قرمز وقتی خاموشه - تا وقتی خودت رنگ دیگه‌ای براش انتخاب نکنی.\n";
         }
         $info .= "👁 پیش‌نمایش زنده 👇";
         $kb = ['inline_keyboard' => []];
@@ -11364,6 +11390,11 @@ if (!function_exists('svc_action_rows')) {
         $keyboardsetting = ['inline_keyboard' => []];
         foreach ($keyboarddate as $sb_key => $keyboardtext) {
             $sb_btn = statusbtn_render($lang, $sb_key, $tx, $keyboardtext['text'], $kind);
+            // 💡 says the service's state by its colour: blue while it is on,
+            // red once it is off - unless 🎨 gave it a colour of its own
+            if ($sb_key === 'changestatus' && !isset(statusbtn_override($lang, $sb_key, $kind)['style'])) {
+                $sb_btn['style'] = $status === 'active' ? 'primary' : 'danger';
+            }
             $sb_btn['callback_data'] = $keyboardtext['callback_data'] . $nameloc['id_invoice'];
             $tempArray[] = $sb_btn;
             if (count($tempArray) == 2 or $keyboardtext['text'] == $tx['users']['status']['btnRefresh']) {
@@ -12878,6 +12909,38 @@ if (!function_exists('bottext_dotted_unset')) {
         $arr = bottext_dotted_unset_walk($arr, explode('.', $key));
     }
 }
+if (!function_exists('bt_myservices_plan')) {
+    // 🛍 سرویس‌های من's 🎨 items in the customer's own order: the list of
+    // services, one service's screen, the screens its buttons open (in the
+    // order of the buttons), then what is only seen when something goes wrong.
+    // key => its bt_section_meta() section. The bot's group screen and the web
+    // panel both read it, so they list the group the same way.
+    function bt_myservices_plan()
+    {
+        return [
+            'users.sell.service_not_available' => 'myservices_list',
+            'users.sell.service_sell' => 'myservices_list',
+            // no group of its own: the bot puts it at the head of the screen's
+            // section by hand, the panel by this line
+            'users.status.infoFull' => 'myservices_screen',
+            'users.subapps.entryBuy' => 'myservices_screen',
+            'users.subapps.listBuy' => 'myservices_screen',
+            'keyboard.infoRefreshed' => 'myservices_actions',
+            'users.status.linksubCaption' => 'myservices_actions',
+            'users.status.subscriptionFile' => 'myservices_actions',
+            'users.status.getConfigHintBuy' => 'myservices_actions',
+            'users.extend.invoiceCreated' => 'myservices_actions',
+            'users.extend.insufficientBalanceAlert' => 'myservices_actions',
+            'users.changeLink.warnchange' => 'myservices_actions',
+            'users.transfer.description' => 'myservices_actions',
+            'users.status.svcUsageUnavailable' => 'myservices_actions',
+            'users.status.svcLocationMore' => 'myservices_actions',
+            'users.status.panelNotConnected' => 'myservices_errors',
+            'users.serviceNotYours' => 'myservices_errors',
+            'users.subapps.noLink' => 'myservices_errors',
+        ];
+    }
+}
 if (!function_exists('bt_section_meta')) {
     // white, non-navigating divider rows inside a bottext group list. Tapping
     // one answers the callback with an alert (no message edit) explaining what
@@ -12937,6 +13000,23 @@ if (!function_exists('bt_section_meta')) {
             'balance_topup' => [
                 'label' => '💳 شارژ کیف پول (کارت‌به‌کارت)',
                 'alert' => 'این بخش پیام «رسید ارسال شد» و پیام تایید نهاییِ شارژ کیف پول (و دکمه‌ی تهیه اشتراک زیرش) رو مدیریت می‌کنه.',
+            ],
+            // 🛍 سرویس‌های من, in the customer's order (keyboard.php)
+            'myservices_list' => [
+                'label' => '1️⃣ لیست سرویس‌ها',
+                'alert' => 'اولین چیزی که مشتری با زدن «🛍 سرویس‌های من» می‌بینه: اگه سرویس نداشته باشه پیام 🚫، اگه داشته باشه پیام ✅ و زیرش لیست سرویس‌هاش.',
+            ],
+            'myservices_screen' => [
+                'label' => '2️⃣ صفحه‌ی هر سرویس',
+                'alert' => 'وقتی مشتری روی یکی از سرویس‌هاش می‌زنه: کپشن وضعیت سرویس، دکمه‌هاش (تمدید، روشن/خاموش، ...) و دو دکمه‌ی 🌐 و 📲 بالای اون‌ها.',
+            ],
+            'myservices_actions' => [
+                'label' => '3️⃣ صفحه‌هایی که دکمه‌ها باز می‌کنن',
+                'alert' => 'پیامی که بعد از زدن هر دکمه‌ی صفحه‌ی سرویس میاد، به همون ترتیب دکمه‌ها: بروزرسانی، لینک اشتراک، دریافت کانفیگ، تمدید، تغییر لینک، انتقال و گزارش مصرف.',
+            ],
+            'myservices_errors' => [
+                'label' => '⚠️ خطاها و پاپ‌آپ‌ها',
+                'alert' => 'پیام‌هایی که فقط وقتی چیزی درست کار نکنه دیده می‌شن: پنل در دسترس نیست، سرویس مال کس دیگه‌ست، یا پنل لینک سابسکریپشن نداده.',
             ],
             'myservices_related' => [
                 'label' => '📊 پیام‌های دیگه‌ی مرتبط',
@@ -14288,6 +14368,12 @@ if (!function_exists('genbtn_hub_payload')) {
     // where 🔙 on a group's hub goes - the same targets the old screens used
     function genbtn_hub_back_cb($alias, $lang, $origin = '')
     {
+        // opened from another 🎨 screen than its usual one: back to that one
+        global $from_id;
+        $opened = bt_origin_get($from_id, "gbs|hub|{$lang}|{$alias}" . ($origin === 'u' ? '|u' : ''));
+        if ($opened !== null) {
+            return $opened;
+        }
         if ($alias === 'ma') {
             return "bt_group|{$lang}|usermgmt";
         }
@@ -18387,6 +18473,86 @@ if (!function_exists('volumepct_tier_detail_payload')) {
 // entry and read by every later draw. A file rather than the user's
 // Processing_value: the element editor's text step wipes that.
 if (!function_exists('cfgcol_back_set')) {
+    // 🎨 screens several others open - a caption that is in its own section
+    // and on a gateway's screen too, one button group under two messages, the
+    // config-button hub - go 🔙 to the one they were opened from. Each 🎨
+    // message remembers the screen it shows (by its message id); opening one
+    // of those screens from another notes that one as its way back. Its own
+    // sub-screens and back buttons never do (bt_origin_track, admin.php).
+    function bt_origin_file($adminId)
+    {
+        return __DIR__ . '/storage/bt_origin_' . preg_replace('/\D/', '', (string) $adminId) . '.json';
+    }
+    function bt_origin_load($adminId)
+    {
+        $m = json_decode((string) @file_get_contents(bt_origin_file($adminId)), true);
+        return ['s' => (array) ($m['s'] ?? []), 'o' => (array) ($m['o'] ?? [])];
+    }
+    function bt_origin_save($adminId, array $m)
+    {
+        // the last screens only - an old message's is never asked for again
+        $m['s'] = array_slice($m['s'], -40, null, true);
+        $f = bt_origin_file($adminId);
+        if (!is_dir(dirname($f))) {
+            @mkdir(dirname($f), 0775, true);
+        }
+        @file_put_contents($f, json_encode($m, JSON_UNESCAPED_UNICODE), LOCK_EX);
+    }
+    // where $target (its opening callback) was opened from, or null - then
+    // the screen's own back applies
+    function bt_origin_get($adminId, $target)
+    {
+        $v = bt_origin_load($adminId)['o'][(string) $target] ?? null;
+        return is_string($v) && $v !== '' ? $v : null;
+    }
+    // The 🎨 screens a message can show and be opened again by - not the
+    // actions on them, which only redraw the same screen
+    function bt_origin_is_screen($data)
+    {
+        return (bool) preg_match('/^(bt_group\|[a-z]{2}\|\w+$|bt_edit\||gbs\|hub\||btact\|cfgcolbuy\||btact\|cfgcol\||topupgw:[a-z]{2}:[a-z0-9]+$|topupgwlist:|topupset:|cfgdeliv\|(list|p)\||volpct\|(hub|sec)\||(status|buy|test|ref)btn\|list\||bt_btnsettings\||btnset_open:|chnbtn_hub:|help_lang:|bt_lang:|btact\|back\|)/', (string) $data);
+    }
+    // the screens that go back the way they were opened
+    function bt_origin_is_target($data)
+    {
+        return (bool) preg_match('/^(bt_edit\|[a-z]{2}\|.+|gbs\|hub\|[a-z]{2}\|\w+(\|u)?|btact\|cfgcolbuy\|[a-z]{2}\|.+|(status|buy|test|ref)btn\|list\|[a-z]{2})$/', (string) $data);
+    }
+    // a tap on a 🎨 message: notes the way back of the screen it opens, and the
+    // screen the message shows from now on. $keyboard is the message's own
+    // (the one the tapped button was on).
+    function bt_origin_track($adminId, $messageId, $data, array $keyboard)
+    {
+        if (!bt_origin_is_screen($data) || (int) $messageId <= 0) {
+            return;
+        }
+        $m = bt_origin_load($adminId);
+        $from = (string) ($m['s'][(string) $messageId] ?? '');
+        if (bt_origin_is_target($data)) {
+            // a 🔙 that leads to it: it is this screen's own parent, not a
+            // place to come back to
+            $isBack = false;
+            $found = false;
+            foreach ($keyboard as $row) {
+                foreach ((array) $row as $btn) {
+                    if (($btn['callback_data'] ?? null) === $data) {
+                        $found = true;
+                        if (preg_match('/^\s*(🔙|↩️)/u', (string) ($btn['text'] ?? ''))) {
+                            $isBack = true;
+                        }
+                    }
+                }
+            }
+            // from 🎨's own list it is its usual way in: its own back
+            $fromHome = (bool) preg_match('/^(btact\|back\||bt_lang:)/', $from);
+            if ($from !== '' && $from !== $data && $found && !$isBack && !$fromHome) {
+                $m['o'][$data] = $from;
+            } elseif ($from === '' || !$found || $fromHome) {
+                // or opened from a screen nothing is known of
+                unset($m['o'][$data]);
+            }
+        }
+        $m['s'][(string) $messageId] = (string) $data;
+        bt_origin_save($adminId, $m);
+    }
     function cfgcol_back_file($adminId)
     {
         return __DIR__ . '/storage/cfgcol_back_' . preg_replace('/\D/', '', (string) $adminId) . '.json';
