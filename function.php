@@ -872,6 +872,18 @@ function direct_pay_gift($paymentReport, $userRow)
     ]), null, 'HTML');
     return $bonus;
 }
+// Extra volume / extra time empty the wallet before the panel is called (the
+// balance and the payment together made the price), so when the panel refuses
+// both go back to the wallet - the same way a failed renewal gives them back.
+function direct_pay_refund($paymentReport, $userRow)
+{
+    $back = round((float) ($userRow['Balance'] ?? 0) + (float) $paymentReport['price'], 2);
+    balance_add($paymentReport['id_user'], $back);
+    $texts = payer_texts($paymentReport['id_user']);
+    $cur = currency_for_user($userRow);
+    $balance = (select("user", "Balance", "id", $paymentReport['id_user'], "select", ['cache' => false]) ?: [])['Balance'] ?? $back;
+    sendmessage($paymentReport['id_user'], sprintf($texts['hardcoded']['extraFailedRefundFn'], money($paymentReport['price'], $cur, false), money($balance, $cur)), null, 'HTML');
+}
 // A payment is settled in the wallet it was asked in. When its payer has
 // switched language since, that wallet is brought into Balance for the
 // settlement and put back after, so every branch of DirectPayment_settle()
@@ -1232,6 +1244,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
                     'parse_mode' => "HTML"
                 ]);
             }
+            direct_pay_refund($Payment_report, $Balance_id);
             return;
         }
         $stmt = $pdo->prepare("INSERT IGNORE INTO service_other (id_user, username,value,type,time,price,output) VALUES (:id_user,:username,:value,:type,:time,:price,:output)");
@@ -1284,7 +1297,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         if ($nameloc['inboundid'] != false) {
             $inboundid = $nameloc['inboundid'];
         }
-        update("user", "Balance", $Balance_Low_user, "id", $nameloc['id_user']);
+        update("user", "Balance", $Balance_Low_user, "id", $Balance_id['id']);
         $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $steppay[0]);
         $data_for_database = json_encode(array(
             'day' => $tmieextra,
@@ -1308,6 +1321,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
                     'parse_mode' => "HTML"
                 ]);
             }
+            direct_pay_refund($Payment_report, $Balance_id);
             return;
         }
         $stmt = $pdo->prepare("INSERT IGNORE INTO service_other (id_user, username,value,type,time,price,output) VALUES (:id_user,:username,:value,:type,:time,:price,:output)");

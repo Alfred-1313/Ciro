@@ -6344,6 +6344,7 @@ Payment tracking code : %s',
                 'departmanGeneral' => '☎️ General section',
         ],
         'hardcoded' => [
+                'extraFailedRefundFn' => '💎 Dear user, the extra volume/time could not be added, so your payment (%s) was returned to your wallet.\n\n💰 Current balance: %s',
                 'topupDiscPercentCaption' => '🎁 Top up your balance and get {value}% extra!',
                 'topupDiscFixedCaption' => '🎁 Every top-up comes with a {value} gift!',
                 'topupDiscGroupPercentCaption' => '🎁 Top up with {group} and get {value}% extra!',
