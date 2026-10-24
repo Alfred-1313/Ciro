@@ -352,4 +352,16 @@ return [
             . "The colour, emoji, side, simple mode and hiding of each warning's button (and the «test account ended» button) used to be shared by Persian and English; each language has its own look now. What was showing was copied to both languages, so nothing changes until you change it.\n"
             . "Only the thresholds (percent, GB, days) stay shared between languages, since they decide when a message is sent.</blockquote>",
     ],
+    [
+        'n' => 23,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>📲 <b>صفحه‌ی باز کردن برنامه: طرح شیشه‌ای تازه</b>\n"
+            . "📍 🎨 شخصی‌سازی ← 🛍 سرویس‌های من ← 🌐 صفحه‌ی باز کردن برنامه؛ وب‌پنل ← پیام‌های ربات\n"
+            . "صفحه‌ای که با زدن یک برنامه در «📲 افزودن به برنامه» باز می‌شود تازه شد: طرح شیشه‌ای با فونت فارسی «استعداد» (از خود سرور لود می‌شود، بدون فیلترشکن و CDN)، آیکون و رنگ مخصوص هر برنامه و انیمیشنِ رفتن اشتراک به داخل برنامه؛ اگر برنامه روی گوشی نبود صفحه همان‌جا نشان می‌دهد و راه‌حل می‌دهد.\n"
+            . "زیر دکمه‌ی دانلود لینک فروشگاه‌ها هست: برای اندروید Google Play، و برای برنامه‌ای که در گوگل‌پلی نیست (مثل v2rayNG و Karing) آخرین نسخه‌ی GitHub؛ برای آیفون App Store؛ و سایت رسمی برنامه. متن‌های جدید صفحه (سرویس، برنامه باز نشد، دوباره امتحان کن و …) هم برای فارسی و انگلیسی جدا قابل ویرایش‌اند.</blockquote>",
+        'en' => "<blockquote>📲 <b>App-opening page: a new glass design</b>\n"
+            . "📍 🎨 Customize → 🛍 My services → 🌐 App-opening page; Web panel → Bot messages\n"
+            . "The page that opens when a customer taps an app in «📲 Add to app» is redesigned: a glass look with the Persian font Estedad (served from your own server - no VPN or CDN needed), each app's own icon and colour, and an animation of the subscription travelling into the app; if the app is not on the phone the page says so right there and shows what to do.\n"
+            . "Under the download button are the stores: Google Play on Android, the latest GitHub release for an app that is not on Google Play (v2rayNG, Karing), the App Store on iPhone, and the app's own site. The new page texts (service, the app didn't open, try again, …) are editable separately for Persian and English.</blockquote>",
+    ],
 ];

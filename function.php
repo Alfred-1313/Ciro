@@ -14150,6 +14150,17 @@ if (!function_exists('subapp_kind')) {
         }
         return 'b';
     }
+    // every text the app-opening web page (subapp.php) shows - they live in the
+    // same 🎨 registry as the bot's messages but are page text, not messages
+    function subapp_page_keys()
+    {
+        $keys = [];
+        foreach (['Opening', 'Button', 'Hint', 'Download', 'Error', 'Service', 'MissingTitle', 'Missing', 'Retry', 'Opened',
+            'StoreCaption', 'StoreGoogle', 'StoreGithub', 'StoreApple', 'StoreSite', 'NoPlatform'] as $k) {
+            $keys[] = 'users.subapps.page' . $k;
+        }
+        return $keys;
+    }
     // the list's apps in its buttons' order - each one's genbtn kb number,
     // the id its link carries, its button's text (users.subapps.*), and where
     // to get it on each kind of phone ('' = not there). 5 is the list's 🔙
@@ -14157,13 +14168,24 @@ if (!function_exists('subapp_kind')) {
     // every button keeps the look its admin gave it
     function subapp_apps()
     {
+        // 'play' Google Play, 'github' the latest release there (the app's own
+        // builds, for one that is not on Google Play), 'ios' the App Store and
+        // 'site' the app's own download page - '' where it has none. 'icon' is
+        // its file in subapp_assets/icons and 'accent' / 'accent2' the colours
+        // of its glow on the page it opens (subapp.php)
         return [
-            0 => ['id' => 'v2rayng', 'name' => 'v2rayNG', 'text' => 'appV2rayng', 'android' => 'https://github.com/2dust/v2rayNG/releases/latest', 'ios' => '', 'other' => 'https://github.com/2dust/v2rayNG/releases/latest'],
-            1 => ['id' => 'hiddify', 'name' => 'Hiddify', 'text' => 'appHiddify', 'android' => 'https://play.google.com/store/apps/details?id=app.hiddify.com', 'ios' => 'https://apps.apple.com/app/id6596777532', 'other' => 'https://github.com/hiddify/hiddify-app/releases/latest'],
-            2 => ['id' => 'v2box', 'name' => 'v2Box', 'text' => 'appV2box', 'android' => 'https://play.google.com/store/apps/details?id=dev.hexasoftware.v2box', 'ios' => 'https://apps.apple.com/app/id6446814690', 'other' => 'https://apps.apple.com/app/id6446814690'],
-            3 => ['id' => 'streisand', 'name' => 'Streisand', 'text' => 'appStreisand', 'android' => '', 'ios' => 'https://apps.apple.com/app/id6450534064', 'other' => 'https://apps.apple.com/app/id6450534064'],
-            4 => ['id' => 'happ', 'name' => 'Happ', 'text' => 'appHapp', 'android' => 'https://play.google.com/store/apps/details?id=com.happproxy', 'ios' => 'https://apps.apple.com/app/id6504287215', 'other' => 'https://www.happ.su/'],
-            6 => ['id' => 'karing', 'name' => 'Karing', 'text' => 'appKaring', 'android' => 'https://karing.app/download', 'ios' => 'https://apps.apple.com/app/id6472431552', 'other' => 'https://karing.app/download'],
+            0 => ['id' => 'v2rayng', 'name' => 'v2rayNG', 'text' => 'appV2rayng', 'icon' => 'v2rayng', 'accent' => '#2467b8', 'accent2' => '#5aa9ff',
+                'play' => '', 'github' => 'https://github.com/2dust/v2rayNG/releases/latest', 'ios' => '', 'site' => ''],
+            1 => ['id' => 'hiddify', 'name' => 'Hiddify', 'text' => 'appHiddify', 'icon' => 'hiddify', 'accent' => '#3f57d8', 'accent2' => '#8aa2ff',
+                'play' => 'https://play.google.com/store/apps/details?id=app.hiddify.com', 'github' => 'https://github.com/hiddify/hiddify-app/releases/latest', 'ios' => 'https://apps.apple.com/app/id6596777532', 'site' => ''],
+            2 => ['id' => 'v2box', 'name' => 'v2Box', 'text' => 'appV2box', 'icon' => 'v2box', 'accent' => '#0f766e', 'accent2' => '#34d3b4',
+                'play' => 'https://play.google.com/store/apps/details?id=dev.hexasoftware.v2box', 'github' => '', 'ios' => 'https://apps.apple.com/app/id6446814690', 'site' => ''],
+            3 => ['id' => 'streisand', 'name' => 'Streisand', 'text' => 'appStreisand', 'icon' => 'streisand', 'accent' => '#c026a3', 'accent2' => '#38bdf8',
+                'play' => '', 'github' => '', 'ios' => 'https://apps.apple.com/app/id6450534064', 'site' => ''],
+            4 => ['id' => 'happ', 'name' => 'Happ', 'text' => 'appHapp', 'icon' => 'happ', 'accent' => '#4b5d78', 'accent2' => '#94a3b8',
+                'play' => 'https://play.google.com/store/apps/details?id=com.happproxy', 'github' => '', 'ios' => 'https://apps.apple.com/app/id6504287215', 'site' => 'https://www.happ.su/'],
+            6 => ['id' => 'karing', 'name' => 'Karing', 'text' => 'appKaring', 'icon' => 'karing', 'accent' => '#5b3df5', 'accent2' => '#22c7e8',
+                'play' => '', 'github' => 'https://github.com/KaringX/karing/releases/latest', 'ios' => 'https://apps.apple.com/app/id6472431552', 'site' => 'https://karing.app/download'],
         ];
     }
     // the list's 🔙 بازگشت به منوی قبلی (genbtn kb)
@@ -21251,8 +21273,7 @@ if (!function_exists('bt_nosticker_keys')) {
             'users.serviceNotYours',
             // 🌐 / 📲's buttons, their popup and the page an app opens through
             'users.subapps.entryBuy',
-            'users.subapps.noLink', 'users.subapps.pageOpening', 'users.subapps.pageButton', 'users.subapps.pageHint',
-            'users.subapps.pageDownload', 'users.subapps.pageError',
+            'users.subapps.noLink', ...subapp_page_keys(),
             'users.affiliates.purchaseCommissionInfo',
             // 🎁 کانفیگ رایگان's status lines and service name, the same
             'users.affiliates.rewardStatusAuto',
