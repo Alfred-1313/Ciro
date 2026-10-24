@@ -278,4 +278,16 @@ return [
             . "Russian, Chinese and Turkmen are fully removed from the bot and the web panel: their language files, the buttons and choices for picking a language, the phone dial codes, the default currency and the time zone of each.\n"
             . "Users who were on one of them move to Persian automatically (the language every untranslated text already falls back to). Settings saved for those languages are left in place and are not shown anywhere.</blockquote>",
     ],
+    [
+        'n' => 17,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>💡 <b>رنگ دکمهٔ روشن/خاموش: سبز، قرمز، آبی</b>\n"
+            . "📍 هر ۵ جا: پیام خرید، اکانت تست، هدیهٔ رفرال، صفحهٔ ساعتی و 🛍 سرویس‌های من\n"
+            . "🟢 سبز وقتی اشتراک روشن است، 🔴 قرمز وقتی خاموش شد (یا موجودی اشتراک ساعتی تمام شد) و 🔵 آبی تا وقتی هنوز به کانفیگ وصل نشده (OnHold). پیام‌های تحویل (خرید، تست، هدیه) هم حالا وضعیت واقعی سرویس را از پنل می‌پرسند، پس سرویس OnHold همان لحظهٔ اول آبی است.\n"
+            . "رنگی که از 🎨 برای این دکمه انتخاب کرده باشی همان می‌ماند.</blockquote>",
+        'en' => "<blockquote>💡 <b>On/off button colour: green, red, blue</b>\n"
+            . "📍 All 5 places: purchase message, test account, referral gift, hourly screen and 🛍 My services\n"
+            . "🟢 Green while the subscription is on, 🔴 red once it is off (or an hourly subscription ran out of balance) and 🔵 blue while it has not connected to the config yet (OnHold). The delivery messages (purchase, test, gift) now ask the panel for the real state too, so an OnHold service is blue from the first moment.\n"
+            . "A colour you picked for this button in 🎨 still wins.</blockquote>",
+    ],
 ];

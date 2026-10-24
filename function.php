@@ -11220,7 +11220,7 @@ if (!function_exists('statusbtn_detail_payload')) {
         $previewBtn['callback_data'] = 'none';
         $info = "🔘 <b>ویرایش {$d['name']}</b>\n➖➖➖➖➖➖➖➖➖➖\n";
         if ($key === 'changestatus') {
-            $info .= "ℹ️ این دکمه بین «روشن کردن» و «خاموش کردن» جابه‌جا می‌شه (بسته به وضعیت فعلی سرویس). اگه متن سفارشی بذاری، همون متن به‌جای هر دو حالت نشون داده می‌شه.\n🎨 رنگش هم خودکاره: آبی وقتی سرویس روشنه، قرمز وقتی خاموشه - تا وقتی خودت رنگ دیگه‌ای براش انتخاب نکنی.\n";
+            $info .= "ℹ️ این دکمه بین «روشن کردن» و «خاموش کردن» جابه‌جا می‌شه (بسته به وضعیت فعلی سرویس). اگه متن سفارشی بذاری، همون متن به‌جای هر دو حالت نشون داده می‌شه.\n🎨 رنگش هم خودکاره: 🟢 سبز وقتی سرویس روشنه، 🔴 قرمز وقتی خاموشه و 🔵 آبی وقتی هنوز وصل نشده (OnHold) - تا وقتی خودت رنگ دیگه‌ای براش انتخاب نکنی.\n";
         }
         $info .= "👁 پیش‌نمایش زنده 👇";
         $kb = ['inline_keyboard' => []];
@@ -11386,10 +11386,11 @@ if (!function_exists('svc_action_rows')) {
         $keyboardsetting = ['inline_keyboard' => []];
         foreach ($keyboarddate as $sb_key => $keyboardtext) {
             $sb_btn = statusbtn_render($lang, $sb_key, $tx, $keyboardtext['text'], $kind);
-            // 💡 says the service's state by its colour: blue while it is on,
-            // red once it is off - unless 🎨 gave it a colour of its own
+            // 💡 says the service's state by its colour: green while it is on,
+            // red once it is off, blue while it waits for its first connection
+            // (on_hold) - unless 🎨 gave it a colour of its own
             if ($sb_key === 'changestatus' && !isset(statusbtn_override($lang, $sb_key, $kind)['style'])) {
-                $sb_btn['style'] = $status === 'active' ? 'primary' : 'danger';
+                $sb_btn['style'] = $status === 'active' ? 'success' : ($status === 'on_hold' ? 'primary' : 'danger');
             }
             $sb_btn['callback_data'] = $keyboardtext['callback_data'] . $nameloc['id_invoice'];
             $tempArray[] = $sb_btn;
@@ -11435,15 +11436,22 @@ if (!function_exists('delivery_action_rows')) {
         }
         $userRow = select("user", "*", "id", $userId, "select");
         $tx = lang_tab_texts($lang);
-        // a service that has just been made is on
-        $rows = svc_action_rows($kind, $inv, $panel, 'active', '', $userRow, $tx);
+        // a service that has just been made is on - unless the panel made it
+        // wait for its first connection (on_hold), which 💡 shows in blue
+        $status = 'active';
+        $sub = (string) $subLink;
         if (!in_array($panel['type'] ?? '', ['ibsng', 'mikrotik'], true)) {
-            $sub = (string) $subLink;
+            global $ManagePanel;
+            $data = is_object($ManagePanel) ? $ManagePanel->DataUser($inv['Service_location'], $inv['username']) : [];
+            if (in_array($data['status'] ?? '', ['active', 'on_hold', 'disabled', 'limited', 'expired'], true)) {
+                $status = $data['status'];
+            }
             if (strpos($sub, 'http') !== 0 && ($panel['type'] ?? '') !== 'WGDashboard') {
-                global $ManagePanel;
-                $data = is_object($ManagePanel) ? $ManagePanel->DataUser($inv['Service_location'], $inv['username']) : [];
                 $sub = (string) ($data['subscription_url'] ?? '');
             }
+        }
+        $rows = svc_action_rows($kind, $inv, $panel, $status, '', $userRow, $tx);
+        if (!in_array($panel['type'] ?? '', ['ibsng', 'mikrotik'], true)) {
             array_splice($rows, 0, 0, subapp_entry_rows($pair, $lang, $tx, $sub, $inv['id_invoice'], true));
         }
         return $rows;
