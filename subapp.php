@@ -130,22 +130,24 @@ $sa_min = $sa_look === 'minimal';
 :root{
   --bg:#0a0e16;--glass:rgba(255,255,255,.065);--line:rgba(255,255,255,.12);--text:#eef2fb;--muted:#a3aec4;--chip:rgba(255,255,255,.07);
   --accent:<?= $sa_app['accent'] ?>;--accent2:<?= $sa_app['accent2'] ?>;--warn:#f5b544;--ok:#3ddc97;
-  --glowA:<?= $sa_mix($sa_app['accent'], '#0a0e16', .38) ?>;--glowB:<?= $sa_mix($sa_app['accent2'], '#0a0e16', .26) ?>;
+  --glowA:<?= $sa_mix($sa_app['accent'], '#0a0e16', .38) ?>;--glowB:<?= $sa_mix($sa_app['accent2'], '#0a0e16', .26) ?>;--glowC:<?= $sa_mix($sa_app['accent'], '#0a0e16', .16) ?>;
+  --cardline:rgba(255,255,255,.12);--sat:1;
   --shadow:0 28px 60px -26px rgba(0,0,0,.65);
   --dx:<?= $sa_rtl ? '-1' : '1' ?>;
   --out:cubic-bezier(.23,1,.32,1);--inout:cubic-bezier(.77,0,.175,1);
 }
 @media (prefers-color-scheme:light){:root{
   --bg:#f1f4fa;--glass:rgba(255,255,255,.74);--line:rgba(16,24,40,.1);--text:#101828;--muted:#566277;--chip:rgba(16,24,40,.05);--warn:#b86e00;--ok:#0f9d63;
-  --glowA:<?= $sa_mix($sa_app['accent'], '#f1f4fa', .24) ?>;--glowB:<?= $sa_mix($sa_app['accent2'], '#f1f4fa', .18) ?>;
-  --shadow:0 28px 60px -30px rgba(16,24,40,.35);
+  --glowA:<?= $sa_mix($sa_app['accent'], '#f1f4fa', .52) ?>;--glowB:<?= $sa_mix($sa_app['accent2'], '#f1f4fa', .46) ?>;--glowC:<?= $sa_mix($sa_app['accent'], '#f1f4fa', .3) ?>;
+  --glass:rgba(255,255,255,.5);--cardline:rgba(255,255,255,.85);--sat:1.6;
+  --shadow:0 28px 60px -26px rgba(16,24,40,.38),inset 0 1px 0 rgba(255,255,255,.9);
 }}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom));color:var(--text);
   font:400 16px/1.8 Estedad,system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
-  background:radial-gradient(70% 42% at 12% 0,var(--glowA) 0,transparent 70%),radial-gradient(60% 38% at 100% 32%,var(--glowB) 0,transparent 72%),var(--bg);background-attachment:fixed}
-.card{width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:30px 22px 22px;border-radius:30px;background:var(--glass);border:1px solid var(--line);box-shadow:var(--shadow);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
+  background:radial-gradient(75% 46% at 10% 0,var(--glowA) 0,transparent 72%),radial-gradient(62% 40% at 100% 34%,var(--glowB) 0,transparent 74%),radial-gradient(80% 36% at 30% 100%,var(--glowC) 0,transparent 76%),var(--bg);background-attachment:fixed}
+.card{width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:30px 22px 22px;border-radius:30px;background:var(--glass);border:1px solid var(--cardline);box-shadow:var(--shadow);-webkit-backdrop-filter:blur(22px) saturate(var(--sat));backdrop-filter:blur(22px) saturate(var(--sat))}
 .err{padding:34px 22px}
 .err p{margin:0;font-size:15.5px;color:var(--muted)}
 

@@ -400,4 +400,14 @@ return [
             . "Everything about «📲 Add to app» is now in one place, like its section in 🎨 Customize: the look of the page (Glass or Minimal, with previews of «opening / app not found / opened»), the buttons under a service, each app's button in the list, the list message, the words of the app-opening page (download and the stores too) and the popups, with stickers and reactions. Separate for each language and one for all 5 places.\n"
             . "A «Reset» button puts this whole section back to its defaults for that language (in the bot, «🔁 Reset all to default» now resets the page's look too). The hourly subscription, referral and service-look pages link to it.</blockquote>",
     ],
+    [
+        'n' => 27,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>🖼 <b>صفحه‌ی باز کردن برنامه: طرح A در حالت روشن واقعاً شیشه‌ای شد</b>\n"
+            . "📍 🎨 شخصی‌سازی ← 📲 افزودن سرویس به برنامه ← «🖼 طرح صفحه»\n"
+            . "روی گوشی‌هایی که حالت روشن دارند، طرح A تقریباً سفید بود و شبیه B دیده می‌شد. حالا رنگ خود برنامه مثل یک شفق روی صفحه پخش می‌شود و کارت شیشه‌ی مات روی آن می‌نشیند؛ B همچنان ساده و یک‌دست می‌ماند. حالت تیره تغییری نکرد.</blockquote>",
+        'en' => "<blockquote>🖼 <b>App-opening page: look A is now truly glass in light mode</b>\n"
+            . "📍 🎨 Customize → 📲 Add service to app → «🖼 The look of the page»\n"
+            . "On phones in light mode, look A was almost white and looked like B. The app's own colour now washes across the page like an aurora with a frosted glass card over it; B stays plain and flat. Dark mode did not change.</blockquote>",
+    ],
 ];
