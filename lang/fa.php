@@ -27,7 +27,7 @@ return array (
       'myservices_screenBtns' => 'دکمه‌های همین صفحه (💊 تمدید، 💡 روشن/خاموش، ...) توی «🔘 دکمه‌های وضعیت سرویس» تنظیم می‌شن',
       'myservices_actions' => '3️⃣ صفحه‌هایی که دکمه‌ها باز می‌کنن',
       'myservices_errors' => '⚠️ خطاها و پاپ‌آپ‌ها',
-      'subapps_page' => '🌐 صفحه‌ی باز کردن برنامه (هر ۴ بخش)',
+      'subapps_page' => '🌐 صفحه‌ی باز کردن برنامه (همه‌ی بخش‌ها)',
     ),
     // ⏱'s screen is only an index: each of these opens one sub-screen, whose
     // items are the bottext items with that 'group'
@@ -463,19 +463,19 @@ return array (
       // (subapp_kind). The popup and the page an app opens through are one
       // for all four, so they are here only
       array (
-        'label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (خرید)',
+        'label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (همه‌ی بخش‌ها)',
         'key' => 'users.subapps.entryBuy',
         'group' => 'myservices',
         'section' => 'subapps',
       ),
       array (
-        'label' => '📲 لیست برنامه‌ها + دکمه‌هاش (خرید)',
+        'label' => '📲 لیست برنامه‌ها + دکمه‌هاش (همه‌ی بخش‌ها)',
         'key' => 'users.subapps.listBuy',
         'group' => 'myservices',
         'section' => 'subapps',
       ),
       array (
-        'label' => '⚠️ پاپ‌آپ «لینک سابسکریپشن در دسترس نیست» (هر ۴ بخش)',
+        'label' => '⚠️ پاپ‌آپ «لینک سابسکریپشن در دسترس نیست» (همه‌ی بخش‌ها)',
         'key' => 'users.subapps.noLink',
         'group' => 'myservices',
         'section' => 'subapps',
@@ -591,37 +591,6 @@ return array (
       array (
         'label' => '🎯 پیام انتخاب پنل (اکانت تست)',
         'key' => 'textbot.selectLocationTest',
-      ),
-      // a test account's 🌐 / 📲 and its app list - no group either: their
-      // rows are inside 🔑 تنظیم اکانت تست
-      'test_subentry' =>
-      array (
-        'label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (اکانت تست)',
-        'key' => 'users.subapps.entryTest',
-      ),
-      'test_sublist' =>
-      array (
-        'label' => '📲 لیست برنامه‌ها + دکمه‌هاش (اکانت تست)',
-        'key' => 'users.subapps.listTest',
-      ),
-      // the 🌐 / 📲 under the message that delivers a new service's config - no
-      // group either: its row is inside 🛍️ پیام بعد از خرید
-      'buymsg_subentry' =>
-      array (
-        'label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (پیام خرید)',
-        'key' => 'users.subapps.entryBuyMsg',
-      ),
-      // and under the test account's and the 🎁 referral gift's delivery
-      // messages - their rows are inside those messages' own screens
-      'testmsg_subentry' =>
-      array (
-        'label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (پیام اکانت تست)',
-        'key' => 'users.subapps.entryTestMsg',
-      ),
-      'refmsg_subentry' =>
-      array (
-        'label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (پیام کانفیگ هدیه)',
-        'key' => 'users.subapps.entryRefMsg',
       ),
       // reached from 🌐 تنظیمات تغییر زبان کاربر, which owns everything about
       // the picker; no 'group' so they get no second entry point of their own
@@ -1050,8 +1019,6 @@ return array (
       'affrw_21' => array ('label' => '☑️ خط وضعیت: منتظر انتخاب نام', 'key' => 'users.affiliates.rewardStatusNaming', 'group' => 'referral'),
       'affrw_22' => array ('label' => '🔄 پیام «این سرویس تمدید نمی‌شه»', 'key' => 'users.affiliates.rewardNoRenew', 'group' => 'referral'),
       'affrw_23' => array ('label' => '🗑 اعلان پاک شدن کانفیگ تمام‌شده', 'key' => 'users.affiliates.rewardDeleted', 'group' => 'referral'),
-      'affrw_27' => array ('label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (کانفیگ هدیه)', 'key' => 'users.subapps.entryRef', 'group' => 'referral', 'section' => 'subapps'),
-      'affrw_28' => array ('label' => '📲 لیست برنامه‌ها + دکمه‌هاش (کانفیگ هدیه)', 'key' => 'users.subapps.listRef', 'group' => 'referral', 'section' => 'subapps'),
       // ---- ⏱ اکانت ساعتی (payg.php) - 'live': the row shows the button as this tab has it ----
       // ⏱'s 🎨 screen is an index (bottext.paygSubs): each 'group' is one sub-screen
       'payg_1' => array ('label' => '🔐 صفحه‌ی «معمولی یا ساعتی؟»', 'key' => 'users.payg.typeChoice', 'group' => 'paygbuy'),
@@ -1095,8 +1062,6 @@ return array (
       'payg_81' => array ('label' => '⛔️ پاپ‌آپ «به خاطر موجودی متوقفه»', 'key' => 'users.payg.pauseStopped', 'group' => 'paygsvc'),
       'payg_82' => array ('label' => '💰 پاپ‌آپ «برای روشن کردن موجودی کمه»', 'key' => 'users.payg.resumeLowBalance', 'group' => 'paygsvc'),
       'payg_83' => array ('label' => '❌ پاپ‌آپ «ارتباط با سرور برقرار نشد»', 'key' => 'users.payg.pauseFailed', 'group' => 'paygsvc'),
-      'payg_72' => array ('label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه', 'key' => 'users.subapps.entryPayg', 'group' => 'paygsvc', 'section' => 'subapps'),
-      'payg_73' => array ('label' => '📲 لیست برنامه‌ها + دکمه‌هاش', 'key' => 'users.subapps.listPayg', 'group' => 'paygsvc', 'section' => 'subapps'),
       'payg_26' => array ('label' => '⏱ خط قیمت هر ساعت', 'key' => 'users.payg.rateHour', 'group' => 'paygrate'),
       'payg_27' => array ('label' => '⏱ خط قیمت هر دقیقه', 'key' => 'users.payg.rateMinute', 'group' => 'paygrate'),
       'payg_28' => array ('label' => '⏱ خط وقتی زمان هزینه نداره', 'key' => 'users.payg.rateTimeFree', 'group' => 'paygrate'),
@@ -2787,17 +2752,8 @@ n2  = نماینده با قابلیت های بیشتر',
     'subapps' =>
     array (
       'entryBuy' => '🌐 ورود به سابسکریپشن',
-      'entryTest' => '🌐 ورود به سابسکریپشن',
-      'entryBuyMsg' => '🌐 ورود به سابسکریپشن',
-      'entryTestMsg' => '🌐 ورود به سابسکریپشن',
-      'entryRefMsg' => '🌐 ورود به سابسکریپشن',
-      'entryRef' => '🌐 ورود به سابسکریپشن',
-      'entryPayg' => '🌐 ورود به سابسکریپشن',
       'appsBtn' => '📲 افزودن به برنامه',
       'listBuy' => "📲 <b>افزودن سرویس به برنامه</b>\n➖➖➖➖➖➖➖➖➖➖\n👤 نام سرویس: <code>{username}</code>\n\n<blockquote>1️⃣ برنامه‌ات رو از دکمه‌های پایین انتخاب کن\n2️⃣ برنامه باز می‌شه و سابسکریپشن خودکار بهش اضافه می‌شه\n3️⃣ توی برنامه یه سرور انتخاب کن و وصل شو ✅</blockquote>\n<i>💡 برنامه رو نداری؟ توی صفحه‌ای که باز می‌شه، لینک دانلودش هست.</i>",
-      'listTest' => "📲 <b>افزودن اکانت تست به برنامه</b>\n➖➖➖➖➖➖➖➖➖➖\n👤 نام سرویس: <code>{username}</code>\n\n<blockquote>1️⃣ برنامه‌ات رو از دکمه‌های پایین انتخاب کن\n2️⃣ برنامه باز می‌شه و سابسکریپشن خودکار بهش اضافه می‌شه\n3️⃣ توی برنامه یه سرور انتخاب کن و وصل شو ✅</blockquote>\n<i>💡 برنامه رو نداری؟ توی صفحه‌ای که باز می‌شه، لینک دانلودش هست.</i>",
-      'listRef' => "📲 <b>افزودن کانفیگ هدیه به برنامه</b>\n➖➖➖➖➖➖➖➖➖➖\n👤 نام سرویس: <code>{username}</code>\n\n<blockquote>1️⃣ برنامه‌ات رو از دکمه‌های پایین انتخاب کن\n2️⃣ برنامه باز می‌شه و سابسکریپشن خودکار بهش اضافه می‌شه\n3️⃣ توی برنامه یه سرور انتخاب کن و وصل شو ✅</blockquote>\n<i>💡 برنامه رو نداری؟ توی صفحه‌ای که باز می‌شه، لینک دانلودش هست.</i>",
-      'listPayg' => "📲 <b>افزودن اشتراک ساعتی به برنامه</b>\n➖➖➖➖➖➖➖➖➖➖\n👤 نام سرویس: <code>{username}</code>\n\n<blockquote>1️⃣ برنامه‌ات رو از دکمه‌های پایین انتخاب کن\n2️⃣ برنامه باز می‌شه و سابسکریپشن خودکار بهش اضافه می‌شه\n3️⃣ توی برنامه یه سرور انتخاب کن و وصل شو ✅</blockquote>\n<i>💡 برنامه رو نداری؟ توی صفحه‌ای که باز می‌شه، لینک دانلودش هست.</i>",
       'appV2rayng' => '📱 v2rayNG',
       'appHiddify' => '📱 Hiddify',
       'appV2box' => '📱 v2Box',
@@ -9400,8 +9356,8 @@ nowpayments.io
     'svcMsgBtnsSub' => 'زیر پیامی که کانفیگ را برای مشتری می‌فرستد (خرید، اکانت تست، هدیهٔ رفرال). همان دکمه‌های «سرویس‌های من» است ولی تنظیم‌هایش (نام، رنگ، ترتیب، پنهان‌بودن) برای هر پیام جداست و با آن صفحه یکی نیست. دکمه‌ای که برای نوع پنل یا تنظیمات فروشگاه کاربرد ندارد، اینجا هم نمی‌آید.',
     'svcBtnOrder' => 'ترتیب',
     'svcBtnShopOff' => 'در تنظیمات فروشگاه خاموش است',
-    'svcBuyBtnsPair' => 'دکمه‌های «ورود به سابسکریپشن» و «افزودن به برنامه» که بالای این دکمه‌ها می‌آیند، برای همین پیام جدا تنظیم می‌شوند:',
-    'svcBuyBtnsPairLink' => 'ظاهر دکمه‌ها ← همین پیام',
+    'svcBuyBtnsPair' => 'دکمه‌های «ورود به سابسکریپشن» و «افزودن به برنامه» که بالای این دکمه‌ها می‌آیند، یکی‌اند برای همه‌ی بخش‌ها (پیام خرید، تست، هدیه، صفحه‌ی ساعتی و سرویس‌های من) و برای هر زبان جدا تنظیم می‌شوند:',
+    'svcBuyBtnsPairLink' => 'ظاهر دکمه‌ها ← سابسکریپشن و افزودن به برنامه',
     'svcBtnOrderInvalid' => 'ترتیب هر دکمه باید عددی بین ۱ تا ۹۹ باشد',
     'svcDelivery' => 'نحوه‌ی نمایش کانفیگ',
     'svcDeliverySub' => 'برای هر پنل: حالت ۱ = یک پیام کامل (با QR اگر روشن باشد)، حالت ۲ = صفحه‌ی انتخاب کانفیگ',
@@ -9726,6 +9682,7 @@ nowpayments.io
     'menuHint' => 'اسم دکمه‌ها را در «متن‌های ربات» هم می‌توانی عوض کنی؛ «اسم سفارشی» اینجا روی آن اولویت دارد.',
     'btnPageTitle' => 'دکمه‌ها',
     'btnPageLede' => 'بقیه‌ی دکمه‌های ربات (تأیید، انصراف، بستن، برگشت، دکمه‌های زیر پیام‌ها) برای هر زبان',
+    'btnAllPlaces' => 'یک تنظیم برای همه‌ی بخش‌ها (پیام خرید، تست، هدیه، صفحه‌ی ساعتی و سرویس‌های من)؛ برای هر زبان جدا.',
     'btnSharedLook' => 'رنگ و ایموجی این دکمه‌ها بین همه‌ی زبان‌ها مشترک است؛ فقط متنشان برای هر زبان جداست.',
     'btnTextOnly' => 'تلگرام برای این دکمه فقط متن را می‌پذیرد.',
     'btnSimple' => 'ساده',

@@ -2409,11 +2409,7 @@ function keyboard_list_text($lang, $groupFilter = null)
         // second row here would make their back button ambiguous
         'bottext.langPickerCaption',
         // opened from inside 📯 پیام عضویت اجباری کانال, whose back it uses
-        'users.channel.left_channel',
-        // the test account's 🌐 / 📲 and its app list: inside 🔑 تنظیم اکانت تست
-        'users.subapps.entryTest', 'users.subapps.listTest',
-        // the pairs under the delivery messages: inside each message's own screen
-        'users.subapps.entryBuyMsg', 'users.subapps.entryTestMsg', 'users.subapps.entryRefMsg'];
+        'users.channel.left_channel'];
     $bt_can_react_keys = bt_react_keys();
     $bt_list_setting = select("setting", "*", null, null, "select");
     $bt_list_edit = json_decode((string) ($bt_list_setting['text_edit'] ?? ''), true);
@@ -2597,6 +2593,20 @@ function keyboard_list_text($lang, $groupFilter = null)
                 $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['Admin']['LangScope']['panelStyleBtn'], 'callback_data' => "btnstyle_kindhub:panel:{$lang}", 'style' => 'primary']];
                 $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['Admin']['LangScope']['categoryStyleBtn'], 'callback_data' => "btnstyle_kindhub:category:{$lang}", 'style' => 'primary']];
                 $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['Admin']['LangScope']['productStyleBtn'], 'callback_data' => "btnstyle_kindhub:product:{$lang}", 'style' => 'primary']];
+            }
+        }
+        // 🌐 / 📲 and the app list are ONE setting for every place that shows
+        // them; the screens that show them link to it
+        if ($groupFilter === 'referral' || $groupFilter === 'paygsvc') {
+            $keyboard_text['inline_keyboard'][] = [['text' => bt_section_meta('subapps')['label'], 'callback_data' => 'bt_sep|subapps']];
+            foreach ([['users.subapps.entryBuy', '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (همه‌ی بخش‌ها)'], ['users.subapps.listBuy', '📲 لیست برنامه‌ها + دکمه‌هاش (همه‌ی بخش‌ها)']] as [$bt_sa_key, $bt_sa_label]) {
+                $bt_sa_live = $bt_sa_key === 'users.subapps.entryBuy' ? genbtn_row_label($bt_sa_key, $lang) : null;
+                list($bt_sa_text, $bt_sa_style) = $bt_decorate($bt_sa_key, $bt_sa_live !== null ? $bt_sa_live[0] : $bt_sa_label);
+                $bt_sa_btn = ['text' => $bt_sa_text, 'callback_data' => "bt_edit|$lang|$bt_sa_key", 'style' => ($bt_sa_style !== '' ? $bt_sa_style : 'primary')];
+                if ($bt_sa_live !== null && $bt_sa_live[1] !== '') {
+                    $bt_sa_btn['icon_custom_emoji_id'] = $bt_sa_live[1];
+                }
+                $keyboard_text['inline_keyboard'][] = [$bt_sa_btn];
             }
         }
         if ($groupFilter === 'referral') {

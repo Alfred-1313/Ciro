@@ -1229,8 +1229,11 @@ if (!function_exists('bottext_item_menu_payload')) {
         if ($bt_key === 'users.status.subscriptionFile') {
             $bt_extra_note = "\nℹ️ این پیام فقط برای پنل‌های نوع WireGuard وقتی نشون داده می‌شه که کاربر روی «🔗 لینک اشتراک» بزنه - به‌جای عکس QR، یه فایل کانفیگ فرستاده می‌شه.\n";
         }
-        if (in_array($bt_key, ['users.subapps.listBuy', 'users.subapps.listTest', 'users.subapps.listRef', 'users.subapps.listPayg'], true)) {
-            $bt_extra_note = "\nℹ️ این پیام وقتی میاد که مشتری روی «📲 افزودن به برنامه» بالای صفحه‌ی سرویسش بزنه: صفحه‌ی سرویس برداشته می‌شه و این لیست جاش میاد.\n💡 توکن: <code>{username}</code> (نام سرویس).\n💡 دکمه‌های برنامه‌ها و ↪️ بازگشت از پایین همین صفحه تنظیم می‌شن. متن صفحه‌ای که هر برنامه رو باز می‌کنه برای هر ۴ بخش یکیه: «🛍 سرویس‌های من» ← «🌐 صفحه‌ی باز کردن برنامه».\n";
+        if ($bt_key === 'users.subapps.entryBuy') {
+            $bt_extra_note = "\nℹ️ یک تنظیم برای ۵ جا: پیام بعد از خرید، پیام اکانت تست، پیام کانفیگ هدیه‌ی دعوت، صفحه‌ی اشتراک ساعتی و صفحه‌ی هر سرویس توی «🛍 سرویس‌های من». هرچی اینجا (برای همین زبان) عوض کنی همه‌ی اون‌ها می‌گیرن؛ زبان دیگه تنظیم جدا داره.\n";
+        }
+        if ($bt_key === 'users.subapps.listBuy') {
+            $bt_extra_note = "\nℹ️ این پیام وقتی میاد که مشتری روی «📲 افزودن به برنامه» بالای صفحه‌ی سرویسش بزنه: صفحه‌ی سرویس برداشته می‌شه و این لیست جاش میاد.\n📌 یک لیست برای ۵ جا: خرید، اکانت تست، هدیه‌ی دعوت، اشتراک ساعتی و «🛍 سرویس‌های من». هرچی اینجا (برای همین زبان) عوض کنی همه‌ی اون‌ها می‌گیرن؛ زبان دیگه تنظیم جدا داره.\n💡 توکن: <code>{username}</code> (نام سرویس).\n💡 دکمه‌های برنامه‌ها و ↪️ بازگشت از پایین همین صفحه تنظیم می‌شن. متن صفحه‌ای که هر برنامه رو باز می‌کنه هم برای همه یکیه: «🛍 سرویس‌های من» ← «🌐 صفحه‌ی باز کردن برنامه».\n";
         }
         if (in_array($bt_key, ['users.subapps.pageOpening', 'users.subapps.pageButton', 'users.subapps.pageHint', 'users.subapps.pageDownload', 'users.subapps.pageError'], true)) {
             $bt_extra_note = "\nℹ️ این متن پیام ربات نیست؛ توی صفحه‌ی وبیه که با زدن یه برنامه از لیست «📲 افزودن به برنامه» باز می‌شه - برای خرید، اکانت تست، هدیه‌ی دعوت و اشتراک ساعتی یکیه.\n💡 <code>{app}</code> = اسم همون برنامه. فقط متن ساده نشون داده می‌شه (بدون بولد و لینک).\n";
@@ -1239,7 +1242,7 @@ if (!function_exists('bottext_item_menu_payload')) {
             $bt_extra_note = "\nℹ️ پاپ‌آپی که وقتی مشتری روی «💡 روشن/خاموش» سرویسی بزنه که هنوز بهش وصل نشده (حالت OnHold) نشون داده می‌شه - برای خرید، اکانت تست، هدیه‌ی دعوت و «🛍 سرویس‌های من» یکیه. توی اشتراک ساعتی همین حالت پاپ‌آپ جدا داره: «⏸ هنوز وصل نشدی» توی ⏱.\n";
         }
         if ($bt_key === 'users.subapps.noLink') {
-            $bt_extra_note = "\nℹ️ پاپ‌آپی که وقتی مشتری روی «📲 افزودن به برنامه»ِ سرویسی بزنه که دیگه فعال نیست نشون داده می‌شه - برای هر ۴ بخش یکیه.\n";
+            $bt_extra_note = "\nℹ️ پاپ‌آپی که وقتی مشتری روی «📲 افزودن به برنامه»ِ سرویسی بزنه که دیگه فعال نیست نشون داده می‌شه - برای همه‌ی بخش‌ها یکیه.\n";
         }
         if ($bt_key === 'users.account.infoSimple') {
             $bt_extra_note = "\nℹ️ کپشن صفحه‌ی 👤 حساب کاربریه.\n"
@@ -1297,11 +1300,13 @@ if (!function_exists('bottext_item_menu_payload')) {
         // used by the "related item" rows (🗂/📦/⏰ etc.) to answer for a
         // DIFFERENT key's own customization state, the same way the main
         // bottext home list already does for its group-launcher rows
-        // a delivery message's service buttons and its 🌐 / 📲 pair, set apart
-        // from the ones on the service's screen in 🛍 سرویس‌های من
-        $bt_svc_rows = function ($sbKind, $pairKey) use (&$kb, $bt_lang, $bt_be, &$bt_live_row) {
+        // a delivery message's service buttons, and the 🌐 / 📲 pair with its
+        // app list - the same two items in every message and screen (and the
+        // same ones 🛍 سرویس‌های من has), so the rows here just open them
+        $bt_svc_rows = function ($sbKind) use (&$kb, $bt_lang, $bt_be, &$bt_live_row, &$bt_is_customized) {
             $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های مدیریت سرویس (کانفیگ، تمدید، روشن/خاموش، ...)', 'callback_data' => statusbtn_prefix($sbKind) . "|list|{$bt_lang}", 'style' => !empty($bt_be[$bt_lang][statusbtn_bucket($sbKind)]) ? 'success' : 'primary']];
-            $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($pairKey, $bt_lang), '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه', "bt_edit|{$bt_lang}|{$pairKey}", is_array($bt_be) && !empty($bt_be[$bt_lang][$pairKey]))];
+            $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label('users.subapps.entryBuy', $bt_lang), '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (همه‌ی بخش‌ها)', "bt_edit|{$bt_lang}|users.subapps.entryBuy", is_array($bt_be) && !empty($bt_be[$bt_lang]['users.subapps.entryBuy']))];
+            $kb['inline_keyboard'][] = [['text' => '📲 لیست برنامه‌ها + دکمه‌هاش (همه‌ی بخش‌ها)', 'callback_data' => "bt_edit|{$bt_lang}|users.subapps.listBuy", 'style' => $bt_is_customized('users.subapps.listBuy') ? 'success' : 'primary']];
         };
         $bt_is_customized = function ($key) use ($bt_lang, $bt_te, $bt_st, $bt_re, $bt_be) {
             $textCustom = is_array($bt_te) && isset($bt_te[$bt_lang]) && bottext_dotted_isset($bt_te[$bt_lang], $key);
@@ -1334,7 +1339,7 @@ if (!function_exists('bottext_item_menu_payload')) {
         // separate configDisplayBuy/configColOrderBuy pair, so it gets its own
         // forward link straight from the myservices list (keyboard.php) instead
         // of the generic $bt_btn_label/$bt_btn_custom status line below.
-        $bt_has_buttons = in_array($bt_key, ['users.usertest.selectUsernamePrompt', 'users.Balance.insufficientBalanceSimple', 'users.sell.selectUsernamePrompt', 'users.sell.preInvoice', 'users.sell.preInvoice2', 'textbot.preInvoice', 'users.sell.service_not_available', 'textbot.testExpired', 'users.sell.service_sell', 'users.status.infoFull', 'users.Balance.chargeSuccess', 'textbot.channel', 'users.channel.left_channel', 'users.extend.invoiceCreated', 'users.changeLink.warnchange', 'textbot.afterPay', 'textbot.afterText', 'users.affiliates.rewardAfterPay', 'users.subapps.listBuy', 'users.subapps.listTest', 'users.subapps.listRef', 'users.subapps.listPayg'], true);
+        $bt_has_buttons = in_array($bt_key, ['users.usertest.selectUsernamePrompt', 'users.Balance.insufficientBalanceSimple', 'users.sell.selectUsernamePrompt', 'users.sell.preInvoice', 'users.sell.preInvoice2', 'textbot.preInvoice', 'users.sell.service_not_available', 'textbot.testExpired', 'users.sell.service_sell', 'users.status.infoFull', 'users.Balance.chargeSuccess', 'textbot.channel', 'users.channel.left_channel', 'users.extend.invoiceCreated', 'users.changeLink.warnchange', 'textbot.afterPay', 'textbot.afterText', 'users.affiliates.rewardAfterPay', 'users.subapps.listBuy'], true);
         $info = "📝 <b>{$bt_label}</b>\n➖➖➖➖➖➖➖➖➖➖\n{$bt_extra_note}";
         $info .= "✏️ متن: " . ($bt_custom ? "سفارشی ✅" : "پیش‌فرض") . "\n";
         if (!$bt_nosticker) {
@@ -1373,7 +1378,7 @@ if (!function_exists('bottext_item_menu_payload')) {
                 $bt_btn_label = '🔘 دکمه‌های تایید/بازگشت';
             } elseif (in_array($bt_key, ['textbot.afterPay', 'textbot.afterText', 'users.affiliates.rewardAfterPay'], true)) {
                 $bt_btn_label = '📚 دکمه مشاهده آموزش';
-            } elseif (in_array($bt_key, ['users.subapps.listBuy', 'users.subapps.listTest', 'users.subapps.listRef', 'users.subapps.listPayg'], true)) {
+            } elseif ($bt_key === 'users.subapps.listBuy') {
                 $bt_btn_label = '🔘 دکمه‌های لیست برنامه‌ها';
             }
             // 'cf' is shared across three caption screens - checked here so its
@@ -1486,11 +1491,11 @@ if (!function_exists('bottext_item_menu_payload')) {
             $kb['inline_keyboard'][] = [['text' => '⛔️ پیام «اکانت تست غیرفعال است»', 'callback_data' => "bt_edit|{$bt_lang}|users.usertest.noPanel", 'style' => 'primary']];
             $kb['inline_keyboard'][] = [['text' => '📦 پیام بعد از دریافت اکانت تست', 'callback_data' => "bt_edit|{$bt_lang}|textbot.afterText", 'style' => 'primary']];
             $kb['inline_keyboard'][] = [['text' => '📌 نحوه‌ی نمایش کانفیگ', 'callback_data' => "cfgdeliv|list|{$bt_lang}|u", 'style' => 'primary']];
-            // 🌐 / 📲 on a test account's screen in 🛍 سرویس‌های من and the
-            // app list 📲 opens - the test account's own (subapp_kind 't')
+            // 🌐 / 📲 and the app list 📲 opens: one for every place, so these
+            // rows open the very same two items as in 🛍 سرویس‌های من
             $kb['inline_keyboard'][] = [['text' => bt_section_meta('subapps')['label'], 'callback_data' => 'bt_sep|subapps']];
-            $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label('users.subapps.entryTest', $bt_lang), '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه', "bt_edit|{$bt_lang}|users.subapps.entryTest", is_array($bt_be) && !empty($bt_be[$bt_lang]['users.subapps.entryTest']))];
-            $kb['inline_keyboard'][] = [['text' => '📲 لیست برنامه‌ها + دکمه‌هاش (اکانت تست)', 'callback_data' => "bt_edit|{$bt_lang}|users.subapps.listTest", 'style' => $bt_is_customized('users.subapps.listTest') ? 'success' : 'primary']];
+            $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label('users.subapps.entryBuy', $bt_lang), '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (همه‌ی بخش‌ها)', "bt_edit|{$bt_lang}|users.subapps.entryBuy", is_array($bt_be) && !empty($bt_be[$bt_lang]['users.subapps.entryBuy']))];
+            $kb['inline_keyboard'][] = [['text' => '📲 لیست برنامه‌ها + دکمه‌هاش (همه‌ی بخش‌ها)', 'callback_data' => "bt_edit|{$bt_lang}|users.subapps.listBuy", 'style' => $bt_is_customized('users.subapps.listBuy') ? 'success' : 'primary']];
         } elseif ($bt_key === 'users.Balance.insufficientBalanceSimple') {
             $kb['inline_keyboard'][] = [$bt_live_row($bt_balance_live(), '🔘 ویرایش دکمه افزایش موجودی', "btact|bbtn|{$bt_lang}", $bt_btn_custom)];
         } elseif ($bt_key === 'users.sell.selectUsernamePrompt') {
@@ -1527,13 +1532,13 @@ if (!function_exists('bottext_item_menu_payload')) {
             $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های تغییر لینک', 'callback_data' => "gbs|hub|{$bt_lang}|cl", 'style' => 'primary']];
         } elseif ($bt_key === 'textbot.afterPay') {
             $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '📚 ویرایش دکمه مشاهده آموزش', "gbs|hub|{$bt_lang}|ab", $bt_btn_custom)];
-            $bt_svc_rows('buy', 'users.subapps.entryBuyMsg');
+            $bt_svc_rows('buy');
         } elseif ($bt_key === 'textbot.afterText') {
             $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '📚 ویرایش دکمه مشاهده آموزش', "gbs|hub|{$bt_lang}|ut", $bt_btn_custom)];
-            $bt_svc_rows('test', 'users.subapps.entryTestMsg');
+            $bt_svc_rows('test');
         } elseif ($bt_key === 'users.affiliates.rewardAfterPay') {
             $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '📚 ویرایش دکمه مشاهده آموزش', "gbs|hub|{$bt_lang}|rw", $bt_btn_custom)];
-            $bt_svc_rows('ref', 'users.subapps.entryRefMsg');
+            $bt_svc_rows('ref');
         } elseif ($bt_key === 'users.help.listCaption') {
             // the one button under the tutorial list ('hb' alias, own-key trick)
             $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '🔘 ویرایش دکمه بازگشت به دسته‌بندی', "gbs|hub|{$bt_lang}|hb", is_array($bt_be) && !empty($bt_be[$bt_lang][$bt_key]))];
@@ -1546,9 +1551,9 @@ if (!function_exists('bottext_item_menu_payload')) {
             $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های کد تخفیف', 'callback_data' => "gbs|hub|{$bt_lang}|td", 'style' => 'primary']];
             $kb['inline_keyboard'][] = [['text' => '❌ ویرایش متن کد نامعتبر', 'callback_data' => "bt_edit|{$bt_lang}|users.Balance.topupDiscInvalid", 'style' => 'primary']];
             $kb['inline_keyboard'][] = [['text' => '✅ ویرایش متن فعال شدن کد', 'callback_data' => "bt_edit|{$bt_lang}|users.Balance.topupDiscActivated", 'style' => 'primary']];
-        } elseif (in_array($bt_key, ['users.subapps.listBuy', 'users.subapps.listTest', 'users.subapps.listRef', 'users.subapps.listPayg'], true)) {
-            // the apps and ↪️ under the list - its own (genbtn k*)
-            $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های لیست برنامه‌ها', 'callback_data' => "gbs|hub|{$bt_lang}|" . genbtn_key_to_alias($bt_key), 'style' => $bt_btn_custom ? 'success' : 'primary']];
+        } elseif ($bt_key === 'users.subapps.listBuy') {
+            // the apps and ↪️ under the list - one list for every place (genbtn kb)
+            $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های لیست برنامه‌ها', 'callback_data' => "gbs|hub|{$bt_lang}|kb", 'style' => $bt_btn_custom ? 'success' : 'primary']];
         }
         // Named for what it actually clears - text, sticker, reaction AND button
         // overrides. Next to the new "📋 کپشن پیش‌فرض" a second plain "ریست به
@@ -1586,7 +1591,7 @@ if (!function_exists('bottext_item_menu_payload')) {
             $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_edit|{$bt_lang}|users.Balance.chargeSuccess", 'style' => 'danger']];
         } elseif ($bt_key === 'users.channel.left_channel') {
             $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_edit|{$bt_lang}|textbot.channel", 'style' => 'danger']];
-        } elseif ($bt_key === 'textbot.afterText' || $bt_key === 'users.usertest.noPanel' || $bt_key === 'textbot.selectLocationTest' || $bt_key === 'users.subapps.listTest') {
+        } elseif ($bt_key === 'textbot.afterText' || $bt_key === 'users.usertest.noPanel' || $bt_key === 'textbot.selectLocationTest') {
             $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_edit|{$bt_lang}|users.usertest.selectUsernamePrompt", 'style' => 'danger']];
         } elseif (in_array($bt_key, notice_section_keys(), true)) {
             // it lives in 🔋 پیام‌های هشدار و اتمام سرویس
@@ -8852,7 +8857,8 @@ if (preg_match('/^btact\|bbtnpos\|([a-z]{2})\|(left|right)$/', $datain, $btm) &&
 if (preg_match('/^gbs\|(hub|lay|layp|layc|lays|layw|layr|col|colp|emo|emop|emos|emod|emor|ren|renp|renr|hide|rstall)\|([a-z]{2})\|([a-z][a-z0-9])((?:\|[0-9])*)(\|u)?$/', $datain, $gs_m) && $adminrulecheck['rule'] == "administrator") {
     $gs_op = $gs_m[1];
     $gs_lang = $gs_m[2];
-    $gs_alias = $gs_m[3];
+    // a button from before the 🌐 / 📲 pair (and its list) became one still opens it
+    $gs_alias = genbtn_canonical_alias($gs_m[3]);
     $gs_idx = array_map('intval', array_values(array_filter(explode('|', (string) $gs_m[4]), 'strlen')));
     $gs_origin = !empty($gs_m[5]) ? 'u' : '';
     $gs_sfx = ($gs_origin === 'u') ? '|u' : '';
@@ -23532,7 +23538,7 @@ if ($datain == "linkappsetting") {
     }
 } elseif (preg_match('/^bt_edit\|([^|]+)\|(.+)$/', $datain, $dataget)) {
     $bt_lang = $dataget[1];
-    $bt_key = $dataget[2];
+    $bt_key = subapps_legacy_key($dataget[2]);
     if (!in_array($bt_lang, panel_langs(), true)) {
         $bt_lang = 'fa';
     }

@@ -1502,10 +1502,10 @@ if (!function_exists('payg_rates_text')) {
         $id = $svc['id_invoice'];
         $rows = [];
         if ($svc['status'] !== 'ended') {
-            // 🌐 / 📲 on top - ⏱'s own pair (genbtn 'gh'), in its owner's tab;
-            // the rest two to a row, 🗑 alone - away from a stray tap
+            // 🌐 / 📲 on top - the pair every screen has (genbtn 'gb'), in its
+            // owner's tab; the rest two to a row, 🗑 alone - away from a stray tap
             $sub = (string) ($subUrl ?? (is_array($panelData) && is_array($panelData['data'] ?? null) ? ($panelData['data']['subscription_url'] ?? '') : ''));
-            $rows = subapp_entry_rows('h', (string) (is_array($u) && !empty($u['lang']) ? $u['lang'] : $svc['lang']), $tx, $sub, $id);
+            $rows = subapp_entry_rows((string) (is_array($u) && !empty($u['lang']) ? $u['lang'] : $svc['lang']), $tx, $sub, $id);
             $rows[] = [
                 ['text' => $w['btnRefresh'], 'callback_data' => "paygref_{$id}", 'style' => 'primary'],
                 ['text' => $tx['users']['status']['linksub'], 'callback_data' => "subscriptionurl_{$id}", 'style' => 'primary'],

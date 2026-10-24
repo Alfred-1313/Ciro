@@ -21,6 +21,10 @@ foreach ($textbotlang['bottext']['items'] as $it) {
 // alias => [key, defs]
 $groups = [];
 foreach (genbtn_alias_map() as $alias => $key) {
+    // the 🌐 / 📲 pair and its app list are one setting for every place: one card each
+    if (genbtn_canonical_alias($alias) !== $alias) {
+        continue;
+    }
     $defs = genbtn_defs($alias, $tx);
     if ($defs) {
         $groups[$alias] = [$key, $defs];
@@ -29,7 +33,7 @@ foreach (genbtn_alias_map() as $alias => $key) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check_post();
-    $alias = (string) ($_POST['alias'] ?? '');
+    $alias = genbtn_canonical_alias((string) ($_POST['alias'] ?? ''));
     $err = null;
     if (!isset($groups[$alias])) {
         $err = $t['btnGroupMissing'];
@@ -113,7 +117,7 @@ echo web_lang_assets();
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
   <input type="hidden" name="alias" value="<?= htmlspecialchars($alias) ?>">
   <div class="card-head"><div><div class="card-title"><?= htmlspecialchars($itemLabels[$key] ?? implode(' · ', array_column($defs, 'name'))) ?></div>
-    <div class="card-subtitle"><?= $shared ? $t['btnSharedLook'] : ($textOnly ? $t['btnTextOnly'] : '') ?></div></div></div>
+    <div class="card-subtitle"><?= $shared ? $t['btnSharedLook'] : ($textOnly ? $t['btnTextOnly'] : (in_array($alias, ['gb', 'kb'], true) ? $t['btnAllPlaces'] : '')) ?></div></div></div>
   <div class="card-body">
     <?php foreach ($defs as $idx => $def): $ov = genbtn_override($lang, $key, $idx); $n = "b[$idx]";
       $isHidden = array_key_exists('hidden', $ov) ? (bool) $ov['hidden'] : !empty($def['hidden']); ?>

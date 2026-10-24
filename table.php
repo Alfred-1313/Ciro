@@ -1576,6 +1576,13 @@ try {
     error_log('statuschangeservice default: ' . $e->getMessage());
 }
 addFieldToTable("setting", "feature_lang", '{}', "TEXT");
+// 🌐 / 📲 and the app list are one setting for every place now: what was set on
+// the per-place ones moves to the shared one (function.php)
+try {
+    subapps_merge_legacy();
+} catch (Throwable $e) {
+    error_log('subapps merge: ' . $e->getMessage());
+}
 // Russian, Chinese and Turkmen are not languages of the bot any more (only fa
 // and en have a lang/ file). Whoever was on one is on Persian - the language
 // every missing text already falls back to - and the picker's list and the

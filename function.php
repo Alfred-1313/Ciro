@@ -11408,7 +11408,7 @@ if (!function_exists('svc_action_rows')) {
         // password in that field). Only on the service screen: the pair has its
         // own 🎨 entry per kind, and the purchase message keeps its buttons apart.
         if ($kind === 'mine' && !in_array($marzban['type'], ['ibsng', 'mikrotik'], true)) {
-            array_splice($keyboardsetting['inline_keyboard'], 0, 0, subapp_entry_rows(subapp_kind($nameloc), $lang, $tx, $subUrl, $nameloc['id_invoice']));
+            array_splice($keyboardsetting['inline_keyboard'], 0, 0, subapp_entry_rows($lang, $tx, $subUrl, $nameloc['id_invoice']));
         }
         return $keyboardsetting['inline_keyboard'];
     }
@@ -11452,7 +11452,7 @@ if (!function_exists('delivery_action_rows')) {
         }
         $rows = svc_action_rows($kind, $inv, $panel, $status, '', $userRow, $tx);
         if (!in_array($panel['type'] ?? '', ['ibsng', 'mikrotik'], true)) {
-            array_splice($rows, 0, 0, subapp_entry_rows($pair, $lang, $tx, $sub, $inv['id_invoice'], true));
+            array_splice($rows, 0, 0, subapp_entry_rows($lang, $tx, $sub, $inv['id_invoice'], true));
         }
         return $rows;
     }
@@ -12945,6 +12945,127 @@ if (!function_exists('bottext_dotted_unset')) {
         $arr = bottext_dotted_unset_walk($arr, explode('.', $key));
     }
 }
+if (!function_exists('subapps_legacy_key')) {
+    // an old 🎨 button (a message still on an admin's screen) naming one of the
+    // per-place keys opens the shared one
+    function subapps_legacy_key($key)
+    {
+        $map = [];
+        foreach (['entryBuyMsg', 'entryTestMsg', 'entryRefMsg', 'entryTest', 'entryRef', 'entryPayg'] as $old) {
+            $map['users.subapps.' . $old] = 'users.subapps.entryBuy';
+        }
+        foreach (['listTest', 'listRef', 'listPayg'] as $old) {
+            $map['users.subapps.' . $old] = 'users.subapps.listBuy';
+        }
+        return $map[$key] ?? $key;
+    }
+}
+if (!function_exists('subapps_merge_legacy')) {
+    // The 🌐 / 📲 pair and the app list used to be one per place (a bought
+    // service, a test account, a gift, ⏱, and the messages that deliver one);
+    // they are one now (genbtn gb / kb). What an admin had set on the old ones
+    // is carried over to the shared one, per language and only where the shared
+    // one has nothing yet - the pair that was always there (entryBuy / listBuy)
+    // first, then the delivery messages', then the rest. The old keys are
+    // dropped. Safe to run again.
+    function subapps_merge_legacy()
+    {
+        $groups = [
+            'users.subapps.entryBuy' => ['users.subapps.entryBuyMsg', 'users.subapps.entryTestMsg', 'users.subapps.entryRefMsg', 'users.subapps.entryTest', 'users.subapps.entryRef', 'users.subapps.entryPayg'],
+            'users.subapps.listBuy' => ['users.subapps.listTest', 'users.subapps.listRef', 'users.subapps.listPayg'],
+        ];
+        $setting = select("setting", "*", null, null, "select");
+        if (!is_array($setting)) {
+            return;
+        }
+        // 1. the buttons' look, text and layout: button_edit[lang][key]
+        $be = json_decode((string) ($setting['button_edit'] ?? ''), true);
+        $beChanged = false;
+        if (is_array($be)) {
+            foreach ($be as $lang => $perLang) {
+                if (!is_array($perLang)) {
+                    continue;
+                }
+                foreach ($groups as $canon => $olds) {
+                    foreach ($olds as $old) {
+                        if (!array_key_exists($old, $perLang)) {
+                            continue;
+                        }
+                        if (empty($perLang[$canon]) && !empty($perLang[$old])) {
+                            $perLang[$canon] = $perLang[$old];
+                        }
+                        unset($perLang[$old]);
+                        $beChanged = true;
+                    }
+                }
+                $be[$lang] = $perLang;
+            }
+        }
+        if ($beChanged) {
+            update("setting", "button_edit", json_encode($be, JSON_UNESCAPED_UNICODE), null, null);
+        }
+        // 2. the list's caption: text_edit[lang] (nested users.subapps.listX)
+        $te = json_decode((string) ($setting['text_edit'] ?? ''), true);
+        $teChanged = false;
+        if (is_array($te)) {
+            foreach ($te as $lang => $perLang) {
+                if (!is_array($perLang)) {
+                    continue;
+                }
+                foreach ($groups as $canon => $olds) {
+                    foreach ($olds as $old) {
+                        if (!bottext_dotted_isset($perLang, $old)) {
+                            continue;
+                        }
+                        if (!bottext_dotted_isset($perLang, $canon)) {
+                            $node = $perLang;
+                            foreach (explode('.', $old) as $p) {
+                                $node = $node[$p];
+                            }
+                            bottext_dotted_set($perLang, $canon, $node);
+                        }
+                        bottext_dotted_unset($perLang, $old);
+                        $teChanged = true;
+                    }
+                }
+                $te[$lang] = $perLang;
+            }
+        }
+        if ($teChanged) {
+            update("setting", "text_edit", json_encode($te, JSON_UNESCAPED_UNICODE), null, null);
+        }
+        // 3. a sticker or reaction on the list: keyboardmain.text_stickers /
+        // text_reactions [key][lang]
+        $km = json_decode((string) ($setting['keyboardmain'] ?? ''), true);
+        $kmChanged = false;
+        if (is_array($km)) {
+            foreach (['text_stickers', 'text_reactions'] as $store) {
+                if (!isset($km[$store]) || !is_array($km[$store])) {
+                    continue;
+                }
+                foreach ($groups as $canon => $olds) {
+                    foreach ($olds as $old) {
+                        if (!array_key_exists($old, $km[$store])) {
+                            continue;
+                        }
+                        if (is_array($km[$store][$old])) {
+                            foreach ($km[$store][$old] as $l => $v) {
+                                if ($v !== '' && (!isset($km[$store][$canon]) || !is_array($km[$store][$canon]) || ($km[$store][$canon][$l] ?? '') === '')) {
+                                    $km[$store][$canon][$l] = $v;
+                                }
+                            }
+                        }
+                        unset($km[$store][$old]);
+                        $kmChanged = true;
+                    }
+                }
+            }
+        }
+        if ($kmChanged) {
+            update("setting", "keyboardmain", json_encode($km, JSON_UNESCAPED_UNICODE), null, null);
+        }
+    }
+}
 if (!function_exists('bt_myservices_plan')) {
     // 🛍 سرویس‌های من's 🎨 items in the customer's own order: the list of
     // services, one service's screen, the screens its buttons open (in the
@@ -13121,10 +13242,10 @@ if (!function_exists('bt_section_meta')) {
             ],
             'subapps' => [
                 'label' => '🌐 سابسکریپشن و 📲 افزودن به برنامه',
-                'alert' => '🌐 صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه؛ 📲 لیست برنامه‌ها رو میاره تا با یه لمس، برنامه باز بشه و سابسکریپشن اضافه بشه. خرید، تست، هدیه و ساعتی هرکدوم جدان.',
+                'alert' => '🌐 صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه؛ 📲 لیست برنامه‌ها رو میاره تا با یه لمس، برنامه باز بشه و سابسکریپشن اضافه بشه. یه تنظیم برای همه‌ی جاهایی که نشون داده می‌شه (خرید، تست، هدیه، ساعتی و «🛍 سرویس‌های من») - برای هر زبان جدا.',
             ],
             'subapps_page' => [
-                'label' => '🌐 صفحه‌ی باز کردن برنامه (هر ۴ بخش)',
+                'label' => '🌐 صفحه‌ی باز کردن برنامه (همه‌ی بخش‌ها)',
                 'alert' => 'متن‌های صفحه‌ی وبی که با زدن یه برنامه از لیست 📲 باز می‌شه و برنامه رو با سابسکریپشن باز می‌کنه. برای خرید، تست، هدیه و ساعتی یکیه.',
             ],
             'notice_vol' => [
@@ -13430,25 +13551,25 @@ if (!function_exists('genbtn_alias_map')) {
             'pl' => 'users.payg.listLabel',
             // ⏱'s 💡 name question: its own 🔴 / 🟢 pair, apart from the purchase's 'su'
             'pu' => 'users.payg.askUsername',
-            // 🌐 ورود به سابسکریپشن + 📲 افزودن به برنامه on top of a service's
-            // screen in 🛍 سرویس‌های من (a button item of its own), and the app
-            // list 📲 opens (own-key: its caption owns its buttons) - one of
-            // each per kind of service (subapp_kind): b خرید, t اکانت تست,
-            // r 🎁 هدیه‌ی دعوت, h ⏱ اشتراک ساعتی
+            // 🌐 ورود به سابسکریپشن + 📲 افزودن به برنامه, and the app list 📲
+            // opens (own-key: its caption owns its buttons). ONE pair and ONE
+            // list for every place that shows them - a bought service, a test
+            // account, a 🎁 referral gift and ⏱ in 🛍 سرویس‌های من, and the
+            // messages that deliver a config - so what is set on a language's
+            // tab is what all five places show on that tab. 'gb' / 'kb' are the
+            // ones the screens use (genbtn_canonical_alias); the others only
+            // name the same key, for a button from before they were one.
             'gb' => 'users.subapps.entryBuy',
-            'gt' => 'users.subapps.entryTest',
-            'gr' => 'users.subapps.entryRef',
-            'gh' => 'users.subapps.entryPayg',
-            // and under the messages that deliver a config - a bought service's
-            // (p), a test account's (u), a 🎁 referral gift's (w): each its own
-            // pair, set apart from the one on that service's screen
-            'gp' => 'users.subapps.entryBuyMsg',
-            'gu' => 'users.subapps.entryTestMsg',
-            'gw' => 'users.subapps.entryRefMsg',
+            'gt' => 'users.subapps.entryBuy',
+            'gr' => 'users.subapps.entryBuy',
+            'gh' => 'users.subapps.entryBuy',
+            'gp' => 'users.subapps.entryBuy',
+            'gu' => 'users.subapps.entryBuy',
+            'gw' => 'users.subapps.entryBuy',
             'kb' => 'users.subapps.listBuy',
-            'kt' => 'users.subapps.listTest',
-            'kr' => 'users.subapps.listRef',
-            'kh' => 'users.subapps.listPayg',
+            'kt' => 'users.subapps.listBuy',
+            'kr' => 'users.subapps.listBuy',
+            'kh' => 'users.subapps.listBuy',
         ];
     }
 }
@@ -13457,6 +13578,13 @@ if (!function_exists('genbtn_alias_to_key')) {
     {
         $m = genbtn_alias_map();
         return $m[$alias] ?? null;
+    }
+    // The alias a screen goes by: the 🌐 / 📲 pair of every place is 'gb' and
+    // the app list of every place is 'kb' (an older button may still name
+    // 'gp', 'kt' ...). Any other alias is its own.
+    function genbtn_canonical_alias($alias)
+    {
+        return preg_match('/^g[tbrhpuw]$/', (string) $alias) ? 'gb' : (preg_match('/^k[tbrh]$/', (string) $alias) ? 'kb' : $alias);
     }
     // the reverse lookup - bt_btnitem_keys() items reach their own alias by
     // key, not the other way around
@@ -13670,7 +13798,7 @@ if (!function_exists('genbtn_defs')) {
                 // 🌐 a link to the subscription page and 📲 the app list -
                 // subapp_entry_rows() gives each its real address
                 return [
-                    0 => ['name' => '🌐 دکمه‌ی ورود به سابسکریپشن (توی مرورگر باز می‌شه)', 'text' => $sa['entry' . subapp_kind_suffix($sm[2])], 'style' => 'primary', 'callback_data' => 'none'],
+                    0 => ['name' => '🌐 دکمه‌ی ورود به سابسکریپشن (توی مرورگر باز می‌شه)', 'text' => $sa['entryBuy'], 'style' => 'primary', 'callback_data' => 'none'],
                     1 => ['name' => '📲 دکمه‌ی افزودن به برنامه (لیست برنامه‌ها)', 'text' => $sa['appsBtn'], 'style' => 'primary', 'callback_data' => 'none'],
                 ];
             }
@@ -13999,10 +14127,10 @@ if (!function_exists('myservices_nav_rows')) {
     }
 }
 if (!function_exists('subapp_kind')) {
-    // 🌐 ورود به سابسکریپشن + 📲 افزودن به برنامه: each kind of service has
-    // its own pair on top of its screen (genbtn g*) and its own app list
-    // (genbtn k*) - b خرید, t اکانت تست, r 🎁 هدیه‌ی دعوت not renewed yet
-    // (renewed, it is a service like any other), h ⏱ اشتراک ساعتی
+    // The kind of a service: b خرید, t اکانت تست, r 🎁 هدیه‌ی دعوت not renewed
+    // yet (renewed, it is a service like any other), h ⏱ اشتراک ساعتی. The
+    // 🌐 / 📲 pair and the app list are one for all of them (genbtn gb / kb);
+    // the kind tells which 💡 / status buttons a screen carries.
     function subapp_kind($inv)
     {
         if ((int) ($inv['payg'] ?? 0) === 1) {
@@ -14022,17 +14150,7 @@ if (!function_exists('subapp_kind')) {
         }
         return 'b';
     }
-    // the kind's part of its texts' keys: users.subapps.entryBuy / listBuy...
-    function subapp_kind_suffix($kind)
-    {
-        return ['b' => 'Buy', 't' => 'Test', 'r' => 'Ref', 'h' => 'Payg', 'p' => 'BuyMsg', 'u' => 'TestMsg', 'w' => 'RefMsg'][$kind] ?? 'Buy';
-    }
-    // and its name in 🎨
-    function subapp_kind_name($kind)
-    {
-        return ['b' => 'خرید', 't' => 'اکانت تست', 'r' => 'کانفیگ هدیه‌ی دعوت', 'h' => 'اشتراک ساعتی', 'p' => 'پیام خرید', 'u' => 'پیام اکانت تست', 'w' => 'پیام کانفیگ هدیه'][$kind] ?? 'خرید';
-    }
-    // the list's apps in its buttons' order - each one's genbtn k* number,
+    // the list's apps in its buttons' order - each one's genbtn kb number,
     // the id its link carries, its button's text (users.subapps.*), and where
     // to get it on each kind of phone ('' = not there). 5 is the list's 🔙
     // (subapp_back_idx), so an app added later takes the next free number and
@@ -14048,7 +14166,7 @@ if (!function_exists('subapp_kind')) {
             6 => ['id' => 'karing', 'name' => 'Karing', 'text' => 'appKaring', 'android' => 'https://karing.app/download', 'ios' => 'https://apps.apple.com/app/id6472431552', 'other' => 'https://karing.app/download'],
         ];
     }
-    // the list's 🔙 بازگشت به منوی قبلی (genbtn k*)
+    // the list's 🔙 بازگشت به منوی قبلی (genbtn kb)
     function subapp_back_idx()
     {
         return 5;
@@ -14081,39 +14199,34 @@ if (!function_exists('subapp_kind')) {
         global $domainhosts;
         return "https://{$domainhosts}/subapp.php?" . http_build_query(['i' => $invoiceId, 'a' => $appId, 's' => subapp_sig($invoiceId, $appId)]);
     }
-    // whether the kind's list still has an app to show
-    function subapp_any_app($kind, $lang, $tx)
+    // whether the list still has an app to show
+    function subapp_any_app($lang, $tx)
     {
-        $key = genbtn_alias_to_key('k' . $kind);
-        foreach (genbtn_defs('k' . $kind, $tx) as $idx => $d) {
+        $key = genbtn_alias_to_key('kb');
+        foreach (genbtn_defs('kb', $tx) as $idx => $d) {
             if (isset(subapp_apps()[$idx]) && !genbtn_is_hidden($d, genbtn_override($lang, $key, $idx))) {
                 return true;
             }
         }
         return false;
     }
-    // the app list a kind's 📲 opens: the purchase message ('p') has a pair of
-    // its own but shows the same list as a bought service's screen
-    function subapp_list_kind($kind)
-    {
-        return ['p' => 'b', 'u' => 't', 'w' => 'r'][$kind] ?? $kind;
-    }
-    // the rows on top of a service's screen: 🌐 (a link to $sub) and 📲 (the
-    // app list), as this tab has them - [] when the panel gives the
+    // the rows on top of a service's screen, or of a message that delivers one:
+    // 🌐 (a link to $sub) and 📲 (the app list), as this tab has them - the same
+    // pair in every one of those places - [] when the panel gives the
     // subscription no address. $keep: 📲 leaves the message it is under where
     // it is (the purchase message carries the config - it must not go)
-    function subapp_entry_rows($kind, $lang, $tx, $sub, $invoiceId, $keep = false)
+    function subapp_entry_rows($lang, $tx, $sub, $invoiceId, $keep = false)
     {
         if (strpos((string) $sub, 'http') !== 0) {
             return [];
         }
-        $alias = 'g' . $kind;
+        $alias = 'gb';
         $key = genbtn_alias_to_key($alias);
         $btns = [];
         foreach (genbtn_defs($alias, $tx) as $idx => $d) {
             $ov = genbtn_override($lang, $key, $idx);
             // 📲 only while its list has an app left on it
-            if (genbtn_is_hidden($d, $ov) || ($idx === 1 && !subapp_any_app(subapp_list_kind($kind), $lang, $tx))) {
+            if (genbtn_is_hidden($d, $ov) || ($idx === 1 && !subapp_any_app($lang, $tx))) {
                 continue;
             }
             $b = genbtn_render($d, $ov, "subapps_{$invoiceId}" . ($keep ? '_k' : ''));
@@ -14125,11 +14238,12 @@ if (!function_exists('subapp_kind')) {
         }
         return genbtn_group_rows($alias, $lang, $btns, $tx);
     }
-    // 📲's screen: [text, keyboard] - the kind's caption, each app a link to
-    // subapp.php, ↪️ back to the service's own screen
-    function subapp_list_screen($kind, $lang, $tx, array $inv)
+    // 📲's screen: [text, keyboard] - the caption, each app a link to
+    // subapp.php, ↪️ back to the service's own screen. One screen for every
+    // kind of service
+    function subapp_list_screen($lang, $tx, array $inv)
     {
-        $alias = 'k' . $kind;
+        $alias = 'kb';
         $key = genbtn_alias_to_key($alias);
         $apps = subapp_apps();
         $btns = [];
@@ -14145,7 +14259,7 @@ if (!function_exists('subapp_kind')) {
             }
             $btns[$idx] = $b;
         }
-        $text = strtr($tx['users']['subapps']['list' . subapp_kind_suffix($kind)], ['{username}' => htmlspecialchars((string) $inv['username'])]);
+        $text = strtr($tx['users']['subapps']['listBuy'], ['{username}' => htmlspecialchars((string) $inv['username'])]);
         return [$text, json_encode(['inline_keyboard' => genbtn_group_rows($alias, $lang, $btns, $tx)])];
     }
 }
@@ -14361,7 +14475,7 @@ if (!function_exists('genbtn_hub_payload')) {
             return $titles[$alias];
         }
         if (preg_match('/^([gk])([btrhpuw])$/', (string) $alias, $sm)) {
-            return ($sm[1] === 'g' ? '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه' : '📲 دکمه‌های لیست برنامه‌ها') . ' (' . subapp_kind_name($sm[2]) . ')';
+            return ($sm[1] === 'g' ? '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه' : '📲 دکمه‌های لیست برنامه‌ها') . ' (همه‌ی بخش‌ها)';
         }
         // the button-only items: their one button's own name
         $defs = genbtn_defs($alias, $textbotlang);
@@ -14390,14 +14504,10 @@ if (!function_exists('genbtn_hub_payload')) {
             return $notes[$alias];
         }
         if (preg_match('/^([gk])([btrhpuw])$/', (string) $alias, $sm)) {
-            $where = ['b' => 'هر سرویس خریداری‌شده', 't' => 'هر اکانت تست', 'r' => 'هر کانفیگ هدیه‌ی دعوت (تا وقتی تمدید نشده)', 'h' => 'هر اشتراک ساعتی'][$sm[2]] ?? '';
-            $msg = ['p' => 'بعد از خرید', 'u' => 'بعد از گرفتن اکانت تست', 'w' => 'برای کانفیگ هدیه‌ی دعوت (رفرال)'][$sm[2]] ?? '';
-            if ($msg !== '') {
-                return 'این ۲ دکمه زیر پیامی میان که ' . $msg . '، کانفیگ رو برای مشتری می‌فرسته (بالای دکمه‌های مدیریت سرویس): 🌐 صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه، 📲 لیست برنامه‌ها رو میاره (پیام خرید سر جاش می‌مونه). فقط وقتی پنل برای سابسکریپشن آدرس بده دیده می‌شن. تنظیمشون جداست و با دکمه‌های همین دو تا توی «🛍 سرویس‌های من» یکی نیست. کنار هم یا زیر هم بودنشون و مخفی کردن هرکدوم: 📐 چیدمان.';
-            }
+            $same = 'یکیه برای ۵ جایی که نشون داده می‌شه: پیام بعد از خرید، پیام اکانت تست، پیام کانفیگ هدیه‌ی دعوت، صفحه‌ی اشتراک ساعتی و صفحه‌ی هر سرویس توی «🛍 سرویس‌های من». هرچی توی این تب (فارسی یا انگلیسی) عوض کنی، همون‌جاها با همون تغییر دیده می‌شه؛ تب زبان دیگه جداست.';
             return $sm[1] === 'g'
-                ? "این ۲ دکمه بالای صفحه‌ی {$where} توی «🛍 سرویس‌های من» میان: 🌐 صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه، 📲 صفحه‌ی سرویس رو برمی‌داره و لیست برنامه‌ها رو میاره. فقط وقتی پنل برای سابسکریپشن آدرس بده دیده می‌شن. کنار هم یا زیر هم بودنشون و مخفی کردن هرکدوم: 📐 چیدمان."
-                : "این دکمه‌ها زیر لیست برنامه‌های {$where} میان (بعد از زدن 📲): هر برنامه یه صفحه باز می‌کنه که همون برنامه رو با سابسکریپشن باز می‌کنه و اگه نصب نباشه، لینک دانلودش رو داره؛ 🔙 برمی‌گردونه به صفحه‌ی سرویس. برنامه‌ای که مشتری‌هات ندارن رو از 📐 چیدمان مخفی کن؛ اگه همه مخفی باشن، 📲 هم دیگه نشون داده نمی‌شه.";
+                ? "این ۲ دکمه بالای دکمه‌های مدیریت سرویس میان: 🌐 صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه، 📲 لیست برنامه‌ها رو میاره (جایی که کانفیگ رو می‌فرسته، پیام سر جاش می‌مونه؛ توی صفحه‌ی سرویس، صفحه برداشته می‌شه و لیست جاش میاد). فقط وقتی پنل برای سابسکریپشن آدرس بده دیده می‌شن. تنظیمشون {$same} کنار هم یا زیر هم بودنشون و مخفی کردن هرکدوم: 📐 چیدمان."
+                : "این دکمه‌ها زیر لیست برنامه‌ها میان (بعد از زدن 📲): هر برنامه یه صفحه باز می‌کنه که همون برنامه رو با سابسکریپشن باز می‌کنه و اگه نصب نباشه، لینک دانلودش رو داره؛ 🔙 برمی‌گردونه به صفحه‌ی سرویس. تنظیمشون {$same} برنامه‌ای که مشتری‌هات ندارن رو از 📐 چیدمان مخفی کن؛ اگه همه مخفی باشن، 📲 هم دیگه نشون داده نمی‌شه.";
         }
         $defs = genbtn_defs($alias, $textbotlang);
         return (string) ($defs[0]['note'] ?? '');
@@ -14420,7 +14530,9 @@ if (!function_exists('genbtn_hub_payload')) {
         }
         $key = genbtn_alias_to_key($alias);
         if ($key !== null && function_exists('bt_btnitem_keys') && in_array($key, bt_btnitem_keys(), true) && function_exists('bt_btnitem_back_cb')) {
-            return bt_btnitem_back_cb($key, $lang);
+            // a button item is its own screen (bt_edit|lang|key): back to the
+            // screen it was opened from, else to its section
+            return bt_origin_get($from_id, "bt_edit|{$lang}|{$key}") ?? bt_btnitem_back_cb($key, $lang);
         }
         // 'cf' points at textbot.preInvoice (the normal-purchase تأیید خرید)
         $backKeyMap = ['su' => 'users.sell.selectUsernamePrompt', 'pu' => 'users.payg.askUsername', 'cf' => 'textbot.preInvoice', 'ns' => 'users.sell.service_not_available', 'te' => 'textbot.testExpired', 'sc' => 'users.sell.service_sell', 'bc' => 'users.Balance.chargeSuccess', 'rn' => 'users.extend.invoiceCreated', 'cl' => 'users.changeLink.warnchange', 'td' => 'users.Balance.topupDiscPrompt', 'hb' => 'users.help.listCaption', 'hv' => 'users.help.categoryCaption', 'ab' => 'textbot.afterPay', 'ut' => 'textbot.afterText', 'rw' => 'users.affiliates.rewardAfterPay', 'lc' => 'users.channel.left_channel', 'ma' => 'users.support.messageFromAdminAlt'];
@@ -14435,14 +14547,13 @@ if (!function_exists('genbtn_hub_payload')) {
     function genbtn_layout_default($alias)
     {
         return ['su' => 'half', 'pu' => 'half', 'cf' => 'half', 'cl' => 'full',
-            'gb' => 'full', 'gt' => 'full', 'gr' => 'full', 'gh' => 'full', 'gp' => 'full', 'gu' => 'full', 'gw' => 'full',
-            'kb' => 'half', 'kt' => 'half', 'kr' => 'half', 'kh' => 'half'][$alias] ?? null;
+            'gb' => 'full', 'kb' => 'half'][genbtn_canonical_alias($alias)] ?? null;
     }
     // one button's width with nothing stored: its group's - except the app
     // list's 🔙 بازگشت, a row of its own under the apps two to a row
     function genbtn_layout_default_width($alias, $idx)
     {
-        if (preg_match('/^k[btrh]$/', (string) $alias) && (int) $idx === subapp_back_idx()) {
+        if (genbtn_canonical_alias($alias) === 'kb' && (int) $idx === subapp_back_idx()) {
             return 'full';
         }
         return genbtn_layout_default($alias);
@@ -14599,7 +14710,7 @@ if (!function_exists('genbtn_hub_payload')) {
     // back/close buttons, the other sections' close buttons and the 🎯 ones.
     function genbtn_preview_aliases()
     {
-        return ['rc', 'rp', 'bu', 'tp', 'ac', 'ts', 'he', 'sp', 'ar', 'mg', 'sl', 'gb', 'gt', 'gr', 'gh', 'gp', 'gu', 'gw', 'kb', 'kt', 'kr', 'kh'];
+        return ['rc', 'rp', 'bu', 'tp', 'ac', 'ts', 'he', 'sp', 'ar', 'mg', 'sl', 'gb', 'kb'];
     }
     // The button exactly as this language's customer receives it - built by
     // genbtn_render(), the same function that builds the real one, so rename,
@@ -19459,15 +19570,9 @@ if (!function_exists('bt_button')) {
             'bottext.bcTopupBtn',
             // ⏱ an hourly service's row in 🛍 سرویس‌های من (genbtn 'pl')
             'users.payg.listLabel',
-            // 🌐 + 📲 on top of each kind of service's screen (genbtn g*)
+            // 🌐 + 📲 - one pair for every service screen and delivery
+            // message (genbtn gb)
             'users.subapps.entryBuy',
-            'users.subapps.entryTest',
-            'users.subapps.entryRef',
-            'users.subapps.entryPayg',
-            // and under the delivery messages (genbtn gp / gu / gw)
-            'users.subapps.entryBuyMsg',
-            'users.subapps.entryTestMsg',
-            'users.subapps.entryRefMsg',
         ];
     }
     // label-only override, for buttons that may render on a reply keyboard
@@ -19486,12 +19591,7 @@ if (!function_exists('bt_button')) {
     // for genbtn's own "list" screen to usefully return to.
     function bt_btnitem_back_cb($key, $lang)
     {
-        // under a delivery message: inside that message's own 🎨 screen
-        $msgOwner = ['users.subapps.entryBuyMsg' => 'textbot.afterPay', 'users.subapps.entryTestMsg' => 'textbot.afterText', 'users.subapps.entryRefMsg' => 'users.affiliates.rewardAfterPay'];
-        if (isset($msgOwner[$key])) {
-            return "bt_edit|{$lang}|{$msgOwner[$key]}";
-        }
-        if ($key === 'bottext.btnCloseTest' || $key === 'users.subapps.entryTest') {
+        if ($key === 'bottext.btnCloseTest') {
             // lives inside 🔑 تنظیم اکانت تست, not a bt_group screen of its own
             return "bt_edit|{$lang}|users.usertest.selectUsernamePrompt";
         }
@@ -19514,8 +19614,6 @@ if (!function_exists('bt_button')) {
             'bottext.bcTopupBtn' => 'usermgmt',
             'users.payg.listLabel' => 'paygsvc',
             'users.subapps.entryBuy' => 'myservices',
-            'users.subapps.entryRef' => 'referral',
-            'users.subapps.entryPayg' => 'paygsvc',
         ];
         $group = $groups[$key] ?? '';
         return $group !== '' ? "bt_group|{$lang}|{$group}" : "btact|back|{$lang}";
@@ -21072,7 +21170,7 @@ if (!function_exists('bt_nosticker_keys')) {
             // a popup refusing someone else's service
             'users.serviceNotYours',
             // 🌐 / 📲's buttons, their popup and the page an app opens through
-            'users.subapps.entryBuy', 'users.subapps.entryTest', 'users.subapps.entryRef', 'users.subapps.entryPayg', 'users.subapps.entryBuyMsg', 'users.subapps.entryTestMsg', 'users.subapps.entryRefMsg',
+            'users.subapps.entryBuy',
             'users.subapps.noLink', 'users.subapps.pageOpening', 'users.subapps.pageButton', 'users.subapps.pageHint',
             'users.subapps.pageDownload', 'users.subapps.pageError',
             'users.affiliates.purchaseCommissionInfo',

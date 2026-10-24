@@ -324,4 +324,20 @@ return [
             . "📍 All 5 places: purchase message, test account, referral gift, hourly screen and 🛍 My services\n"
             . "🔵 Blue while the subscription is on (or has not connected to the config yet, OnHold) and 🔴 red once it is turned off. Green is gone. A colour you picked for this button in 🎨 still wins.</blockquote>",
     ],
+    [
+        'n' => 21,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>📲 <b>«ورود به سابسکریپشن» و «افزودن به برنامه»: یک تنظیم برای همه‌ی بخش‌ها</b>\n"
+            . "📍 🎨 شخصی‌سازی ← پیام‌ها و ظاهر سرویس‌های من ← «🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه» و «📲 لیست برنامه‌ها»\n"
+            . "📍 وب‌پنل ← ظاهر دکمه‌ها ← همان دو کارت\n"
+            . "پیام خرید، پیام اکانت تست، پیام کانفیگ هدیهٔ رفرال، صفحهٔ ساعتی و 🛍 سرویس‌های من حالا همه یک جفت دکمه و یک لیست برنامه دارند. هرچه در تب فارسی عوض کنی (نام، ایموجی، رنگ، چیدمان، مخفی کردن، کپشن لیست و دکمه‌های برنامه‌ها) در هر ۵ جا با همان تغییر دیده می‌شود؛ تب انگلیسی تنظیم جدای خودش را دارد.\n"
+            . "هر پیام (بعد از خرید، اکانت تست، هدیه، گروه رفرال و ساعتی) فقط یک ردیف دارد که به همین تنظیم مشترک می‌رود و 🔙 به همان صفحه‌ای برمی‌گردد که از آن آمده‌ای.\n"
+            . "آنچه قبلاً برای هر بخش جدا ذخیره کرده بودی، به تنظیم مشترک همان زبان منتقل شد.</blockquote>",
+        'en' => "<blockquote>📲 <b>«Open subscription page» and «Add to app»: one setting for every place</b>\n"
+            . "📍 🎨 Customize → My services messages and look → «🌐 Subscription and 📲 Add to app buttons» and «📲 The app list»\n"
+            . "📍 Web panel → Button looks → those two cards\n"
+            . "The purchase message, the test account message, the referral gift config message, the hourly screen and 🛍 My services now all have one pair of buttons and one app list. Whatever you change on the Persian tab (name, emoji, colour, layout, hiding, the list's caption and the app buttons) shows in all 5 places; the English tab has a setting of its own.\n"
+            . "Each message (after purchase, test account, gift, the referral group and the hourly one) has just one row that opens this shared setting, and 🔙 goes back to the screen you came from.\n"
+            . "What you had saved separately for each place was moved to that language's shared setting.</blockquote>",
+    ],
 ];
