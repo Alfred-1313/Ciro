@@ -37,6 +37,7 @@ array_push(
   $navItem('buttons.php', 'buttons', $navT['btnPageTitle'], 'package', $navT['btnPageTitle']),
   $navItem('looks.php', 'looks', $navT['looksPageTitle'], 'menu', $navT['looksPageTitle']),
   $navItem('svclook.php', 'svclook', $navT['svcPageTitle'], 'package', $navT['svcPageTitle']),
+  $navItem('subapps.php', 'subapps', $navT['saPageTitle'], 'package', $navT['saPageTitle']),
   $navItem('bottext.php', 'bottext', $navT['bottextPageTitle'], 'edit', $navT['bottextPageTitle']),
   $navItem('tools.php', 'tools', $navT['toolsPageTitle'], 'settings', $navT['toolsPageTitle'])
 );

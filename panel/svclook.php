@@ -340,7 +340,7 @@ $saveBtn = '<div class="modal-foot" style="border-radius:0 0 10px 10px"><button 
     <?php endforeach; ?>
     </tbody></table></div>
     <div class="field-hint"><?= $t['looksHint'] ?></div>
-    <div class="field-hint">🌐 📲 <?= $t['svcBuyBtnsPair'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-gb"><?= $t['svcBuyBtnsPairLink'] ?></a> · <a href="bottext.php?<?= http_build_query(['lang' => $lang, 'group' => 'subapps']) ?>"><?= $t['svcBuyBtnsGroupLink'] ?></a></div></div>
+    <div class="field-hint">🌐 📲 <?= $t['svcBuyBtnsPair'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-gb"><?= $t['svcBuyBtnsPairLink'] ?></a> · <a href="subapps.php?<?= http_build_query(['lang' => $lang]) ?>"><?= $t['svcBuyBtnsGroupLink'] ?></a></div></div>
 <?php elseif ($part === 'delivery'): $panels = array_filter((array) select("marzban_panel", "*", null, null, "fetchAll"), 'is_array'); ?>
   <div class="card-head"><div><div class="card-title">📦 <?= $t['svcDelivery'] ?></div><div class="card-subtitle"><?= $t['svcDeliverySub'] ?></div></div></div>
   <div class="card-body">

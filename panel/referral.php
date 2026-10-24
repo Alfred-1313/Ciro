@@ -294,4 +294,6 @@ echo web_lang_assets();
 </div>
 <?php endforeach; ?>
 
+<div class="card fade-up" style="margin-bottom:14px"><div class="card-body"><div class="set-row"><div class="set-hint">📲 <?= $t['saLinkHint'] ?></div><div class="set-ctl"><a class="btn btn-ghost btn-sm" href="subapps.php?<?= http_build_query(['lang' => web_lang_pick()]) ?>"><?= $t['saLinkText'] ?></a></div></div></div></div>
+
 <?php include __DIR__ . '/inc/layout_foot.php'; ?>

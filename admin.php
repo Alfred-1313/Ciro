@@ -23515,6 +23515,10 @@ if ($datain == "linkappsetting") {
         return in_array($it['group'] ?? '', $bt_reset_groups, true);
     }), 'key');
     bottext_reset_keys($bt_group_keys, $bt_lang);
+    // 📲's group also holds the look of its page
+    if ($bt_group === 'subapps') {
+        feature_setting_set('subapp_look', $bt_lang, 'glass');
+    }
     $textbotlang = panel_texts();
     list($bt_group_text, $bt_group_kb) = keyboard_list_text($bt_lang, $bt_group);
     Editmessagetext($from_id, $message_id, $textbotlang['bottext']['resetAllDone'] . "\n\n" . $bt_group_text, $bt_group_kb, 'HTML');

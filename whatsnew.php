@@ -388,4 +388,16 @@ return [
             . "The page that opens when a customer taps an app in «📲 Add to app» now has two looks: ✨ A Glass (the one you had) and ⚪ B Minimal, with a plain background, a pill button and the download as a row. The font, the words and the motion are the same in both; only the theme differs.\n"
             . "The look is chosen per language (one for Persian, one for English), and each look has a «👁 Preview» that opens that page with sample data. A stays the default, so nothing changes until you choose.</blockquote>",
     ],
+    [
+        'n' => 26,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>🌐 <b>وب‌پنل: صفحه‌ی «افزودن سرویس به برنامه»</b>\n"
+            . "📍 وب‌پنل ← افزودن سرویس به برنامه\n"
+            . "همه‌ی تنظیمات «📲 افزودن به برنامه» حالا مثل بخش خودش در 🎨 شخصی‌سازی یک‌جاست: طرح صفحه (شیشه‌ای یا مینیمال، با پیش‌نمایش «باز می‌شود / برنامه پیدا نشد / باز شد»)، دکمه‌های زیر سرویس، دکمه‌ی هر برنامه در لیست، متن پیام لیست، متن‌های صفحه‌ی باز کردن برنامه (دانلود و فروشگاه‌ها هم) و پاپ‌آپ‌ها، با استیکر و ری‌اکشن. برای هر زبان جدا و یکی برای هر ۵ بخش.\n"
+            . "یک دکمه‌ی «ریست» هم دارد که همه‌ی این بخش را برای همان زبان به پیش‌فرض برمی‌گرداند (در ربات هم «🔁 ریست همه به پیش‌فرض» حالا طرح صفحه را هم برمی‌گرداند). از صفحه‌های اکانت ساعتی، زیرمجموعه‌گیری و ظاهر سرویس هم به آن لینک هست.</blockquote>",
+        'en' => "<blockquote>🌐 <b>Web panel: the «Add service to app» page</b>\n"
+            . "📍 Web panel → Add service to app\n"
+            . "Everything about «📲 Add to app» is now in one place, like its section in 🎨 Customize: the look of the page (Glass or Minimal, with previews of «opening / app not found / opened»), the buttons under a service, each app's button in the list, the list message, the words of the app-opening page (download and the stores too) and the popups, with stickers and reactions. Separate for each language and one for all 5 places.\n"
+            . "A «Reset» button puts this whole section back to its defaults for that language (in the bot, «🔁 Reset all to default» now resets the page's look too). The hourly subscription, referral and service-look pages link to it.</blockquote>",
+    ],
 ];
