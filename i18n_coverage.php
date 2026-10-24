@@ -8,7 +8,7 @@
 
 $dir = __DIR__ . '/';
 $ref = 'fa';
-$codes = ['en', 'ru', 'zh', 'tk'];
+$codes = ['en'];
 
 function flatten($a, $prefix = '')
 {

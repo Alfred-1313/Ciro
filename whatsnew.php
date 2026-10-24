@@ -268,4 +268,14 @@ return [
             . "📍 Web panel → Bot Texts → 🛍 My services messages and look\n"
             . "A popup takes plain text only and shows up to 200 characters. The default text is also new and friendlier.</blockquote>",
     ],
+    [
+        'n' => 16,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>🧹 <b>فقط فارسی و انگلیسی</b>\n"
+            . "زبان‌های روسی، چینی و ترکمنی کامل از ربات و وب‌پنل برداشته شد: فایل‌های زبانشان، دکمه‌ها و گزینه‌های انتخاب زبان، پیش‌شماره‌ی تلفن، ارز پیش‌فرض و ساعت هر زبان.\n"
+            . "کاربرانی که روی یکی از این زبان‌ها بودند خودکار روی فارسی می‌روند (زبانی که هر متن بدون ترجمه هم به آن برمی‌گردد). تنظیمات ذخیره‌شده‌ی این زبان‌ها دست نخورده می‌ماند و هیچ جا نشان داده نمی‌شود.</blockquote>",
+        'en' => "<blockquote>🧹 <b>Persian and English only</b>\n"
+            . "Russian, Chinese and Turkmen are fully removed from the bot and the web panel: their language files, the buttons and choices for picking a language, the phone dial codes, the default currency and the time zone of each.\n"
+            . "Users who were on one of them move to Persian automatically (the language every untranslated text already falls back to). Settings saved for those languages are left in place and are not shown anywhere.</blockquote>",
+    ],
 ];

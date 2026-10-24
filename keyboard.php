@@ -2317,9 +2317,6 @@ if (!function_exists('language_picker_payload')) {
         $lsw_meta = [
             'fa' => ['label' => '🇮🇷 فارسی', 'line' => '🌐 لطفاً زبان خود را انتخاب کنید'],
             'en' => ['label' => '🇬🇧 English', 'line' => '🌐 Please select your language'],
-            'ru' => ['label' => '🇷🇺 Русский', 'line' => '🌐 Пожалуйста, выберите язык'],
-            'zh' => ['label' => '🇨🇳 中文', 'line' => '🌐 请选择您的语言'],
-            'tk' => ['label' => '🇹🇲 Türkmençe', 'line' => '🌐 Haýyş edýäris, diliňizi saýlaň'],
         ];
         $lp_section = help_layout_section('fa', 'langpick');
         $lsw_lines = [];

@@ -59,8 +59,6 @@ Current language: <b>{lang}</b>',
                 'langs' => [
                         'fa' => '🇮🇷 فارسی',
                         'en' => '🇬🇧 English',
-                        'ru' => '🇷🇺 Русский',
-                        'zh' => '🇨🇳 中文',
                 ],
                 'items' => [
                         [
@@ -286,8 +284,6 @@ Current language: <b>{lang}</b>',
                 'setSuccess' => '✅ Language set successfully',
                 'btnFa' => '🇮🇷 فارسی',
                 'btnEn' => '🇬🇧 English',
-                'btnRu' => '🇷🇺 Русский',
-                'btnZh' => '🇨🇳 中文',
         ],
         'common' => [
                 'units' => [

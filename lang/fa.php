@@ -150,9 +150,6 @@ return array (
     array (
       'fa' => '🇮🇷 فارسی',
       'en' => '🇬🇧 English',
-      'ru' => '🇷🇺 Русский',
-      'zh' => '🇨🇳 中文',
-      'tk' => '🇹🇲 Türkmençe',
     ),
     'items' => 
     array (
@@ -1179,9 +1176,6 @@ return array (
     'setSuccess' => '✅  زبان با موفقیت تنظیم گردید',
     'btnFa' => '🇮🇷 فارسی',
     'btnEn' => '🇬🇧 English',
-    'btnRu' => '🇷🇺 Русский',
-    'btnZh' => '🇨🇳 中文',
-    'btnTk' => '🇹🇲 Türkmençe',
   ),
   'common' => 
   array (
@@ -10734,8 +10728,6 @@ nowpayments.io
     array (
       'langBtnFa' => '🇮🇷 فارسی',
       'langBtnEn' => '🇬🇧 English',
-      'langBtnZh' => '🇨🇳 中文',
-      'langBtnRu' => '🇷🇺 Русский',
       'acceptRulesButton' => '✅ قوانین را می پذیرم',
       'affiliateBalanceGift' => '🎁 مبلغ {addbalancediscount} به موجودی شما از طرف زیر مجموعه با شناسه کاربری {from_id} اضافه گردید.',
       'unlimited' => 'نامحدود',

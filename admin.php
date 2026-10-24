@@ -1855,7 +1855,7 @@ if (!function_exists('lang_switch_settings_payload')) {
     function lang_switch_settings_payload()
     {
         $ls = lang_switch_settings(true);
-        $lsw_names = ['fa' => '🇮🇷 فارسی', 'en' => '🇬🇧 English', 'ru' => '🇷🇺 Русский', 'zh' => '🇨🇳 中文', 'tk' => '🇹🇲 Türkmençe'];
+        $lsw_names = ['fa' => '🇮🇷 فارسی', 'en' => '🇬🇧 English'];
         $kb = ['inline_keyboard' => []];
 
         $kb['inline_keyboard'][] = [['text' => bt_section_meta('langsw_when')['label'], 'callback_data' => 'bt_sep|langsw_when']];
@@ -1905,7 +1905,7 @@ if (!function_exists('lang_switch_settings_payload')) {
     function lang_switch_settings_caption($textbotlang)
     {
         $ls = lang_switch_settings();
-        $names = ['fa' => '🇮🇷 فارسی', 'en' => '🇬🇧 English', 'ru' => '🇷🇺 Русский', 'zh' => '🇨🇳 中文', 'tk' => '🇹🇲 Türkmençe'];
+        $names = ['fa' => '🇮🇷 فارسی', 'en' => '🇬🇧 English'];
         $on = [];
         foreach ($ls['langs'] as $c) {
             $on[] = $names[$c] ?? $c;
@@ -2364,6 +2364,8 @@ if (!function_exists('help_home_payload')) {
         // "add" / "list" button labels follow the selected TAB, not the admin's
         // own account language — same load+fallback+overrides logic as
         // keyboard_list_text() uses for the bot-text editor
+        // a tab that is no longer a language (an old button) opens the Persian one
+        $lang = in_array($lang, panel_langs(), true) ? $lang : 'fa';
         $help_tab_texts = require __DIR__ . '/lang/' . $lang . '.php';
         if ($lang !== 'fa' && is_array($help_tab_texts)) {
             $help_tab_fa = require __DIR__ . '/lang/fa.php';
@@ -7296,7 +7298,7 @@ if (preg_match('/^lsw_mode-(once|always)$/', $datain, $lsw_match) && $adminrulec
     Editmessagetext($from_id, $message_id, lang_switch_settings_caption($textbotlang), lang_switch_settings_payload(), 'HTML');
     return;
 }
-if (preg_match('/^lsw_lang-(fa|en|ru|zh|tk)$/', $datain, $lsw_match) && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^lsw_lang-(fa|en)$/', $datain, $lsw_match) && $adminrulecheck['rule'] == "administrator") {
     $lsw_langs = lang_switch_settings()['langs'];
     $lsw_code = $lsw_match[1];
     $lsw_warn = '';
@@ -12097,7 +12099,7 @@ elseif ($datain == "systemsms") {
             '{name}' => (!empty($fs_u['username']) && $fs_u['username'] !== 'none') ? '@' . htmlspecialchars($fs_u['username']) : '',
         ]), null, 'HTML');
     } elseif ($fs_key === 'wheel_price' || $fs_key === 'aff_giftamount') {
-        // an amount in this language's currency - USD/CNY/RUB/TMT carry
+        // an amount in this language's currency - USD carries
         // decimals, so "12.5" has to be accepted, not just whole numbers
         $fs_cur = currency_for_lang($fs_lang);
         if (!money_valid($text, $fs_cur)) {
@@ -21204,7 +21206,7 @@ if ($datain == "linkappsetting") {
     ]);
     $ls_kb = langscope_list_payload($ls_kind, $textbotlang, 0, $ls_id);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['LangScope'][$ls_meta['captionKey']], $ls_kb, 'HTML');
-} elseif (preg_match('/^langscope_set:(panel|product|category):(.+):(fa|en|ru|zh|tk|all)$/', $datain, $ls_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^langscope_set:(panel|product|category):(.+):(fa|en|all)$/', $datain, $ls_m) && $adminrulecheck['rule'] == "administrator") {
     $ls_kind = $ls_m[1];
     $ls_id = $ls_m[2];
     $ls_lang = $ls_m[3];
@@ -22730,17 +22732,17 @@ if ($datain == "linkappsetting") {
         'show_alert' => true,
         'cache_time' => 3,
     ]);
-} elseif (preg_match('/^help_lang:(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lang:(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_lang = $help_m[1];
     list($help_caption, $help_kb) = help_home_payload($help_lang, $textbotlang);
     Editmessagetext($from_id, $message_id, $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_cats:(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_cats:(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     list($help_caption, $help_kb) = help_categories_payload($help_m[1], $textbotlang);
     Editmessagetext($from_id, $message_id, $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_catview:(fa|en|ru|zh|tk):(\d{1,4})$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_catview:(fa|en):(\d{1,4})$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     list($help_caption, $help_kb) = help_category_items_payload($help_m[1], (int) $help_m[2], $textbotlang);
     Editmessagetext($from_id, $message_id, $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_pickcat:(fa|en|ru|zh|tk):(add|\d+):(none|\d{1,4})$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_pickcat:(fa|en):(add|\d+):(none|\d{1,4})$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_lang = $help_m[1];
     $help_target = $help_m[2];
     $help_cat_names = array_keys(help_category_list());
@@ -22757,13 +22759,13 @@ if ($datain == "linkappsetting") {
         list($help_info, $help_kb) = help_item_menu_payload($help_target, $help_lang, $textbotlang);
         Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['categorySaved'] . "\n\n" . $help_info, $help_kb, 'HTML');
     }
-} elseif (preg_match('/^help_status:(fa|en|ru|zh|tk):([01])$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_status:(fa|en):([01])$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     // nothing is deleted here - only whether the customer is offered the
     // section at all, so switching it back on restores every tutorial as it was
     help_section_set($help_m[2] !== '1');
     list($help_caption, $help_kb) = help_home_payload($help_m[1], $textbotlang);
     Editmessagetext($from_id, $message_id, $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_delcat:(fa|en|ru|zh|tk):(\d{1,4})$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_delcat:(fa|en):(\d{1,4})$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_lang = $help_m[1];
     $help_cats_now = help_category_list();
     $help_names_now = array_keys($help_cats_now);
@@ -22781,7 +22783,7 @@ if ($datain == "linkappsetting") {
     help_category_store_save(array_values(array_diff(help_category_store(), [$help_del])));
     list($help_caption, $help_kb) = help_categories_payload($help_lang, $textbotlang);
     Editmessagetext($from_id, $message_id, "🗑 دسته‌ی «" . htmlspecialchars($help_del, ENT_QUOTES, 'UTF-8') . "» حذف شد.\n\n" . $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_newcat:(fa|en|ru|zh|tk):(add|list|\d+)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_newcat:(fa|en):(add|list|\d+)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     update("user", "Processing_value", $help_m[1] . '|' . $help_m[2], "id", $from_id);
     sendmessage($from_id, "🗂 اسم دسته‌بندی جدید رو بفرست:", $btpromptcancel, 'HTML');
     step('help_new_cat', $from_id);
@@ -22807,27 +22809,27 @@ if ($datain == "linkappsetting") {
         list($help_caption, $help_kb) = help_category_picker_payload($help_lang, $help_target, $textbotlang);
     }
     sendmessage($from_id, "✅ دسته‌بندی «" . htmlspecialchars($text, ENT_QUOTES, 'UTF-8') . "» ساخته شد.\n\n" . $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_disp:(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_disp:(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_lang = $help_m[1];
     $help_kb = help_display_hub_payload($help_lang, $textbotlang);
     $help_caption = strtr($textbotlang['Admin']['Help']['displayCaption'], ['{lang}' => $textbotlang['bottext']['langs'][$help_lang]]);
     Editmessagetext($from_id, $message_id, $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_disp_cat:(fa|en|ru|zh|tk)(?::(bt))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_disp_cat:(fa|en)(?::(bt))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_lang = $help_m[1];
     $help_kb = help_disp_cat_hub_payload($help_lang, $textbotlang, $help_m[2] ?? '');
     $help_caption = strtr($textbotlang['Admin']['Help']['catSubCaption'], ['{lang}' => $textbotlang['bottext']['langs'][$help_lang]]);
     Editmessagetext($from_id, $message_id, $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_disp_tut:(fa|en|ru|zh|tk)(?::(bt))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_disp_tut:(fa|en)(?::(bt))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_lang = $help_m[1];
     $help_kb = help_disp_tut_hub_payload($help_lang, $textbotlang, $help_m[2] ?? '');
     $help_caption = strtr($textbotlang['Admin']['Help']['tutSubCaption'], ['{lang}' => $textbotlang['bottext']['langs'][$help_lang]]);
     Editmessagetext($from_id, $message_id, $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_col:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_col:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_kb = help_color_editor_payload($help_lang, $help_kind, $textbotlang);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['colorCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_col_pick:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_col_pick:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en):(\d+)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_idx = (int) $help_m[3];
@@ -22852,24 +22854,24 @@ if ($datain == "linkappsetting") {
     }
     $help_kb = help_color_editor_payload($help_lang, $help_kind, $textbotlang);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['colorCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     // :pe on these help_lay_* taps = opened from ✏️ ویرایش محصول (help_layout_editor_payload)
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null, $help_m[3] ?? '');
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay_pick:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay_pick:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en):(\d+)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_sel = (int) $help_m[3];
     $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, $help_sel, $help_m[4] ?? '');
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay_cancel:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay_cancel:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null, $help_m[3] ?? '');
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay_swap:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+):(\d+)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay_swap:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en):(\d+):(\d+)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_idx1 = (int) $help_m[3];
@@ -22893,7 +22895,7 @@ if ($datain == "linkappsetting") {
     }
     $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null, $help_from);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay_width:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay_width:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en):(\d+)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_idx = (int) $help_m[3];
@@ -22943,7 +22945,7 @@ if ($datain == "linkappsetting") {
     }
     $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null, $help_from);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay_hide:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay_hide:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en):(\d+)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     // 🚫 مخفی / 👁 نمایش for one button. Display only: the item itself, its
     // database row and its own on/off switch are never touched.
     $help_kind = $help_m[1];
@@ -22982,7 +22984,7 @@ if ($datain == "linkappsetting") {
     }
     $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, $help_idx, $help_from);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_lay_reset:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_lay_reset:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en)(?::(pe))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_section = help_layout_section($help_lang, $help_kind);
@@ -22991,12 +22993,12 @@ if ($datain == "linkappsetting") {
     help_layout_set_section($help_lang, $help_kind, ['order' => [], 'width' => [], 'hidden' => [], 'emoji' => $help_section['emoji'], 'emojiIcon' => $help_section['emojiIcon'], 'emojiSimple' => $help_section['emojiSimple'], 'color' => $help_section['color'], 'rename' => $help_section['rename']]);
     $help_kb = help_layout_editor_payload($help_lang, $help_kind, $textbotlang, null, $help_m[3] ?? '');
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_emo:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_emo:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_kb = help_emoji_editor_payload($help_lang, $help_kind, $textbotlang);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['emojiCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_emo_pick:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_emo_pick:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en):(\d+)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_idx = (int) $help_m[3];
@@ -23010,14 +23012,14 @@ if ($datain == "linkappsetting") {
         sendmessage($from_id, sprintf($textbotlang['Admin']['Help']['askEmojiForItem'], $help_item_name), $btpromptcancel, 'HTML');
         step('help_emo_input', $from_id);
     }
-} elseif (preg_match('/^help_emo_reset:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_emo_reset:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_section = help_layout_section($help_lang, $help_kind);
     help_layout_set_section($help_lang, $help_kind, ['order' => $help_section['order'], 'width' => $help_section['width'], 'hidden' => $help_section['hidden'], 'emoji' => [], 'emojiIcon' => [], 'emojiSimple' => $help_section['emojiSimple'], 'color' => $help_section['color'], 'rename' => $help_section['rename']]);
     $help_kb = help_emoji_editor_payload($help_lang, $help_kind, $textbotlang);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['emojiCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_emo_simple:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_emo_simple:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_section = help_layout_section($help_lang, $help_kind);
@@ -23025,12 +23027,12 @@ if ($datain == "linkappsetting") {
     help_layout_set_section($help_lang, $help_kind, $help_section);
     $help_kb = help_emoji_editor_payload($help_lang, $help_kind, $textbotlang);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['emojiCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_ren:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_ren:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_kb = help_rename_editor_payload($help_lang, $help_kind, $textbotlang);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['BtnStyle']['renameCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_ren_pick:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk):(\d+)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_ren_pick:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en):(\d+)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_idx = (int) $help_m[3];
@@ -23044,7 +23046,7 @@ if ($datain == "linkappsetting") {
         sendmessage($from_id, sprintf($textbotlang['Admin']['BtnStyle']['askRenameForItem'], $help_item_name), $btpromptcancel, 'HTML');
         step('help_ren_input', $from_id);
     }
-} elseif (preg_match('/^help_ren_reset:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_ren_reset:(categories|tutorials|panel|product|category|gateway|langpick):(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_section = help_layout_section($help_lang, $help_kind);
@@ -23055,7 +23057,7 @@ if ($datain == "linkappsetting") {
     $help_kb = btnstyle_hub_payload('fa', $textbotlang);
     $help_caption = strtr($textbotlang['Admin']['BtnStyle']['hubCaption'], ['{lang}' => $textbotlang['bottext']['langs']['fa']]);
     sendmessage($from_id, $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^btnstyle_lang:(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^btnstyle_lang:(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_lang = $help_m[1];
     $help_kb = btnstyle_hub_payload($help_lang, $textbotlang);
     $help_caption = strtr($textbotlang['Admin']['BtnStyle']['hubCaption'], ['{lang}' => $textbotlang['bottext']['langs'][$help_lang]]);
@@ -23153,21 +23155,21 @@ if ($datain == "linkappsetting") {
         topup_group_btnstyle_set($gg_m[1], $gg_group, $gg_style);
     }
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['BtnStyle']['renameCaption'], topup_group_rename_payload($gg_m[1], $textbotlang), 'HTML');
-} elseif (preg_match('/^btnstyle_kindhub:(panel|product|category|gateway|langpick):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^btnstyle_kindhub:(panel|product|category|gateway|langpick):(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_kind = $help_m[1];
     $help_lang = $help_m[2];
     $help_kb = btnstyle_kindhub_payload($help_kind, $help_lang, $textbotlang);
     $help_caption = strtr($textbotlang['Admin']['BtnStyle'][btnstyle_kindhub_caption_key($help_kind)], ['{lang}' => $textbotlang['bottext']['langs'][$help_lang]]);
     Editmessagetext($from_id, $message_id, $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_item:(\d+):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_item:(\d+):(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     list($help_info, $help_kb) = help_item_menu_payload($help_m[1], $help_m[2], $textbotlang);
     Editmessagetext($from_id, $message_id, $help_info, $help_kb, 'HTML');
-} elseif (preg_match('/^help_back:(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_back:(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_lang = $help_m[1];
     $help_kb = help_list_payload($help_lang, $textbotlang);
     $help_caption = strtr($textbotlang['Admin']['Help']['listCaption'], ['{lang}' => $textbotlang['bottext']['langs'][$help_lang]]);
     Editmessagetext($from_id, $message_id, $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_view_list:(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_view_list:(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_lang = $help_m[1];
     if (select("help", "*", null, null, "count") == 0) {
         telegram('answerCallbackQuery', [
@@ -23190,7 +23192,7 @@ if ($datain == "linkappsetting") {
     $help_kb = help_list_payload($help_lang, $textbotlang);
     $help_caption = strtr($textbotlang['Admin']['Help']['listCaption'], ['{lang}' => $textbotlang['bottext']['langs'][$help_lang]]);
     Editmessagetext($from_id, $message_id, $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_preview:(fa|en|ru|zh|tk)(?::(\d{1,4}))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_preview:(fa|en)(?::(\d{1,4}))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_lang = $help_m[1];
     list($help_kb, $help_hidden, $help_ncats, $help_nitems) = help_preview_list_payload($help_lang, $textbotlang);
     $help_caption = strtr($textbotlang['Admin']['Help']['previewCaption'], ['{lang}' => $textbotlang['bottext']['langs'][$help_lang]]);
@@ -23201,7 +23203,7 @@ if ($datain == "linkappsetting") {
         $help_caption .= "\n🚫 {$help_hidden} دکمه مخفیه و اینجا هم مثل دید کاربر نشون داده نمی‌شه.";
     }
     Editmessagetext($from_id, $message_id, $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_prev_cat:(fa|en|ru|zh|tk):(\d{1,4})$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_prev_cat:(fa|en):(\d{1,4})$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_lang = $help_m[1];
     list($help_kb, $help_hidden, , $help_nitems) = help_preview_list_payload($help_lang, $textbotlang, (int) $help_m[2]);
     $help_cats_now = help_preview_categories(select("help", "*", null, null, "fetchAll") ?: [], $help_lang);
@@ -23213,7 +23215,7 @@ if ($datain == "linkappsetting") {
         $help_caption .= "\n🚫 {$help_hidden} آموزش مخفیه و نشون داده نمی‌شه.";
     }
     Editmessagetext($from_id, $message_id, $help_caption, $help_kb, 'HTML');
-} elseif (preg_match('/^help_prev_item:(\d+):(fa|en|ru|zh|tk)(?::(\d{1,4}))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_prev_item:(\d+):(fa|en)(?::(\d{1,4}))?$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_row = select("help", "*", "id", $help_m[1], "select");
     $help_lang = $help_m[2];
     // back goes where the admin came FROM: the category's own preview when the
@@ -23235,7 +23237,7 @@ if ($datain == "linkappsetting") {
     update("user", "Processing_value_four", "0", "id", $from_id);
     list($help_pick_caption, $help_pick_kb) = help_category_picker_payload('fa', 'add', $textbotlang);
     Editmessagetext($from_id, $message_id, $help_pick_caption, $help_pick_kb, 'HTML');
-} elseif (preg_match('/^help_name:(\d+):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_name:(\d+):(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     update("user", "Processing_value", $help_m[1] . ':' . $help_m[2], "id", $from_id);
     sendmessage($from_id, $textbotlang['Admin']['Help']['askOnlyName'], $btpromptcancel, 'HTML');
     step('help_edit_name', $from_id);
@@ -23257,7 +23259,7 @@ if ($datain == "linkappsetting") {
     list($help_info, $help_kb) = help_item_menu_payload($help_parts[0], $help_parts[1], $textbotlang);
     sendmessage($from_id, $textbotlang['Admin']['Help']['nameSaved'] . "\n\n" . $help_info, $help_kb, 'HTML');
     step('home', $from_id);
-} elseif (preg_match('/^help_cat:(\d+):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_cat:(\d+):(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     // picker instead of free text - same list the add flow offers, plus
     // "هیچ‌کدام", which is how a tutorial gets taken OUT of its category
     list($help_caption, $help_kb) = help_category_picker_payload($help_m[2], $help_m[1], $textbotlang);
@@ -23280,7 +23282,7 @@ if ($datain == "linkappsetting") {
     list($help_info, $help_kb) = help_item_menu_payload($help_parts[0], $help_parts[1], $textbotlang);
     sendmessage($from_id, $textbotlang['Admin']['Help']['categorySaved'] . "\n\n" . $help_info, $help_kb, 'HTML');
     step('home', $from_id);
-} elseif (preg_match('/^help_edit:(\d+):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_edit:(\d+):(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     update("user", "Processing_value", $help_m[1] . ':' . $help_m[2], "id", $from_id);
     sendmessage($from_id, $textbotlang['Admin']['Help']['askOnlyContent'], $btpromptcancel, 'HTML');
     step('help_edit_content', $from_id);
@@ -23414,7 +23416,7 @@ if ($datain == "linkappsetting") {
     step('home', $from_id);
     $help_kb = help_rename_editor_payload($help_lang, $help_kind, $textbotlang);
     sendmessage($from_id, $textbotlang['Admin']['BtnStyle']['renameSaved'] . "\n\n" . $textbotlang['Admin']['BtnStyle']['renameCaption'], $help_kb, 'HTML');
-} elseif (preg_match('/^help_reset:(\d+):(en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_reset:(\d+):(en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_id = $help_m[1];
     $help_lang = $help_m[2];
     $help_row = select("help", "*", "id", $help_id, "select");
@@ -23427,7 +23429,7 @@ if ($datain == "linkappsetting") {
     }
     list($help_info, $help_kb) = help_item_menu_payload($help_id, $help_lang, $textbotlang);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['resetDone'] . "\n\n" . $help_info, $help_kb, 'HTML');
-} elseif (preg_match('/^help_delete:(\d+):(fa|en|ru|zh|tk)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
+} elseif (preg_match('/^help_delete:(\d+):(fa|en)$/', $datain, $help_m) && $adminrulecheck['rule'] == "administrator") {
     $help_id = intval($help_m[1]);
     $help_lang = $help_m[2];
     $stmt = $pdo->prepare("DELETE FROM help WHERE id = :id");

@@ -7552,7 +7552,7 @@ if (isset($update['message']['successful_payment'])) {
     list($lsw_caption_ch, $lsw_kb_ch) = language_picker_payload();
     Editmessagetext($from_id, $message_id, $lsw_caption_ch, $lsw_kb_ch);
 
-} elseif (preg_match('/^setlang:(fa|en|ru|zh|tk)$/', $datain, $dataget)) {
+} elseif (preg_match('/^setlang:(fa|en)$/', $datain, $dataget)) {
     $lang = $dataget[1];
     // 👥 someone who joined today and still has what their language gave a
     // new user: what the language they pick gives one (🆕 کاربرهای جدید).

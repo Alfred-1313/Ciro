@@ -267,7 +267,7 @@ timeauto_not_verify,status_keyboard_config,cron_status
         // the automatic language picker is off on a fresh install - it used to
         // rely on this column being NULL and the reader defaulting to '0', which
         // meant the shipped default was invisible in the database
-        addFieldToTable("setting", "lang_switch", '{"enabled":"0","mode":"once","langs":["fa","en","ru","zh","tk"],"blockOthers":"0"}', "TEXT");
+        addFieldToTable("setting", "lang_switch", '{"enabled":"0","mode":"once","langs":["fa","en"],"blockOthers":"0"}', "TEXT");
         addFieldToTable("setting", "help_layout", null, "TEXT");
         addFieldToTable("setting", "status_keyboard_config", "1", "varchar(20)");
         addFieldToTable("setting", "configDeliveryMode", null, "TEXT");
@@ -1460,9 +1460,6 @@ try {
         foreach ([
             ['IRT', 'تومان', 'تومان', 0, 'after'],
             ['USD', 'US Dollar', '$', 2, 'before'],
-            ['RUB', 'Russian Ruble', '₽', 2, 'after'],
-            ['CNY', 'Chinese Yuan', '¥', 2, 'before'],
-            ['TMT', 'Turkmen Manat', 'm', 2, 'after'],
         ] as $rowcur) {
             $seedcur->execute($rowcur);
         }
@@ -1470,7 +1467,7 @@ try {
 } catch (Exception $e) {
     file_put_contents('error_log', $e->getMessage());
 }
-addFieldToTable("setting", "lang_currency", '{"fa":"IRT","en":"USD","ru":"RUB","zh":"CNY","tk":"TMT"}', "TEXT");
+addFieldToTable("setting", "lang_currency", '{"fa":"IRT","en":"USD"}', "TEXT");
 addFieldToTable("setting", "lang_gateways", '{}', "TEXT");
 addFieldToTable("setting", "gw_auto_currency", 'off', "TEXT");
 addFieldToTable("setting", "topup_packages", '{}', "TEXT");
@@ -1579,6 +1576,27 @@ try {
     error_log('statuschangeservice default: ' . $e->getMessage());
 }
 addFieldToTable("setting", "feature_lang", '{}', "TEXT");
+// Russian, Chinese and Turkmen are not languages of the bot any more (only fa
+// and en have a lang/ file). Whoever was on one is on Persian - the language
+// every missing text already falls back to - and the picker's list and the
+// language -> currency map lose those codes. Safe to run again.
+try {
+    $pdo->query("UPDATE `user` SET lang = 'fa' WHERE lang IN ('ru', 'zh', 'tk')");
+    $gone_row = $pdo->query("SELECT lang_switch, lang_currency FROM setting LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    if (is_array($gone_row)) {
+        $gone_sw = json_decode((string) $gone_row['lang_switch'], true);
+        if (is_array($gone_sw) && is_array($gone_sw['langs'] ?? null)) {
+            $gone_sw['langs'] = array_values(array_intersect($gone_sw['langs'], ['fa', 'en']));
+            $pdo->prepare("UPDATE setting SET lang_switch = ?")->execute([json_encode($gone_sw, JSON_UNESCAPED_UNICODE)]);
+        }
+        $gone_cur = json_decode((string) $gone_row['lang_currency'], true);
+        if (is_array($gone_cur) && array_diff_key($gone_cur, ['fa' => 1, 'en' => 1])) {
+            $pdo->prepare("UPDATE setting SET lang_currency = ?")->execute([json_encode(array_intersect_key($gone_cur, ['fa' => 1, 'en' => 1]), JSON_UNESCAPED_UNICODE)]);
+        }
+    }
+} catch (Exception $e) {
+    error_log('dropped languages: ' . $e->getMessage());
+}
 addFieldToTable("setting", "feature_lang_settings", '{}', "TEXT");
 addFieldToTable("setting", "webhook_secret", null, "VARCHAR(200) NOT NULL DEFAULT ''");
 // per-language app-download rows, same convention marzban_panel.lang already

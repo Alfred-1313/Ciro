@@ -1743,7 +1743,7 @@ if (!function_exists('phone_prefixes_for_lang')) {
     // English is deliberately unrestricted: it is a language, not a country.
     function phone_prefix_defaults()
     {
-        return ['fa' => '98', 'ru' => '7', 'zh' => '86', 'tk' => '993', 'en' => ''];
+        return ['fa' => '98', 'en' => ''];
     }
     // Which dial codes a number may start with, for ONE language. Stored per
     // language (feature_lang_settings key "phone_prefix") as a comma list of
@@ -2531,14 +2531,10 @@ if (!function_exists('panel_langs')) {
     // The languages this bot actually speaks.
     //
     // One list, so a language cannot be offered by one screen and rejected by
-    // the next. lang/ru.php, lang/zh.php and lang/tk.php are still shipped and
-    // still load - they are simply not offered any more, which is the owner's
-    // call: keeping a tab for a language nobody maintains means half-translated
-    // screens with silent Persian fallbacks behind them.
-    //
-    // Re-adding one is this list plus nothing else. Values already stored
-    // against a dropped language are left alone rather than deleted, so they
-    // come back with it.
+    // the next. Persian and English are the only languages the bot has files
+    // for (lang/fa.php, lang/en.php); every screen, the language picker and the
+    // loader below read this list, so a language is added or dropped here and
+    // by its file, nowhere else.
     function panel_langs()
     {
         return ['fa', 'en'];
@@ -7034,7 +7030,7 @@ if (!function_exists('svc_bytes_text')) {
         return implode("\n\n", $lines);
     }
     // Persian tabs get a Jalali date, every other language a Gregorian one -
-    // a Chinese or Russian customer reading "۱۴۰۶/۰۵/۰۵" learns nothing.
+    // an English customer reading "۱۴۰۶/۰۵/۰۵" learns nothing.
     function svc_expire_text($expire_ts, $lang, $textbotlang)
     {
         $b = $textbotlang['users']['status'] ?? [];
@@ -10576,7 +10572,7 @@ function languagechange($path_dir = null, string $lang = 'fa')
     global $from_id;
     $user_lang = select("user", "*", "id", $from_id);
     $lang = $user_lang ? $user_lang['lang'] : $lang;
-    $allowed = ['fa', 'en', 'ar', 'ru', 'zh', 'tk'];
+    $allowed = panel_langs();
     if (!in_array($lang, $allowed, true))
         $lang = 'fa';
     $base_dir = $path_dir ?: __DIR__;
@@ -19889,7 +19885,7 @@ if (!function_exists('help_layout_items')) {
             // Only the languages the shop actually offers are listed, the same
             // way 'gateway' lists only live gateways: styling a button nobody
             // will ever see is noise. The picker itself filters the same list.
-            $lp_names = ['fa' => '🇮🇷 فارسی', 'en' => '🇬🇧 English', 'ru' => '🇷🇺 Русский', 'zh' => '🇨🇳 中文', 'tk' => '🇹🇲 Türkmençe'];
+            $lp_names = ['fa' => '🇮🇷 فارسی', 'en' => '🇬🇧 English'];
             $lp_section = help_layout_section($lang, 'langpick');
             $out = [];
             foreach (lang_switch_enabled_langs() as $code) {
@@ -21669,9 +21665,6 @@ if (!function_exists('lang_timezone')) {
         $map = [
             'fa' => 'Asia/Tehran',
             'en' => 'UTC',
-            'ru' => 'Europe/Moscow',
-            'zh' => 'Asia/Shanghai',
-            'tk' => 'Asia/Ashgabat',
         ];
         return $map[$lang] ?? 'UTC';
     }

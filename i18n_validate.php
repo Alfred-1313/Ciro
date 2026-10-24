@@ -39,7 +39,7 @@ function tokens($s)
 $fa = flatten(require $dir . 'lang/fa.php');
 $problems = 0;
 
-foreach (['en', 'ru', 'zh', 'tk'] as $code) {
+foreach (['en'] as $code) {
     $p = $dir . "lang/$code.php";
     if (!is_file($p)) {
         continue;

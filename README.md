@@ -4,13 +4,13 @@
 
 **A Telegram bot that sells VPN subscriptions — and runs a different shop for every language you serve.**
 
-Built on [Mirza Bot](https://github.com/mahdiMGF2/mirzabot), extended so one bot can behave like five.
+Built on [Mirza Bot](https://github.com/mahdiMGF2/mirzabot), extended so one bot can behave like two: one shop per language, Persian and English.
 
 <p>
   <img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP 8.2"/>
   <img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="AGPL-3.0"/>
   <img src="https://img.shields.io/badge/Ubuntu%20%7C%20Debian-supported-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt="Ubuntu / Debian"/>
-  <img src="https://img.shields.io/badge/languages-5-success?style=flat-square" alt="5 languages"/>
+  <img src="https://img.shields.io/badge/languages-2-success?style=flat-square" alt="2 languages"/>
 </p>
 
 </div>
@@ -86,7 +86,7 @@ The original ships one shop with one set of rules. This version makes almost eve
 Amounts follow each language's currency from `lang_currency`, so the wheel prize reads `20,000 تومان` on the Persian tab and `$0.2` on the English one. Two-decimal currencies accept decimal input properly.
 
 **Its own country, per language**
-Phone verification enforces the dial code of the market it belongs to — `+98` for Persian, `+7` for Russian, `+86` for Chinese — instead of demanding an Iranian number from everyone. English is unrestricted by default, because it is a language and not a country.
+Phone verification enforces the dial code of the language it belongs to (`+98` for Persian) instead of demanding an Iranian number from everyone. English is unrestricted by default, because it is a language and not a country.
 
 **Inline settings screens**
 The settings behind app links, wheel of fortune, referrals and location limits open inside the message you are already in, with a cancel button on every prompt. No more reply keyboards to get stuck in.
@@ -105,7 +105,7 @@ USDT (BEP20) gateway · numbered card placeholders for multi-card invoices · se
 
 **Payments** — card-to-card (with receipt review) · Zarinpal · AqayePardakht · IranPay ×3 · Plisio · NOWPayments · TRX · TON · USDT (BEP20) · DigitalTron · Telegram Stars
 
-**Languages** — 🇮🇷 فارسی · 🇬🇧 English · 🇷🇺 Русский · 🇨🇳 中文 · 🇹🇲 Türkmençe
+**Languages** — 🇮🇷 فارسی · 🇬🇧 English
 
 ---
 
