@@ -13240,6 +13240,14 @@ if (!function_exists('bt_section_meta')) {
                 'label' => '🌐 سابسکریپشن و 📲 افزودن به برنامه',
                 'alert' => 'دکمه‌های «🌐 سابسکریپشن» و «📲 افزودن به برنامه»، لیست برنامه‌ها و صفحه‌ی بازشدنشون برای ۵ جا (خرید، تست، هدیه، ساعتی، سرویس‌های من) یکیه؛ دکمه‌ی زیر بخش مخصوصش رو باز می‌کنه.',
             ],
+            'subapps_lay' => [
+                'label' => '🧩 چیدمان صفحه',
+                'alert' => 'جای هر بخش صفحه و اینکه نشون داده بشه یا نه. ⬆️ ⬇️ جابه‌جا می‌کنه و ✅ / 🚫 نشون می‌ده یا حذف می‌کنه.',
+            ],
+            'home_subapps' => [
+                'label' => '📲 افزودن سرویس به برنامه — یکی برای ۵ مسیر',
+                'alert' => 'دکمه‌های 🌐/📲، لیست برنامه‌ها، لینک دانلودشون و صفحه‌ای که برنامه رو باز می‌کنه برای ۵ مسیر (بعد از خرید، اکانت تست، هدیه‌ی دعوت، اشتراک ساعتی و سرویس‌های من) یکیه؛ دکمه‌ی زیر تنظیماتش رو باز می‌کنه.',
+            ],
             'subapps_look' => [
                 'label' => '🖼 طرح صفحه‌ی باز کردن برنامه',
                 'alert' => 'صفحه‌ای که با زدن یه برنامه باز می‌شه دو طرح داره (شیشه‌ای / مینیمال)؛ فونت، متن‌ها و انیمیشنش یکیه و فقط تم فرق می‌کنه. برای هر زبان جدا انتخاب می‌شه.',
@@ -14217,16 +14225,210 @@ if (!function_exists('subapp_kind')) {
         $v = (string) feature_setting_value('subapp_theme', $lang, 'auto');
         return isset(subapp_themes()[$v]) ? $v : 'auto';
     }
+    // ---- the page's layout and the apps' links, per language (feature_lang_settings) ----
+    // the blocks of the page an admin can hide, and the top-level ones he can move
+    function subapp_layout_elements()
+    {
+        return ['logo', 'flow', 'title', 'chip', 'status', 'note', 'download', 'stores', 'retry'];
+    }
+    function subapp_layout_blocks()
+    {
+        return ['stage', 'title', 'chip', 'status', 'actions'];
+    }
+    // app icon: its size and shape; where the stage sits; the text's alignment
+    function subapp_layout_choices()
+    {
+        return ['size' => ['sm', 'md', 'lg', 'xl'], 'shape' => ['squircle', 'circle', 'square'], 'stageAlign' => ['center', 'start', 'end'], 'align' => ['center', 'start']];
+    }
+    function subapp_layout_defaults()
+    {
+        return ['hide' => [], 'order' => subapp_layout_blocks(), 'size' => 'md', 'shape' => 'squircle', 'stageAlign' => 'center', 'align' => 'center'];
+    }
+    // what is saved for a language, checked, on top of the defaults
+    function subapp_layout($lang)
+    {
+        $lay = subapp_layout_defaults();
+        $raw = json_decode((string) feature_setting_value('subapp_layout', $lang, ''), true);
+        if (!is_array($raw)) {
+            return $lay;
+        }
+        foreach (subapp_layout_choices() as $k => $allowed) {
+            if (isset($raw[$k]) && in_array($raw[$k], $allowed, true)) {
+                $lay[$k] = $raw[$k];
+            }
+        }
+        if (isset($raw['hide']) && is_array($raw['hide'])) {
+            $lay['hide'] = array_values(array_intersect(subapp_layout_elements(), $raw['hide']));
+        }
+        if (isset($raw['order']) && is_array($raw['order'])) {
+            // the blocks in his order, any he did not name after them
+            $ord = array_values(array_unique(array_intersect($raw['order'], subapp_layout_blocks())));
+            $lay['order'] = array_merge($ord, array_values(array_diff(subapp_layout_blocks(), $ord)));
+        }
+        return $lay;
+    }
+    function subapp_layout_set($lang, array $lay)
+    {
+        $clean = subapp_layout_defaults();
+        foreach (subapp_layout_choices() as $k => $allowed) {
+            if (isset($lay[$k]) && in_array($lay[$k], $allowed, true)) {
+                $clean[$k] = $lay[$k];
+            }
+        }
+        $clean['hide'] = array_values(array_intersect(subapp_layout_elements(), (array) ($lay['hide'] ?? [])));
+        $ord = array_values(array_unique(array_intersect((array) ($lay['order'] ?? []), subapp_layout_blocks())));
+        $clean['order'] = array_merge($ord, array_values(array_diff(subapp_layout_blocks(), $ord)));
+        // nothing changed: nothing kept
+        feature_setting_set('subapp_layout', $lang, $clean === subapp_layout_defaults() ? '' : json_encode($clean));
+    }
+    function subapp_layout_changed($lang)
+    {
+        return subapp_layout($lang) !== subapp_layout_defaults();
+    }
+    // the stores of an app: Google Play, the latest GitHub release, the App
+    // Store, its own site. The admin may change each (per language); «-» says
+    // «none» and an empty one is the default
+    function subapp_link_kinds()
+    {
+        return ['play', 'github', 'ios', 'site'];
+    }
+    function subapp_link_valid($url)
+    {
+        return (bool) preg_match('~^https?://[^\s<>"\']{3,300}$~i', (string) $url);
+    }
+    function subapp_links($lang)
+    {
+        $raw = json_decode((string) feature_setting_value('subapp_links', $lang, ''), true);
+        return is_array($raw) ? $raw : [];
+    }
+    function subapp_link_set($lang, $appId, $kind, $value)
+    {
+        $m = subapp_links($lang);
+        if ($value === '') {
+            unset($m[$appId][$kind]);
+            if (empty($m[$appId])) {
+                unset($m[$appId]);
+            }
+        } else {
+            $m[$appId][$kind] = $value;
+        }
+        feature_setting_set('subapp_links', $lang, $m ? json_encode($m, JSON_UNESCAPED_SLASHES) : '');
+    }
+    // subapp_apps() with this language's links on top of the defaults
+    function subapp_apps_for($lang)
+    {
+        $m = subapp_links($lang);
+        $apps = subapp_apps();
+        foreach ($apps as $i => $a) {
+            foreach (subapp_link_kinds() as $kind) {
+                $v = $m[$a['id']][$kind] ?? null;
+                if ($v === '-') {
+                    $apps[$i][$kind] = '';
+                } elseif (is_string($v) && subapp_link_valid($v)) {
+                    $apps[$i][$kind] = $v;
+                }
+            }
+        }
+        return $apps;
+    }
+    // anything of the page changed here: its look, theme, layout or links
+    function subapps_customized($lang)
+    {
+        return subapp_look($lang) !== 'glass' || subapp_theme($lang) !== 'auto' || subapp_layout_changed($lang) || subapp_links($lang) !== [];
+    }
     // a link to the page with made-up data, for the admin to see a look before
     // choosing it - signed like the real ones, and it opens nothing (subapp.php)
-    function subapp_preview_link($look, $lang, $appId = 'karing', $state = '')
+    function subapp_preview_link($look, $lang, $appId = 'karing', $state = '', array $extra = [])
     {
         global $domainhosts;
         $q = ['demo' => $look, 'l' => $lang, 'a' => $appId, 's' => subapp_sig('demo' . $look . $lang, $appId)];
         if (in_array($state, ['opening', 'missing', 'opened'], true)) {
             $q['st'] = $state;
         }
+        // th: a theme, os: whose stores, ed: the admin's editor talks to the page
+        $q += array_intersect_key($extra, ['th' => 1, 'os' => 1, 'ed' => 1]);
         return "https://{$domainhosts}/subapp.php?" . http_build_query($q);
+    }
+    // 🧩 the page's layout as a 🎨 screen: [text, keyboard json]
+    function subapp_layout_screen($lang)
+    {
+        global $textbotlang;
+        $tb = $textbotlang['bottext'];
+        $p = $textbotlang['panel'];
+        $lay = subapp_layout($lang);
+        $blockEls = ['stage' => ['logo', 'flow'], 'title' => ['title'], 'chip' => ['chip'], 'status' => ['status'], 'actions' => ['note', 'download', 'stores', 'retry']];
+        $rows = [];
+        $last = count($lay['order']) - 1;
+        foreach ($lay['order'] as $i => $b) {
+            $rows[] = [
+                ['text' => $p['seBlock' . ucfirst($b)], 'callback_data' => 'bt_sep|subapps_lay'],
+                ['text' => '⬆️', 'callback_data' => $i > 0 ? "salay|{$lang}|mv_{$b}_u" : 'bt_sep|subapps_lay'],
+                ['text' => '⬇️', 'callback_data' => $i < $last ? "salay|{$lang}|mv_{$b}_d" : 'bt_sep|subapps_lay'],
+            ];
+            $row = [];
+            foreach ($blockEls[$b] as $el) {
+                $shown = !in_array($el, $lay['hide'], true);
+                $row[] = ['text' => ($shown ? '✅ ' : '🚫 ') . $p['seEl' . ucfirst($el)], 'callback_data' => "salay|{$lang}|tg_{$el}", 'style' => $shown ? 'success' : 'danger'];
+            }
+            $rows[] = $row;
+        }
+        // the logo and the text: each button turns to the next choice
+        $cycle = ['size' => ['seSize', ['sm' => 'seSizeSm', 'md' => 'seSizeMd', 'lg' => 'seSizeLg', 'xl' => 'seSizeXl']],
+            'shape' => ['seShape', ['squircle' => 'seShapeSquircle', 'circle' => 'seShapeCircle', 'square' => 'seShapeSquare']],
+            'stageAlign' => ['seStageAlign', ['center' => 'seAlignCenter', 'start' => 'seAlignStart', 'end' => 'seAlignEnd']],
+            'align' => ['seTextAlign', ['center' => 'seAlignCenter', 'start' => 'seAlignStart']]];
+        $btns = [];
+        foreach ($cycle as $field => [$title, $names]) {
+            $btns[] = ['text' => $p[$title] . ': ' . $p[$names[$lay[$field]]], 'callback_data' => "salay|{$lang}|cy_{$field}", 'style' => 'primary'];
+        }
+        foreach (array_chunk($btns, 2) as $r) {
+            $rows[] = $r;
+        }
+        $rows[] = [['text' => $tb['saLookPreview'], 'url' => subapp_preview_link(subapp_look($lang), $lang)], ['text' => '🔁 ' . $p['seResetLayout'], 'callback_data' => "salay|{$lang}|reset", 'style' => 'danger']];
+        $rows[] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_group|{$lang}|subapps", 'style' => 'danger']];
+        $rows[] = [['text' => $tb['btn_close'], 'callback_data' => 'bt_close', 'style' => 'danger']];
+        return [strtr($tb['saLayCaption'], ['{lang}' => $tb['langs'][$lang] ?? $lang]), json_encode(['inline_keyboard' => $rows])];
+    }
+    // 🔗 the apps' links: the list of apps ($appId '') or one app's screen
+    function subapp_links_screen($lang, $appId = '')
+    {
+        global $textbotlang;
+        $tb = $textbotlang['bottext'];
+        $p = $textbotlang['panel'];
+        $mine = subapp_links($lang);
+        $apps = subapp_apps();
+        $names = ['play' => 'seLinkPlay', 'github' => 'seLinkGithub', 'ios' => 'seLinkIos', 'site' => 'seLinkSite'];
+        $rows = [];
+        $app = null;
+        foreach ($apps as $a) {
+            if ($a['id'] === $appId) {
+                $app = $a;
+            }
+        }
+        if ($app === null) {
+            foreach (array_chunk($apps, 2) as $pair) {
+                $rows[] = array_map(fn($a) => ['text' => '📱 ' . $a['name'], 'callback_data' => "salinks|{$lang}|{$a['id']}", 'style' => empty($mine[$a['id']]) ? 'primary' : 'success'], $pair);
+            }
+            $rows[] = [['text' => '🔁 ' . $p['seResetLayout'], 'callback_data' => "salinks|{$lang}|reset", 'style' => 'danger']];
+            $rows[] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_group|{$lang}|subapps", 'style' => 'danger']];
+            $rows[] = [['text' => $tb['btn_close'], 'callback_data' => 'bt_close', 'style' => 'danger']];
+            return [strtr($tb['saLinksCaption'], ['{lang}' => $tb['langs'][$lang] ?? $lang]), json_encode(['inline_keyboard' => $rows])];
+        }
+        $eff = array_column(subapp_apps_for($lang), null, 'id')[$appId];
+        $lines = '';
+        foreach ($names as $kind => $tk) {
+            $o = $mine[$appId][$kind] ?? null;
+            $state = $o === null ? $tb['saLinkDefault'] : ($o === '-' ? $tb['saLinkNone'] : $tb['saLinkChanged']);
+            $lines .= '• <b>' . $p[$tk] . '</b> (' . $state . '): ' . ($eff[$kind] !== '' ? '<code>' . htmlspecialchars($eff[$kind]) . '</code>' : '—') . "\n";
+            $rows[] = [
+                ['text' => '✏️ ' . $p[$tk], 'callback_data' => "salinkedit|{$lang}|{$appId}|{$kind}", 'style' => $o === null ? 'primary' : 'success'],
+                ['text' => '↩️ ' . $tb['saLinkDefault'], 'callback_data' => "salinkset|{$lang}|{$appId}|{$kind}|d"],
+                ['text' => '🚫', 'callback_data' => "salinkset|{$lang}|{$appId}|{$kind}|n"],
+            ];
+        }
+        $rows[] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "salinks|{$lang}", 'style' => 'danger']];
+        $rows[] = [['text' => $tb['btn_close'], 'callback_data' => 'bt_close', 'style' => 'danger']];
+        return [strtr($tb['saLinkAppCaption'], ['{app}' => $app['name'], '{lang}' => $tb['langs'][$lang] ?? $lang, '{links}' => $lines]), json_encode(['inline_keyboard' => $rows])];
     }
     // every text the app-opening web page (subapp.php) shows - they live in the
     // same 🎨 registry as the bot's messages but are page text, not messages

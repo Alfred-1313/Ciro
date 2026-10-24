@@ -44,6 +44,12 @@ if ($sa_demo !== '') {
     $sa_inv = ['username' => 'demo'];
 }
 $sa_t = lang_tab_texts($sa_lang)['users']['subapps'];
+// the apps with the stores this language's admin chose for them
+$sa_apps = array_column(subapp_apps_for($sa_lang), null, 'id');
+// the admin's page editor: a preview that talks to it (its own signed link only)
+$sa_edit = $sa_demo !== '' && isset($_GET['ed']);
+// what the admin hid, moved or resized on this page (the editor shows it live, too)
+$sa_lay = subapp_layout($sa_lang);
 // the look of the owner's language - the words and the motion are the same in both
 $sa_look = $sa_demo !== '' ? $sa_demo : subapp_look($sa_lang);
 // dark / light: the shop's choice for this language - 'auto' follows the device
@@ -76,6 +82,9 @@ if ($sa_ok) {
     // the phone shows its other ones with a line saying so
     $sa_ua = strtolower((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
     $sa_os = preg_match('/iphone|ipad|ipod|macintosh/', $sa_ua) ? 'ios' : (strpos($sa_ua, 'android') !== false ? 'android' : 'other');
+    if ($sa_demo !== '' && in_array((string) ($_GET['os'] ?? ''), ['android', 'ios', 'other'], true)) {
+        $sa_os = (string) $_GET['os'];
+    }
     $sa_order = ['android' => ['play', 'github', 'site'], 'ios' => ['ios', 'site'], 'other' => ['github', 'site', 'play', 'ios']][$sa_os];
     $sa_names = ['play' => 'pageStoreGoogle', 'github' => 'pageStoreGithub', 'ios' => 'pageStoreApple', 'site' => 'pageStoreSite'];
     foreach ($sa_order as $k) {
@@ -119,6 +128,21 @@ $sa_words = [
 ];
 $sa_state = ($sa_demo !== '' && isset($sa_words[(string) ($_GET['st'] ?? '')])) ? (string) $_GET['st'] : 'opening';
 $sa_min = $sa_look === 'minimal';
+// the blocks' own words, for the editor to know what a click on a word is
+$sa_tk = ['opening' => ['status' => 'pageOpening', 'note' => 'pageHint'], 'missing' => ['status' => 'pageMissingTitle', 'note' => 'pageMissing'], 'opened' => ['status' => '', 'note' => 'pageOpened']];
+$sa_hid = fn($el) => in_array($el, $sa_lay['hide'], true) ? ' data-hide="1"' : '';
+$sa_ord = array_flip($sa_lay['order']);
+$sa_stageHidden = in_array('logo', $sa_lay['hide'], true) && in_array('flow', $sa_lay['hide'], true);
+// the icon's size and shape: only what differs from the look's own is written
+$sa_bodyStyle = '';
+$sa_sizes = ['sm' => 72, 'lg' => 128, 'xl' => 152];
+if (isset($sa_sizes[$sa_lay['size']])) {
+    $sa_bodyStyle .= '--ico:' . $sa_sizes[$sa_lay['size']] . 'px;';
+}
+if ($sa_lay['shape'] !== 'squircle' || $sa_lay['size'] !== 'md') {
+    $sa_bodyStyle .= '--rad:calc(var(--ico,' . ($sa_min ? '112' : '96') . 'px)*' . ['squircle' => '.27', 'circle' => '.5', 'square' => '.1'][$sa_lay['shape']] . ');';
+}
+$sa_justify = ['center' => 'center', 'start' => 'flex-start', 'end' => 'flex-end'][$sa_lay['stageAlign']];
 ?><!doctype html>
 <html lang="<?= $sa_lang ?>" dir="<?= $sa_rtl ? 'rtl' : 'ltr' ?>">
 <head>
@@ -165,6 +189,18 @@ body{margin:0;min-height:100vh;min-height:100dvh;display:flex;align-items:center
 .err{padding:34px 22px}
 .err p{margin:0;font-size:15.5px;color:var(--muted)}
 
+/* in the admin's editor: what a click would pick */
+.ed [data-tk],.ed [data-el]{cursor:pointer}
+.ed [data-tk]:hover,.ed [data-el]:hover{outline:2px dashed var(--accent2);outline-offset:4px;border-radius:6px}
+.ed .sel{outline:2px solid var(--accent2)!important;outline-offset:4px;border-radius:6px}
+.ed [data-hide]{display:block!important;opacity:.28;filter:grayscale(1)}
+.ed .stage[data-hide]{display:flex!important}
+/* what the shop's admin hid on this page, and the text aligned to the start */
+[data-hide]{display:none!important}
+[data-align=start] .card{align-items:flex-start;text-align:start}
+[data-align=start] .stores{align-items:flex-start}
+[data-align=start] .row{justify-content:flex-start}
+.stage{width:100%}
 /* app icon between the service and the app, with the subscription travelling over */
 .stage{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px}
 .node{flex:none;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:var(--chip);border:1px solid var(--line);color:var(--muted)}
@@ -285,40 +321,40 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
 }
 </style>
 </head>
-<body data-look="<?= $sa_look ?>" data-theme="<?= $sa_theme ?>">
+<body data-look="<?= $sa_look ?>" data-theme="<?= $sa_theme ?>" data-align="<?= $sa_lay['align'] ?>"<?= $sa_bodyStyle !== '' ? ' style="' . $sa_bodyStyle . '"' : '' ?>>
 <?php if ($sa_ok): ?>
 <main class="card enter" id="card" data-state="<?= $sa_state ?>">
-  <div class="stage" aria-hidden="true">
-    <div class="node"><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.1 7.5 9.5 4.4-1.4 7.5-4.9 7.5-9.5V6z"/><path d="m9 12 2.2 2.2L15.2 10"/></svg></div>
-    <div class="track"><i></i><i></i><i></i></div>
-    <div class="appwrap">
+  <div class="stage" data-el="stage" aria-hidden="true" style="order:<?= $sa_ord['stage'] ?>;justify-content:<?= $sa_justify ?>"<?= $sa_stageHidden ? ' data-hide="1"' : '' ?>>
+    <div class="node" data-el="flow"<?= $sa_hid('flow') ?>><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.1 7.5 9.5 4.4-1.4 7.5-4.9 7.5-9.5V6z"/><path d="m9 12 2.2 2.2L15.2 10"/></svg></div>
+    <div class="track" data-el="flow"<?= $sa_hid('flow') ?>><i></i><i></i><i></i></div>
+    <div class="appwrap" data-el="logo"<?= $sa_hid('logo') ?>>
       <div class="app"><span><?= htmlspecialchars(strtoupper(substr($sa_app['name'], 0, 1))) ?></span><img src="subapp_assets/icons/<?= htmlspecialchars($sa_app['icon']) ?>.webp" alt="" width="96" height="96" onerror="this.remove()"></div>
       <div class="badge"><svg class="b-ok" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg><svg class="b-warn" viewBox="0 0 24 24"><path d="M12 6.5v7M12 17.5h.01"/></svg></div>
     </div>
   </div>
-  <h1><?= htmlspecialchars($sa_app['name']) ?></h1>
-  <div class="chip"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span><?= $sa_txt('pageService') ?></span><b><?= htmlspecialchars((string) $sa_inv['username']) ?></b></div>
-  <div class="status" role="status" aria-live="polite"><i class="dot"></i><span id="status"><?= htmlspecialchars($sa_words[$sa_state]['status'], ENT_QUOTES, 'UTF-8') ?></span></div>
-  <div class="col">
-    <a class="btn primary" id="open" href="<?= htmlspecialchars($sa_deep, ENT_QUOTES) ?>"><span><?= $sa_txt('pageButton') ?></span><svg class="flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-    <p class="note" id="note"><?= htmlspecialchars($sa_words[$sa_state]['note'], ENT_QUOTES, 'UTF-8') ?></p>
+  <h1 data-el="title" style="order:<?= $sa_ord['title'] ?>"<?= $sa_hid('title') ?>><?= htmlspecialchars($sa_app['name']) ?></h1>
+  <div class="chip" data-el="chip" style="order:<?= $sa_ord['chip'] ?>"<?= $sa_hid('chip') ?>><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span data-tk="pageService"><?= $sa_txt('pageService') ?></span><b><?= htmlspecialchars((string) $sa_inv['username']) ?></b></div>
+  <div class="status" data-el="status" style="order:<?= $sa_ord['status'] ?>"<?= $sa_hid('status') ?> role="status" aria-live="polite"><i class="dot"></i><span id="status" data-tk="<?= $sa_tk[$sa_state]['status'] ?>"><?= htmlspecialchars($sa_words[$sa_state]['status'], ENT_QUOTES, 'UTF-8') ?></span></div>
+  <div class="col" data-el="actions" style="order:<?= $sa_ord['actions'] ?>">
+    <a class="btn primary" id="open" href="<?= htmlspecialchars($sa_deep, ENT_QUOTES) ?>"><span data-tk="pageButton"><?= $sa_txt('pageButton') ?></span><svg class="flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    <p class="note" id="note" data-el="note" data-tk="<?= $sa_tk[$sa_state]['note'] ?>"<?= $sa_hid('note') ?>><?= htmlspecialchars($sa_words[$sa_state]['note'], ENT_QUOTES, 'UTF-8') ?></p>
 <?php if ($sa_dl !== ''): ?>
     <div class="dlbox">
-      <a class="btn dl" href="<?= htmlspecialchars($sa_dl, ENT_QUOTES) ?>" target="_blank" rel="noopener noreferrer"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></span><span class="tx"><b><?= $sa_txt('pageDownload') ?></b><small><?= $sa_stores[0]['label'] ?></small></span><svg class="chev flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
-      <div class="stores">
-        <span class="cap"><?= $sa_txt('pageStoreCaption') ?></span>
+      <a class="btn dl" data-el="download"<?= $sa_hid('download') ?> href="<?= htmlspecialchars($sa_dl, ENT_QUOTES) ?>" target="_blank" rel="noopener noreferrer"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></span><span class="tx"><b data-tk="pageDownload"><?= $sa_txt('pageDownload') ?></b><small><?= $sa_stores[0]['label'] ?></small></span><svg class="chev flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
+      <div class="stores" data-el="stores"<?= $sa_hid('stores') ?>>
+        <span class="cap" data-tk="pageStoreCaption"><?= $sa_txt('pageStoreCaption') ?></span>
         <div class="row">
 <?php foreach ($sa_stores as $st): ?>
-          <a class="store" href="<?= htmlspecialchars($st['url'], ENT_QUOTES) ?>" target="_blank" rel="noopener noreferrer"><?= $sa_glyph[$st['k']] ?><span><?= $st['label'] ?></span></a>
+          <a class="store" href="<?= htmlspecialchars($st['url'], ENT_QUOTES) ?>" target="_blank" rel="noopener noreferrer"><?= $sa_glyph[$st['k']] ?><span data-tk="<?= $sa_names[$st['k']] ?>"><?= $st['label'] ?></span></a>
 <?php endforeach; ?>
         </div>
 <?php if ($sa_noplat): ?>
-        <span class="cap"><?= $sa_txt('pageNoPlatform') ?></span>
+        <span class="cap" data-tk="pageNoPlatform"><?= $sa_txt('pageNoPlatform') ?></span>
 <?php endif; ?>
       </div>
     </div>
 <?php endif; ?>
-    <button type="button" class="btn" id="retry"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg><span><?= $sa_txt('pageRetry') ?></span></button>
+    <button type="button" class="btn" id="retry" data-el="retry"<?= $sa_hid('retry') ?>><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg><span data-tk="pageRetry"><?= $sa_txt('pageRetry') ?></span></button>
   </div>
 </main>
 <script>
@@ -359,6 +395,65 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
   document.getElementById('open').addEventListener('click', function (e) { e.preventDefault(); go(); });
   document.getElementById('retry').addEventListener('click', go);
   if (!demo) setTimeout(go, 600);
+
+<?php if ($sa_edit): ?>
+  // the admin's editor (panel/subapp_edit.php) talks to this page: it sends what
+  // he changes - a word, the layout, a state - and hears what he clicks
+  (function () {
+    var KEYS = <?= json_encode($sa_tk, $sa_json) ?>, APP = <?= json_encode($sa_app['name'], $sa_json) ?>;
+    var SIZES = { sm: '72px', lg: '128px', xl: '152px' }, RAD = { squircle: '.27', circle: '.5', square: '.1' };
+    var BLOCK = { stage: '.stage', title: 'h1', chip: '.chip', status: '.status', actions: '.col' };
+    document.body.classList.add('ed');
+    // an editing page shows what is hidden, faded: it can be brought back by a click
+    function layout(l) {
+      document.querySelectorAll('[data-el]').forEach(function (el) {
+        var id = el.getAttribute('data-el');
+        if (id === 'stage') return;
+        if (l.hide.indexOf(id) >= 0) el.setAttribute('data-hide', '1'); else el.removeAttribute('data-hide');
+      });
+      var st = document.querySelector('.stage');
+      if (l.hide.indexOf('logo') >= 0 && l.hide.indexOf('flow') >= 0) st.setAttribute('data-hide', '1'); else st.removeAttribute('data-hide');
+      l.order.forEach(function (b, i) { var el = document.querySelector(BLOCK[b]); if (el) el.style.order = i; });
+      st.style.justifyContent = { center: 'center', start: 'flex-start', end: 'flex-end' }[l.stageAlign];
+      document.body.setAttribute('data-align', l.align);
+      var bs = document.body.style, min = document.body.getAttribute('data-look') === 'minimal';
+      if (SIZES[l.size]) bs.setProperty('--ico', SIZES[l.size]); else bs.removeProperty('--ico');
+      if (l.shape !== 'squircle' || l.size !== 'md') bs.setProperty('--rad', 'calc(var(--ico,' + (min ? 112 : 96) + 'px)*' + RAD[l.shape] + ')'); else bs.removeProperty('--rad');
+    }
+    function text(key, val) {
+      var v = String(val).replace(/\{app\}/g, APP);
+      Object.keys(KEYS).forEach(function (st) {
+        ['status', 'note'].forEach(function (f) { if (KEYS[st][f] === key) words[st][f] = v; });
+      });
+      document.querySelectorAll('[data-tk="' + key + '"]').forEach(function (el) { el.textContent = v; });
+    }
+    window.addEventListener('message', function (e) {
+      if (e.origin !== location.origin || !e.data) return;
+      var m = e.data;
+      if (m.t === 'layout') layout(m.lay);
+      else if (m.t === 'text') text(m.key, m.val);
+      else if (m.t === 'state') { show(m.v); retag(); }
+      else if (m.t === 'select') {
+        document.querySelectorAll('.sel').forEach(function (x) { x.classList.remove('sel'); });
+        var q = m.tk ? '[data-tk="' + m.tk + '"]' : (m.el ? '[data-el="' + m.el + '"]' : '');
+        if (q) document.querySelectorAll(q).forEach(function (x) { x.classList.add('sel'); });
+      }
+    });
+    // the words of a state change with it: which word the status and the note hold
+    function retag() {
+      var k = KEYS[card.getAttribute('data-state')];
+      status.setAttribute('data-tk', k.status); note.setAttribute('data-tk', k.note);
+    }
+    card.addEventListener('click', function (e) {
+      var el = e.target.closest('[data-tk],[data-el]');
+      if (!el) return;
+      e.preventDefault(); e.stopPropagation();
+      var blk = el.closest('[data-el]');
+      parent.postMessage({ t: 'pick', tk: el.getAttribute('data-tk') || '', el: blk && blk.getAttribute('data-el') !== 'stage' ? blk.getAttribute('data-el') : '' }, location.origin);
+    }, true);
+    window.addEventListener('load', retag);
+  })();
+<?php endif; ?>
 })();
 </script>
 <?php else: ?>

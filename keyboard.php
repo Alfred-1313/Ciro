@@ -2528,6 +2528,11 @@ function keyboard_list_text($lang, $groupFilter = null)
             $keyboard_text['inline_keyboard'][] = [['text' => bt_section_meta('subapps_look')['label'], 'callback_data' => 'bt_sep|subapps_look']];
             $keyboard_text['inline_keyboard'][] = [['text' => strtr($textbotlang['bottext']['saLookRow'], ['{look}' => subapp_looks()[$bt_look], '{theme}' => subapp_themes()[$bt_theme]]), 'callback_data' => "salook|{$lang}", 'style' => ($bt_look === 'glass' && $bt_theme === 'auto') ? 'primary' : 'success']];
         }
+        if ($groupFilter === 'subapps') {
+            // the page's layout and the apps' links, one row each (green once changed)
+            $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['saLayRow'], 'callback_data' => "salay|{$lang}", 'style' => subapp_layout_changed($lang) ? 'success' : 'primary'],
+                ['text' => $textbotlang['bottext']['saLinksRow'], 'callback_data' => "salinks|{$lang}", 'style' => subapp_links($lang) ? 'success' : 'primary']];
+        }
         $bt_cur_section = null;
         foreach (($bt_grouped[$groupFilter] ?? []) as $data) {
             // Items a group screen no longer lists because they moved onto a
@@ -2848,18 +2853,6 @@ function keyboard_list_text($lang, $groupFilter = null)
                 }
                 $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupServicesLabel'], 'callback_data' => "bt_group|$lang|myservices", 'style' => 'primary']];
             }
-            // 📲 افزودن سرویس به برنامه: one place for the five that show it
-            if (!empty($bt_grouped['subapps'])) {
-                $bt_sa_custom = false;
-                foreach ($bt_grouped['subapps'] as $bt_g) {
-                    list(, $bt_g_style) = $bt_decorate($bt_g['key'], $bt_g['label']);
-                    if ($bt_g_style !== '') {
-                        $bt_sa_custom = true;
-                        break;
-                    }
-                }
-                $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupSubappsLabel'], 'callback_data' => "bt_group|$lang|subapps", 'style' => $bt_sa_custom ? 'success' : 'primary']];
-            }
             // 💰 افزایش موجودی gets its own divider + entry directly under the
             // services row: its messages used to sit inside 🛒 مراحل خرید even
             // though topping the wallet up is a separate journey from buying a
@@ -2973,6 +2966,20 @@ function keyboard_list_text($lang, $groupFilter = null)
     // language - so colouring it from them made the row look edited on a tab it
     // was never edited on, which is what green means everywhere else here.
     $keyboard_text['inline_keyboard'][] = [['text' => '🛡 دسترسی و محدودیت‌های ادمین', 'callback_data' => "admperm|open|$lang", 'style' => 'primary']];
+    // 📲 one setting for the five places that show it: a heading that says so,
+    // and the button under it, so no one reads it as a part of just one of them
+    if (!empty($bt_grouped['subapps'])) {
+        $bt_sa_custom = subapps_customized($lang);
+        foreach ($bt_grouped['subapps'] as $bt_g) {
+            list(, $bt_g_style) = $bt_decorate($bt_g['key'], $bt_g['label']);
+            if ($bt_g_style !== '') {
+                $bt_sa_custom = true;
+                break;
+            }
+        }
+        $keyboard_text['inline_keyboard'][] = [['text' => bt_section_meta('home_subapps')['label'], 'callback_data' => 'bt_sep|home_subapps']];
+        $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['saHomeBtn'], 'callback_data' => "bt_group|$lang|subapps", 'style' => $bt_sa_custom ? 'success' : 'primary']];
+    }
     // 🖼 استیکر دکمه بستن moved from here into each section's own ❌ بستن item
     // (خرید اشتراک, افزایش موجودی, ...) - it is per-section now, not one
     // shared bot-wide switch, so a single row here would no longer mean

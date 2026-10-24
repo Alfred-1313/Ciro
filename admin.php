@@ -23519,10 +23519,77 @@ if ($datain == "linkappsetting") {
     if ($bt_group === 'subapps') {
         feature_setting_set('subapp_look', $bt_lang, 'glass');
         feature_setting_set('subapp_theme', $bt_lang, 'auto');
+        subapp_layout_set($bt_lang, subapp_layout_defaults());
+        feature_setting_set('subapp_links', $bt_lang, '');
     }
     $textbotlang = panel_texts();
     list($bt_group_text, $bt_group_kb) = keyboard_list_text($bt_lang, $bt_group);
     Editmessagetext($from_id, $message_id, $textbotlang['bottext']['resetAllDone'] . "\n\n" . $bt_group_text, $bt_group_kb, 'HTML');
+} elseif (preg_match('/^salay\|([a-z]{2})(?:\|(\w+))?$/', $datain, $dataget) && $adminrulecheck['rule'] == "administrator") {
+    // 🧩 the layout of the page an app opens through: move, show or remove its parts
+    $sa_lang = in_array($dataget[1], panel_langs(), true) ? $dataget[1] : 'fa';
+    $sa_do = $dataget[2] ?? '';
+    $sa_lay = subapp_layout($sa_lang);
+    $sa_changed = false;
+    if (strpos($sa_do, 'tg_') === 0 && in_array(substr($sa_do, 3), subapp_layout_elements(), true)) {
+        $el = substr($sa_do, 3);
+        $sa_lay['hide'] = in_array($el, $sa_lay['hide'], true) ? array_values(array_diff($sa_lay['hide'], [$el])) : array_merge($sa_lay['hide'], [$el]);
+        $sa_changed = true;
+    } elseif (preg_match('/^mv_(\w+)_([ud])$/', $sa_do, $mv) && in_array($mv[1], $sa_lay['order'], true)) {
+        $i = array_search($mv[1], $sa_lay['order'], true);
+        $j = $mv[2] === 'u' ? $i - 1 : $i + 1;
+        if (isset($sa_lay['order'][$j])) {
+            [$sa_lay['order'][$i], $sa_lay['order'][$j]] = [$sa_lay['order'][$j], $sa_lay['order'][$i]];
+            $sa_changed = true;
+        }
+    } elseif (strpos($sa_do, 'cy_') === 0 && isset(subapp_layout_choices()[substr($sa_do, 3)])) {
+        // the next choice of that field, round and round
+        $field = substr($sa_do, 3);
+        $opts = subapp_layout_choices()[$field];
+        $sa_lay[$field] = $opts[(array_search($sa_lay[$field], $opts, true) + 1) % count($opts)];
+        $sa_changed = true;
+    } elseif ($sa_do === 'reset') {
+        $sa_lay = subapp_layout_defaults();
+        $sa_changed = true;
+    }
+    if ($sa_changed) {
+        subapp_layout_set($sa_lang, $sa_lay);
+    }
+    list($sa_text, $sa_kb) = subapp_layout_screen($sa_lang);
+    Editmessagetext($from_id, $message_id, $sa_text, $sa_kb, 'HTML');
+} elseif (preg_match('/^salinks\|([a-z]{2})(?:\|(\w+))?$/', $datain, $dataget) && $adminrulecheck['rule'] == "administrator") {
+    // 🔗 the apps' download links: the list of apps, and one app's links
+    $sa_lang = in_array($dataget[1], panel_langs(), true) ? $dataget[1] : 'fa';
+    $sa_app = $dataget[2] ?? '';
+    if ($sa_app === 'reset') {
+        feature_setting_set('subapp_links', $sa_lang, '');
+        $sa_app = '';
+    }
+    step('home', $from_id);
+    list($sa_text, $sa_kb) = subapp_links_screen($sa_lang, $sa_app);
+    Editmessagetext($from_id, $message_id, $sa_text, $sa_kb, 'HTML');
+} elseif (preg_match('/^salinkset\|([a-z]{2})\|(\w+)\|(play|github|ios|site)\|([dn])$/', $datain, $dataget) && $adminrulecheck['rule'] == "administrator") {
+    // ↩️ the default link back, or 🚫 none
+    $sa_lang = in_array($dataget[1], panel_langs(), true) ? $dataget[1] : 'fa';
+    if (in_array($dataget[2], array_column(subapp_apps(), 'id'), true)) {
+        subapp_link_set($sa_lang, $dataget[2], $dataget[3], $dataget[4] === 'n' ? '-' : '');
+    }
+    list($sa_text, $sa_kb) = subapp_links_screen($sa_lang, $dataget[2]);
+    Editmessagetext($from_id, $message_id, $sa_text, $sa_kb, 'HTML');
+} elseif (preg_match('/^salinkedit\|([a-z]{2})\|(\w+)\|(play|github|ios|site)$/', $datain, $dataget) && $adminrulecheck['rule'] == "administrator") {
+    // ✏️ a link typed in: asked for here, taken in the step below
+    $sa_lang = in_array($dataget[1], panel_langs(), true) ? $dataget[1] : 'fa';
+    $sa_found = array_column(subapp_apps(), null, 'id')[$dataget[2]] ?? null;
+    if ($sa_found !== null) {
+        savedata("clear", "sa_lang", $sa_lang);
+        savedata("save", "sa_app", $dataget[2]);
+        savedata("save", "sa_kind", $dataget[3]);
+        savedata("save", "sa_msgid", $message_id);
+        step("sa_link_set", $from_id);
+        $sa_kinds = ['play' => 'seLinkPlay', 'github' => 'seLinkGithub', 'ios' => 'seLinkIos', 'site' => 'seLinkSite'];
+        Editmessagetext($from_id, $message_id, strtr($textbotlang['bottext']['saLinkPrompt'], ['{kind}' => $textbotlang['panel'][$sa_kinds[$dataget[3]]], '{app}' => $sa_found['name']]),
+            json_encode(['inline_keyboard' => [[['text' => '❌ انصراف', 'callback_data' => "salinks|{$sa_lang}|{$dataget[2]}", 'style' => 'danger']]]]), 'HTML');
+    }
 } elseif (preg_match('/^salook\|([a-z]{2})(?:\|(\w+))?$/', $datain, $dataget) && $adminrulecheck['rule'] == "administrator") {
     // 🖼 the look of the page an app of 📲's list opens: the picker, and a tap on a look
     $sa_lang = in_array($dataget[1], panel_langs(), true) ? $dataget[1] : 'fa';
@@ -23583,6 +23650,36 @@ if ($datain == "linkappsetting") {
     }
     list($btm_text, $btm_kb) = bottext_item_menu_payload($bt_key, $bt_lang, $textbotlang);
     Editmessagetext($from_id, $message_id, $btm_text, $btm_kb, 'HTML');
+} elseif ($user['step'] == "sa_link_set") {
+    // ✏️ the link typed for an app's store (🔗 لینک دانلود برنامه‌ها)
+    $sa_data = json_decode((string) ($user['Processing_value'] ?? ''), true);
+    $sa_data = is_array($sa_data) ? $sa_data : [];
+    $sa_lang = in_array($sa_data['sa_lang'] ?? '', panel_langs(), true) ? $sa_data['sa_lang'] : 'fa';
+    $sa_app = (string) ($sa_data['sa_app'] ?? '');
+    $sa_kind = (string) ($sa_data['sa_kind'] ?? '');
+    $sa_msgid = intval($sa_data['sa_msgid'] ?? 0);
+    $sa_in = trim((string) ($update['message']['text'] ?? $text));
+    if (!in_array($sa_app, array_column(subapp_apps(), 'id'), true) || !in_array($sa_kind, subapp_link_kinds(), true)) {
+        step('home', $from_id);
+        sendmessage($from_id, $textbotlang['bottext']['msg_session'], $keyboardadmin, 'HTML');
+        return;
+    }
+    if ($sa_in !== '0' && $sa_in !== '-' && !subapp_link_valid($sa_in)) {
+        sendmessage($from_id, $textbotlang['bottext']['saLinkInvalid'], null, 'HTML');
+        return;
+    }
+    subapp_link_set($sa_lang, $sa_app, $sa_kind, $sa_in === '0' ? '' : $sa_in);
+    step('home', $from_id);
+    if ($message_id) {
+        deletemessage($from_id, $message_id);
+    }
+    list($sa_text, $sa_kb) = subapp_links_screen($sa_lang, $sa_app);
+    $sa_text = $textbotlang['bottext']['saLinkSaved'] . "\n\n" . $sa_text;
+    if ($sa_msgid > 0) {
+        Editmessagetext($from_id, $sa_msgid, $sa_text, $sa_kb, 'HTML');
+    } else {
+        sendmessage($from_id, $sa_text, $sa_kb, 'HTML');
+    }
 } elseif ($user['step'] == "get_new_text") {
     $userdata = json_decode((string) ($user['Processing_value'] ?? ''), true);
     if (!is_array($userdata)) {

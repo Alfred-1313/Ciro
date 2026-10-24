@@ -33,10 +33,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             feature_setting_set('subapp_theme', $lang, $theme);
         }
         flash('success', $t['refSaved']);
+    } elseif ($action === 'links') {
+        // each app's stores, for this language: empty = the default, «-» = none
+        $err = null;
+        $posted = (array) ($_POST['links'] ?? []);
+        $current = subapp_links($lang);
+        foreach (subapp_apps() as $app) {
+            foreach (subapp_link_kinds() as $kind) {
+                $v = trim((string) ($posted[$app['id']][$kind] ?? ($current[$app['id']][$kind] ?? '')));
+                if ($v !== '' && $v !== '-' && !subapp_link_valid($v)) {
+                    $err = sprintf($t['seLinkInvalid'], $v);
+                    continue;
+                }
+                if ($v !== (string) ($current[$app['id']][$kind] ?? '')) {
+                    subapp_link_set($lang, $app['id'], $kind, $v);
+                }
+            }
+        }
+        flash($err === null ? 'success' : 'error', $err ?? $t['seLinksSaved']);
     } elseif ($action === 'reset') {
         // what 🔁 «ریست همه به پیش‌فرض» does in the bot's group, and the look too
         bottext_reset_keys($groupKeys, $lang);
         feature_setting_set('subapp_look', $lang, 'glass');
+        subapp_layout_set($lang, subapp_layout_defaults());
+        feature_setting_set('subapp_links', $lang, '');
         feature_setting_set('subapp_theme', $lang, 'auto');
         flash('success', $t['saResetDone']);
     }
@@ -114,6 +134,11 @@ echo web_lang_assets();
 
 <?= web_lang_tabs($lang, fn($code) => 'subapps.php?' . http_build_query(['lang' => $code])) ?>
 
+<div class="card fade-up" style="margin-bottom:14px"><div class="card-body"><div class="set-row">
+  <div><div class="set-label">✏️ <?= $t['seOpenEditor'] ?></div><div class="set-hint"><?= $t['seOpenEditorHint'] ?></div></div>
+  <div class="set-ctl"><a class="btn btn-primary btn-sm" href="subapp_edit.php?<?= http_build_query(['lang' => $lang]) ?>"><?= $t['seOpenEditor'] ?></a></div>
+</div></div></div>
+
 <form method="POST" action="subapps.php?<?= http_build_query(['lang' => $lang]) ?>" class="card fade-up" id="look" data-autosave data-ajax="quiet" style="margin-bottom:14px">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
   <input type="hidden" name="action" value="look">
@@ -137,6 +162,26 @@ echo web_lang_assets();
         <?php endforeach; ?>
       </div>
     </div>
+  </div>
+  <div class="modal-foot" style="border-radius:0 0 10px 10px"><button type="submit" class="btn btn-primary"><?= icon('check', 13) ?> <?= $t['bottextSaveBtn'] ?></button></div>
+</form>
+
+<form method="POST" action="subapps.php?<?= http_build_query(['lang' => $lang]) ?>" class="card fade-up" id="links" style="margin-bottom:14px">
+  <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+  <input type="hidden" name="action" value="links">
+  <div class="card-head"><div><div class="card-title">🔗 <?= $t['seLinksTitle'] ?></div><div class="card-subtitle"><?= $t['seLinksHint'] ?></div></div></div>
+  <div class="card-body" style="display:flex;flex-direction:column;gap:16px">
+    <?php $myLinks = subapp_links($lang); foreach (subapp_apps() as $app): ?>
+      <div class="field">
+        <label><?= htmlspecialchars($app['name']) ?></label>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px">
+          <?php foreach (['play' => 'seLinkPlay', 'github' => 'seLinkGithub', 'ios' => 'seLinkIos', 'site' => 'seLinkSite'] as $kind => $tk): ?>
+            <label style="display:flex;flex-direction:column;gap:3px;font-size:.78rem;color:var(--mute)"><?= $t[$tk] ?>
+              <input type="text" class="input" dir="ltr" name="links[<?= htmlspecialchars($app['id']) ?>][<?= $kind ?>]" value="<?= htmlspecialchars((string) ($myLinks[$app['id']][$kind] ?? '')) ?>" placeholder="<?= htmlspecialchars($app[$kind] !== '' ? $app[$kind] : '-') ?>" maxlength="300"></label>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    <?php endforeach; ?>
   </div>
   <div class="modal-foot" style="border-radius:0 0 10px 10px"><button type="submit" class="btn btn-primary"><?= icon('check', 13) ?> <?= $t['bottextSaveBtn'] ?></button></div>
 </form>

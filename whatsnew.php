@@ -440,4 +440,20 @@ return [
             . "📍 Every page of the web panel\n"
             . "A save or a choice no longer reloads the whole page and throws the scroll back to the top: the form is sent in the background, the result comes up as a small bar at the bottom, and only that form is swapped for the server's fresh copy. Choices such as the look and theme of the «Add service to app» page are saved the moment you pick them and have no save button. If a save leads to another page, or a row is added or removed, the page loads as before with the message carried over. The pages' entrance animation is also shorter and calmer.</blockquote>",
     ],
+    [
+        'n' => 31,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>✏️ <b>ویرایش صفحه‌ی باز کردن برنامه، لینک برنامه‌ها و ورودی تازه در 🎨</b>\n"
+            . "📍 وب‌پنل ← افزودن سرویس به برنامه ← «ویرایش زنده‌ی صفحه»؛ 🎨 شخصی‌سازی ← «📲 تنظیمات افزودن سرویس به برنامه»\n"
+            . "🖌 <b>ویرایشگر زنده</b> (وب‌پنل): کنار یک پیش‌نمایش زنده‌ی صفحه، روی هر متن بزن و عوضش کن، لوگو را بزرگ‌وکوچک، گرد یا جابه‌جا کن، هر جزء (لوگو، انیمیشن، اسم برنامه، نام سرویس، خط وضعیت، راهنما، دکمه‌ی دانلود، لینک فروشگاه‌ها، «دوباره امتحان کن») را حذف کن و جای بخش‌ها را با ▲▼ عوض کن. تغییر همان لحظه روی پیش‌نمایش می‌افتد و با «ذخیره‌ی صفحه» روی صفحه‌ی مشتری می‌رود. دکمه‌ی «باز کردن برنامه» همیشه می‌ماند.\n"
+            . "🔗 <b>لینک دانلود برنامه‌ها</b> (وب‌پنل و ربات): لینک Google Play، GitHub، App Store و سایت رسمی هر برنامه را عوض کن، به پیش‌فرض برگردان یا «-» بگذار تا آن لینک نمایش داده نشود.\n"
+            . "🧩 در 🎨 هم «چیدمان صفحه» هست (جابه‌جایی بخش‌ها، نمایش/حذف اجزا، اندازه و شکل و جای لوگو، چینش متن).\n"
+            . "ℹ️ همه برای هر زبان جدا و یکی برای هر ۵ مسیر است. ورودی «📲 تنظیمات افزودن سرویس به برنامه» هم از زیر 🛍 به زیر «🛡 دسترسی و محدودیت‌های ادمین» رفت و بالایش یک عنوان می‌گوید برای ۵ مسیر یکی است.</blockquote>",
+        'en' => "<blockquote>✏️ <b>Editing the app-opening page, the apps' links, and a new entry in 🎨</b>\n"
+            . "📍 Web panel → Add service to app → «Live page editor»; 🎨 Customize → «📲 Add service to app settings»\n"
+            . "🖌 <b>Live editor</b> (web panel): next to a live preview of the page, tap any text to change it, resize, round or move the logo, remove any part (logo, animation, app name, service name, status line, hint, download button, store links, «Try again») and reorder the blocks with ▲▼. A change shows on the preview at once and goes to the customer's page with «Save the page». The «Open the app» button always stays.\n"
+            . "🔗 <b>Download links of the apps</b> (web panel and bot): change each app's Google Play, GitHub, App Store and official-site links, put them back to the default, or enter «-» so that link is not shown.\n"
+            . "🧩 🎨 also has «Page layout» (moving the parts, showing or removing them, the logo's size, shape and place, the text alignment).\n"
+            . "ℹ️ All of it is separate for each language and one for all 5 places. The «📲 Add service to app settings» entry also moved from under 🛍 to under «🛡 Admin access and limits», with a heading above it saying it is one for all 5 places.</blockquote>",
+    ],
 ];
