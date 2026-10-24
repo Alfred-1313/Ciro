@@ -420,4 +420,14 @@ return [
             . "📍 🎨 Customize → 📲 Add service to app → «🖼 The look of the page»\n"
             . "The Minimal look B used to follow the phone's or browser's light/dark theme like A, so it went black on a dark device. It is now always white, even when the device is dark. A still follows the device's light/dark by itself.</blockquote>",
     ],
+    [
+        'n' => 29,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>🌓 <b>تم صفحه‌ی باز کردن برنامه: مطابق دستگاه / تیره / روشن</b>\n"
+            . "📍 🎨 شخصی‌سازی ← 📲 افزودن سرویس به برنامه ← «🖼 طرح صفحه»؛ وب‌پنل ← افزودن سرویس به برنامه\n"
+            . "حالا برای هر زبان می‌توانی انتخاب کنی صفحه‌ی باز کردن برنامه (هر دو طرح A و B) تیره باشد، روشن باشد، یا مطابق تم مرورگر یا موبایل مشتری. پیش‌فرض «مطابق دستگاه» است. این جایگزین یادداشت قبلی می‌شود: B دیگر اجباراً سفید نیست و مثل A پیش‌فرض با دستگاه هماهنگ است؛ اگر سفید ثابت می‌خواهی، تم را «روشن» بگذار. «ریست همه به پیش‌فرض» تم را هم به «مطابق دستگاه» برمی‌گرداند.</blockquote>",
+        'en' => "<blockquote>🌓 <b>Theme of the app-opening page: match the device / dark / light</b>\n"
+            . "📍 🎨 Customize → 📲 Add service to app → «🖼 The look of the page»; Web panel → Add service to app\n"
+            . "You can now choose, per language, whether the app-opening page (both looks, A and B) is dark, light, or follows the customer's browser or phone. The default is «Match the device». This replaces the previous note: B is no longer forced white and follows the device by default like A; for an always-white page, set the theme to «Light». «Reset all to default» puts the theme back to «Match the device» too.</blockquote>",
+    ],
 ];

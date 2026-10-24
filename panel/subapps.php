@@ -28,11 +28,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset(subapp_looks()[$look])) {
             feature_setting_set('subapp_look', $lang, $look);
         }
+        $theme = (string) ($_POST['subapp_theme'] ?? '');
+        if (isset(subapp_themes()[$theme])) {
+            feature_setting_set('subapp_theme', $lang, $theme);
+        }
         flash('success', $t['refSaved']);
     } elseif ($action === 'reset') {
         // what 🔁 «ریست همه به پیش‌فرض» does in the bot's group, and the look too
         bottext_reset_keys($groupKeys, $lang);
         feature_setting_set('subapp_look', $lang, 'glass');
+        feature_setting_set('subapp_theme', $lang, 'auto');
         flash('success', $t['saResetDone']);
     }
     header('Location: subapps.php?' . http_build_query(['lang' => $lang]));
@@ -85,6 +90,7 @@ foreach ($bt['items'] as $it) {
 }
 
 $curLook = subapp_look($lang);
+$curTheme = subapp_theme($lang);
 $colors = ['' => $t['menuColorDefault'], 'primary' => '🔵 ' . $t['menuColorBlue'], 'success' => '🟢 ' . $t['menuColorGreen'], 'danger' => '🔴 ' . $t['menuColorRed']];
 $itemLabels = [];
 foreach ($bt['items'] as $it) {
@@ -123,6 +129,14 @@ echo web_lang_assets();
         </div>
       </div>
     <?php endforeach; ?>
+    <div class="set-row" style="flex-wrap:wrap">
+      <div style="min-width:200px"><div class="set-label">🌓 <?= $t['saThemeLabel'] ?></div><div class="set-hint"><?= $t['saThemeHint'] ?></div></div>
+      <div class="lang-chips" style="flex:1;justify-content:flex-end">
+        <?php foreach (subapp_themes() as $tk => $tn): ?>
+          <label class="lang-chip"><input type="radio" name="subapp_theme" value="<?= htmlspecialchars($tk) ?>"<?= $curTheme === $tk ? ' checked' : '' ?>> <?= htmlspecialchars($tn) ?></label>
+        <?php endforeach; ?>
+      </div>
+    </div>
   </div>
   <div class="modal-foot" style="border-radius:0 0 10px 10px"><button type="submit" class="btn btn-primary"><?= icon('check', 13) ?> <?= $t['bottextSaveBtn'] ?></button></div>
 </form>

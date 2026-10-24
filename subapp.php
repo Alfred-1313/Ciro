@@ -46,6 +46,12 @@ if ($sa_demo !== '') {
 $sa_t = lang_tab_texts($sa_lang)['users']['subapps'];
 // the look of the owner's language - the words and the motion are the same in both
 $sa_look = $sa_demo !== '' ? $sa_demo : subapp_look($sa_lang);
+// dark / light: the shop's choice for this language - 'auto' follows the device
+// (a preview may ask for another to show it)
+$sa_theme = subapp_theme($sa_lang);
+if ($sa_demo !== '' && isset(subapp_themes()[(string) ($_GET['th'] ?? '')])) {
+    $sa_theme = (string) $_GET['th'];
+}
 $sa_sub = $sa_demo !== '' ? 'https://example.com/sub/demo' : '';
 if ($sa_demo === '' && is_array($sa_inv) && in_array($sa_inv['Status'], ['active', 'end_of_time', 'end_of_volume', 'sendedwarn', 'send_on_hold'], true)) {
     $sa_panel = select("marzban_panel", "*", "name_panel", $sa_inv['Service_location'], "select");
@@ -119,13 +125,14 @@ $sa_min = $sa_look === 'minimal';
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<?php if ($sa_min): ?>
-<meta name="color-scheme" content="light">
-<meta name="theme-color" content="#ffffff">
-<?php else: ?>
+<?php $sa_bgDark = $sa_min ? '#0b0b10' : '#0a0e16'; $sa_bgLight = $sa_min ? '#ffffff' : '#f1f4fa'; ?>
+<?php if ($sa_theme === 'auto'): ?>
 <meta name="color-scheme" content="dark light">
-<meta name="theme-color" content="#0a0e16" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#f1f4fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="<?= $sa_bgDark ?>" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="<?= $sa_bgLight ?>" media="(prefers-color-scheme: light)">
+<?php else: ?>
+<meta name="color-scheme" content="<?= $sa_theme ?>">
+<meta name="theme-color" content="<?= $sa_theme === 'dark' ? $sa_bgDark : $sa_bgLight ?>">
 <?php endif; ?>
 <title><?= $sa_ok ? htmlspecialchars($sa_app['name']) : '⛔️' ?></title>
 <link rel="preload" href="subapp_assets/fonts/estedad-<?= $sa_rtl ? 'arabic' : 'latin' ?>.woff2" as="font" type="font/woff2" crossorigin>
@@ -141,12 +148,14 @@ $sa_min = $sa_look === 'minimal';
   --dx:<?= $sa_rtl ? '-1' : '1' ?>;
   --out:cubic-bezier(.23,1,.32,1);--inout:cubic-bezier(.77,0,.175,1);
 }
-@media (prefers-color-scheme:light){:root{
+<?php ob_start(); ?>
   --bg:#f1f4fa;--glass:rgba(255,255,255,.74);--line:rgba(16,24,40,.1);--text:#101828;--muted:#566277;--chip:rgba(16,24,40,.05);--warn:#b86e00;--ok:#0f9d63;
   --glowA:<?= $sa_mix($sa_app['accent'], '#f1f4fa', .52) ?>;--glowB:<?= $sa_mix($sa_app['accent2'], '#f1f4fa', .46) ?>;--glowC:<?= $sa_mix($sa_app['accent'], '#f1f4fa', .3) ?>;
   --glass:rgba(255,255,255,.5);--cardline:rgba(255,255,255,.85);--sat:1.6;
-  --shadow:0 28px 60px -26px rgba(16,24,40,.38),inset 0 1px 0 rgba(255,255,255,.9);
-}}
+  --shadow:0 28px 60px -26px rgba(16,24,40,.38),inset 0 1px 0 rgba(255,255,255,.9);<?php $sa_light = ob_get_clean(); ?>
+@media (prefers-color-scheme:light){[data-theme=auto]{<?= $sa_light ?>}}
+[data-theme=light]{<?= $sa_light ?>;color-scheme:light}
+[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom));color:var(--text);
@@ -230,10 +239,13 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
 .store:active{transform:scale(.96)}
 @media (hover:hover) and (pointer:fine){.btn:hover,.store:hover{background-color:var(--glass)}.primary:hover,[data-state=missing] .dl:hover{filter:brightness(1.06);background-color:transparent}}
 
-/* B - minimal: white, whatever the phone's theme is - flat colours instead of the
-   glass, a pill for the main button, a row for the download. The same font, words,
-   stage and motion as A (which follows the phone's light / dark). */
-[data-look=minimal]{--bg:#fff;--chip:#f4f6fa;--line:rgba(15,23,42,.09);--text:#0f172a;--muted:#586377;--warn:#b86e00;--ok:#0f9d63;--soft:<?= $sa_mix($sa_app['accent'], '#ffffff', .12) ?>;--accentText:<?= $sa_app['accent'] ?>;--ico:112px;--rad:32px;background:var(--bg);color-scheme:light}
+/* B - minimal: flat colours instead of the glass, a pill for the main button, a row
+   for the download. The same font, words, stage and motion as A, and the same
+   dark / light (the device's, or the one the shop chose). */
+[data-look=minimal]{--bg:#0b0b10;--chip:#17171e;--line:rgba(255,255,255,.09);--text:#f4f4f8;--muted:#a0a0ae;--soft:rgba(255,255,255,.08);--accentText:<?= $sa_mix($sa_app['accent'], '#ffffff', .5) ?>;--ico:112px;--rad:32px;background:var(--bg)}
+<?php ob_start(); ?>--bg:#fff;--chip:#f4f6fa;--line:rgba(15,23,42,.09);--text:#0f172a;--muted:#586377;--warn:#b86e00;--ok:#0f9d63;--soft:<?= $sa_mix($sa_app['accent'], '#ffffff', .12) ?>;--accentText:<?= $sa_app['accent'] ?><?php $sa_minLight = ob_get_clean(); ?>
+@media (prefers-color-scheme:light){[data-look=minimal][data-theme=auto]{<?= $sa_minLight ?>}}
+[data-look=minimal][data-theme=light]{<?= $sa_minLight ?>}
 [data-look=minimal] .card{background:none;border:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;padding:8px 2px}
 [data-look=minimal] .node{background:var(--soft);border-color:transparent}
 [data-look=minimal] .app{font-size:46px;background:linear-gradient(150deg,var(--accent2),var(--accent));box-shadow:inset 0 1.5px 0 rgba(255,255,255,.38),0 22px 40px -16px var(--accent)}
@@ -273,7 +285,7 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
 }
 </style>
 </head>
-<body data-look="<?= $sa_look ?>">
+<body data-look="<?= $sa_look ?>" data-theme="<?= $sa_theme ?>">
 <?php if ($sa_ok): ?>
 <main class="card enter" id="card" data-state="<?= $sa_state ?>">
   <div class="stage" aria-hidden="true">

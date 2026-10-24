@@ -138,6 +138,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset(subapp_looks()[$postedLook]) && $postedLook !== subapp_look($lang)) {
         feature_setting_set('subapp_look', $lang, $postedLook);
     }
+    $postedTheme = (string) ($_POST['subapp_theme'] ?? '');
+    if (isset(subapp_themes()[$postedTheme]) && $postedTheme !== subapp_theme($lang)) {
+        feature_setting_set('subapp_theme', $lang, $postedTheme);
+    }
     foreach ($switchable as $key => $default) {
         if (isset($_POST['on'][$key])) {
             $on = $_POST['on'][$key] === '1';
@@ -273,6 +277,13 @@ echo web_lang_assets();
                             <?php endforeach; ?>
                         </div>
                         <div class="field-hint"><?= $t['saLookHint'] ?></div>
+                        <label style="margin-top:10px">🌓 <?= $t['saThemeLabel'] ?></label>
+                        <div class="lang-chips">
+                            <?php foreach (subapp_themes() as $tk => $tn): ?>
+                                <label class="lang-chip"><input type="radio" name="subapp_theme" value="<?= htmlspecialchars($tk) ?>"<?= subapp_theme($lang) === $tk ? ' checked' : '' ?>> <?= htmlspecialchars($tn) ?></label>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="field-hint"><?= $t['saThemeHint'] ?></div>
                     </div>
                 <?php endif; ?>
                 <?php $sub = ''; $sec = ''; foreach ($visible as $key => $v): $k = htmlspecialchars($key); ?>

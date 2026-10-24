@@ -23518,6 +23518,7 @@ if ($datain == "linkappsetting") {
     // 📲's group also holds the look of its page
     if ($bt_group === 'subapps') {
         feature_setting_set('subapp_look', $bt_lang, 'glass');
+        feature_setting_set('subapp_theme', $bt_lang, 'auto');
     }
     $textbotlang = panel_texts();
     list($bt_group_text, $bt_group_kb) = keyboard_list_text($bt_lang, $bt_group);
@@ -23528,11 +23529,17 @@ if ($datain == "linkappsetting") {
     $sa_looks = subapp_looks();
     $sa_pick = $dataget[2] ?? '';
     $sa_tb = $textbotlang['bottext'];
+    $sa_themes = subapp_themes();
     if ($sa_pick !== '' && isset($sa_looks[$sa_pick])) {
         feature_setting_set('subapp_look', $sa_lang, $sa_pick);
         telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => strtr($sa_tb['saLookSaved'], ['{look}' => $sa_looks[$sa_pick], '{lang}' => $sa_tb['langs'][$sa_lang] ?? $sa_lang])]);
+    } elseif (strpos($sa_pick, 'th_') === 0 && isset($sa_themes[substr($sa_pick, 3)])) {
+        // dark / light / the device's
+        feature_setting_set('subapp_theme', $sa_lang, substr($sa_pick, 3));
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => strtr($sa_tb['saThemeSaved'], ['{theme}' => $sa_themes[substr($sa_pick, 3)], '{lang}' => $sa_tb['langs'][$sa_lang] ?? $sa_lang])]);
     }
     $sa_cur = subapp_look($sa_lang);
+    $sa_curTheme = subapp_theme($sa_lang);
     $sa_rows = [];
     foreach ($sa_looks as $sa_k => $sa_n) {
         // the look itself, then its preview: the page with made-up data
@@ -23541,9 +23548,15 @@ if ($datain == "linkappsetting") {
             ['text' => $sa_tb['saLookPreview'], 'url' => subapp_preview_link($sa_k, $sa_lang)],
         ];
     }
+    // then dark / light / the device's, in one row
+    $sa_row = [];
+    foreach ($sa_themes as $sa_k => $sa_n) {
+        $sa_row[] = ['text' => ($sa_k === $sa_curTheme ? '✅ ' : '') . $sa_n, 'callback_data' => "salook|{$sa_lang}|th_{$sa_k}", 'style' => $sa_k === $sa_curTheme ? 'success' : 'primary'];
+    }
+    $sa_rows[] = $sa_row;
     $sa_rows[] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_group|{$sa_lang}|subapps", 'style' => 'danger']];
     $sa_rows[] = [['text' => $sa_tb['btn_close'], 'callback_data' => 'bt_close', 'style' => 'danger']];
-    Editmessagetext($from_id, $message_id, strtr($sa_tb['saLookCaption'], ['{lang}' => $sa_tb['langs'][$sa_lang] ?? $sa_lang, '{current}' => $sa_looks[$sa_cur]]), json_encode(['inline_keyboard' => $sa_rows]), 'HTML');
+    Editmessagetext($from_id, $message_id, strtr($sa_tb['saLookCaption'], ['{lang}' => $sa_tb['langs'][$sa_lang] ?? $sa_lang, '{current}' => $sa_looks[$sa_cur], '{theme}' => $sa_themes[$sa_curTheme]]), json_encode(['inline_keyboard' => $sa_rows]), 'HTML');
 } elseif (preg_match('/^bt_group\|([^|]+)\|(.+)$/', $datain, $dataget) && $adminrulecheck['rule'] == "administrator") {
     $bt_lang = $dataget[1];
     $bt_group = $dataget[2];

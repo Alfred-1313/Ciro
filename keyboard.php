@@ -2524,8 +2524,9 @@ function keyboard_list_text($lang, $groupFilter = null)
         // 📲's group opens with the look of its page: one row, the picker behind it
         if ($groupFilter === 'subapps') {
             $bt_look = subapp_look($lang);
+            $bt_theme = subapp_theme($lang);
             $keyboard_text['inline_keyboard'][] = [['text' => bt_section_meta('subapps_look')['label'], 'callback_data' => 'bt_sep|subapps_look']];
-            $keyboard_text['inline_keyboard'][] = [['text' => strtr($textbotlang['bottext']['saLookRow'], ['{look}' => subapp_looks()[$bt_look]]), 'callback_data' => "salook|{$lang}", 'style' => $bt_look === 'glass' ? 'primary' : 'success']];
+            $keyboard_text['inline_keyboard'][] = [['text' => strtr($textbotlang['bottext']['saLookRow'], ['{look}' => subapp_looks()[$bt_look], '{theme}' => subapp_themes()[$bt_theme]]), 'callback_data' => "salook|{$lang}", 'style' => ($bt_look === 'glass' && $bt_theme === 'auto') ? 'primary' : 'success']];
         }
         $bt_cur_section = null;
         foreach (($bt_grouped[$groupFilter] ?? []) as $data) {

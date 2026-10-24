@@ -14204,6 +14204,19 @@ if (!function_exists('subapp_kind')) {
         $v = (string) feature_setting_value('subapp_look', $lang, 'glass');
         return isset(subapp_looks()[$v]) ? $v : 'glass';
     }
+    // dark / light of that page, chosen per language like the look: 'auto' (the
+    // default) follows the phone's or browser's own theme
+    function subapp_themes()
+    {
+        global $textbotlang;
+        $n = $textbotlang['bottext']['saThemeNames'] ?? [];
+        return ['auto' => $n['auto'] ?? 'Auto', 'dark' => $n['dark'] ?? 'Dark', 'light' => $n['light'] ?? 'Light'];
+    }
+    function subapp_theme($lang)
+    {
+        $v = (string) feature_setting_value('subapp_theme', $lang, 'auto');
+        return isset(subapp_themes()[$v]) ? $v : 'auto';
+    }
     // a link to the page with made-up data, for the admin to see a look before
     // choosing it - signed like the real ones, and it opens nothing (subapp.php)
     function subapp_preview_link($look, $lang, $appId = 'karing', $state = '')
