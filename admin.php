@@ -1301,12 +1301,13 @@ if (!function_exists('bottext_item_menu_payload')) {
         // DIFFERENT key's own customization state, the same way the main
         // bottext home list already does for its group-launcher rows
         // a delivery message's service buttons, and the 🌐 / 📲 pair with its
-        // app list - the same two items in every message and screen (and the
-        // same ones 🛍 سرویس‌های من has), so the rows here just open them
+        // app list - one group of its own for every message and screen (and for
+        // 🛍 سرویس‌های من), so the rows here just open it
         $bt_svc_rows = function ($sbKind) use (&$kb, $bt_lang, $bt_be, &$bt_live_row, &$bt_is_customized) {
             $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های مدیریت سرویس (کانفیگ، تمدید، روشن/خاموش، ...)', 'callback_data' => statusbtn_prefix($sbKind) . "|list|{$bt_lang}", 'style' => !empty($bt_be[$bt_lang][statusbtn_bucket($sbKind)]) ? 'success' : 'primary']];
-            $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label('users.subapps.entryBuy', $bt_lang), '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (همه‌ی بخش‌ها)', "bt_edit|{$bt_lang}|users.subapps.entryBuy", is_array($bt_be) && !empty($bt_be[$bt_lang]['users.subapps.entryBuy']))];
-            $kb['inline_keyboard'][] = [['text' => '📲 لیست برنامه‌ها + دکمه‌هاش (همه‌ی بخش‌ها)', 'callback_data' => "bt_edit|{$bt_lang}|users.subapps.listBuy", 'style' => $bt_is_customized('users.subapps.listBuy') ? 'success' : 'primary']];
+            foreach (subapps_link_rows($bt_lang, (bool) array_filter(subapps_group_keys(), $bt_is_customized)) as $bt_sa_row) {
+                $kb['inline_keyboard'][] = $bt_sa_row;
+            }
         };
         $bt_is_customized = function ($key) use ($bt_lang, $bt_te, $bt_st, $bt_re, $bt_be) {
             $textCustom = is_array($bt_te) && isset($bt_te[$bt_lang]) && bottext_dotted_isset($bt_te[$bt_lang], $key);
@@ -1493,9 +1494,9 @@ if (!function_exists('bottext_item_menu_payload')) {
             $kb['inline_keyboard'][] = [['text' => '📌 نحوه‌ی نمایش کانفیگ', 'callback_data' => "cfgdeliv|list|{$bt_lang}|u", 'style' => 'primary']];
             // 🌐 / 📲 and the app list 📲 opens: one for every place, so these
             // rows open the very same two items as in 🛍 سرویس‌های من
-            $kb['inline_keyboard'][] = [['text' => bt_section_meta('subapps')['label'], 'callback_data' => 'bt_sep|subapps']];
-            $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label('users.subapps.entryBuy', $bt_lang), '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (همه‌ی بخش‌ها)', "bt_edit|{$bt_lang}|users.subapps.entryBuy", is_array($bt_be) && !empty($bt_be[$bt_lang]['users.subapps.entryBuy']))];
-            $kb['inline_keyboard'][] = [['text' => '📲 لیست برنامه‌ها + دکمه‌هاش (همه‌ی بخش‌ها)', 'callback_data' => "bt_edit|{$bt_lang}|users.subapps.listBuy", 'style' => $bt_is_customized('users.subapps.listBuy') ? 'success' : 'primary']];
+            foreach (subapps_link_rows($bt_lang, (bool) array_filter(subapps_group_keys(), $bt_is_customized)) as $bt_sa_row) {
+                $kb['inline_keyboard'][] = $bt_sa_row;
+            }
         } elseif ($bt_key === 'users.Balance.insufficientBalanceSimple') {
             $kb['inline_keyboard'][] = [$bt_live_row($bt_balance_live(), '🔘 ویرایش دکمه افزایش موجودی', "btact|bbtn|{$bt_lang}", $bt_btn_custom)];
         } elseif ($bt_key === 'users.sell.selectUsernamePrompt') {

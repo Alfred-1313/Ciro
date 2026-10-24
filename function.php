@@ -13238,7 +13238,7 @@ if (!function_exists('bt_section_meta')) {
             ],
             'subapps' => [
                 'label' => '🌐 سابسکریپشن و 📲 افزودن به برنامه',
-                'alert' => '🌐 صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه؛ 📲 لیست برنامه‌ها رو میاره تا با یه لمس، برنامه باز بشه و سابسکریپشن اضافه بشه. یه تنظیم برای همه‌ی جاهایی که نشون داده می‌شه (خرید، تست، هدیه، ساعتی و «🛍 سرویس‌های من») - برای هر زبان جدا.',
+                'alert' => 'دکمه‌های «🌐 سابسکریپشن» و «📲 افزودن به برنامه»، لیست برنامه‌ها و صفحه‌ی بازشدنشون برای ۵ جا (خرید، تست، هدیه، ساعتی، سرویس‌های من) یکیه؛ دکمه‌ی زیر بخش مخصوصش رو باز می‌کنه.',
             ],
             'subapps_entry' => [
                 'label' => '🌐 / 📲 دکمه‌های زیر هر سرویس',
@@ -14166,6 +14166,25 @@ if (!function_exists('subapp_kind')) {
             }
         }
         return 'b';
+    }
+    // 📲 افزودن سرویس به برنامه is ONE group of 🎨 for the five places that show
+    // it (a bought service, a test account, a 🎁 gift config, ⏱, 🛍 سرویس‌های من);
+    // each of their screens carries these two rows instead of the group's items:
+    // a white heading, and the button that opens the group on this tab
+    function subapps_link_rows($lang, $custom = false)
+    {
+        global $textbotlang;
+        $tb = $textbotlang['bottext'];
+        return [
+            [['text' => bt_section_meta('subapps')['label'], 'callback_data' => 'bt_sep|subapps']],
+            [['text' => $tb['groupSubappsLabel'] . ' — ' . ($tb['langs'][$lang] ?? $lang), 'callback_data' => "bt_group|{$lang}|subapps", 'style' => $custom ? 'success' : 'primary']],
+        ];
+    }
+    // the keys of that group
+    function subapps_group_keys()
+    {
+        global $textbotlang;
+        return array_values(array_column(array_filter($textbotlang['bottext']['items'] ?? [], fn($it) => ($it['group'] ?? '') === 'subapps' && !empty($it['key'])), 'key'));
     }
     // every text the app-opening web page (subapp.php) shows - they live in the
     // same 🎨 registry as the bot's messages but are page text, not messages
@@ -18781,7 +18800,7 @@ if (!function_exists('cfgcol_back_set')) {
     // the screens that go back the way they were opened
     function bt_origin_is_target($data)
     {
-        return (bool) preg_match('/^(bt_edit\|[a-z]{2}\|.+|gbs\|hub\|[a-z]{2}\|\w+(\|u)?|btact\|cfgcolbuy\|[a-z]{2}\|.+|(status|buy|test|ref)btn\|list\|[a-z]{2})$/', (string) $data);
+        return (bool) preg_match('/^(bt_edit\|[a-z]{2}\|.+|bt_group\|[a-z]{2}\|subapps|gbs\|hub\|[a-z]{2}\|\w+(\|u)?|btact\|cfgcolbuy\|[a-z]{2}\|.+|(status|buy|test|ref)btn\|list\|[a-z]{2})$/', (string) $data);
     }
     // a tap on a 🎨 message: notes the way back of the screen it opens, and the
     // screen the message shows from now on. $keyboard is the message's own

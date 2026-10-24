@@ -370,10 +370,10 @@ return [
         'fa' => "<blockquote>📲 <b>«افزودن سرویس به برنامه» یک بخش جدا در 🎨 شخصی‌سازی دارد</b>\n"
             . "📍 🎨 شخصی‌سازی ← 📲 افزودن سرویس به برنامه؛ وب‌پنل ← پیام‌های ربات ← 📲 افزودن سرویس به برنامه\n"
             . "چون «🌐 سابسکریپشن / 📲 افزودن به برنامه» برای هر ۵ مسیر (خرید، تست، هدیه‌ی دعوت، اشتراک ساعتی و سرویس‌های من) یکی است، تنظیماتش از «🛍 سرویس‌های من» بیرون آمد و جای خودش را دارد: دکمه‌های زیر سرویس، پیام لیست برنامه‌ها و دکمه‌هایش، صفحه‌ی وبی که برنامه را باز می‌کند (باز شدن، برنامه پیدا نشد، دانلود و فروشگاه‌ها) و پاپ‌آپ‌ها، همه در یک جا و برای فارسی و انگلیسی جدا.\n"
-            . "هیچ تنظیمی عوض نشد و از همه‌ی ۵ مسیر هم لینک‌های قبلی به همین موارد کار می‌کنند.</blockquote>",
+            . "توی هر ۵ بخش (پیام بعد از خرید، اکانت تست، هدیه‌ی دعوت، اشتراک ساعتی و سرویس‌های من) هم زیر عنوان «🌐 سابسکریپشن و 📲 افزودن به برنامه» یک دکمه‌ی «📲 افزودن سرویس به برنامه — زبان» هست که همین بخش را باز می‌کند و 🔙 برت می‌گرداند همان‌جا که بودی. هیچ تنظیمی عوض نشد.</blockquote>",
         'en' => "<blockquote>📲 <b>«Add service to app» has its own section in 🎨 Customize</b>\n"
             . "📍 🎨 Customize → 📲 Add service to app; Web panel → Bot messages → Add service to app\n"
             . "«🌐 Subscription / 📲 Add to app» is one and the same for all 5 paths (purchase, test, invite gift, hourly subscription and My services), so its settings left «🛍 My services» and have a place of their own: the buttons under a service, the app-list message and its buttons, the web page that opens the app (opening, app not found, download and stores) and the popups - all in one place, separate for Persian and English.\n"
-            . "No setting changed, and the links to these items from all 5 paths still work.</blockquote>",
+            . "Each of the 5 paths (purchase message, test account, invite gift, hourly subscription and My services) shows a «📲 Add service to app — language» button under the «🌐 Subscription and 📲 Add to app» heading that opens this section, and 🔙 takes you back to where you were. No setting changed.</blockquote>",
     ],
 ];

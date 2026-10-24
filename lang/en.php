@@ -5124,6 +5124,7 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'svcBtnShopOff' => 'Off in the shop settings',
                 'svcBuyBtnsPair' => 'The «Open subscription page» and «Add to app» buttons above these are one and the same in every place (purchase, test and gift messages, the hourly screen and My services), and are set per language:',
                 'svcBuyBtnsPairLink' => 'Button looks → subscription and app buttons',
+                'svcBuyBtnsGroupLink' => 'Texts → Add service to app (the list, the opening page, download)',
                 'saEntryBtnsHint' => 'The name, emoji, colour, side and hiding of the «🌐 Subscription» and «📲 Add to app» buttons (one for 5 places, separate per language):',
                 'saEntryBtnsLink' => 'Button looks → subscription and app buttons',
                 'saListBtnsHint' => 'The name, emoji and colour of each app\'s button and of this list\'s back button:',

@@ -2515,6 +2515,9 @@ function keyboard_list_text($lang, $groupFilter = null)
                 }
                 $bt_ms_items[] = [$bt_ms_pos[$bt_ms_it['key']] ?? (1000 + $bt_ms_i), $bt_ms_it];
             }
+            // the service screen's section has no item of its own any more - the
+            // bot draws its rows by hand - so a stand-in holds its place
+            $bt_ms_items[] = [$bt_ms_pos['users.status.infoFull'] ?? 1000, ['key' => 'users.status.infoFull', 'label' => '', 'section' => 'myservices_screen', 'stand_in' => true]];
             usort($bt_ms_items, fn($a, $b) => $a[0] <=> $b[0]);
             $bt_grouped['myservices'] = array_column($bt_ms_items, 1);
         }
@@ -2548,7 +2551,23 @@ function keyboard_list_text($lang, $groupFilter = null)
                     list($bt_sf_label, $bt_sf_style) = $bt_decorate('users.status.infoFull', '📊 کپشن صفحه‌ی سرویس');
                     $keyboard_text['inline_keyboard'][] = [['text' => $bt_sf_label, 'callback_data' => "bt_edit|$lang|users.status.infoFull", 'style' => ($bt_sf_style !== '' ? $bt_sf_style : 'primary')]];
                     $keyboard_text['inline_keyboard'][] = [['text' => '🔘 دکمه‌های صفحه‌ی سرویس (💊 تمدید، 💡 روشن/خاموش، ...)', 'callback_data' => "statusbtn|list|{$lang}", 'style' => !empty($bt_list_be[$lang][statusbtn_bucket('mine')]) ? 'success' : 'primary']];
+                    // then the 🌐 / 📲 pair: a group of its own, the same one every
+                    // screen that shows it links to
+                    $bt_sa_custom = false;
+                    foreach (($bt_grouped['subapps'] ?? []) as $bt_g) {
+                        list(, $bt_g_style) = $bt_decorate($bt_g['key'], $bt_g['label']);
+                        if ($bt_g_style !== '') {
+                            $bt_sa_custom = true;
+                            break;
+                        }
+                    }
+                    foreach (subapps_link_rows($lang, $bt_sa_custom) as $bt_sa_row) {
+                        $keyboard_text['inline_keyboard'][] = $bt_sa_row;
+                    }
                 }
+            }
+            if (!empty($data['stand_in'])) {
+                continue;
             }
             // a button item shows the button itself, as this tab has it now
             $bt_live = in_array($data['key'], bt_btnitem_keys(), true) ? genbtn_row_label($data['key'], $lang) : null;
@@ -2595,18 +2614,19 @@ function keyboard_list_text($lang, $groupFilter = null)
                 $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['Admin']['LangScope']['productStyleBtn'], 'callback_data' => "btnstyle_kindhub:product:{$lang}", 'style' => 'primary']];
             }
         }
-        // 🌐 / 📲 and the app list are ONE setting for every place that shows
+        // 🌐 / 📲 and the app list are ONE group for every place that shows
         // them; the screens that show them link to it
         if ($groupFilter === 'referral' || $groupFilter === 'paygsvc') {
-            $keyboard_text['inline_keyboard'][] = [['text' => bt_section_meta('subapps')['label'], 'callback_data' => 'bt_sep|subapps']];
-            foreach ([['users.subapps.entryBuy', '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (همه‌ی بخش‌ها)'], ['users.subapps.listBuy', '📲 لیست برنامه‌ها + دکمه‌هاش (همه‌ی بخش‌ها)']] as [$bt_sa_key, $bt_sa_label]) {
-                $bt_sa_live = $bt_sa_key === 'users.subapps.entryBuy' ? genbtn_row_label($bt_sa_key, $lang) : null;
-                list($bt_sa_text, $bt_sa_style) = $bt_decorate($bt_sa_key, $bt_sa_live !== null ? $bt_sa_live[0] : $bt_sa_label);
-                $bt_sa_btn = ['text' => $bt_sa_text, 'callback_data' => "bt_edit|$lang|$bt_sa_key", 'style' => ($bt_sa_style !== '' ? $bt_sa_style : 'primary')];
-                if ($bt_sa_live !== null && $bt_sa_live[1] !== '') {
-                    $bt_sa_btn['icon_custom_emoji_id'] = $bt_sa_live[1];
+            $bt_sa_custom = false;
+            foreach (($bt_grouped['subapps'] ?? []) as $bt_g) {
+                list(, $bt_g_style) = $bt_decorate($bt_g['key'], $bt_g['label']);
+                if ($bt_g_style !== '') {
+                    $bt_sa_custom = true;
+                    break;
                 }
-                $keyboard_text['inline_keyboard'][] = [$bt_sa_btn];
+            }
+            foreach (subapps_link_rows($lang, $bt_sa_custom) as $bt_sa_row) {
+                $keyboard_text['inline_keyboard'][] = $bt_sa_row;
             }
         }
         if ($groupFilter === 'referral') {
@@ -2711,6 +2731,12 @@ function keyboard_list_text($lang, $groupFilter = null)
         if (isset($bt_payg_subs[$groupFilter])) {
             $keyboard_text['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_group|$lang|payg", 'style' => 'danger']];
         } else {
+            // 📲's group is opened from the five places that show it: back there
+            global $from_id;
+            $bt_sa_from = $groupFilter === 'subapps' ? bt_origin_get($from_id, "bt_group|$lang|subapps") : null;
+            if ($bt_sa_from !== null) {
+                $keyboard_text['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => $bt_sa_from, 'style' => 'danger']];
+            }
             // 👤's screen goes back to 👤 مدیریت کاربر, on this same tab
             $keyboard_text['inline_keyboard'][] = $groupFilter === 'usermgmt'
                 ? [['text' => '🔙 بازگشت به مدیریت کاربر', 'callback_data' => "umlang:$lang", 'style' => 'danger']]
