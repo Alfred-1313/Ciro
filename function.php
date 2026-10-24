@@ -1348,8 +1348,8 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         }
         $textextratime = sprintf($textbotlang['hardcoded']['extraTimeSuccessFn'], $steppay[0], $tmieextra, $volumesformat);
         sendmessage($Balance_id['id'], $textextratime, $keyboardextrafnished, 'HTML');
+        $volumes = $tmieextra;
         if ($Payment_report['Payment_Method'] == "cart to cart") {
-            $volumes = $tmieextra;
             $textconfrom = sprintf($textbotlang['hardcoded']['paymentConfirmedExtraTime'], $volumes, $steppay[0], $Balance_id['id'], $Payment_report['id_order'], $Balance_id['username'], wallet_amount_text($Balance_id), $format_price_cart);
             Editmessagetext($from_id, $message_id, $textconfrom, $Confirm_pay);
         }

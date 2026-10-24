@@ -142,4 +142,14 @@ return [
             . "<blockquote>🌐 <b>Web panel and 🎨 customization</b>\n"
             . "The error report still goes to the error-report channel for admins. The refund message is one of the bot's built-in texts and has no setting of its own.</blockquote>",
     ],
+    [
+        'n' => 10,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>🛠 <b>گزارش خرید زمان اضافه با درگاه</b>\n"
+            . "📍 کانال گزارش ← «کاربر زمان اضافه خریده است»\n"
+            . "وقتی مشتری زمان اضافه را با درگاه می‌خرید، در گزارش ادمین تعداد روزِ خریداری‌شده خالی می‌آمد. حالا مثل کارت‌به‌کارت پر می‌شود.</blockquote>",
+        'en' => "<blockquote>🛠 <b>Extra-time purchase report via gateway</b>\n"
+            . "📍 Report channel → «A user bought extra time»\n"
+            . "When a customer bought extra time through a gateway, the admin report left the number of days empty. It is now filled in, as with card-to-card.</blockquote>",
+    ],
 ];
