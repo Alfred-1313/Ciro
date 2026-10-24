@@ -10736,22 +10736,90 @@ if (!function_exists('statusbtn_defs')) {
 }
 if (!function_exists('statusbtn_bucket')) {
     // The service buttons' customizations are kept per place they appear:
-    // 'mine' is the service screen in 🛍 سرویس‌های من, 'buy' the message that
-    // carries a new service's config. Same buttons, two separate sets of
-    // overrides - editing one never touches the other.
+    // 'mine' is the service screen in 🛍 سرویس‌های من; 'buy', 'test' and 'ref'
+    // the messages that deliver a bought service's, a test account's and a 🎁
+    // referral gift's config. Same buttons, separate sets of overrides -
+    // editing one never touches another. Each: [its store in button_edit, its
+    // editor's callback prefix, the message (caption) it sits under - that
+    // message's own 🎨 entry, its name on the editor's screens]
+    function statusbtn_kinds()
+    {
+        return [
+            'mine' => ['users.status.infoFull', 'statusbtn', 'users.status.infoFull', 'صفحه‌ی وضعیت'],
+            'buy' => ['textbot.afterPay.svcbtn', 'buybtn', 'textbot.afterPay', 'پیام خرید'],
+            'test' => ['textbot.afterText.svcbtn', 'testbtn', 'textbot.afterText', 'پیام اکانت تست'],
+            'ref' => ['users.affiliates.rewardAfterPay.svcbtn', 'refbtn', 'users.affiliates.rewardAfterPay', 'پیام کانفیگ هدیه'],
+        ];
+    }
+    function statusbtn_kind_meta($kind)
+    {
+        $k = statusbtn_kinds();
+        return $k[$kind] ?? $k['mine'];
+    }
     function statusbtn_bucket($kind = 'mine')
     {
-        return $kind === 'buy' ? 'textbot.afterPay.svcbtn' : 'users.status.infoFull';
+        return statusbtn_kind_meta($kind)[0];
     }
-    // the callback prefix of that place's editor screens in 🎨
     function statusbtn_prefix($kind = 'mine')
     {
-        return $kind === 'buy' ? 'buybtn' : 'statusbtn';
+        return statusbtn_kind_meta($kind)[1];
     }
-    // the message text (caption) the buttons sit under - its own 🎨 entry
     function statusbtn_text_key($kind = 'mine')
     {
-        return $kind === 'buy' ? 'textbot.afterPay' : 'users.status.infoFull';
+        return statusbtn_kind_meta($kind)[2];
+    }
+    function statusbtn_kind_name($kind = 'mine')
+    {
+        return statusbtn_kind_meta($kind)[3];
+    }
+    // the place an editor callback is for, by its prefix ('mine' for none)
+    function statusbtn_kind_of_data($data)
+    {
+        foreach (statusbtn_kinds() as $kind => $m) {
+            if (strpos((string) $data, $m[1] . '|') === 0) {
+                return $kind;
+            }
+        }
+        return 'mine';
+    }
+    // what a sendMessageService() kind's message is, here
+    function statusbtn_kind_of_delivery($deliveryKind)
+    {
+        return ['purchase' => 'buy', 'usertest' => 'test', 'affrw' => 'ref'][$deliveryKind] ?? null;
+    }
+    // The buttons a place has: the screen in 🛍 سرویس‌های من all of them, a
+    // delivery message the screen's own (the ones inside گزارش مصرف live on
+    // that screen) - and the purchase message no 🔗 لینک اشتراک: the message
+    // itself carries the link, with 🌐 above it.
+    function statusbtn_kind_keys($kind, $textbotlang)
+    {
+        $keys = $kind === 'mine' ? array_keys(statusbtn_defs($textbotlang)) : statusbtn_screen_keys($textbotlang);
+        if ($kind === 'buy') {
+            $keys = array_values(array_diff($keys, ['linksub']));
+        }
+        return $keys;
+    }
+    // shipped hidden, everywhere: shown once 🎨 (or the web panel) says so
+    function statusbtn_default_hidden()
+    {
+        return ['changenameconfig', 'removeservice', 'ekhtelal'];
+    }
+    // The buttons whose feature 🏬 تنظیمات فروشگاه ← وضعیت قابلیت‌ها has off in
+    // $lang: they are not on any service whatever 🎨 says, so 🎨 marks them 🔒
+    function statusbtn_shop_off($lang)
+    {
+        $shop = fn($feature, $name) => shop_feature_value($feature, $lang, select("shopSetting", "*", "Namevalue", $name, "select")['value'] ?? '');
+        $setting = select("setting", "*", null, null, "select");
+        $off = [
+            'removeservice' => $shop('removeservicebackbtn', 'backserviecstatus') == 'off',
+            'config' => $shop('showconfig', 'configshow') == 'offconfig',
+            'ekhtelal' => $shop('disorderss', 'statusdisorder') == 'offdisorder',
+            'changestatus' => $shop('changgestatus', 'statuschangeservice') == 'offstatus',
+            'changenameconfig' => feature_value('statusnamecustom', $lang, $setting['statusnamecustom'] ?? '') == 'offnamecustom',
+            'Extra_time' => $shop('statustimeextra', 'statustimeextra') == 'offtimeextraa',
+            'Extra_volume' => $shop('extravolunme', 'statusextra') == 'offextra',
+        ];
+        return array_keys(array_filter($off));
     }
 }
 if (!function_exists('statusbtn_override')) {
@@ -10868,10 +10936,15 @@ if (!function_exists('statusbtn_list_payload')) {
     {
         $sb_p = statusbtn_prefix($kind);
         $sb_tk = statusbtn_text_key($kind);
-        $sb_scr = $kind === 'buy' ? 'پیام خرید' : 'صفحه‌ی وضعیت';
+        $sb_scr = statusbtn_kind_name($kind);
         $info = "🔘 <b>دکمه‌های {$sb_scr} سرویس</b>\n➖➖➖➖➖➖➖➖➖➖\n";
-        $info .= $kind === 'buy'
-            ? "این دکمه‌ها زیر پیام «خرید سرویس» (همون پیامی که بعد از خرید، کانفیگ رو برای کاربر می‌فرسته) نشون داده می‌شن. همون دکمه‌های «🛍 سرویس‌های من» هستن، ولی تنظیمشون جداست و با تنظیمات اون صفحه یکی نیست.\n"
+        $sb_where = [
+            'buy' => 'پیام «خرید سرویس» (همون پیامی که بعد از خرید، کانفیگ رو برای کاربر می‌فرسته)',
+            'test' => 'پیامی که بعد از گرفتن اکانت تست، کانفیگ رو برای کاربر می‌فرسته',
+            'ref' => 'پیامی که کانفیگ هدیه‌ی دعوت (رفرال) رو برای کاربر می‌فرسته',
+        ][$kind] ?? '';
+        $info .= $sb_where !== ''
+            ? "این دکمه‌ها زیر {$sb_where} نشون داده می‌شن. همون دکمه‌های «🛍 سرویس‌های من» هستن، ولی تنظیمشون جداست و با تنظیمات اون صفحه یکی نیست.\n"
             : "این دکمه‌ها زیر پیام «وضعیت سرویس» نشون داده می‌شن (وقتی کاربر داخل «🛍 سرویس‌های من» روی یکی از سرویس‌هاش می‌زنه).\n";
         $info .= "ℹ️ کدوم‌هاشون واقعاً نشون داده بشن به نوع پنل و تنظیمات فروشگاه بستگی داره - همیشه همه‌شون با هم نیستن.\n";
         $info .= "➖➖➖➖➖➖➖➖➖➖\nکدوم بخش رو می‌خوای تنظیم کنی؟ 👇";
@@ -10880,7 +10953,7 @@ if (!function_exists('statusbtn_list_payload')) {
         $kb['inline_keyboard'][] = [['text' => '🎭 ایموجی دکمه‌ها', 'callback_data' => "{$sb_p}|cat|{$lang}|emoji", 'style' => 'primary']];
         $kb['inline_keyboard'][] = [['text' => '📐 چیدمان دکمه‌ها', 'callback_data' => "{$sb_p}|cat|{$lang}|layout", 'style' => 'primary']];
         $kb['inline_keyboard'][] = [['text' => '✏️ نام و نمایش دکمه‌ها', 'callback_data' => "{$sb_p}|cat|{$lang}|text", 'style' => 'primary']];
-        $kb['inline_keyboard'][] = [['text' => '✏️ ویرایش کپشن ' . ($kind === 'buy' ? 'پیام خرید سرویس' : 'پیام وضعیت سرویس'), 'callback_data' => "bt_edit|{$lang}|{$sb_tk}", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [['text' => '✏️ ویرایش کپشن ' . ($kind === 'mine' ? 'پیام وضعیت سرویس' : statusbtn_kind_name($kind)), 'callback_data' => "bt_edit|{$lang}|{$sb_tk}", 'style' => 'primary']];
         $kb['inline_keyboard'][] = [['text' => '🔁 ریست همه‌ی دکمه‌ها به پیش‌فرض', 'callback_data' => "{$sb_p}|rstall|{$lang}", 'style' => 'danger']];
         $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => "bt_edit|{$lang}|{$sb_tk}", 'style' => 'danger']];
         $kb['inline_keyboard'][] = [['text' => '❌ بستن', 'callback_data' => 'bt_close', 'style' => 'danger']];
@@ -10895,16 +10968,18 @@ if (!function_exists('statusbtn_cat_payload')) {
     function statusbtn_cat_payload($lang, $cat, $textbotlang, $kind = 'mine')
     {
         $sb_p = statusbtn_prefix($kind);
-        $sb_scr = $kind === 'buy' ? 'پیام خرید' : 'صفحه‌ی وضعیت';
+        $sb_scr = statusbtn_kind_name($kind);
         $defs = statusbtn_defs($textbotlang);
         $kb = ['inline_keyboard' => []];
+        $sb_keys = statusbtn_kind_keys($kind, $textbotlang);
+        $sb_shopOff = statusbtn_shop_off($lang);
         foreach ($defs as $key => $d) {
-            // the buttons inside گزارش مصرف belong to the service's screen only
-            if ($kind === 'buy' && strpos($key, 'ur_') === 0) {
+            // only the buttons this place has (statusbtn_kind_keys)
+            if (!in_array($key, $sb_keys, true)) {
                 continue;
             }
             $rendered = statusbtn_render($lang, $key, lang_tab_texts($lang), null, $kind);
-            $hiddenMark = statusbtn_is_hidden($lang, $key, $kind) ? '🚫 ' : '';
+            $hiddenMark = (statusbtn_is_hidden($lang, $key, $kind) ? '🚫 ' : '') . (in_array($key, $sb_shopOff, true) ? '🔒 ' : '');
             if ($cat === 'color') {
                 $kb['inline_keyboard'][] = [['text' => $hiddenMark . $rendered['text'], 'callback_data' => "{$sb_p}|colorcyc|{$lang}|{$key}", 'style' => $rendered['style']]];
             } elseif ($cat === 'emoji') {
@@ -10919,14 +10994,15 @@ if (!function_exists('statusbtn_cat_payload')) {
             } else {
                 $hidden = statusbtn_is_hidden($lang, $key, $kind);
                 $mainBtn = ['text' => $hiddenMark . $rendered['text'], 'callback_data' => "{$sb_p}|text|{$lang}|{$key}", 'style' => $rendered['style']];
-                $hideBtn = ['text' => $hidden ? '👁' : '🚫', 'callback_data' => "{$sb_p}|hidetog|{$lang}|{$key}", 'style' => $hidden ? 'danger' : 'primary'];
+                // the button's state, as the legend above reads it: 👁 shown, 🚫 hidden
+                $hideBtn = ['text' => $hidden ? '🚫' : '👁', 'callback_data' => "{$sb_p}|hidetog|{$lang}|{$key}", 'style' => $hidden ? 'danger' : 'primary'];
                 $kb['inline_keyboard'][] = [$mainBtn, $hideBtn];
             }
         }
         $captions = [
-            'color' => "🎨 <b>رنگ‌بندی دکمه‌های {$sb_scr}</b>\n\nاین لیست، پیش‌نمایش زنده‌ست 👁\nروی هر دکمه بزن تا رنگش عوض بشه 👇\n🔵 آبی ← 🟢 سبز ← 🔴 قرمز ← ⚪️ پیش‌فرض\n🚫 = دکمه‌ی پنهان‌شده",
-            'emoji' => "🎭 <b>ایموجی دکمه‌های {$sb_scr}</b>\n\nروی هر دکمه بزن و ایموجی جدیدش رو بفرست 👇\n📍 دکمه‌ی کوچیک کنارش (⬅️/➡️) جای ایموجی رو (چپ یا راست متن) عوض می‌کنه\n💎 ایموجی پریمیوم همیشه سمت راست میاد (محدودیت خود تلگرامه)\n🚫 = دکمه‌ی پنهان‌شده",
-            'text' => "✏️ <b>نام و نمایش دکمه‌های {$sb_scr}</b>\n\n🔹 روی متن دکمه بزن تا متنش رو عوض کنی\n🔹 دکمه‌ی کوچیک کنارش، اون دکمه رو کلاً از دید کاربر پنهان یا آشکار می‌کنه\n🚫 = دکمه‌ی پنهان‌شده (کاربر اصلاً نمی‌بینتش) | 👁 = دوباره آشکارش می‌کنه",
+            'color' => "🎨 <b>رنگ‌بندی دکمه‌های {$sb_scr}</b>\n\nاین لیست، پیش‌نمایش زنده‌ست 👁\nروی هر دکمه بزن تا رنگش عوض بشه 👇\n🔵 آبی ← 🟢 سبز ← 🔴 قرمز ← ⚪️ پیش‌فرض\n🚫 = دکمه‌ی پنهان‌شده\n🔒 = قابلیتش توی 🏬 تنظیمات فروشگاه ← وضعیت قابلیت‌ها خاموشه، پس فعلاً به کاربر نشون داده نمی‌شه",
+            'emoji' => "🎭 <b>ایموجی دکمه‌های {$sb_scr}</b>\n\nروی هر دکمه بزن و ایموجی جدیدش رو بفرست 👇\n📍 دکمه‌ی کوچیک کنارش (⬅️/➡️) جای ایموجی رو (چپ یا راست متن) عوض می‌کنه\n💎 ایموجی پریمیوم همیشه سمت راست میاد (محدودیت خود تلگرامه)\n🚫 = دکمه‌ی پنهان‌شده\n🔒 = قابلیتش توی 🏬 تنظیمات فروشگاه ← وضعیت قابلیت‌ها خاموشه، پس فعلاً به کاربر نشون داده نمی‌شه",
+            'text' => "✏️ <b>نام و نمایش دکمه‌های {$sb_scr}</b>\n\n🔹 روی متن دکمه بزن تا متنش رو عوض کنی\n🔹 دکمه‌ی کوچیک کنارش وضعیت همون دکمه‌ست؛ بزنی عوض می‌شه\n👁 = به کاربر نشون داده می‌شه | 🚫 = پنهانه (کاربر اصلاً نمی‌بینتش)\n🔒 = قابلیتش توی 🏬 تنظیمات فروشگاه ← وضعیت قابلیت‌ها خاموشه، پس فعلاً به کاربر نشون داده نمی‌شه",
         ];
         $info = $captions[$cat] ?? $captions['color'];
         $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبلی', 'callback_data' => "{$sb_p}|list|{$lang}", 'style' => 'danger']];
@@ -10983,7 +11059,8 @@ if (!function_exists('statusbtn_is_hidden')) {
     function statusbtn_is_hidden($lang, $key, $kind = 'mine')
     {
         $ov = statusbtn_override($lang, $key, $kind);
-        return !empty($ov['hidden']);
+        // «shown» is stored as false, so a button that ships hidden can be shown
+        return array_key_exists('hidden', $ov) ? !empty($ov['hidden']) : in_array($key, statusbtn_default_hidden(), true);
     }
 }
 if (!function_exists('statusbtn_toggle_hidden')) {
@@ -11072,17 +11149,19 @@ if (!function_exists('statusbtn_layout_payload')) {
     function statusbtn_layout_payload($lang, $textbotlang, $selectedIdx = null, $kind = 'mine')
     {
         $sb_p = statusbtn_prefix($kind);
-        $sb_scr = $kind === 'buy' ? 'پیام خرید' : 'صفحه‌ی وضعیت';
+        $sb_scr = statusbtn_kind_name($kind);
         // only the service screen's own buttons can be reordered here - the
         // گزارش مصرف sub-screen's rows are edited elsewhere in this same tool
+        $sb_keys = statusbtn_kind_keys($kind, $textbotlang);
+        $sb_shopOff = statusbtn_shop_off($lang);
         $orderedKeys = array_values(array_filter(
             statusbtn_ordered_keys($lang, $textbotlang, $kind),
-            fn($k) => strpos($k, 'ur_') !== 0
+            fn($k) => strpos($k, 'ur_') !== 0 && in_array($k, $sb_keys, true)
         ));
         $kb = ['inline_keyboard' => []];
         foreach ($orderedKeys as $idx => $key) {
             $rendered = statusbtn_render($lang, $key, lang_tab_texts($lang), null, $kind);
-            $label = (statusbtn_is_hidden($lang, $key, $kind) ? '🚫 ' : '') . $rendered['text'];
+            $label = (statusbtn_is_hidden($lang, $key, $kind) ? '🚫 ' : '') . (in_array($key, $sb_shopOff, true) ? '🔒 ' : '') . $rendered['text'];
             $isSel = ($selectedIdx !== null && (int) $selectedIdx === $idx);
             if ($isSel) {
                 $btn = ['text' => '🔵 ' . $label, 'callback_data' => "{$sb_p}|laycancel|{$lang}"];
@@ -11097,7 +11176,7 @@ if (!function_exists('statusbtn_layout_payload')) {
         $kb['inline_keyboard'][] = [['text' => '🔁 ریست چیدمان', 'callback_data' => "{$sb_p}|layreset|{$lang}"]];
         $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبلی', 'callback_data' => "{$sb_p}|list|{$lang}", 'style' => 'danger']];
         $kb['inline_keyboard'][] = [['text' => '❌ بستن', 'callback_data' => 'bt_close', 'style' => 'danger']];
-        $info = "📐 <b>چیدمان دکمه‌های {$sb_scr}</b>\n\nروی یه دکمه بزن تا انتخاب بشه 🔵، بعد روی دکمه‌ی مقصد بزن تا جاشون با هم عوض بشه 👇\nرنگ و ایموجی دکمه‌ها همراهشون منتقل می‌شن\n🚫 = دکمه‌ی پنهان‌شده";
+        $info = "📐 <b>چیدمان دکمه‌های {$sb_scr}</b>\n\nروی یه دکمه بزن تا انتخاب بشه 🔵، بعد روی دکمه‌ی مقصد بزن تا جاشون با هم عوض بشه 👇\nرنگ و ایموجی دکمه‌ها همراهشون منتقل می‌شن\n🚫 = دکمه‌ی پنهان‌شده\n🔒 = قابلیتش توی 🏬 تنظیمات فروشگاه ← وضعیت قابلیت‌ها خاموشه، پس فعلاً به کاربر نشون داده نمی‌شه";
         return [$info, json_encode($kb)];
     }
 }
@@ -11106,7 +11185,7 @@ if (!function_exists('statusbtn_detail_payload')) {
     {
         $sb_p = statusbtn_prefix($kind);
         $defs = statusbtn_defs($textbotlang);
-        if (!isset($defs[$key])) {
+        if (!isset($defs[$key]) || !in_array($key, statusbtn_kind_keys($kind, $textbotlang), true)) {
             return statusbtn_list_payload($lang, $textbotlang, $kind);
         }
         $d = $defs[$key];
@@ -11156,13 +11235,6 @@ if (!function_exists('svc_action_rows')) {
     function svc_action_rows($kind, $nameloc, $marzban, $status, $subUrl, $userRow, $tx)
     {
         $lang = (is_array($userRow) && !empty($userRow['lang'])) ? $userRow['lang'] : 'fa';
-        $setting = select("setting", "*", null, null, "select");
-        $statustimeextra = shop_feature_value('statustimeextra', $lang, select("shopSetting", "*", "Namevalue", "statustimeextra", "select")['value']);
-        $marzbanstatusextra = shop_feature_value('extravolunme', $lang, select("shopSetting", "*", "Namevalue", "statusextra", "select")['value']);
-        $statusdisorder = shop_feature_value('disorderss', $lang, select("shopSetting", "*", "Namevalue", "statusdisorder", "select")['value']);
-        $statuschangeservice = shop_feature_value('changgestatus', $lang, select("shopSetting", "*", "Namevalue", "statuschangeservice", "select")['value']);
-        $statusshowconfig = shop_feature_value('showconfig', $lang, select("shopSetting", "*", "Namevalue", "configshow", "select")['value']);
-        $statusremoveserveice = shop_feature_value('removeservicebackbtn', $lang, select("shopSetting", "*", "Namevalue", "backserviecstatus", "select")['value']);
         // per language: 🔄 تغییر لوکیشن is hidden when there is nowhere to move
         // to, and "nowhere" depends on which panels THIS customer is offered.
         // The list behind that button (list_marzban_panel_userschange) filters
@@ -11261,38 +11333,29 @@ if (!function_exists('svc_action_rows')) {
         if (affrw_renew_blocked($nameloc)) {
             unset($keyboarddate['extend']);
         }
-        if ($statusremoveserveice == "off")
-            unset($keyboarddate['removeservice']);
-        if ($statusshowconfig == "offconfig")
-            unset($keyboarddate['config']);
+        // the ones whose feature 🏬 تنظیمات فروشگاه has off for this language
+        foreach (statusbtn_shop_off($lang) as $sb_off) {
+            unset($keyboarddate[$sb_off]);
+        }
         if ($marzban['type'] == "hiddify") {
             unset($keyboarddate['changelink']);
             unset($keyboarddate['changestatus']);
             unset($keyboarddate['config']);
         }
-        if ($statusdisorder == "offdisorder")
-            unset($keyboarddate['ekhtelal']);
         if ($nameloc['Service_time'] == "0")
             unset($keyboarddate['Extra_time']);
         if ($nameloc['Volume'] == "0") {
             unset($keyboarddate['Extra_volume']);
             unset($keyboarddate['Extra_time']);
         }
-        if ($statuschangeservice == "offstatus")
-            unset($keyboarddate['changestatus']);
-        if (feature_value('statusnamecustom', $lang, $setting['statusnamecustom']) == 'offnamecustom')
-            unset($keyboarddate['changenameconfig']);
         if ($marzbancount == 1)
             unset($keyboarddate['change-location']);
         if ($marzban['changeloc'] == "offchangeloc")
             unset($keyboarddate['change-location']);
-        if ($statustimeextra == "offtimeextraa")
-            unset($keyboarddate['Extra_time']);
-        if ($marzbanstatusextra == "offextra")
-            unset($keyboarddate['Extra_volume']);
         $sb_ordered_kd = [];
+        $sb_keys = statusbtn_kind_keys($kind, $tx);
         foreach (statusbtn_ordered_keys($lang, $tx, $kind) as $sb_ok) {
-            if (isset($keyboarddate[$sb_ok]) && !statusbtn_is_hidden($lang, $sb_ok, $kind)) {
+            if (isset($keyboarddate[$sb_ok]) && in_array($sb_ok, $sb_keys, true) && !statusbtn_is_hidden($lang, $sb_ok, $kind)) {
                 $sb_ordered_kd[$sb_ok] = $keyboarddate[$sb_ok];
             }
         }
@@ -11322,17 +11385,23 @@ if (!function_exists('svc_action_rows')) {
         return $keyboardsetting['inline_keyboard'];
     }
 }
-if (!function_exists('buy_service_action_rows')) {
-    // The management buttons under the message that delivers a new service's
-    // config - the ones 🛍 سرویس‌های من shows under the same service, apart in
-    // 🎨 (statusbtn_* kind 'buy', and the 🌐 / 📲 pair's own genbtn gp). Nothing
-    // for an invoice that is not the recipient's, and nothing for a manual
-    // sale, whose screen there has none either. Rows only; the tutorial button
-    // is the caller's. $subLink is the address the message already carries;
-    // when it shows none (the panel's «لینک اشتراک» off) the panel is asked,
-    // since 🌐 needs it either way.
-    function buy_service_action_rows($userId, $invoiceId, $lang, $panel, $subLink = '')
+if (!function_exists('delivery_action_rows')) {
+    // The management buttons under a message that delivers a config - a bought
+    // service's ('purchase'), a test account's ('usertest') or a 🎁 referral
+    // gift's ('affrw'): the ones 🛍 سرویس‌های من shows under the same service,
+    // apart in 🎨 (statusbtn_* kinds buy / test / ref, and each message's own
+    // 🌐 / 📲 pair - genbtn gp / gu / gw). Nothing for an invoice that is not
+    // the recipient's, and nothing for a manual sale, whose screen there has
+    // none either. Rows only; the tutorial button is the caller's. $subLink is
+    // the address the message already carries; when it shows none (the panel's
+    // «لینک اشتراک» off) the panel is asked, since 🌐 needs it either way.
+    function delivery_action_rows($deliveryKind, $userId, $invoiceId, $lang, $panel, $subLink = '')
     {
+        $kind = statusbtn_kind_of_delivery($deliveryKind);
+        $pair = ['purchase' => 'p', 'usertest' => 'u', 'affrw' => 'w'][$deliveryKind] ?? null;
+        if ($kind === null || $pair === null) {
+            return [];
+        }
         $inv = select("invoice", "*", "id_invoice", $invoiceId, "select");
         if (!is_array($inv) || (string) $inv['id_user'] !== (string) $userId || !is_array($panel) || ($panel['type'] ?? '') === 'Manualsale') {
             return [];
@@ -11340,7 +11409,7 @@ if (!function_exists('buy_service_action_rows')) {
         $userRow = select("user", "*", "id", $userId, "select");
         $tx = lang_tab_texts($lang);
         // a service that has just been made is on
-        $rows = svc_action_rows('buy', $inv, $panel, 'active', '', $userRow, $tx);
+        $rows = svc_action_rows($kind, $inv, $panel, 'active', '', $userRow, $tx);
         if (!in_array($panel['type'] ?? '', ['ibsng', 'mikrotik'], true)) {
             $sub = (string) $subLink;
             if (strpos($sub, 'http') !== 0 && ($panel['type'] ?? '') !== 'WGDashboard') {
@@ -11348,7 +11417,7 @@ if (!function_exists('buy_service_action_rows')) {
                 $data = is_object($ManagePanel) ? $ManagePanel->DataUser($inv['Service_location'], $inv['username']) : [];
                 $sub = (string) ($data['subscription_url'] ?? '');
             }
-            array_splice($rows, 0, 0, subapp_entry_rows('p', $lang, $tx, $sub, $inv['id_invoice'], true));
+            array_splice($rows, 0, 0, subapp_entry_rows($pair, $lang, $tx, $sub, $inv['id_invoice'], true));
         }
         return $rows;
     }
@@ -11363,7 +11432,12 @@ if (!function_exists('bottext_key_touched')) {
         $be = json_decode((string) ($setting['button_edit'] ?? ''), true);
         $textCustom = is_array($te) && isset($te[$lang]) && bottext_dotted_isset($te[$lang], $key);
         $stickerCustom = bt_media_lookup($st, $key, $lang) !== '';
-        $btnCustom = is_array($be) && (!empty($be[$lang][$key]) || ($key === statusbtn_text_key('buy') && !empty($be[$lang][statusbtn_bucket('buy')])));
+        $btnCustom = is_array($be) && !empty($be[$lang][$key]);
+        foreach (statusbtn_kinds() as $sbKind => $sbMeta) {
+            if ($sbKind !== 'mine' && $key === $sbMeta[2] && is_array($be) && !empty($be[$lang][$sbMeta[0]])) {
+                $btnCustom = true;
+            }
+        }
         return $textCustom || $stickerCustom || $btnCustom;
     }
 }
@@ -13248,9 +13322,12 @@ if (!function_exists('genbtn_alias_map')) {
             'gt' => 'users.subapps.entryTest',
             'gr' => 'users.subapps.entryRef',
             'gh' => 'users.subapps.entryPayg',
-            // and under the message that delivers a new service's config: its own
-            // pair, set apart from the purchase's one on the service's screen (gb)
+            // and under the messages that deliver a config - a bought service's
+            // (p), a test account's (u), a 🎁 referral gift's (w): each its own
+            // pair, set apart from the one on that service's screen
             'gp' => 'users.subapps.entryBuyMsg',
+            'gu' => 'users.subapps.entryTestMsg',
+            'gw' => 'users.subapps.entryRefMsg',
             'kb' => 'users.subapps.listBuy',
             'kt' => 'users.subapps.listTest',
             'kr' => 'users.subapps.listRef',
@@ -13470,7 +13547,7 @@ if (!function_exists('genbtn_defs')) {
             return [0 => ['name' => '⏱ دکمه‌ی اشتراک ساعتی (لیست «🛍 سرویس‌های من»)', 'text' => $textbotlang['users']['payg']['listLabel'], 'style' => 'danger', 'callback_data' => 'none',
                 'note' => 'هر اشتراک ساعتی مشتری با همین دکمه، بالای همه‌ی سرویس‌هاش توی «🛍 سرویس‌های من» میاد. اگه بیشتر از یکی داشته باشه شماره می‌خوره (۱، ۲، ...). {username} توی اسم = نام کاربری همون سرویس. وقتی به ماهانه تبدیل بشه، دکمه‌ش مثل بقیه‌ی سرویس‌ها با نام سرویس و آبی می‌شه.']];
         }
-        if (preg_match('/^([gk])([btrhp])$/', (string) $alias, $sm)) {
+        if (preg_match('/^([gk])([btrhpuw])$/', (string) $alias, $sm)) {
             $sa = $textbotlang['users']['subapps'];
             if ($sm[1] === 'g') {
                 // 🌐 a link to the subscription page and 📲 the app list -
@@ -13831,12 +13908,12 @@ if (!function_exists('subapp_kind')) {
     // the kind's part of its texts' keys: users.subapps.entryBuy / listBuy...
     function subapp_kind_suffix($kind)
     {
-        return ['b' => 'Buy', 't' => 'Test', 'r' => 'Ref', 'h' => 'Payg', 'p' => 'BuyMsg'][$kind] ?? 'Buy';
+        return ['b' => 'Buy', 't' => 'Test', 'r' => 'Ref', 'h' => 'Payg', 'p' => 'BuyMsg', 'u' => 'TestMsg', 'w' => 'RefMsg'][$kind] ?? 'Buy';
     }
     // and its name in 🎨
     function subapp_kind_name($kind)
     {
-        return ['b' => 'خرید', 't' => 'اکانت تست', 'r' => 'کانفیگ هدیه‌ی دعوت', 'h' => 'اشتراک ساعتی', 'p' => 'پیام خرید'][$kind] ?? 'خرید';
+        return ['b' => 'خرید', 't' => 'اکانت تست', 'r' => 'کانفیگ هدیه‌ی دعوت', 'h' => 'اشتراک ساعتی', 'p' => 'پیام خرید', 'u' => 'پیام اکانت تست', 'w' => 'پیام کانفیگ هدیه'][$kind] ?? 'خرید';
     }
     // the list's apps in its buttons' order - each one's genbtn k* number,
     // the id its link carries, its button's text (users.subapps.*), and where
@@ -13902,7 +13979,7 @@ if (!function_exists('subapp_kind')) {
     // its own but shows the same list as a bought service's screen
     function subapp_list_kind($kind)
     {
-        return $kind === 'p' ? 'b' : $kind;
+        return ['p' => 'b', 'u' => 't', 'w' => 'r'][$kind] ?? $kind;
     }
     // the rows on top of a service's screen: 🌐 (a link to $sub) and 📲 (the
     // app list), as this tab has them - [] when the panel gives the
@@ -14166,7 +14243,7 @@ if (!function_exists('genbtn_hub_payload')) {
         if (isset($titles[$alias])) {
             return $titles[$alias];
         }
-        if (preg_match('/^([gk])([btrhp])$/', (string) $alias, $sm)) {
+        if (preg_match('/^([gk])([btrhpuw])$/', (string) $alias, $sm)) {
             return ($sm[1] === 'g' ? '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه' : '📲 دکمه‌های لیست برنامه‌ها') . ' (' . subapp_kind_name($sm[2]) . ')';
         }
         // the button-only items: their one button's own name
@@ -14195,10 +14272,11 @@ if (!function_exists('genbtn_hub_payload')) {
         if (isset($notes[$alias])) {
             return $notes[$alias];
         }
-        if (preg_match('/^([gk])([btrhp])$/', (string) $alias, $sm)) {
+        if (preg_match('/^([gk])([btrhpuw])$/', (string) $alias, $sm)) {
             $where = ['b' => 'هر سرویس خریداری‌شده', 't' => 'هر اکانت تست', 'r' => 'هر کانفیگ هدیه‌ی دعوت (تا وقتی تمدید نشده)', 'h' => 'هر اشتراک ساعتی'][$sm[2]] ?? '';
-            if ($sm[2] === 'p') {
-                return 'این ۲ دکمه زیر پیامی میان که بعد از خرید، کانفیگ رو برای مشتری می‌فرسته (بالای دکمه‌های مدیریت سرویس): 🌐 صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه، 📲 لیست برنامه‌ها رو میاره (پیام خرید سر جاش می‌مونه). فقط وقتی پنل برای سابسکریپشن آدرس بده دیده می‌شن. تنظیمشون جداست و با دکمه‌های همین دو تا توی «🛍 سرویس‌های من» یکی نیست. کنار هم یا زیر هم بودنشون و مخفی کردن هرکدوم: 📐 چیدمان.';
+            $msg = ['p' => 'بعد از خرید', 'u' => 'بعد از گرفتن اکانت تست', 'w' => 'برای کانفیگ هدیه‌ی دعوت (رفرال)'][$sm[2]] ?? '';
+            if ($msg !== '') {
+                return 'این ۲ دکمه زیر پیامی میان که ' . $msg . '، کانفیگ رو برای مشتری می‌فرسته (بالای دکمه‌های مدیریت سرویس): 🌐 صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه، 📲 لیست برنامه‌ها رو میاره (پیام خرید سر جاش می‌مونه). فقط وقتی پنل برای سابسکریپشن آدرس بده دیده می‌شن. تنظیمشون جداست و با دکمه‌های همین دو تا توی «🛍 سرویس‌های من» یکی نیست. کنار هم یا زیر هم بودنشون و مخفی کردن هرکدوم: 📐 چیدمان.';
             }
             return $sm[1] === 'g'
                 ? "این ۲ دکمه بالای صفحه‌ی {$where} توی «🛍 سرویس‌های من» میان: 🌐 صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه، 📲 صفحه‌ی سرویس رو برمی‌داره و لیست برنامه‌ها رو میاره. فقط وقتی پنل برای سابسکریپشن آدرس بده دیده می‌شن. کنار هم یا زیر هم بودنشون و مخفی کردن هرکدوم: 📐 چیدمان."
@@ -14234,7 +14312,7 @@ if (!function_exists('genbtn_hub_payload')) {
     function genbtn_layout_default($alias)
     {
         return ['su' => 'half', 'pu' => 'half', 'cf' => 'half', 'cl' => 'full',
-            'gb' => 'full', 'gt' => 'full', 'gr' => 'full', 'gh' => 'full', 'gp' => 'full',
+            'gb' => 'full', 'gt' => 'full', 'gr' => 'full', 'gh' => 'full', 'gp' => 'full', 'gu' => 'full', 'gw' => 'full',
             'kb' => 'half', 'kt' => 'half', 'kr' => 'half', 'kh' => 'half'][$alias] ?? null;
     }
     // one button's width with nothing stored: its group's - except the app
@@ -14398,7 +14476,7 @@ if (!function_exists('genbtn_hub_payload')) {
     // back/close buttons, the other sections' close buttons and the 🎯 ones.
     function genbtn_preview_aliases()
     {
-        return ['rc', 'rp', 'bu', 'tp', 'ac', 'ts', 'he', 'sp', 'ar', 'mg', 'sl', 'gb', 'gt', 'gr', 'gh', 'gp', 'kb', 'kt', 'kr', 'kh'];
+        return ['rc', 'rp', 'bu', 'tp', 'ac', 'ts', 'he', 'sp', 'ar', 'mg', 'sl', 'gb', 'gt', 'gr', 'gh', 'gp', 'gu', 'gw', 'kb', 'kt', 'kr', 'kh'];
     }
     // The button exactly as this language's customer receives it - built by
     // genbtn_render(), the same function that builds the real one, so rename,
@@ -19183,8 +19261,10 @@ if (!function_exists('bt_button')) {
             'users.subapps.entryTest',
             'users.subapps.entryRef',
             'users.subapps.entryPayg',
-            // and under the purchase message (genbtn gp)
+            // and under the delivery messages (genbtn gp / gu / gw)
             'users.subapps.entryBuyMsg',
+            'users.subapps.entryTestMsg',
+            'users.subapps.entryRefMsg',
         ];
     }
     // label-only override, for buttons that may render on a reply keyboard
@@ -19203,9 +19283,10 @@ if (!function_exists('bt_button')) {
     // for genbtn's own "list" screen to usefully return to.
     function bt_btnitem_back_cb($key, $lang)
     {
-        // under the purchase message: inside 🛍️ پیام بعد از خرید
-        if ($key === 'users.subapps.entryBuyMsg') {
-            return "bt_edit|{$lang}|textbot.afterPay";
+        // under a delivery message: inside that message's own 🎨 screen
+        $msgOwner = ['users.subapps.entryBuyMsg' => 'textbot.afterPay', 'users.subapps.entryTestMsg' => 'textbot.afterText', 'users.subapps.entryRefMsg' => 'users.affiliates.rewardAfterPay'];
+        if (isset($msgOwner[$key])) {
+            return "bt_edit|{$lang}|{$msgOwner[$key]}";
         }
         if ($key === 'bottext.btnCloseTest' || $key === 'users.subapps.entryTest') {
             // lives inside 🔑 تنظیم اکانت تست, not a bt_group screen of its own
@@ -20760,6 +20841,13 @@ if (!function_exists('bt_alert_keys')) {
             'keyboard.infoRefreshed',
             'users.subapps.noLink',
             'users.serviceNotYours',
+            // ⏱'s 💡 popups
+            'users.payg.pausedOk',
+            'users.payg.resumedOk',
+            'users.payg.pauseWaiting',
+            'users.payg.pauseStopped',
+            'users.payg.resumeLowBalance',
+            'users.payg.pauseFailed',
         ];
     }
 }
@@ -20780,7 +20868,7 @@ if (!function_exists('bt_nosticker_keys')) {
             // a popup refusing someone else's service
             'users.serviceNotYours',
             // 🌐 / 📲's buttons, their popup and the page an app opens through
-            'users.subapps.entryBuy', 'users.subapps.entryTest', 'users.subapps.entryRef', 'users.subapps.entryPayg', 'users.subapps.entryBuyMsg',
+            'users.subapps.entryBuy', 'users.subapps.entryTest', 'users.subapps.entryRef', 'users.subapps.entryPayg', 'users.subapps.entryBuyMsg', 'users.subapps.entryTestMsg', 'users.subapps.entryRefMsg',
             'users.subapps.noLink', 'users.subapps.pageOpening', 'users.subapps.pageButton', 'users.subapps.pageHint',
             'users.subapps.pageDownload', 'users.subapps.pageError',
             'users.affiliates.purchaseCommissionInfo',
@@ -21002,7 +21090,7 @@ if (!function_exists('service_button_invoice_id')) {
             return $m[1];
         }
         // ⏱'s own: paygcp_{id}_{product} and paygcpok_ carry the id first
-        foreach (['paygref_', 'paygdel_', 'paygdelok_', 'paygconv_', 'paygcp_', 'paygcpok_', 'paygrm_', 'paygrmok_',
+        foreach (['paygref_', 'paygpause_', 'paygdel_', 'paygdelok_', 'paygconv_', 'paygcp_', 'paygcpok_', 'paygrm_', 'paygrmok_',
             'updateproduct_', 'product_', 'subscriptionurl_', 'config_', 'extend_', 'changelink_', 'confirmchange_',
             'removeserviceuser_', 'changenote_', 'Extra_volume_', 'Extra_time_', 'changestatus_', 'confirmaccountdisable_',
             'transfer_', 'changeloc_', 'confirmchangeloccha_', 'disorder-', 'confirmdisorders-', 'usagereport_', 'removeauto-', 'subapps_'] as $p) {
@@ -21603,10 +21691,11 @@ function sendMessageService($panel_info, $config, $sub_link, $username_service, 
     $sms_lang = $sms_row['lang'] ?? 'fa';
     if (!mainmenu_btn_active($sms_lang, "text_help"))
         $reply_markup = null;
-    // a purchase also carries the buttons the service has in 🛍 سرویس‌های من
-    // (🔗 لینک اشتراک, 💊 تمدید ...), above the tutorial button
-    if ($kind === 'purchase') {
-        $sms_actions = buy_service_action_rows($user_id, $invoice_id, $sms_lang, $panel_info, $sub_link);
+    // a purchase, a test account and a 🎁 referral gift also carry the buttons
+    // the service has in 🛍 سرویس‌های من (🌐, 📲, 🔰, 💡 ...), above the
+    // tutorial button
+    if (statusbtn_kind_of_delivery($kind) !== null) {
+        $sms_actions = delivery_action_rows($kind, $user_id, $invoice_id, $sms_lang, $panel_info, $sub_link);
         if ($sms_actions) {
             $sms_help = is_string($reply_markup) ? (json_decode($reply_markup, true)['inline_keyboard'] ?? []) : [];
             $reply_markup = json_encode(['inline_keyboard' => array_merge($sms_actions, $sms_help)]);

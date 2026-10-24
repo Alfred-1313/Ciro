@@ -2415,8 +2415,8 @@ function keyboard_list_text($lang, $groupFilter = null)
         'users.channel.left_channel',
         // the test account's 🌐 / 📲 and its app list: inside 🔑 تنظیم اکانت تست
         'users.subapps.entryTest', 'users.subapps.listTest',
-        // the pair under the purchase message: inside 🛍️ پیام بعد از خرید
-        'users.subapps.entryBuyMsg'];
+        // the pairs under the delivery messages: inside each message's own screen
+        'users.subapps.entryBuyMsg', 'users.subapps.entryTestMsg', 'users.subapps.entryRefMsg'];
     $bt_can_react_keys = bt_react_keys();
     $bt_list_setting = select("setting", "*", null, null, "select");
     $bt_list_edit = json_decode((string) ($bt_list_setting['text_edit'] ?? ''), true);

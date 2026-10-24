@@ -3596,9 +3596,9 @@ if (preg_match('/^paygmk_(.+)$/', (string) $datain, $pg_m)) {
     svc_send_status_screen($from_id, $message_id, $pg_text, $pg_kb, (string) ($pg_res['out']['subscription_url'] ?? ''), true);
     return;
 }
-// the service's own buttons: 🔄 ⏩ 🗑 - each for its owner only (the check at
-// the top, service_button_invoice_id), each on the service's lock
-if (preg_match('/^(paygref|paygdel|paygdelok|paygconv|paygrm|paygrmok)_([A-Za-z0-9]+)$/', (string) $datain, $pg_m) || preg_match('/^(paygcp|paygcpok)_([A-Za-z0-9]+)_(.+)$/', (string) $datain, $pg_m)) {
+// the service's own buttons: 🔄 💡 ⏩ 🗑 - each for its owner only (the check
+// at the top, service_button_invoice_id), each on the service's lock
+if (preg_match('/^(paygref|paygpause|paygdel|paygdelok|paygconv|paygrm|paygrmok)_([A-Za-z0-9]+)$/', (string) $datain, $pg_m) || preg_match('/^(paygcp|paygcpok)_([A-Za-z0-9]+)_(.+)$/', (string) $datain, $pg_m)) {
     $pg_w = $textbotlang['users']['payg'];
     $pg_act = $pg_m[1];
     $pg_id = $pg_m[2];
@@ -3606,7 +3606,7 @@ if (preg_match('/^(paygref|paygdel|paygdelok|paygconv|paygrm|paygrmok)_([A-Za-z0
         telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $t, 'show_alert' => true]);
     };
     $pg_svc = payg_invoice_of($pg_id) !== null ? payg_row($pg_id) : null;
-    $pg_open = $pg_svc !== null && in_array($pg_svc['status'], ['waiting', 'active', 'stopped'], true);
+    $pg_open = $pg_svc !== null && in_array($pg_svc['status'], ['waiting', 'active', 'stopped', 'paused'], true);
     $pg_toList = json_encode(['inline_keyboard' => [[['text' => $textbotlang['users']['status']['backlist'], 'callback_data' => 'backorder', 'style' => 'danger']]]]);
     if ($pg_act === 'paygref') {
         if ($pg_svc === null) {
@@ -3631,6 +3631,45 @@ if (preg_match('/^(paygref|paygdel|paygdelok|paygconv|paygrm|paygrmok)_([A-Za-z0
         svc_send_status_screen($from_id, $message_id, $pg_text, $pg_kb, $pg_sub, false);
         return;
     }
+    if ($pg_act === 'paygpause') {
+        // 💡: an ordinary service's on/off, as an hourly one can have it - off
+        // stops the clock (payg_user_pause), on needs what a ⛔️ one needs
+        if (!$pg_open) {
+            $pg_alert($pg_w['notActive']);
+            return;
+        }
+        if (in_array('changestatus', statusbtn_shop_off($user['lang'] ?? 'fa'), true)) {
+            $pg_alert($textbotlang['users']['featureUnavailable']);
+            return;
+        }
+        if ($pg_svc['status'] === 'waiting' || $pg_svc['status'] === 'stopped') {
+            $pg_alert($pg_w[$pg_svc['status'] === 'waiting' ? 'pauseWaiting' : 'pauseStopped']);
+            return;
+        }
+        $pg_res = payg_locked($pg_id, function () use ($pg_id) {
+            $svc = payg_row($pg_id);
+            if ($svc === null) {
+                return ['error' => 'state'];
+            }
+            return $svc['status'] === 'paused' ? payg_user_resume($svc) : payg_user_pause($svc);
+        });
+        if (!is_array($pg_res) || empty($pg_res['ok'])) {
+            $pg_err = is_array($pg_res) ? (string) ($pg_res['error'] ?? '') : '';
+            if ($pg_err === 'lowbal') {
+                $pg_alert(strtr($pg_w['resumeLowBalance'], ['{need}' => money($pg_res['need'], $pg_res['cur']), '{balance}' => money($pg_res['have'], $pg_res['cur'])]));
+            } else {
+                $pg_alert($pg_err === 'panel' ? $pg_w['pauseFailed'] : $pg_w['notActive']);
+            }
+            return;
+        }
+        $pg_svc = $pg_res['svc'];
+        $pg_alert($pg_svc['status'] === 'paused' ? $pg_w['pausedOk'] : $pg_w['resumedOk']);
+        $pg_d = payg_panel_data(select("marzban_panel", "*", "name_panel", $pg_svc['panel'], "select"), $pg_svc['username']);
+        [$pg_text, $pg_kb] = payg_service_screen($pg_svc, $textbotlang, $pg_d);
+        $pg_sub = is_array($pg_d['data'] ?? null) ? (string) ($pg_d['data']['subscription_url'] ?? '') : '';
+        svc_send_status_screen($from_id, $message_id, $pg_text, $pg_kb, $pg_sub, false);
+        return;
+    }
     if ($pg_act === 'paygdel' || $pg_act === 'paygdelok') {
         if (!$pg_open) {
             $pg_alert($pg_w['notActive']);
@@ -3650,7 +3689,7 @@ if (preg_match('/^(paygref|paygdel|paygdelok|paygconv|paygrm|paygrmok)_([A-Za-z0
         // what it used up to now is taken first; nothing after it
         $pg_done = payg_locked($pg_id, function () use ($pg_id) {
             $svc = payg_row($pg_id);
-            if ($svc === null || !in_array($svc['status'], ['waiting', 'active', 'stopped'], true)) {
+            if ($svc === null || !in_array($svc['status'], ['waiting', 'active', 'stopped', 'paused'], true)) {
                 return null;
             }
             payg_settle($svc);

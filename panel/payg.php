@@ -129,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (string) ($_POST['id'] ?? '');
         $done = preg_match('/^[A-Za-z0-9]+$/', $id) ? payg_locked($id, function () use ($id) {
             $svc = payg_row($id);
-            if ($svc === null || !in_array($svc['status'], ['waiting', 'active', 'stopped'], true)) {
+            if ($svc === null || !in_array($svc['status'], ['waiting', 'active', 'stopped', 'paused'], true)) {
                 return null;
             }
             payg_settle($svc);
@@ -153,7 +153,7 @@ $cfg = payg_cfg($lang);
 $problems = payg_admin_problems($lang);
 $stats = payg_stats($lang);
 $day = payg_stats($lang, time() - 86400, time());
-$open = db_fetchAll($pdo, "SELECT * FROM payg_service WHERE lang = ? AND status IN ('waiting', 'active', 'stopped') ORDER BY created_at DESC LIMIT 200", [$lang]);
+$open = db_fetchAll($pdo, "SELECT * FROM payg_service WHERE lang = ? AND status IN ('waiting', 'active', 'stopped', 'paused') ORDER BY created_at DESC LIMIT 200", [$lang]);
 
 $switch = function ($name, $on, $label, $hint = '') use ($t) {
     return '<div class="set-row"><div><div class="set-label">' . htmlspecialchars($label) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . $hint . '</div>' : '') . '</div>'
@@ -186,7 +186,7 @@ $calc = function ($key) use ($cfg, $cur, $t) {
     }
     return sprintf($t['pgCalcVol'], payg_money($v * 10, $cur), payg_money($v * 100, $cur));
 };
-$statusName = ['waiting' => '⏸ ' . $t['pgStatusWaiting'], 'active' => '✅ ' . $t['pgStatusActive'], 'stopped' => '⛔️ ' . $t['pgStatusStopped']];
+$statusName = ['waiting' => '⏸ ' . $t['pgStatusWaiting'], 'active' => '✅ ' . $t['pgStatusActive'], 'stopped' => '⛔️ ' . $t['pgStatusStopped'], 'paused' => '💤 ' . $t['pgStatusPaused']];
 
 $pageTitle = $t['pgPageTitle'];
 $pageLede = $t['pgPageLede'];

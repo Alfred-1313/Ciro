@@ -188,4 +188,32 @@ return [
             . "📍 Web panel → Button looks → «(purchase message)» (linked from the «Purchase message buttons» tab)\n"
             . "The name, colour, emoji, layout and visibility of these two buttons are set for the purchase message on their own, apart from the same two in «My services». The app list 📲 opens is the «purchase» one.</blockquote>",
     ],
+    [
+        'n' => 13,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>🔘 <b>دکمه‌های یکسان در هر ۵ جا</b>\n"
+            . "📍 پیام خرید، پیام اکانت تست، پیام هدیهٔ رفرال، صفحهٔ ساعتی و 🛍 سرویس‌های من\n"
+            . "همه‌جا 🌐 ورود به سابسکریپشن، 📲 افزودن به برنامه، ♻️ بروزرسانی، 🔰 دریافت کانفیگ، 💡 روشن/خاموش و 📊 گزارش مصرف هست. پیام اکانت تست و هدیهٔ رفرال هم حالا دکمه‌های مدیریت سرویس را دارند. 🔗 لینک اشتراک از پیام خرید برداشته شد (خود پیام لینک را دارد).</blockquote>\n\n"
+            . "<blockquote>⚙️ <b>پیش‌فرض‌های تازه</b>\n"
+            . "📍 🏬 تنظیمات فروشگاه ← وضعیت قابلیت‌ها ← تغییر وضعیت اکانت\n"
+            . "💡 روشن/خاموش حالا پیش‌فرض روشن است و یک‌بار برای همه روشن شد (اگر بعداً خاموشش کنی، خاموش می‌ماند). 📝 یادداشت، ❌ بازگشت وجه و ⚠️ گزارش اختلال پیش‌فرض پنهان‌اند و 📚 آموزش هم مثل قبل پیش‌فرض پنهان است؛ هرکدام را از 🎨 می‌شود نشان داد.</blockquote>\n\n"
+            . "<blockquote>⏱ <b>💡 برای اشتراک ساعتی</b>\n"
+            . "مشتری می‌تواند اشتراک ساعتی را خاموش کند؛ تا وقتی خاموش است هزینه‌ای کم نمی‌شود و حذف هم نمی‌شود. روشن‌کردن دوباره به همان موجودی‌ای نیاز دارد که برای شروع لازم است. 📊 گزارش مصرف هم به صفحه‌اش اضافه شد.</blockquote>\n\n"
+            . "<blockquote>🎨 <b>تنظیم جدا و اصلاح نمایش</b>\n"
+            . "📍 🎨 شخصی‌سازی ← پیام بعد از دریافت اکانت تست / پیام کامل کانفیگ هدیه ← «🔘 ویرایش دکمه‌های مدیریت سرویس» و «🌐 دکمه‌های سابسکریپشن»\n"
+            . "📍 وب‌پنل ← پیام‌ها و دکمه‌های سرویس ← «دکمه‌های پیام دریافت» (خرید / اکانت تست / هدیهٔ دعوت)\n"
+            . "در «✏️ نام و نمایش دکمه‌ها» علامت کنار هر دکمه حالا وضعیت واقعی را نشان می‌دهد: 👁 دیده می‌شود، 🚫 پنهان است. 🔒 یعنی قابلیتش در تنظیمات فروشگاه خاموش است.</blockquote>",
+        'en' => "<blockquote>🔘 <b>The same buttons in all 5 places</b>\n"
+            . "📍 Purchase message, test account message, referral gift message, hourly screen and 🛍 My services\n"
+            . "Every one now has 🌐 Open subscription page, 📲 Add to app, ♻️ Update, 🔰 Get config, 💡 On/off and 📊 Usage report. The test account and referral gift messages now carry the service buttons too. 🔗 Subscription link is gone from the purchase message (the message itself has the link).</blockquote>\n\n"
+            . "<blockquote>⚙️ <b>New defaults</b>\n"
+            . "📍 🏬 Shop settings → Feature status → Change account status\n"
+            . "💡 On/off is now on by default and was turned on once for everyone (turn it off later and it stays off). 📝 Note, ❌ Refund and ⚠️ Disruption report ship hidden, and 📚 Tutorial is still hidden by default; 🎨 can show any of them.</blockquote>\n\n"
+            . "<blockquote>⏱ <b>💡 for hourly subscriptions</b>\n"
+            . "Customers can turn an hourly subscription off; nothing is charged and it is not deleted while it is off. Turning it on again needs the same balance a start needs. 📊 Usage report was added to its screen too.</blockquote>\n\n"
+            . "<blockquote>🎨 <b>Set apart, and shown right</b>\n"
+            . "📍 🎨 Customize → Message after a test account / Full referral gift message → «🔘 Edit service buttons» and «🌐 Subscription buttons»\n"
+            . "📍 Web panel → Messages and service buttons → «Delivery message buttons» (purchase / test account / referral gift)\n"
+            . "In «✏️ Names and visibility» the mark next to each button now shows its real state: 👁 shown, 🚫 hidden. 🔒 means its feature is off in the shop settings.</blockquote>",
+    ],
 ];

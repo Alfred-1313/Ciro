@@ -1080,7 +1080,9 @@ try {
         $pdo->query("INSERT INTO shopSetting (Namevalue,value) VALUES ('minbalancebuybulk','0')");
         $pdo->query("INSERT INTO shopSetting (Namevalue,value) VALUES ('statustimeextra','offtimeextraa')");
         $pdo->query("INSERT INTO shopSetting (Namevalue,value) VALUES ('statusdisorder','offdisorder')");
-        $pdo->query("INSERT INTO shopSetting (Namevalue,value) VALUES ('statuschangeservice','offstatus')");
+        // 💡 روشن/خاموش کردن اکانت ships on
+        $pdo->query("INSERT INTO shopSetting (Namevalue,value) VALUES ('statuschangeservice','onstatus')");
+        $pdo->query("INSERT INTO shopSetting (Namevalue,value) VALUES ('statuschangeservice_defon','1')");
         $pdo->query("INSERT INTO shopSetting (Namevalue,value) VALUES ('statusshowprice','offshowprice')");
         $pdo->query("INSERT INTO shopSetting (Namevalue,value) VALUES ('configshow','onconfig')");
         $pdo->query("INSERT INTO shopSetting (Namevalue,value) VALUES ('backserviecstatus','off')");
@@ -1100,7 +1102,7 @@ try {
         $pdo->query("INSERT IGNORE INTO shopSetting (Namevalue,value) VALUES ('customtimepricen','4000')");
         $pdo->query("INSERT IGNORE INTO shopSetting (Namevalue,value) VALUES ('customtimepricen2','4000')");
         $pdo->query("INSERT IGNORE INTO shopSetting (Namevalue,value) VALUES ('statusdisorder','offdisorder')");
-        $pdo->query("INSERT IGNORE INTO shopSetting (Namevalue,value) VALUES ('statuschangeservice','offstatus')");
+        $pdo->query("INSERT IGNORE INTO shopSetting (Namevalue,value) VALUES ('statuschangeservice','onstatus')");
         $pdo->query("INSERT IGNORE INTO shopSetting (Namevalue,value) VALUES ('statusshowprice','offshowprice')");
         $pdo->query("INSERT IGNORE INTO shopSetting (Namevalue,value) VALUES ('configshow','onconfig')");
         $pdo->query("INSERT IGNORE INTO shopSetting (Namevalue,value) VALUES ('backserviecstatus','off')");
@@ -1556,6 +1558,26 @@ addFieldToTable("setting", "channelButtonsLang", '{}', "TEXT");
 addFieldToTable("setting", "close_sticker", '{}', "TEXT");
 addFieldToTable("setting", "svc_node_usage", '{}', "TEXT");
 addFieldToTable("setting", "shop_feature_lang", '{}', "TEXT");
+// 💡 روشن/خاموش کردن اکانت is on by default now. A shop still on the old
+// default (off) gets it on once - every language's own switch too; one turned
+// off after this stays off (the marker row says it has run).
+try {
+    if (!$pdo->query("SELECT COUNT(*) FROM shopSetting WHERE Namevalue = 'statuschangeservice_defon'")->fetchColumn()) {
+        $pdo->query("UPDATE shopSetting SET value = 'onstatus' WHERE Namevalue = 'statuschangeservice' AND value = 'offstatus'");
+        $sc_map = json_decode((string) $pdo->query("SELECT shop_feature_lang FROM setting LIMIT 1")->fetchColumn(), true);
+        if (is_array($sc_map) && is_array($sc_map['changgestatus'] ?? null)) {
+            foreach ($sc_map['changgestatus'] as $sc_l => $sc_v) {
+                if ($sc_v === 'offstatus') {
+                    $sc_map['changgestatus'][$sc_l] = 'onstatus';
+                }
+            }
+            $pdo->prepare("UPDATE setting SET shop_feature_lang = ?")->execute([json_encode($sc_map, JSON_UNESCAPED_UNICODE)]);
+        }
+        $pdo->query("INSERT IGNORE INTO shopSetting (Namevalue,value) VALUES ('statuschangeservice_defon','1')");
+    }
+} catch (Exception $e) {
+    error_log('statuschangeservice default: ' . $e->getMessage());
+}
 addFieldToTable("setting", "feature_lang", '{}', "TEXT");
 addFieldToTable("setting", "feature_lang_settings", '{}', "TEXT");
 addFieldToTable("setting", "webhook_secret", null, "VARCHAR(200) NOT NULL DEFAULT ''");

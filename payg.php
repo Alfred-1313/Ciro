@@ -564,7 +564,7 @@ if (!function_exists('payg_row')) {
     {
         global $pdo;
         payg_ensure_schema();
-        $st = $pdo->prepare("SELECT * FROM payg_service WHERE user_id = ? AND status IN ('waiting', 'active', 'stopped')");
+        $st = $pdo->prepare("SELECT * FROM payg_service WHERE user_id = ? AND status IN ('waiting', 'active', 'stopped', 'paused')");
         $st->execute([(string) $uid]);
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -1154,6 +1154,45 @@ if (!function_exists('payg_stop')) {
     }
 }
 
+if (!function_exists('payg_user_pause')) {
+    // 💡 by its owner, off: what ran up to now is billed, the panel user is
+    // switched off and no time runs (payg_tick leaves a paused one alone) -
+    // unlike ⛔️ متوقف, nothing counts down to a deletion
+    function payg_user_pause(array $svc)
+    {
+        if ($svc['status'] !== 'active') {
+            return ['error' => 'state'];
+        }
+        $panel = select("marzban_panel", "*", "name_panel", $svc['panel'], "select");
+        if (!is_array($panel) || !payg_panel_set($panel, $svc['username'], (int) $svc['cap_expire'], (int) $svc['cap_limit'], false)) {
+            return ['error' => 'panel'];
+        }
+        payg_bill($svc, null);
+        payg_set($svc['id_invoice'], ['status' => 'paused', 'stopped_at' => time()]);
+        return ['ok' => true, 'svc' => payg_row($svc['id_invoice'])];
+    }
+    // ...and on again, when the wallet covers it the way a ⛔️ one needs to be
+    // resumed; the clock runs from now
+    function payg_user_resume(array $svc)
+    {
+        if ($svc['status'] !== 'paused') {
+            return ['error' => 'state'];
+        }
+        $u = select("user", "*", "id", (string) $svc['user_id'], "select", ['cache' => false]);
+        $cfg = payg_cfg($svc['lang']);
+        $rates = payg_rates($cfg, payg_group_of($u));
+        $have = payg_wallet($svc['user_id'], $svc['currency']);
+        $need = max($cfg['minbal'], payg_need_running($svc['user_id'], $svc['currency']) + payg_need($rates, $svc['currency']));
+        if ($have + 1e-9 < $need) {
+            return ['error' => 'lowbal', 'need' => $need, 'have' => $have, 'cur' => $svc['currency']];
+        }
+        payg_set($svc['id_invoice'], ['status' => 'active', 'stopped_at' => 0, 'billed_until' => time()]);
+        $svc = payg_row($svc['id_invoice']);
+        payg_sync_caps($svc, $rates, $have, (int) $svc['billed_bytes'], true);
+        return ['ok' => true, 'svc' => payg_row($svc['id_invoice'])];
+    }
+}
+
 if (!function_exists('payg_convert')) {
     // ⏩ into one of the panel's monthly plans: what the hourly side owes up
     // to now, then the plan's price, then the same panel user (same config)
@@ -1218,7 +1257,7 @@ if (!function_exists('payg_tick')) {
     {
         return payg_locked($svc['id_invoice'], function () use ($svc) {
             $svc = payg_row($svc['id_invoice']);
-            if ($svc === null || !in_array($svc['status'], ['waiting', 'active', 'stopped'], true)) {
+            if ($svc === null || !in_array($svc['status'], ['waiting', 'active', 'stopped', 'paused'], true)) {
                 return;
             }
             $now = time();
@@ -1232,6 +1271,11 @@ if (!function_exists('payg_tick')) {
             }
             if (!in_array($invStatus, ['active', 'end_of_time', 'end_of_volume', 'sendedwarn', 'send_on_hold'], true)) {
                 payg_delete($svc, 'gone');
+                return;
+            }
+            // 💡 switched off by its owner: no time runs and nothing is billed
+            // until they turn it on again (payg_user_resume)
+            if ($svc['status'] === 'paused') {
                 return;
             }
             $panel = select("marzban_panel", "*", "name_panel", $svc['panel'], "select");
@@ -1346,7 +1390,7 @@ if (!function_exists('payg_tick')) {
         global $pdo;
         payg_ensure_schema();
         $start = time();
-        foreach ($pdo->query("SELECT * FROM payg_service WHERE status IN ('waiting', 'active', 'stopped') ORDER BY billed_until, polled_at")->fetchAll(PDO::FETCH_ASSOC) as $svc) {
+        foreach ($pdo->query("SELECT * FROM payg_service WHERE status IN ('waiting', 'active', 'stopped', 'paused') ORDER BY billed_until, polled_at")->fetchAll(PDO::FETCH_ASSOC) as $svc) {
             if (time() - $start >= $budget) {
                 break;
             }
@@ -1436,7 +1480,7 @@ if (!function_exists('payg_rates_text')) {
         $cfg = payg_cfg($svc['lang']);
         $rates = payg_rates($cfg, payg_group_of($u));
         $left = payg_wallet($svc['user_id'], $svc['currency']);
-        $status = ['waiting' => $w['statusWaiting'], 'active' => $w['statusActive'], 'stopped' => $w['statusStopped']][$svc['status']] ?? $w['statusEnded'];
+        $status = ['waiting' => $w['statusWaiting'], 'active' => $w['statusActive'], 'stopped' => $w['statusStopped'], 'paused' => $w['statusPaused']][$svc['status']] ?? $w['statusEnded'];
         $started = (int) $svc['started_at'];
         $endAt = $svc['status'] === 'active' ? time() : ((int) $svc['stopped_at'] ?: ((int) $svc['ended_at'] ?: time()));
         $used = (is_array($panelData) && $panelData['ok'] && !$panelData['gone']) ? $panelData['used'] : (int) $svc['billed_bytes'];
@@ -1470,6 +1514,14 @@ if (!function_exists('payg_rates_text')) {
             if ($cfg['convert'] && in_array($svc['status'], ['active', 'waiting'], true) && payg_panel_products($svc['lang'], $svc['panel'], payg_group_of($u))) {
                 $pair[] = ['text' => $w['btnConvert'], 'callback_data' => "paygconv_{$id}", 'style' => 'primary'];
             }
+            $rows[] = $pair;
+            // 💡 on/off - while the shop has it on - and 📊 گزارش مصرف, as an
+            // ordinary service's screen has them
+            $pair = [];
+            if (!in_array('changestatus', statusbtn_shop_off($svc['lang']), true)) {
+                $pair[] = ['text' => $svc['status'] === 'paused' ? $w['btnTurnOn'] : $w['btnTurnOff'], 'callback_data' => "paygpause_{$id}", 'style' => 'primary'];
+            }
+            $pair[] = ['text' => $w['btnUsage'], 'callback_data' => "usagereport_{$id}", 'style' => 'primary'];
             $rows[] = $pair;
             $rows[] = [['text' => $w['btnDelete'], 'callback_data' => "paygdel_{$id}", 'style' => 'danger']];
         } else {
@@ -1572,7 +1624,7 @@ if (!function_exists('payg_report')) {
     {
         global $pdo;
         payg_ensure_schema();
-        $st = $pdo->prepare("SELECT COUNT(*) FROM payg_service WHERE lang = ? AND status IN ('waiting', 'active', 'stopped')");
+        $st = $pdo->prepare("SELECT COUNT(*) FROM payg_service WHERE lang = ? AND status IN ('waiting', 'active', 'stopped', 'paused')");
         $st->execute([$lang]);
         $open = (int) $st->fetchColumn();
         $sql = "SELECT COALESCE(SUM(amount), 0) s, COUNT(DISTINCT id_invoice) n FROM payg_charge WHERE lang = ?";
@@ -1783,12 +1835,12 @@ if (!function_exists('payg_admin_screen')) {
         $r = payg_admin_texts();
         $per = 15;
         $page = max(1, (int) $page);
-        $st = $pdo->prepare("SELECT COUNT(*) FROM payg_service WHERE lang = ? AND status IN ('waiting', 'active', 'stopped')");
+        $st = $pdo->prepare("SELECT COUNT(*) FROM payg_service WHERE lang = ? AND status IN ('waiting', 'active', 'stopped', 'paused')");
         $st->execute([$lang]);
         $total = (int) $st->fetchColumn();
-        $st = $pdo->prepare("SELECT * FROM payg_service WHERE lang = ? AND status IN ('waiting', 'active', 'stopped') ORDER BY created_at DESC LIMIT " . (($page - 1) * $per) . ", {$per}");
+        $st = $pdo->prepare("SELECT * FROM payg_service WHERE lang = ? AND status IN ('waiting', 'active', 'stopped', 'paused') ORDER BY created_at DESC LIMIT " . (($page - 1) * $per) . ", {$per}");
         $st->execute([$lang]);
-        $icons = ['waiting' => '⏸', 'active' => '✅', 'stopped' => '⛔️'];
+        $icons = ['waiting' => '⏸', 'active' => '✅', 'stopped' => '⛔️', 'paused' => '💤'];
         $rows = [];
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $s) {
             $rows[] = [['text' => ($icons[$s['status']] ?? '') . " {$s['username']} · {$s['user_id']} · " . money((float) $s['charged'], $s['currency']), 'callback_data' => "paygadel:{$s['id_invoice']}", 'style' => 'primary']];

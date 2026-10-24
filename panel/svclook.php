@@ -14,7 +14,7 @@ require_auth();
 $t = $textbotlang['panel'];
 $lang = web_lang_pick();
 $tx = lang_tab_texts($lang);
-$parts = ['status' => '🔘 ' . $t['svcStatus'], 'buybtn' => '🛒 ' . $t['svcBuyBtns'], 'delivery' => '📦 ' . $t['svcDelivery'], 'tiers' => '🔋 ' . $t['svcTiers'], 'close' => '🖼 ' . $t['svcClose']];
+$parts = ['status' => '🔘 ' . $t['svcStatus'], 'buybtn' => '📨 ' . $t['svcMsgBtns'], 'delivery' => '📦 ' . $t['svcDelivery'], 'tiers' => '🔋 ' . $t['svcTiers'], 'close' => '🖼 ' . $t['svcClose']];
 $part = (string) ($_GET['part'] ?? $_POST['part'] ?? '');
 $part = isset($parts[$part]) ? $part : 'status';
 $kinds = ['purchase' => '🛒 ' . $t['svcKindBuy'], 'usertest' => '🎁 ' . $t['svcKindTest'], 'affrw' => '👥 ' . $t['svcKindReward']];
@@ -22,15 +22,18 @@ $kind = (string) ($_GET['kind'] ?? $_POST['kind'] ?? '');
 $kind = isset($kinds[$kind]) ? $kind : 'purchase';
 // the config-columns store names the purchase kind «buy»
 $cdKind = ['purchase' => 'buy', 'usertest' => 'usertest', 'affrw' => 'affrw'][$kind];
-$here = 'svclook.php?' . http_build_query(['lang' => $lang, 'part' => $part, 'kind' => $part === 'delivery' ? $kind : null]);
-// the service buttons are kept for two places: the service's own screen and the
-// message that delivers a new config (statusbtn_* kind 'mine' / 'buy')
-$sbKind = $part === 'buybtn' ? 'buy' : 'mine';
-$sbDefs = statusbtn_defs($tx);
-if ($sbKind === 'buy') {
-    // the buttons inside گزارش مصرف are not on that message
-    $sbDefs = array_intersect_key($sbDefs, array_flip(statusbtn_screen_keys($tx)));
-}
+// the service buttons are kept per place: the service's own screen ('mine')
+// and each message that delivers a config - a purchase's, a test account's, a
+// 🎁 referral gift's (statusbtn_* kinds buy / test / ref)
+$msgKinds = ['buy' => '🛒 ' . $t['svcKindBuy'], 'test' => '🎁 ' . $t['svcKindTest'], 'ref' => '👥 ' . $t['svcKindReward']];
+$mk = (string) ($_GET['mk'] ?? $_POST['mk'] ?? '');
+$mk = isset($msgKinds[$mk]) ? $mk : 'buy';
+$here = 'svclook.php?' . http_build_query(['lang' => $lang, 'part' => $part, 'kind' => $part === 'delivery' ? $kind : null, 'mk' => $part === 'buybtn' ? $mk : null]);
+$sbKind = $part === 'buybtn' ? $mk : 'mine';
+// only the buttons that place has (no 🔗 on the purchase message, no گزارش مصرف inner buttons on a message)
+$sbDefs = array_intersect_key(statusbtn_defs($tx), array_flip(statusbtn_kind_keys($sbKind, $tx)));
+// and the ones whose feature the shop has off in this language
+$sbShopOff = statusbtn_shop_off($lang);
 $colorNames = ['primary' => '🔵 ' . $t['menuColorBlue'], 'success' => '🟢 ' . $t['menuColorGreen'], 'danger' => '🔴 ' . $t['menuColorRed']];
 $emojiOk = fn($e) => $e === '' || (preg_match('/^\X$/u', $e) && !preg_match('/^[0-9a-zA-Z]$/', $e));
 $nameOk = fn($s) => !containsHtmlMarkup($s) && mb_strlen($s) <= 64;
@@ -96,15 +99,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($simple !== !empty($ov['simple'])) {
                 $writes[] = fn() => statusbtn_set_field($lang, $key, 'simple', $simple, $sbKind);
             }
-            if ($sbKind === 'buy') {
-                $hidden = ($p['hidden'] ?? '') === '1';
-                if ($hidden !== !empty($ov['hidden'])) {
-                    $writes[] = fn() => statusbtn_set_field($lang, $key, 'hidden', $hidden, $sbKind);
-                }
+            // 📝 ❌ ⚠️ ship hidden: «shown» is written out as false
+            $hidden = ($p['hidden'] ?? '') === '1';
+            if ($hidden !== statusbtn_is_hidden($lang, $key, $sbKind)) {
+                $writes[] = fn() => statusbtn_set_field($lang, $key, 'hidden', $hidden, $sbKind);
             }
         }
         // the order, as the bot's 📐 چیدمان: a button takes the place of the number it is given
-        if ($sbKind === 'buy' && $err === null) {
+        if ($sbKind !== 'mine' && $err === null) {
             $cur = array_values(array_filter(statusbtn_ordered_keys($lang, $tx, $sbKind), fn($k) => isset($sbDefs[$k])));
             $at = [];
             foreach ($cur as $i => $k) {
@@ -314,28 +316,30 @@ $saveBtn = '<div class="modal-foot" style="border-radius:0 0 10px 10px"><button 
 </div>
 
 <form method="POST" action="<?= $here ?>" class="card fade-up">
-  <input type="hidden" name="_csrf" value="<?= csrf_token() ?>"><input type="hidden" name="part" value="<?= $part ?>"><input type="hidden" name="kind" value="<?= $kind ?>">
-<?php if ($part === 'status' || $part === 'buybtn'): $isBuy = $sbKind === 'buy'; ?>
-  <div class="card-head"><div><div class="card-title"><?= $isBuy ? '🛒 ' . $t['svcBuyBtns'] : '🔘 ' . $t['svcStatus'] ?></div><div class="card-subtitle"><?= $isBuy ? $t['svcBuyBtnsSub'] : $t['svcStatusSub'] ?></div></div></div>
-  <div class="card-body"><div class="tbl-wrap"><table class="tbl-xl">
-    <thead><tr><th><?= $t['menuColButton'] ?></th><th><?= $t['menuColName'] ?></th><th><?= $t['menuColEmoji'] ?></th><th><?= $t['menuEmojiPos'] ?></th><th><?= $t['menuColColor'] ?></th><th><?= $t['menuSimple'] ?></th><?php if ($isBuy): ?><th><?= $t['menuHidden'] ?></th><th><?= $t['svcBtnOrder'] ?></th><?php endif; ?></tr></thead>
+  <input type="hidden" name="_csrf" value="<?= csrf_token() ?>"><input type="hidden" name="part" value="<?= $part ?>"><input type="hidden" name="kind" value="<?= $kind ?>"><input type="hidden" name="mk" value="<?= $mk ?>">
+<?php if ($part === 'status' || $part === 'buybtn'): $isMsg = $sbKind !== 'mine'; ?>
+  <div class="card-head"><div><div class="card-title"><?= $isMsg ? '📨 ' . $t['svcMsgBtns'] : '🔘 ' . $t['svcStatus'] ?></div><div class="card-subtitle"><?= $isMsg ? $t['svcMsgBtnsSub'] : $t['svcStatusSub'] ?></div></div></div>
+  <div class="card-body">
+    <?php if ($isMsg): ?><div class="lang-tabs"><?php foreach ($msgKinds as $k => $label): ?><a href="svclook.php?<?= http_build_query(['lang' => $lang, 'part' => 'buybtn', 'mk' => $k]) ?>" class="lang-tab<?= $k === $mk ? ' on' : '' ?>"><?= htmlspecialchars($label) ?></a><?php endforeach; ?></div><?php endif; ?>
+    <div class="tbl-wrap"><table class="tbl-xl">
+    <thead><tr><th><?= $t['menuColButton'] ?></th><th><?= $t['menuColName'] ?></th><th><?= $t['menuColEmoji'] ?></th><th><?= $t['menuEmojiPos'] ?></th><th><?= $t['menuColColor'] ?></th><th><?= $t['menuSimple'] ?></th><th><?= $t['menuHidden'] ?></th><?php if ($isMsg): ?><th><?= $t['svcBtnOrder'] ?></th><?php endif; ?></tr></thead>
     <tbody>
-    <?php $sbRows = $isBuy ? array_values(array_filter(statusbtn_ordered_keys($lang, $tx, $sbKind), fn($k) => isset($sbDefs[$k]))) : array_keys($sbDefs);
+    <?php $sbRows = $isMsg ? array_values(array_filter(statusbtn_ordered_keys($lang, $tx, $sbKind), fn($k) => isset($sbDefs[$k]))) : array_keys($sbDefs);
     foreach ($sbRows as $sbPos => $key): $def = $sbDefs[$key]; $ov = statusbtn_override($lang, $key, $sbKind); $n = 'sb[' . htmlspecialchars($key) . ']'; ?>
       <tr>
-        <td class="cs"><?= htmlspecialchars($def['name']) ?></td>
+        <td class="cs"><?= htmlspecialchars($def['name']) ?><?php if (in_array($key, $sbShopOff, true)): ?><div class="set-hint">🔒 <?= $t['svcBtnShopOff'] ?></div><?php endif; ?></td>
         <td><input type="text" class="input" name="<?= $n ?>[text]" value="<?= htmlspecialchars((string) ($ov['text'] ?? '')) ?>" placeholder="<?= htmlspecialchars((string) $def['text']) ?>" maxlength="64"></td>
         <td style="white-space:nowrap"><?= $emojiIn($n, $ov) ?></td>
         <td><?= $posSel($n . '[pos]', (string) ($ov['pos'] ?? '')) ?></td>
         <td><?= $colorSel($n . '[style]', (string) ($ov['style'] ?? ''), (string) $def['style']) ?></td>
         <td><?= $chk($n . '[simple]', !empty($ov['simple']), $t['refOn']) ?></td>
-        <?php if ($isBuy): ?><td><?= $chk($n . '[hidden]', !empty($ov['hidden']), $t['refOn']) ?></td>
-        <td><input type="text" class="input" name="<?= $n ?>[order]" value="<?= $sbPos + 1 ?>" inputmode="numeric" style="width:64px;text-align:center"></td><?php endif; ?>
+        <td><?= $chk($n . '[hidden]', statusbtn_is_hidden($lang, $key, $sbKind), $t['refOn']) ?></td>
+        <?php if ($isMsg): ?><td><input type="text" class="input" name="<?= $n ?>[order]" value="<?= $sbPos + 1 ?>" inputmode="numeric" style="width:64px;text-align:center"></td><?php endif; ?>
       </tr>
     <?php endforeach; ?>
     </tbody></table></div>
     <div class="field-hint"><?= $t['looksHint'] ?></div>
-    <?php if ($isBuy): ?><div class="field-hint">🌐 📲 <?= $t['svcBuyBtnsPair'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-gp"><?= $t['svcBuyBtnsPairLink'] ?></a></div><?php endif; ?></div>
+    <?php if ($isMsg): ?><div class="field-hint">🌐 📲 <?= $t['svcBuyBtnsPair'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-<?= ['buy' => 'gp', 'test' => 'gu', 'ref' => 'gw'][$sbKind] ?>"><?= $t['svcBuyBtnsPairLink'] ?></a></div><?php endif; ?></div>
 <?php elseif ($part === 'delivery'): $panels = array_filter((array) select("marzban_panel", "*", null, null, "fetchAll"), 'is_array'); ?>
   <div class="card-head"><div><div class="card-title">📦 <?= $t['svcDelivery'] ?></div><div class="card-subtitle"><?= $t['svcDeliverySub'] ?></div></div></div>
   <div class="card-body">

@@ -1289,6 +1289,12 @@ if (!function_exists('bottext_item_menu_payload')) {
         // used by the "related item" rows (🗂/📦/⏰ etc.) to answer for a
         // DIFFERENT key's own customization state, the same way the main
         // bottext home list already does for its group-launcher rows
+        // a delivery message's service buttons and its 🌐 / 📲 pair, set apart
+        // from the ones on the service's screen in 🛍 سرویس‌های من
+        $bt_svc_rows = function ($sbKind, $pairKey) use (&$kb, $bt_lang, $bt_be, &$bt_live_row) {
+            $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های مدیریت سرویس (کانفیگ، تمدید، روشن/خاموش، ...)', 'callback_data' => statusbtn_prefix($sbKind) . "|list|{$bt_lang}", 'style' => !empty($bt_be[$bt_lang][statusbtn_bucket($sbKind)]) ? 'success' : 'primary']];
+            $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($pairKey, $bt_lang), '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه', "bt_edit|{$bt_lang}|{$pairKey}", is_array($bt_be) && !empty($bt_be[$bt_lang][$pairKey]))];
+        };
         $bt_is_customized = function ($key) use ($bt_lang, $bt_te, $bt_st, $bt_re, $bt_be) {
             $textCustom = is_array($bt_te) && isset($bt_te[$bt_lang]) && bottext_dotted_isset($bt_te[$bt_lang], $key);
             $stickerCustom = bt_media_lookup($bt_st, $key, $bt_lang) !== '';
@@ -1513,15 +1519,13 @@ if (!function_exists('bottext_item_menu_payload')) {
             $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های تغییر لینک', 'callback_data' => "gbs|hub|{$bt_lang}|cl", 'style' => 'primary']];
         } elseif ($bt_key === 'textbot.afterPay') {
             $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '📚 ویرایش دکمه مشاهده آموزش', "gbs|hub|{$bt_lang}|ab", $bt_btn_custom)];
-            // the service's own buttons under it, set apart from the ones on its
-            // screen in 🛍 سرویس‌های من
-            $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های مدیریت سرویس (لینک اشتراک، تمدید، ...)', 'callback_data' => "buybtn|list|{$bt_lang}", 'style' => !empty($bt_be[$bt_lang]['textbot.afterPay.svcbtn']) ? 'success' : 'primary']];
-            // 🌐 / 📲 above them - this message's own pair (genbtn gp)
-            $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label('users.subapps.entryBuyMsg', $bt_lang), '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه', "bt_edit|{$bt_lang}|users.subapps.entryBuyMsg", is_array($bt_be) && !empty($bt_be[$bt_lang]['users.subapps.entryBuyMsg']))];
+            $bt_svc_rows('buy', 'users.subapps.entryBuyMsg');
         } elseif ($bt_key === 'textbot.afterText') {
             $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '📚 ویرایش دکمه مشاهده آموزش', "gbs|hub|{$bt_lang}|ut", $bt_btn_custom)];
+            $bt_svc_rows('test', 'users.subapps.entryTestMsg');
         } elseif ($bt_key === 'users.affiliates.rewardAfterPay') {
             $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '📚 ویرایش دکمه مشاهده آموزش', "gbs|hub|{$bt_lang}|rw", $bt_btn_custom)];
+            $bt_svc_rows('ref', 'users.subapps.entryRefMsg');
         } elseif ($bt_key === 'users.help.listCaption') {
             // the one button under the tutorial list ('hb' alias, own-key trick)
             $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '🔘 ویرایش دکمه بازگشت به دسته‌بندی', "gbs|hub|{$bt_lang}|hb", is_array($bt_be) && !empty($bt_be[$bt_lang][$bt_key]))];
@@ -7070,13 +7074,14 @@ if (preg_match('/^cfgdeliv\|cfgcol\|([a-z]{2})\|([^|]+)\|([bur])$/', $datain, $c
     Editmessagetext($from_id, $message_id, $cd_text, $cd_kb, 'HTML');
     return;
 }
-// the service buttons are edited for two places - the service's screen in
-// 🛍 سرویس‌های من (statusbtn|...) and the message that delivers a new
-// service's config (buybtn|...). Same screens, separate settings.
-$sb_kind = strpos((string) $datain, 'buybtn|') === 0 ? 'buy' : 'mine';
-$sb_data = $sb_kind === 'buy' ? 'statusbtn|' . substr($datain, 7) : $datain;
+// the service buttons are edited for four places - the service's screen in
+// 🛍 سرویس‌های من (statusbtn|...) and the messages that deliver a bought
+// service's, a test account's and a 🎁 referral gift's config (buybtn|,
+// testbtn|, refbtn|). Same screens, separate settings (statusbtn_kinds).
+$sb_kind = statusbtn_kind_of_data((string) $datain);
 $sb_pfx = statusbtn_prefix($sb_kind);
-$sb_ks = $sb_kind === 'buy' ? 'buy:' : '';
+$sb_data = $sb_kind === 'mine' ? $datain : 'statusbtn|' . substr((string) $datain, strlen($sb_pfx) + 1);
+$sb_ks = $sb_kind === 'mine' ? '' : $sb_kind . ':';
 if (preg_match('/^statusbtn\|list\|([a-z]{2})$/', $sb_data, $sb_m) && $adminrulecheck['rule'] == "administrator") {
     list($sb_text, $sb_kb) = statusbtn_list_payload($sb_m[1], $textbotlang, $sb_kind);
     Editmessagetext($from_id, $message_id, $sb_text, $sb_kb, 'HTML');
@@ -9552,8 +9557,10 @@ if (preg_match('/^btbtntext-([a-z]{2})-([01])$/', (string) $user['step'], $btm) 
 if (preg_match('/^statusbtntxt-([a-z]{2})-(.+)$/', (string) $user['step'], $sb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $sb_lang = $sb_m[1];
     $sb_key = $sb_m[2];
-    $sb_kind = strpos($sb_key, 'buy:') === 0 ? 'buy' : 'mine';
-    $sb_key = $sb_kind === 'buy' ? substr($sb_key, 4) : $sb_key;
+    $sb_kind = 'mine';
+    if (preg_match('/^(buy|test|ref):(.+)$/', $sb_key, $sb_km)) {
+        [$sb_kind, $sb_key] = [$sb_km[1], $sb_km[2]];
+    }
     [$sb_newtext, $sb_icon] = button_name_from_update($text, $update);
     if ($sb_newtext === '' || mb_strlen($sb_newtext) > 64) {
         sendmessage($from_id, "⚠️ متن باید بین ۱ تا ۶۴ حرف باشه 😅", $btpromptcancel, 'HTML');
@@ -9578,8 +9585,10 @@ if (preg_match('/^statusbtntxt-([a-z]{2})-(.+)$/', (string) $user['step'], $sb_m
 if (preg_match('/^statusbtnemo-([a-z]{2})-(.+)$/', (string) $user['step'], $sb_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $sb_lang = $sb_m[1];
     $sb_key = $sb_m[2];
-    $sb_kind = strpos($sb_key, 'buy:') === 0 ? 'buy' : 'mine';
-    $sb_key = $sb_kind === 'buy' ? substr($sb_key, 4) : $sb_key;
+    $sb_kind = 'mine';
+    if (preg_match('/^(buy|test|ref):(.+)$/', $sb_key, $sb_km)) {
+        [$sb_kind, $sb_key] = [$sb_km[1], $sb_km[2]];
+    }
     $sb_icon_id = '';
     if (!empty($update['message']['entities']) && is_array($update['message']['entities'])) {
         foreach ($update['message']['entities'] as $sb_ent) {
@@ -11846,7 +11855,7 @@ elseif ($datain == "systemsms") {
 } elseif (preg_match('/^paygadel:([A-Za-z0-9]+)$/', $datain, $pg_m) && $adminrulecheck['rule'] == "administrator") {
     $pg_r = payg_admin_texts();
     $pg_svc = payg_row($pg_m[1]);
-    if ($pg_svc === null || !in_array($pg_svc['status'], ['waiting', 'active', 'stopped'], true)) {
+    if ($pg_svc === null || !in_array($pg_svc['status'], ['waiting', 'active', 'stopped', 'paused'], true)) {
         telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $pg_r['gone'], 'show_alert' => true]);
         return;
     }
@@ -11860,7 +11869,7 @@ elseif ($datain == "systemsms") {
     $pg_r = payg_admin_texts();
     $pg_done = payg_locked($pg_m[1], function () use ($pg_m) {
         $svc = payg_row($pg_m[1]);
-        if ($svc === null || !in_array($svc['status'], ['waiting', 'active', 'stopped'], true)) {
+        if ($svc === null || !in_array($svc['status'], ['waiting', 'active', 'stopped', 'paused'], true)) {
             return null;
         }
         payg_settle($svc);

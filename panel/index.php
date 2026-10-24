@@ -47,7 +47,7 @@ try {
     payg_ensure_schema();
     [$pgW, $pgP] = $lang !== '' ? ['lang = ?', [$lang]] : ['1 = 1', []];
     $paygEver = db_count($pdo, "SELECT COUNT(*) FROM payg_service WHERE $pgW", $pgP);
-    $paygOpen = db_count($pdo, "SELECT COUNT(*) FROM payg_service WHERE status IN ('waiting', 'active', 'stopped') AND $pgW", $pgP);
+    $paygOpen = db_count($pdo, "SELECT COUNT(*) FROM payg_service WHERE status IN ('waiting', 'active', 'stopped', 'paused') AND $pgW", $pgP);
     foreach (db_fetchAll($pdo, "SELECT currency, SUM(amount) s FROM payg_charge WHERE $pgW GROUP BY currency", $pgP) as $pgRow) {
         $paygIncome[$pgRow['currency']] = (float) $pgRow['s'];
     }
