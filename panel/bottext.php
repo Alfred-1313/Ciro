@@ -132,6 +132,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $layout['text_reactions'] = $reactions;
         db_query($pdo, "UPDATE setting SET keyboardmain = ?", [json_encode($layout, JSON_UNESCAPED_UNICODE)]);
     }
+    // 📲 افزودن سرویس به برنامه: the look of the page an app opens through
+    $postedLook = (string) ($_POST['subapp_look'] ?? '');
+    if (isset(subapp_looks()[$postedLook]) && $postedLook !== subapp_look($lang)) {
+        feature_setting_set('subapp_look', $lang, $postedLook);
+    }
     foreach ($switchable as $key => $default) {
         if (isset($_POST['on'][$key])) {
             $on = $_POST['on'][$key] === '1';
@@ -249,6 +254,18 @@ echo web_lang_assets();
                                 <label class="lang-chip"><input type="hidden" name="on[<?= $k ?>]" value="0"><input type="checkbox" name="on[<?= $k ?>]" value="1"<?= bt_item_enabled($key, $lang) ? ' checked' : '' ?>> <?= htmlspecialchars($t['btTier_' . str_replace('volpct.', '', $key)] ?? $key) ?></label>
                             <?php endforeach; ?>
                         </div>
+                    </div>
+                <?php endif; ?>
+                <?php if ($group === 'subapps'): $curLook = subapp_look($lang); ?>
+                    <div class="field">
+                        <label><?= $t['saLookLabel'] ?></label>
+                        <div class="lang-chips">
+                            <?php foreach (subapp_looks() as $lk => $ln): ?>
+                                <label class="lang-chip"><input type="radio" name="subapp_look" value="<?= htmlspecialchars($lk) ?>"<?= $curLook === $lk ? ' checked' : '' ?>> <?= htmlspecialchars($ln) ?>
+                                    <a href="<?= htmlspecialchars(subapp_preview_link($lk, $lang)) ?>" target="_blank" rel="noopener noreferrer">👁 <?= $t['saLookPreview'] ?></a></label>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="field-hint"><?= $t['saLookHint'] ?></div>
                     </div>
                 <?php endif; ?>
                 <?php $sub = ''; $sec = ''; foreach ($visible as $key => $v): $k = htmlspecialchars($key); ?>

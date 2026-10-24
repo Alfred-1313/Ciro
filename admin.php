@@ -23518,6 +23518,28 @@ if ($datain == "linkappsetting") {
     $textbotlang = panel_texts();
     list($bt_group_text, $bt_group_kb) = keyboard_list_text($bt_lang, $bt_group);
     Editmessagetext($from_id, $message_id, $textbotlang['bottext']['resetAllDone'] . "\n\n" . $bt_group_text, $bt_group_kb, 'HTML');
+} elseif (preg_match('/^salook\|([a-z]{2})(?:\|(\w+))?$/', $datain, $dataget) && $adminrulecheck['rule'] == "administrator") {
+    // 🖼 the look of the page an app of 📲's list opens: the picker, and a tap on a look
+    $sa_lang = in_array($dataget[1], panel_langs(), true) ? $dataget[1] : 'fa';
+    $sa_looks = subapp_looks();
+    $sa_pick = $dataget[2] ?? '';
+    $sa_tb = $textbotlang['bottext'];
+    if ($sa_pick !== '' && isset($sa_looks[$sa_pick])) {
+        feature_setting_set('subapp_look', $sa_lang, $sa_pick);
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => strtr($sa_tb['saLookSaved'], ['{look}' => $sa_looks[$sa_pick], '{lang}' => $sa_tb['langs'][$sa_lang] ?? $sa_lang])]);
+    }
+    $sa_cur = subapp_look($sa_lang);
+    $sa_rows = [];
+    foreach ($sa_looks as $sa_k => $sa_n) {
+        // the look itself, then its preview: the page with made-up data
+        $sa_rows[] = [
+            ['text' => ($sa_k === $sa_cur ? '✅ ' : '') . $sa_n, 'callback_data' => "salook|{$sa_lang}|{$sa_k}", 'style' => $sa_k === $sa_cur ? 'success' : 'primary'],
+            ['text' => $sa_tb['saLookPreview'], 'url' => subapp_preview_link($sa_k, $sa_lang)],
+        ];
+    }
+    $sa_rows[] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_group|{$sa_lang}|subapps", 'style' => 'danger']];
+    $sa_rows[] = [['text' => $sa_tb['btn_close'], 'callback_data' => 'bt_close', 'style' => 'danger']];
+    Editmessagetext($from_id, $message_id, strtr($sa_tb['saLookCaption'], ['{lang}' => $sa_tb['langs'][$sa_lang] ?? $sa_lang, '{current}' => $sa_looks[$sa_cur]]), json_encode(['inline_keyboard' => $sa_rows]), 'HTML');
 } elseif (preg_match('/^bt_group\|([^|]+)\|(.+)$/', $datain, $dataget) && $adminrulecheck['rule'] == "administrator") {
     $bt_lang = $dataget[1];
     $bt_group = $dataget[2];

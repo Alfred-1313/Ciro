@@ -13240,6 +13240,10 @@ if (!function_exists('bt_section_meta')) {
                 'label' => '🌐 سابسکریپشن و 📲 افزودن به برنامه',
                 'alert' => 'دکمه‌های «🌐 سابسکریپشن» و «📲 افزودن به برنامه»، لیست برنامه‌ها و صفحه‌ی بازشدنشون برای ۵ جا (خرید، تست، هدیه، ساعتی، سرویس‌های من) یکیه؛ دکمه‌ی زیر بخش مخصوصش رو باز می‌کنه.',
             ],
+            'subapps_look' => [
+                'label' => '🖼 طرح صفحه‌ی باز کردن برنامه',
+                'alert' => 'صفحه‌ای که با زدن یه برنامه باز می‌شه دو طرح داره (شیشه‌ای / مینیمال)؛ فونت، متن‌ها و انیمیشنش یکیه و فقط تم فرق می‌کنه. برای هر زبان جدا انتخاب می‌شه.',
+            ],
             'subapps_entry' => [
                 'label' => '🌐 / 📲 دکمه‌های زیر هر سرویس',
                 'alert' => 'دکمه‌ی «🌐 سابسکریپشن» و «📲 افزودن به برنامه» که بالای دکمه‌های سرویس می‌آن: اسم، ایموجی، رنگ، جا و مخفی بودنشون. یکی برای ۵ جا.',
@@ -14185,6 +14189,31 @@ if (!function_exists('subapp_kind')) {
     {
         global $textbotlang;
         return array_values(array_column(array_filter($textbotlang['bottext']['items'] ?? [], fn($it) => ($it['group'] ?? '') === 'subapps' && !empty($it['key'])), 'key'));
+    }
+    // the two looks of the app-opening page (subapp.php): the words, the font
+    // and the motion are the same, only the theme changes. Chosen per language
+    // (feature_lang_settings 'subapp_look'), 'glass' until someone picks
+    function subapp_looks()
+    {
+        global $textbotlang;
+        $n = $textbotlang['bottext']['saLookNames'] ?? [];
+        return ['glass' => $n['glass'] ?? '✨ A — Glass', 'minimal' => $n['minimal'] ?? '⚪ B — Minimal'];
+    }
+    function subapp_look($lang)
+    {
+        $v = (string) feature_setting_value('subapp_look', $lang, 'glass');
+        return isset(subapp_looks()[$v]) ? $v : 'glass';
+    }
+    // a link to the page with made-up data, for the admin to see a look before
+    // choosing it - signed like the real ones, and it opens nothing (subapp.php)
+    function subapp_preview_link($look, $lang, $appId = 'karing', $state = '')
+    {
+        global $domainhosts;
+        $q = ['demo' => $look, 'l' => $lang, 'a' => $appId, 's' => subapp_sig('demo' . $look . $lang, $appId)];
+        if (in_array($state, ['opening', 'missing', 'opened'], true)) {
+            $q['st'] = $state;
+        }
+        return "https://{$domainhosts}/subapp.php?" . http_build_query($q);
     }
     // every text the app-opening web page (subapp.php) shows - they live in the
     // same 🎨 registry as the bot's messages but are page text, not messages

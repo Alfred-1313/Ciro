@@ -25,14 +25,29 @@ $sa_apps = array_column(subapp_apps(), null, 'id');
 $sa_id = (string) ($_GET['i'] ?? '');
 $sa_appId = (string) ($_GET['a'] ?? '');
 $sa_inv = false;
-if (preg_match('/^[A-Za-z0-9]{1,64}$/', $sa_id) && isset($sa_apps[$sa_appId]) && hash_equals(subapp_sig($sa_id, $sa_appId), (string) ($_GET['s'] ?? ''))) {
+// a preview the admin opens from 🎨 to see a look before choosing it: made-up
+// data, signed like a real link (subapp_preview_link), and it opens nothing
+$sa_demo = '';
+$sa_dl_look = (string) ($_GET['demo'] ?? '');
+$sa_dl_lang = (string) ($_GET['l'] ?? '');
+if (isset(subapp_looks()[$sa_dl_look]) && in_array($sa_dl_lang, panel_langs(), true) && isset($sa_apps[$sa_appId])
+    && hash_equals(subapp_sig('demo' . $sa_dl_look . $sa_dl_lang, $sa_appId), (string) ($_GET['s'] ?? ''))) {
+    $sa_demo = $sa_dl_look;
+}
+if ($sa_demo === '' && preg_match('/^[A-Za-z0-9]{1,64}$/', $sa_id) && isset($sa_apps[$sa_appId]) && hash_equals(subapp_sig($sa_id, $sa_appId), (string) ($_GET['s'] ?? ''))) {
     $sa_inv = select("invoice", "*", "id_invoice", $sa_id, "select");
 }
 $sa_owner = is_array($sa_inv) ? select("user", "*", "id", (string) $sa_inv['id_user'], "select") : false;
 $sa_lang = (is_array($sa_owner) && in_array($sa_owner['lang'] ?? '', panel_langs(), true)) ? $sa_owner['lang'] : 'fa';
+if ($sa_demo !== '') {
+    $sa_lang = $sa_dl_lang;
+    $sa_inv = ['username' => 'demo'];
+}
 $sa_t = lang_tab_texts($sa_lang)['users']['subapps'];
-$sa_sub = '';
-if (is_array($sa_inv) && in_array($sa_inv['Status'], ['active', 'end_of_time', 'end_of_volume', 'sendedwarn', 'send_on_hold'], true)) {
+// the look of the owner's language - the words and the motion are the same in both
+$sa_look = $sa_demo !== '' ? $sa_demo : subapp_look($sa_lang);
+$sa_sub = $sa_demo !== '' ? 'https://example.com/sub/demo' : '';
+if ($sa_demo === '' && is_array($sa_inv) && in_array($sa_inv['Status'], ['active', 'end_of_time', 'end_of_volume', 'sendedwarn', 'send_on_hold'], true)) {
     $sa_panel = select("marzban_panel", "*", "name_panel", $sa_inv['Service_location'], "select");
     if (is_array($sa_panel) && !in_array($sa_panel['type'], ['ibsng', 'mikrotik'], true)) {
         $sa_data = (new ManagePanel())->DataUser($sa_inv['Service_location'], $sa_inv['username']);
@@ -48,7 +63,8 @@ $sa_json = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON
 $sa_stores = [];
 $sa_noplat = false;
 if ($sa_ok) {
-    $sa_deep = subapp_deep_link($sa_appId, $sa_sub, $sa_inv['username']);
+    // a preview opens nothing - not an app with a made-up subscription in it
+    $sa_deep = $sa_demo !== '' ? '#demo' : subapp_deep_link($sa_appId, $sa_sub, $sa_inv['username']);
     // where to get it on this phone, in this order (Android: Google Play, and
     // the GitHub build for one that is not on it); an app with no version for
     // the phone shows its other ones with a line saying so
@@ -88,6 +104,15 @@ $sa_mix = function ($a, $b, $t) {
     return sprintf('#%02x%02x%02x', ...array_map(fn($i) => (int) round($y[$i] + ($x[$i] - $y[$i]) * $t), [0, 1, 2]));
 };
 $sa_dl = $sa_stores ? $sa_stores[0]['url'] : '';
+// what the page says in each of its three states (the first is what it opens in;
+// a preview can ask for another)
+$sa_words = [
+    'opening' => ['status' => $sa_raw('pageOpening'), 'note' => $sa_raw('pageHint')],
+    'missing' => ['status' => $sa_raw('pageMissingTitle'), 'note' => $sa_raw('pageMissing')],
+    'opened' => ['status' => '', 'note' => $sa_raw('pageOpened')],
+];
+$sa_state = ($sa_demo !== '' && isset($sa_words[(string) ($_GET['st'] ?? '')])) ? (string) $_GET['st'] : 'opening';
+$sa_min = $sa_look === 'minimal';
 ?><!doctype html>
 <html lang="<?= $sa_lang ?>" dir="<?= $sa_rtl ? 'rtl' : 'ltr' ?>">
 <head>
@@ -95,8 +120,8 @@ $sa_dl = $sa_stores ? $sa_stores[0]['url'] : '';
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="dark light">
-<meta name="theme-color" content="#0a0e16" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#f1f4fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="<?= $sa_min ? '#0b0b10' : '#0a0e16' ?>" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="<?= $sa_min ? '#f3f5f9' : '#f1f4fa' ?>" media="(prefers-color-scheme: light)">
 <title><?= $sa_ok ? htmlspecialchars($sa_app['name']) : '⛔️' ?></title>
 <link rel="preload" href="subapp_assets/fonts/estedad-<?= $sa_rtl ? 'arabic' : 'latin' ?>.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -133,10 +158,10 @@ body{margin:0;min-height:100vh;min-height:100dvh;display:flex;align-items:center
 .track i:nth-child(2){animation-delay:-.53s}
 [dir=rtl] .track i{left:auto;right:0}
 .track i:nth-child(3){animation-delay:-1.07s}
-.appwrap{position:relative;flex:none;width:96px;height:96px}
-.appwrap::before,.appwrap::after{content:"";position:absolute;top:0;left:0;right:0;bottom:0;border-radius:27px;border:2px solid var(--accent2);opacity:0;animation:ping 2s var(--out) infinite}
+.appwrap{position:relative;flex:none;width:var(--ico,96px);height:var(--ico,96px)}
+.appwrap::before,.appwrap::after{content:"";position:absolute;top:0;left:0;right:0;bottom:0;border-radius:calc(var(--rad,25px) + 2px);border:2px solid var(--accent2);opacity:0;animation:ping 2s var(--out) infinite}
 .appwrap::after{animation-delay:1s}
-.app{position:relative;width:96px;height:96px;border-radius:25px;overflow:hidden;display:grid;place-items:center;background:linear-gradient(145deg,var(--accent2),var(--accent));color:#fff;font-weight:800;font-size:40px;line-height:1;box-shadow:0 16px 32px -12px var(--accent)}
+.app{position:relative;width:var(--ico,96px);height:var(--ico,96px);border-radius:var(--rad,25px);overflow:hidden;display:grid;place-items:center;background:linear-gradient(145deg,var(--accent2),var(--accent));color:#fff;font-weight:800;font-size:40px;line-height:1;box-shadow:0 16px 32px -12px var(--accent)}
 .app img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
 .badge{position:absolute;right:-6px;bottom:-6px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;border:3px solid var(--bg);opacity:0;transform:scale(.6);transition:opacity .2s var(--out),transform .28s var(--out)}
 [dir=rtl] .badge{right:auto;left:-6px}
@@ -184,6 +209,9 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
 .btn .flip{transform:<?= $sa_rtl ? 'scaleX(-1)' : 'none' ?>}
 .primary,[data-state=missing] .dl{border:0;background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;box-shadow:0 16px 30px -14px var(--accent)}
 .dl{font-weight:600;font-size:15.5px;min-height:50px}
+.dl .ic,.dl .tx{display:contents}
+.dl .tx small,.dl .chev{display:none}
+.dl .tx b{font-weight:inherit}
 [data-state=missing] .dl{font-weight:700;font-size:16px;min-height:54px}
 #retry{display:none;margin-top:14px;min-height:48px;font-size:15px;font-weight:600}
 .dlbox{margin-top:14px;display:flex;flex-direction:column}
@@ -194,6 +222,28 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
 .store svg{flex:none;width:18px;height:18px}
 .store:active{transform:scale(.96)}
 @media (hover:hover) and (pointer:fine){.btn:hover,.store:hover{background-color:var(--glass)}.primary:hover,[data-state=missing] .dl:hover{filter:brightness(1.06);background-color:transparent}}
+
+/* B - minimal: flat colours instead of the glass, a pill for the main button, a
+   row for the download. The same font, words, stage and motion as A. */
+[data-look=minimal]{--bg:#0b0b10;--chip:#17171e;--line:rgba(255,255,255,.09);--text:#f4f4f8;--muted:#a0a0ae;--soft:rgba(255,255,255,.08);--accentText:<?= $sa_mix($sa_app['accent'], '#ffffff', .5) ?>;--ico:112px;--rad:32px;background:var(--bg)}
+@media (prefers-color-scheme:light){[data-look=minimal]{--bg:#f3f5f9;--chip:#fff;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#586377;--soft:<?= $sa_mix($sa_app['accent'], '#ffffff', .12) ?>;--accentText:<?= $sa_app['accent'] ?>}}
+[data-look=minimal] .card{background:none;border:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;padding:8px 2px}
+[data-look=minimal] .node{background:var(--soft);border-color:transparent}
+[data-look=minimal] .app{font-size:46px;background:linear-gradient(150deg,var(--accent2),var(--accent));box-shadow:inset 0 1.5px 0 rgba(255,255,255,.38),0 22px 40px -16px var(--accent)}
+[data-look=minimal] h1{margin-top:24px;font-size:31px;letter-spacing:-.3px}
+[data-look=minimal] .chip{margin-top:6px;padding:0;background:none;font-size:15px}
+[data-look=minimal] .primary,[data-look=minimal] [data-state=missing] .dl{border:0;border-radius:999px;min-height:56px;font-size:17px;background:var(--accent);color:#fff;box-shadow:0 14px 26px -14px var(--accent)}
+[data-look=minimal] .dl{justify-content:flex-start;gap:13px;min-height:0;padding:14px 16px;border-radius:20px;background:var(--chip);color:var(--text);font-weight:700;font-size:15.5px;box-shadow:none;text-align:start}
+[data-look=minimal] .dl .ic{display:grid;place-items:center;flex:none;width:38px;height:38px;border-radius:12px;background:var(--soft);color:var(--accentText)}
+[data-look=minimal] .dl .tx{display:flex;flex:1;min-width:0;flex-direction:column;align-items:flex-start;line-height:1.55}
+[data-look=minimal] .dl .tx small{display:block;font-size:12.5px;font-weight:500;color:var(--muted)}
+[data-look=minimal] .dl .chev{display:block;width:18px;height:18px;color:var(--muted)}
+[data-look=minimal] [data-state=missing] .dl{justify-content:center;gap:10px;padding:0 18px;text-align:center}
+[data-look=minimal] [data-state=missing] .dl .ic{display:contents}
+[data-look=minimal] [data-state=missing] .dl .tx{display:contents}
+[data-look=minimal] [data-state=missing] .dl .tx small,[data-look=minimal] [data-state=missing] .dl .chev{display:none}
+[data-look=minimal] #retry{border:0;border-radius:999px;background:none;color:var(--accentText);font-weight:700;font-size:15.5px}
+@media (hover:hover) and (pointer:fine){[data-look=minimal] .btn:hover,[data-look=minimal] .store:hover{background-color:var(--soft)}[data-look=minimal] .primary:hover,[data-look=minimal] [data-state=missing] .dl:hover{background-color:var(--accent)}}
 
 /* the page comes up once: the card, then what is in it one by one */
 .card.enter{animation:rise .5s var(--out) both}
@@ -216,9 +266,9 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
 }
 </style>
 </head>
-<body>
+<body data-look="<?= $sa_look ?>">
 <?php if ($sa_ok): ?>
-<main class="card enter" id="card" data-state="opening">
+<main class="card enter" id="card" data-state="<?= $sa_state ?>">
   <div class="stage" aria-hidden="true">
     <div class="node"><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.1 7.5 9.5 4.4-1.4 7.5-4.9 7.5-9.5V6z"/><path d="m9 12 2.2 2.2L15.2 10"/></svg></div>
     <div class="track"><i></i><i></i><i></i></div>
@@ -229,13 +279,13 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
   </div>
   <h1><?= htmlspecialchars($sa_app['name']) ?></h1>
   <div class="chip"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span><?= $sa_txt('pageService') ?></span><b><?= htmlspecialchars((string) $sa_inv['username']) ?></b></div>
-  <div class="status" role="status" aria-live="polite"><i class="dot"></i><span id="status"><?= $sa_txt('pageOpening') ?></span></div>
+  <div class="status" role="status" aria-live="polite"><i class="dot"></i><span id="status"><?= htmlspecialchars($sa_words[$sa_state]['status'], ENT_QUOTES, 'UTF-8') ?></span></div>
   <div class="col">
     <a class="btn primary" id="open" href="<?= htmlspecialchars($sa_deep, ENT_QUOTES) ?>"><span><?= $sa_txt('pageButton') ?></span><svg class="flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-    <p class="note" id="note"><?= $sa_txt('pageHint') ?></p>
+    <p class="note" id="note"><?= htmlspecialchars($sa_words[$sa_state]['note'], ENT_QUOTES, 'UTF-8') ?></p>
 <?php if ($sa_dl !== ''): ?>
     <div class="dlbox">
-      <a class="btn dl" href="<?= htmlspecialchars($sa_dl, ENT_QUOTES) ?>" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><span><?= $sa_txt('pageDownload') ?></span></a>
+      <a class="btn dl" href="<?= htmlspecialchars($sa_dl, ENT_QUOTES) ?>" target="_blank" rel="noopener noreferrer"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></span><span class="tx"><b><?= $sa_txt('pageDownload') ?></b><small><?= $sa_stores[0]['label'] ?></small></span><svg class="chev flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
       <div class="stores">
         <span class="cap"><?= $sa_txt('pageStoreCaption') ?></span>
         <div class="row">
@@ -255,11 +305,8 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
 <script>
 (function () {
   var deep = <?= json_encode($sa_deep, $sa_json) ?>;
-  var words = <?= json_encode([
-      'opening' => ['status' => $sa_raw('pageOpening'), 'note' => $sa_raw('pageHint')],
-      'missing' => ['status' => $sa_raw('pageMissingTitle'), 'note' => $sa_raw('pageMissing')],
-      'opened'  => ['status' => '', 'note' => $sa_raw('pageOpened')],
-  ], $sa_json) ?>;
+  var words = <?= json_encode($sa_words, $sa_json) ?>;
+  var demo = <?= $sa_demo !== '' ? 'true' : 'false' ?>;
   var card = document.getElementById('card'), status = document.getElementById('status'), note = document.getElementById('note');
   var timer = 0, left = false;
   function show(state) {
@@ -277,6 +324,7 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
     left = false;
     clearTimeout(timer);
     show('opening');
+    if (demo) return;
     window.location.href = deep;
     timer = setTimeout(function () { if (!left) show('missing'); }, 3000);
   }
@@ -291,7 +339,7 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
   window.addEventListener('pagehide', function () { if (card.getAttribute('data-state') === 'opening') left = true; });
   document.getElementById('open').addEventListener('click', function (e) { e.preventDefault(); go(); });
   document.getElementById('retry').addEventListener('click', go);
-  setTimeout(go, 600);
+  if (!demo) setTimeout(go, 600);
 })();
 </script>
 <?php else: ?>

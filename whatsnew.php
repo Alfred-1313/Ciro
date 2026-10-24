@@ -376,4 +376,16 @@ return [
             . "«🌐 Subscription / 📲 Add to app» is one and the same for all 5 paths (purchase, test, invite gift, hourly subscription and My services), so its settings left «🛍 My services» and have a place of their own: the buttons under a service, the app-list message and its buttons, the web page that opens the app (opening, app not found, download and stores) and the popups - all in one place, separate for Persian and English.\n"
             . "Each of the 5 paths (purchase message, test account, invite gift, hourly subscription and My services) shows a «📲 Add service to app — language» button under the «🌐 Subscription and 📲 Add to app» heading that opens this section, and 🔙 takes you back to where you were. No setting changed.</blockquote>",
     ],
+    [
+        'n' => 25,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>🖼 <b>صفحه‌ی باز کردن برنامه: دو طرح، انتخاب با خودت</b>\n"
+            . "📍 🎨 شخصی‌سازی ← 📲 افزودن سرویس به برنامه ← «🖼 طرح صفحه‌ی باز کردن برنامه»؛ وب‌پنل ← پیام‌های ربات ← 📲 افزودن سرویس به برنامه\n"
+            . "صفحه‌ای که با زدن یک برنامه در «📲 افزودن به برنامه» باز می‌شود حالا دو طرح دارد: ✨ A شیشه‌ای (همان قبلی) و ⚪ B مینیمال با زمینه‌ی ساده، دکمه‌ی گرد و دانلود به شکل یک ردیف. فونت، متن‌ها و انیمیشن هر دو یکی است و فقط تم فرق می‌کند.\n"
+            . "طرح برای هر زبان جدا انتخاب می‌شود (فارسی یکی، انگلیسی یکی)، و کنار هر طرح یک «👁 پیش‌نمایش» هست که همان صفحه را با اطلاعات نمونه باز می‌کند. پیش‌فرض همان A است و تا انتخاب نکنی چیزی عوض نمی‌شود.</blockquote>",
+        'en' => "<blockquote>🖼 <b>App-opening page: two looks, you choose</b>\n"
+            . "📍 🎨 Customize → 📲 Add service to app → «🖼 The look of the app-opening page»; Web panel → Bot messages → Add service to app\n"
+            . "The page that opens when a customer taps an app in «📲 Add to app» now has two looks: ✨ A Glass (the one you had) and ⚪ B Minimal, with a plain background, a pill button and the download as a row. The font, the words and the motion are the same in both; only the theme differs.\n"
+            . "The look is chosen per language (one for Persian, one for English), and each look has a «👁 Preview» that opens that page with sample data. A stays the default, so nothing changes until you choose.</blockquote>",
+    ],
 ];
