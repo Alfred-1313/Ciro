@@ -1854,6 +1854,7 @@ To use the default name, press the green button; to cancel and go back to the me
                 'subapps' => [
                         'entryBuy' => '🌐 Open subscription page',
                         'entryTest' => '🌐 Open subscription page',
+                        'entryBuyMsg' => '🌐 Open subscription page',
                         'entryRef' => '🌐 Open subscription page',
                         'entryPayg' => '🌐 Open subscription page',
                         'appsBtn' => '📲 Add to app',
@@ -5095,6 +5096,8 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'svcBuyBtns' => 'Purchase message buttons',
                 'svcBuyBtnsSub' => 'Under the message that sends the customer their config after buying. The same buttons as My services, but their settings (name, colour, order, hidden) are kept apart: changing them here never changes that screen. A button that does not apply to the panel type or the shop\'s settings does not show here either.',
                 'svcBtnOrder' => 'Order',
+                'svcBuyBtnsPair' => 'The «Open subscription page» and «Add to app» buttons above these are set for this message on their own:',
+                'svcBuyBtnsPairLink' => 'Button looks → purchase message',
                 'svcBtnOrderInvalid' => 'Each button\'s order must be a number from 1 to 99',
                 'svcDelivery' => 'Config delivery',
                 'svcDeliverySub' => 'Per panel: mode 1 = one full message (with a QR if on), mode 2 = a config picker page',

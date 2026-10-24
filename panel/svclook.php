@@ -334,7 +334,8 @@ $saveBtn = '<div class="modal-foot" style="border-radius:0 0 10px 10px"><button 
       </tr>
     <?php endforeach; ?>
     </tbody></table></div>
-    <div class="field-hint"><?= $t['looksHint'] ?></div></div>
+    <div class="field-hint"><?= $t['looksHint'] ?></div>
+    <?php if ($isBuy): ?><div class="field-hint">🌐 📲 <?= $t['svcBuyBtnsPair'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-gp"><?= $t['svcBuyBtnsPairLink'] ?></a></div><?php endif; ?></div>
 <?php elseif ($part === 'delivery'): $panels = array_filter((array) select("marzban_panel", "*", null, null, "fetchAll"), 'is_array'); ?>
   <div class="card-head"><div><div class="card-title">📦 <?= $t['svcDelivery'] ?></div><div class="card-subtitle"><?= $t['svcDeliverySub'] ?></div></div></div>
   <div class="card-body">

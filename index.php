@@ -1526,10 +1526,11 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     }
     step('home', $from_id);
     return;
-} elseif (preg_match('/^subapps_([A-Za-z0-9]+)$/', $datain, $dataget)) {
+} elseif (preg_match('/^subapps_([A-Za-z0-9]+)(_k)?$/', $datain, $dataget)) {
     // 📲 افزودن به برنامه: the service's screen goes and its kind's app list
     // comes - each app a link to subapp.php, which opens it with the
-    // subscription; ↪️ brings the service's screen back
+    // subscription; ↪️ brings the service's screen back. From the purchase
+    // message (_k) nothing goes: it carries the config, and the list follows it
     $nameloc = select("invoice", "*", "id_invoice", $dataget[1], "select");
     if (!is_array($nameloc) || !in_array($nameloc['Status'], ['active', 'end_of_time', 'end_of_volume', 'sendedwarn', 'send_on_hold'], true)) {
         telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $textbotlang['users']['subapps']['noLink'], 'show_alert' => true]);
@@ -1537,7 +1538,9 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     }
     $sa_kind = subapp_kind($nameloc);
     [$sa_text, $sa_kb] = subapp_list_screen($sa_kind, $user['lang'] ?? 'fa', $textbotlang, $nameloc);
-    deletemessage($from_id, $message_id);
+    if (empty($dataget[2])) {
+        deletemessage($from_id, $message_id);
+    }
     bottext_extras_key_hint(genbtn_alias_to_key('k' . $sa_kind));
     sendmessage($from_id, $sa_text, $sa_kb, 'HTML');
     return;

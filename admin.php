@@ -1516,6 +1516,8 @@ if (!function_exists('bottext_item_menu_payload')) {
             // the service's own buttons under it, set apart from the ones on its
             // screen in 🛍 سرویس‌های من
             $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های مدیریت سرویس (لینک اشتراک، تمدید، ...)', 'callback_data' => "buybtn|list|{$bt_lang}", 'style' => !empty($bt_be[$bt_lang]['textbot.afterPay.svcbtn']) ? 'success' : 'primary']];
+            // 🌐 / 📲 above them - this message's own pair (genbtn gp)
+            $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label('users.subapps.entryBuyMsg', $bt_lang), '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه', "bt_edit|{$bt_lang}|users.subapps.entryBuyMsg", is_array($bt_be) && !empty($bt_be[$bt_lang]['users.subapps.entryBuyMsg']))];
         } elseif ($bt_key === 'textbot.afterText') {
             $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '📚 ویرایش دکمه مشاهده آموزش', "gbs|hub|{$bt_lang}|ut", $bt_btn_custom)];
         } elseif ($bt_key === 'users.affiliates.rewardAfterPay') {

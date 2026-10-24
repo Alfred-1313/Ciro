@@ -170,4 +170,22 @@ return [
             . "📍 Web panel → Messages and service buttons → «Purchase message buttons»\n"
             . "The name, colour, emoji, order and visibility of each button are set for the purchase message on their own and are not the ones on the service status screen. This message's caption is still edited from «✏️ Edit caption» on the same page.</blockquote>",
     ],
+    [
+        'n' => 12,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>🌐 <b>ورود به سابسکریپشن و 📲 افزودن به برنامه زیر پیام خرید</b>\n"
+            . "📍 مشتری: پیامی که بعد از خرید کانفیگ را می‌فرستد\n"
+            . "دو دکمهٔ بالای «🛍 سرویس‌های من» هم حالا بالای دکمه‌های مدیریت سرویس همین پیام آمده‌اند. با زدن 📲 پیام خرید (که کانفیگ را دارد) سر جایش می‌ماند و لیست برنامه‌ها پایینش فرستاده می‌شود.</blockquote>\n\n"
+            . "<blockquote>🎨 <b>تنظیم جدا</b>\n"
+            . "📍 🎨 شخصی‌سازی ← 🛍️ پیام بعد از خرید ← «🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه»\n"
+            . "📍 وب‌پنل ← ظاهر دکمه‌ها ← «(پیام خرید)» (و لینکش در تب «دکمه‌های پیام خرید»)\n"
+            . "نام، رنگ، ایموجی، چیدمان و پنهان‌کردنِ این دو دکمه برای پیام خرید جدا از دکمه‌های همین دو در «سرویس‌های من» تنظیم می‌شود. لیست برنامه‌هایی که 📲 باز می‌کند همان لیست «خرید» است.</blockquote>",
+        'en' => "<blockquote>🌐 <b>Open subscription page and 📲 Add to app under the purchase message</b>\n"
+            . "📍 Customer: the message that sends the config after buying\n"
+            . "The two buttons on top of «🛍 My services» now sit above the service buttons of this message too. Tapping 📲 leaves the purchase message (which has the config) where it is and sends the app list below it.</blockquote>\n\n"
+            . "<blockquote>🎨 <b>Set apart</b>\n"
+            . "📍 🎨 Customize → 🛍️ Message after purchase → «🌐 Subscription and 📲 Add to app buttons»\n"
+            . "📍 Web panel → Button looks → «(purchase message)» (linked from the «Purchase message buttons» tab)\n"
+            . "The name, colour, emoji, layout and visibility of these two buttons are set for the purchase message on their own, apart from the same two in «My services». The app list 📲 opens is the «purchase» one.</blockquote>",
+    ],
 ];

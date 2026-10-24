@@ -592,6 +592,13 @@ return array (
         'label' => '📲 لیست برنامه‌ها + دکمه‌هاش (اکانت تست)',
         'key' => 'users.subapps.listTest',
       ),
+      // the 🌐 / 📲 under the message that delivers a new service's config - no
+      // group either: its row is inside 🛍️ پیام بعد از خرید
+      'buymsg_subentry' =>
+      array (
+        'label' => '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه (پیام خرید)',
+        'key' => 'users.subapps.entryBuyMsg',
+      ),
       // reached from 🌐 تنظیمات تغییر زبان کاربر, which owns everything about
       // the picker; no 'group' so they get no second entry point of their own
       array (
@@ -2749,6 +2756,7 @@ n2  = نماینده با قابلیت های بیشتر',
     array (
       'entryBuy' => '🌐 ورود به سابسکریپشن',
       'entryTest' => '🌐 ورود به سابسکریپشن',
+      'entryBuyMsg' => '🌐 ورود به سابسکریپشن',
       'entryRef' => '🌐 ورود به سابسکریپشن',
       'entryPayg' => '🌐 ورود به سابسکریپشن',
       'appsBtn' => '📲 افزودن به برنامه',
@@ -9347,6 +9355,8 @@ nowpayments.io
     'svcBuyBtns' => 'دکمه‌های پیام خرید',
     'svcBuyBtnsSub' => 'زیر پیامی که بعد از خرید، کانفیگ را برای مشتری می‌فرستد. همان دکمه‌های «سرویس‌های من» است ولی تنظیم‌هایش (نام، رنگ، ترتیب، پنهان‌بودن) جداست و با آن صفحه یکی نیست. دکمه‌ای که برای نوع پنل یا تنظیمات فروشگاه کاربرد ندارد، اینجا هم نمی‌آید.',
     'svcBtnOrder' => 'ترتیب',
+    'svcBuyBtnsPair' => 'دکمه‌های «ورود به سابسکریپشن» و «افزودن به برنامه» که بالای این دکمه‌ها می‌آیند، برای همین پیام جدا تنظیم می‌شوند:',
+    'svcBuyBtnsPairLink' => 'ظاهر دکمه‌ها ← پیام خرید',
     'svcBtnOrderInvalid' => 'ترتیب هر دکمه باید عددی بین ۱ تا ۹۹ باشد',
     'svcDelivery' => 'نحوه‌ی نمایش کانفیگ',
     'svcDeliverySub' => 'برای هر پنل: حالت ۱ = یک پیام کامل (با QR اگر روشن باشد)، حالت ۲ = صفحه‌ی انتخاب کانفیگ',

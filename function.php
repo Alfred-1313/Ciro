@@ -11325,18 +11325,32 @@ if (!function_exists('svc_action_rows')) {
 if (!function_exists('buy_service_action_rows')) {
     // The management buttons under the message that delivers a new service's
     // config - the ones 🛍 سرویس‌های من shows under the same service, apart in
-    // 🎨 (statusbtn_* kind 'buy'). Nothing for an invoice that is not the
-    // recipient's, and nothing for a manual sale, whose screen there has none
-    // either. Rows only; the tutorial button is the caller's.
-    function buy_service_action_rows($userId, $invoiceId, $lang, $panel)
+    // 🎨 (statusbtn_* kind 'buy', and the 🌐 / 📲 pair's own genbtn gp). Nothing
+    // for an invoice that is not the recipient's, and nothing for a manual
+    // sale, whose screen there has none either. Rows only; the tutorial button
+    // is the caller's. $subLink is the address the message already carries;
+    // when it shows none (the panel's «لینک اشتراک» off) the panel is asked,
+    // since 🌐 needs it either way.
+    function buy_service_action_rows($userId, $invoiceId, $lang, $panel, $subLink = '')
     {
         $inv = select("invoice", "*", "id_invoice", $invoiceId, "select");
         if (!is_array($inv) || (string) $inv['id_user'] !== (string) $userId || !is_array($panel) || ($panel['type'] ?? '') === 'Manualsale') {
             return [];
         }
         $userRow = select("user", "*", "id", $userId, "select");
+        $tx = lang_tab_texts($lang);
         // a service that has just been made is on
-        return svc_action_rows('buy', $inv, $panel, 'active', '', $userRow, lang_tab_texts($lang));
+        $rows = svc_action_rows('buy', $inv, $panel, 'active', '', $userRow, $tx);
+        if (!in_array($panel['type'] ?? '', ['ibsng', 'mikrotik'], true)) {
+            $sub = (string) $subLink;
+            if (strpos($sub, 'http') !== 0 && ($panel['type'] ?? '') !== 'WGDashboard') {
+                global $ManagePanel;
+                $data = is_object($ManagePanel) ? $ManagePanel->DataUser($inv['Service_location'], $inv['username']) : [];
+                $sub = (string) ($data['subscription_url'] ?? '');
+            }
+            array_splice($rows, 0, 0, subapp_entry_rows('p', $lang, $tx, $sub, $inv['id_invoice'], true));
+        }
+        return $rows;
     }
 }
 if (!function_exists('bottext_key_touched')) {
@@ -13234,6 +13248,9 @@ if (!function_exists('genbtn_alias_map')) {
             'gt' => 'users.subapps.entryTest',
             'gr' => 'users.subapps.entryRef',
             'gh' => 'users.subapps.entryPayg',
+            // and under the message that delivers a new service's config: its own
+            // pair, set apart from the purchase's one on the service's screen (gb)
+            'gp' => 'users.subapps.entryBuyMsg',
             'kb' => 'users.subapps.listBuy',
             'kt' => 'users.subapps.listTest',
             'kr' => 'users.subapps.listRef',
@@ -13453,7 +13470,7 @@ if (!function_exists('genbtn_defs')) {
             return [0 => ['name' => '⏱ دکمه‌ی اشتراک ساعتی (لیست «🛍 سرویس‌های من»)', 'text' => $textbotlang['users']['payg']['listLabel'], 'style' => 'danger', 'callback_data' => 'none',
                 'note' => 'هر اشتراک ساعتی مشتری با همین دکمه، بالای همه‌ی سرویس‌هاش توی «🛍 سرویس‌های من» میاد. اگه بیشتر از یکی داشته باشه شماره می‌خوره (۱، ۲، ...). {username} توی اسم = نام کاربری همون سرویس. وقتی به ماهانه تبدیل بشه، دکمه‌ش مثل بقیه‌ی سرویس‌ها با نام سرویس و آبی می‌شه.']];
         }
-        if (preg_match('/^([gk])([btrh])$/', (string) $alias, $sm)) {
+        if (preg_match('/^([gk])([btrhp])$/', (string) $alias, $sm)) {
             $sa = $textbotlang['users']['subapps'];
             if ($sm[1] === 'g') {
                 // 🌐 a link to the subscription page and 📲 the app list -
@@ -13814,12 +13831,12 @@ if (!function_exists('subapp_kind')) {
     // the kind's part of its texts' keys: users.subapps.entryBuy / listBuy...
     function subapp_kind_suffix($kind)
     {
-        return ['b' => 'Buy', 't' => 'Test', 'r' => 'Ref', 'h' => 'Payg'][$kind] ?? 'Buy';
+        return ['b' => 'Buy', 't' => 'Test', 'r' => 'Ref', 'h' => 'Payg', 'p' => 'BuyMsg'][$kind] ?? 'Buy';
     }
     // and its name in 🎨
     function subapp_kind_name($kind)
     {
-        return ['b' => 'خرید', 't' => 'اکانت تست', 'r' => 'کانفیگ هدیه‌ی دعوت', 'h' => 'اشتراک ساعتی'][$kind] ?? 'خرید';
+        return ['b' => 'خرید', 't' => 'اکانت تست', 'r' => 'کانفیگ هدیه‌ی دعوت', 'h' => 'اشتراک ساعتی', 'p' => 'پیام خرید'][$kind] ?? 'خرید';
     }
     // the list's apps in its buttons' order - each one's genbtn k* number,
     // the id its link carries, its button's text (users.subapps.*), and where
@@ -13881,10 +13898,17 @@ if (!function_exists('subapp_kind')) {
         }
         return false;
     }
+    // the app list a kind's 📲 opens: the purchase message ('p') has a pair of
+    // its own but shows the same list as a bought service's screen
+    function subapp_list_kind($kind)
+    {
+        return $kind === 'p' ? 'b' : $kind;
+    }
     // the rows on top of a service's screen: 🌐 (a link to $sub) and 📲 (the
     // app list), as this tab has them - [] when the panel gives the
-    // subscription no address
-    function subapp_entry_rows($kind, $lang, $tx, $sub, $invoiceId)
+    // subscription no address. $keep: 📲 leaves the message it is under where
+    // it is (the purchase message carries the config - it must not go)
+    function subapp_entry_rows($kind, $lang, $tx, $sub, $invoiceId, $keep = false)
     {
         if (strpos((string) $sub, 'http') !== 0) {
             return [];
@@ -13895,10 +13919,10 @@ if (!function_exists('subapp_kind')) {
         foreach (genbtn_defs($alias, $tx) as $idx => $d) {
             $ov = genbtn_override($lang, $key, $idx);
             // 📲 only while its list has an app left on it
-            if (genbtn_is_hidden($d, $ov) || ($idx === 1 && !subapp_any_app($kind, $lang, $tx))) {
+            if (genbtn_is_hidden($d, $ov) || ($idx === 1 && !subapp_any_app(subapp_list_kind($kind), $lang, $tx))) {
                 continue;
             }
-            $b = genbtn_render($d, $ov, "subapps_{$invoiceId}");
+            $b = genbtn_render($d, $ov, "subapps_{$invoiceId}" . ($keep ? '_k' : ''));
             if ($idx === 0) {
                 unset($b['callback_data']);
                 $b['url'] = (string) $sub;
@@ -14142,7 +14166,7 @@ if (!function_exists('genbtn_hub_payload')) {
         if (isset($titles[$alias])) {
             return $titles[$alias];
         }
-        if (preg_match('/^([gk])([btrh])$/', (string) $alias, $sm)) {
+        if (preg_match('/^([gk])([btrhp])$/', (string) $alias, $sm)) {
             return ($sm[1] === 'g' ? '🌐 دکمه‌های سابسکریپشن و 📲 افزودن به برنامه' : '📲 دکمه‌های لیست برنامه‌ها') . ' (' . subapp_kind_name($sm[2]) . ')';
         }
         // the button-only items: their one button's own name
@@ -14171,8 +14195,11 @@ if (!function_exists('genbtn_hub_payload')) {
         if (isset($notes[$alias])) {
             return $notes[$alias];
         }
-        if (preg_match('/^([gk])([btrh])$/', (string) $alias, $sm)) {
-            $where = ['b' => 'هر سرویس خریداری‌شده', 't' => 'هر اکانت تست', 'r' => 'هر کانفیگ هدیه‌ی دعوت (تا وقتی تمدید نشده)', 'h' => 'هر اشتراک ساعتی'][$sm[2]];
+        if (preg_match('/^([gk])([btrhp])$/', (string) $alias, $sm)) {
+            $where = ['b' => 'هر سرویس خریداری‌شده', 't' => 'هر اکانت تست', 'r' => 'هر کانفیگ هدیه‌ی دعوت (تا وقتی تمدید نشده)', 'h' => 'هر اشتراک ساعتی'][$sm[2]] ?? '';
+            if ($sm[2] === 'p') {
+                return 'این ۲ دکمه زیر پیامی میان که بعد از خرید، کانفیگ رو برای مشتری می‌فرسته (بالای دکمه‌های مدیریت سرویس): 🌐 صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه، 📲 لیست برنامه‌ها رو میاره (پیام خرید سر جاش می‌مونه). فقط وقتی پنل برای سابسکریپشن آدرس بده دیده می‌شن. تنظیمشون جداست و با دکمه‌های همین دو تا توی «🛍 سرویس‌های من» یکی نیست. کنار هم یا زیر هم بودنشون و مخفی کردن هرکدوم: 📐 چیدمان.';
+            }
             return $sm[1] === 'g'
                 ? "این ۲ دکمه بالای صفحه‌ی {$where} توی «🛍 سرویس‌های من» میان: 🌐 صفحه‌ی سابسکریپشن رو توی مرورگر باز می‌کنه، 📲 صفحه‌ی سرویس رو برمی‌داره و لیست برنامه‌ها رو میاره. فقط وقتی پنل برای سابسکریپشن آدرس بده دیده می‌شن. کنار هم یا زیر هم بودنشون و مخفی کردن هرکدوم: 📐 چیدمان."
                 : "این دکمه‌ها زیر لیست برنامه‌های {$where} میان (بعد از زدن 📲): هر برنامه یه صفحه باز می‌کنه که همون برنامه رو با سابسکریپشن باز می‌کنه و اگه نصب نباشه، لینک دانلودش رو داره؛ 🔙 برمی‌گردونه به صفحه‌ی سرویس. برنامه‌ای که مشتری‌هات ندارن رو از 📐 چیدمان مخفی کن؛ اگه همه مخفی باشن، 📲 هم دیگه نشون داده نمی‌شه.";
@@ -14207,7 +14234,7 @@ if (!function_exists('genbtn_hub_payload')) {
     function genbtn_layout_default($alias)
     {
         return ['su' => 'half', 'pu' => 'half', 'cf' => 'half', 'cl' => 'full',
-            'gb' => 'full', 'gt' => 'full', 'gr' => 'full', 'gh' => 'full',
+            'gb' => 'full', 'gt' => 'full', 'gr' => 'full', 'gh' => 'full', 'gp' => 'full',
             'kb' => 'half', 'kt' => 'half', 'kr' => 'half', 'kh' => 'half'][$alias] ?? null;
     }
     // one button's width with nothing stored: its group's - except the app
@@ -14371,7 +14398,7 @@ if (!function_exists('genbtn_hub_payload')) {
     // back/close buttons, the other sections' close buttons and the 🎯 ones.
     function genbtn_preview_aliases()
     {
-        return ['rc', 'rp', 'bu', 'tp', 'ac', 'ts', 'he', 'sp', 'ar', 'mg', 'sl', 'gb', 'gt', 'gr', 'gh', 'kb', 'kt', 'kr', 'kh'];
+        return ['rc', 'rp', 'bu', 'tp', 'ac', 'ts', 'he', 'sp', 'ar', 'mg', 'sl', 'gb', 'gt', 'gr', 'gh', 'gp', 'kb', 'kt', 'kr', 'kh'];
     }
     // The button exactly as this language's customer receives it - built by
     // genbtn_render(), the same function that builds the real one, so rename,
@@ -19156,6 +19183,8 @@ if (!function_exists('bt_button')) {
             'users.subapps.entryTest',
             'users.subapps.entryRef',
             'users.subapps.entryPayg',
+            // and under the purchase message (genbtn gp)
+            'users.subapps.entryBuyMsg',
         ];
     }
     // label-only override, for buttons that may render on a reply keyboard
@@ -19174,6 +19203,10 @@ if (!function_exists('bt_button')) {
     // for genbtn's own "list" screen to usefully return to.
     function bt_btnitem_back_cb($key, $lang)
     {
+        // under the purchase message: inside 🛍️ پیام بعد از خرید
+        if ($key === 'users.subapps.entryBuyMsg') {
+            return "bt_edit|{$lang}|textbot.afterPay";
+        }
         if ($key === 'bottext.btnCloseTest' || $key === 'users.subapps.entryTest') {
             // lives inside 🔑 تنظیم اکانت تست, not a bt_group screen of its own
             return "bt_edit|{$lang}|users.usertest.selectUsernamePrompt";
@@ -20747,7 +20780,7 @@ if (!function_exists('bt_nosticker_keys')) {
             // a popup refusing someone else's service
             'users.serviceNotYours',
             // 🌐 / 📲's buttons, their popup and the page an app opens through
-            'users.subapps.entryBuy', 'users.subapps.entryTest', 'users.subapps.entryRef', 'users.subapps.entryPayg',
+            'users.subapps.entryBuy', 'users.subapps.entryTest', 'users.subapps.entryRef', 'users.subapps.entryPayg', 'users.subapps.entryBuyMsg',
             'users.subapps.noLink', 'users.subapps.pageOpening', 'users.subapps.pageButton', 'users.subapps.pageHint',
             'users.subapps.pageDownload', 'users.subapps.pageError',
             'users.affiliates.purchaseCommissionInfo',
@@ -21573,7 +21606,7 @@ function sendMessageService($panel_info, $config, $sub_link, $username_service, 
     // a purchase also carries the buttons the service has in 🛍 سرویس‌های من
     // (🔗 لینک اشتراک, 💊 تمدید ...), above the tutorial button
     if ($kind === 'purchase') {
-        $sms_actions = buy_service_action_rows($user_id, $invoice_id, $sms_lang, $panel_info);
+        $sms_actions = buy_service_action_rows($user_id, $invoice_id, $sms_lang, $panel_info, $sub_link);
         if ($sms_actions) {
             $sms_help = is_string($reply_markup) ? (json_decode($reply_markup, true)['inline_keyboard'] ?? []) : [];
             $reply_markup = json_encode(['inline_keyboard' => array_merge($sms_actions, $sms_help)]);

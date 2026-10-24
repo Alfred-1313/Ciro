@@ -2414,7 +2414,9 @@ function keyboard_list_text($lang, $groupFilter = null)
         // opened from inside 📯 پیام عضویت اجباری کانال, whose back it uses
         'users.channel.left_channel',
         // the test account's 🌐 / 📲 and its app list: inside 🔑 تنظیم اکانت تست
-        'users.subapps.entryTest', 'users.subapps.listTest'];
+        'users.subapps.entryTest', 'users.subapps.listTest',
+        // the pair under the purchase message: inside 🛍️ پیام بعد از خرید
+        'users.subapps.entryBuyMsg'];
     $bt_can_react_keys = bt_react_keys();
     $bt_list_setting = select("setting", "*", null, null, "select");
     $bt_list_edit = json_decode((string) ($bt_list_setting['text_edit'] ?? ''), true);
