@@ -59,6 +59,25 @@ function premium_emoji_refused_notice($reason)
         telegram('sendmessage', ['chat_id' => $adminnumber, 'text' => strtr($text, ['{reason}' => htmlspecialchars((string) $reason)]), 'parse_mode' => 'HTML']);
     }
 }
+// An alert (answerCallbackQuery) is plain text: Telegram reads no HTML in it and
+// shows every tag exactly as typed. A text an admin wrote in 🎨 شخصی‌سازی with a
+// premium emoji (saved as <tg-emoji emoji-id="..">😱</tg-emoji>) or a <b> reached
+// the customer as that markup - and the 200-character cut then fell in the
+// middle of a tag. The markup goes; the words stay, and a premium emoji keeps
+// the ordinary emoji it stands on.
+if (!function_exists('alert_plain_text')) {
+    function alert_plain_text($text)
+    {
+        $text = (string) $text;
+        if (strpos($text, '<') === false && strpos($text, '&') === false) {
+            return $text;
+        }
+        $text = preg_replace('#<br\s*/?>#i', "\n", $text);
+        // only Telegram's own tags: a "<" that is just a character stays
+        $text = preg_replace('#</?(?:b|strong|i|em|u|ins|s|strike|del|code|pre|a|tg-emoji|tg-spoiler|span|blockquote)(?:\s[^>]*)?>#i', '', $text);
+        return html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+}
 function telegram($method, $datas = [], $token = null)
 {
     global $APIKEY;
@@ -95,8 +114,12 @@ function telegram($method, $datas = [], $token = null)
     // going over doesn't truncate - the whole call is rejected and the admin
     // simply sees no alert at all, with nothing in the logs to explain it.
     // Trim here so a long alert degrades to a shortened one instead of silence.
-    if (strcasecmp($method, 'answerCallbackQuery') === 0 && isset($datas['text']) && mb_strlen((string) $datas['text']) > 200) {
-        $datas['text'] = mb_substr((string) $datas['text'], 0, 199) . '…';
+    if (strcasecmp($method, 'answerCallbackQuery') === 0 && isset($datas['text'])) {
+        // the markup first: the cut below must count what is actually shown
+        $datas['text'] = alert_plain_text($datas['text']);
+        if (mb_strlen($datas['text']) > 200) {
+            $datas['text'] = mb_substr($datas['text'], 0, 199) . '…';
+        }
     }
 
     $ch = curl_init($url);

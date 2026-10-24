@@ -50,6 +50,8 @@ $noSticker = array_flip(bt_nosticker_keys());
 // a reaction goes on the customer's own message - only these have one
 $canReact = array_flip(bt_react_keys());
 $switchable = bt_item_switch_defaults();
+// the items shown as a popup: plain text only, 200 characters at most
+$isAlert = array_flip(bt_alert_keys());
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check_post();
@@ -246,6 +248,7 @@ echo web_lang_assets();
                             <?php endif; ?>
                         </label>
                         <textarea name="texts[<?= $k ?>]" class="textarea" dir="auto" rows="<?= min(8, substr_count($v['current'], "\n") + 1) ?>"><?= htmlspecialchars($v['current']) ?></textarea>
+                        <?php if (isset($isAlert[$key])): ?><div class="field-hint">⚠️ <?= $t['btAlertHint'] ?></div><?php endif; ?>
                         <?php if ($v['textChanged']): ?>
                             <div class="field-hint" style="display:flex;align-items:flex-start;gap:8px">
                                 <span style="flex:1;white-space:pre-wrap"><?= $t['bottextDefaultLabel'] ?> <?= htmlspecialchars($v['default']) ?></span>

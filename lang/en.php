@@ -5373,6 +5373,7 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'btSticker' => 'Sticker',
                 'btStickerPlaceholder' => 'Sticker file_id',
                 'btStickerDelete' => 'Remove sticker',
+                'btAlertHint' => 'This text is shown in a popup (alert) and Telegram takes plain text only there: bold and links do not apply, a premium emoji shows as its ordinary emoji, and anything past 200 characters is cut.',
                 'btStickerHint' => '✅ means this message has a sticker in this language. Sending the sticker from the bot is easier; here only its file_id is taken.',
                 'btStickerInvalid' => 'The sticker id of «%s» is not valid.',
                 'btTierSwitches' => '🔋 Service warning and end messages',

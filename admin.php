@@ -1266,6 +1266,10 @@ if (!function_exists('bottext_item_menu_payload')) {
             $bt_extra_note = "\nℹ️ این جمله وقتی نشون داده می‌شه که تخفیف از بخش <b>⚡️ اعمال همگانی</b> ست شده باشه، یعنی روی <b>همه‌ی درگاه‌ها</b>.\n"
                 . "💡 چون دسته‌ای در کار نیست، <code>{group}</code> اینجا معنی نداره - فقط <code>{value}</code> رو می‌تونی استفاده کنی.\n";
         }
+        // a popup shows plain text only, whatever the item is about
+        if (in_array($bt_key, bt_alert_keys(), true)) {
+            $bt_extra_note .= "\n⚠️ این متن توی پاپ‌آپ (Alert) نشون داده می‌شه و تلگرام توش فقط متن ساده می‌پذیره: بولد و لینک اعمال نمی‌شه، ایموجی پریمیوم به شکل ایموجی معمولیش دیده می‌شه، و بیشتر از ۲۰۰ حرف بریده می‌شه.\n";
+        }
         foreach (($textbotlang['bottext']['items'] ?? []) as $bt_it) {
             if (($bt_it['key'] ?? '') === $bt_key) {
                 $bt_label = $bt_it['label'];

@@ -20426,6 +20426,22 @@ if (!function_exists('bt_react_keys')) {
         return ['users.text_start', 'textbot.faqDesc', 'textbot.tariffListDesc', 'textbot.rules', 'users.unknownMsg'];
     }
 }
+if (!function_exists('bt_alert_keys')) {
+    // The 🎨 items that reach the customer as a popup (answerCallbackQuery), not
+    // as a message. A popup holds plain text only - alert_plain_text() takes the
+    // markup out of what an admin wrote - and 200 characters at most, so their
+    // editing screens say so.
+    function bt_alert_keys()
+    {
+        return [
+            'users.status.svcUsageUnavailable',
+            'users.extend.insufficientBalanceAlert',
+            'keyboard.infoRefreshed',
+            'users.subapps.noLink',
+            'users.serviceNotYours',
+        ];
+    }
+}
 if (!function_exists('bt_nosticker_keys')) {
     // Messages whose 🖼 استیکر can never do anything useful - hidden on their
     // editing screen and skipped when stickers are sent. A sticker stored on
