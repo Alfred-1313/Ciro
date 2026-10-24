@@ -1235,6 +1235,9 @@ if (!function_exists('bottext_item_menu_payload')) {
         if (in_array($bt_key, ['users.subapps.pageOpening', 'users.subapps.pageButton', 'users.subapps.pageHint', 'users.subapps.pageDownload', 'users.subapps.pageError'], true)) {
             $bt_extra_note = "\nℹ️ این متن پیام ربات نیست؛ توی صفحه‌ی وبیه که با زدن یه برنامه از لیست «📲 افزودن به برنامه» باز می‌شه - برای خرید، اکانت تست، هدیه‌ی دعوت و اشتراک ساعتی یکیه.\n💡 <code>{app}</code> = اسم همون برنامه. فقط متن ساده نشون داده می‌شه (بدون بولد و لینک).\n";
         }
+        if ($bt_key === 'users.status.notConnectedCannotChangeStatus') {
+            $bt_extra_note = "\nℹ️ پاپ‌آپی که وقتی مشتری روی «💡 روشن/خاموش» سرویسی بزنه که هنوز بهش وصل نشده (حالت OnHold) نشون داده می‌شه - برای خرید، اکانت تست، هدیه‌ی دعوت و «🛍 سرویس‌های من» یکیه. توی اشتراک ساعتی همین حالت پاپ‌آپ جدا داره: «⏸ هنوز وصل نشدی» توی ⏱.\n";
+        }
         if ($bt_key === 'users.subapps.noLink') {
             $bt_extra_note = "\nℹ️ پاپ‌آپی که وقتی مشتری روی «📲 افزودن به برنامه»ِ سرویسی بزنه که دیگه فعال نیست نشون داده می‌شه - برای هر ۴ بخش یکیه.\n";
         }
@@ -1682,6 +1685,7 @@ if (!function_exists('bt_inline_block_keys')) {
             'bottext.btnCloseHelp',
             // alerts: answerCallbackQuery carries text and nothing else
             'users.status.svcUsageUnavailable',
+            'users.status.notConnectedCannotChangeStatus',
             'users.extend.insufficientBalanceAlert',
             'keyboard.infoRefreshed',
             'users.subapps.noLink',

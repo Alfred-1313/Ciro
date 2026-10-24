@@ -250,4 +250,22 @@ return [
             . "• Four colour and name buttons of the card-to-card invoice did nothing; fixed.\n"
             . "• The bot errored once a setting grew long; its storage now grows by itself.</blockquote>",
     ],
+    [
+        'n' => 15,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>💡 <b>روشن/خاموش روی سرویسی که هنوز وصل نشده</b>\n"
+            . "📍 هر ۵ جا: پیام خرید، اکانت تست، هدیهٔ رفرال، صفحهٔ ساعتی و 🛍 سرویس‌های من\n"
+            . "اگر مشتری روی «💡 روشن/خاموش» سرویسی بزند که هنوز بهش وصل نشده (OnHold)، دیگر پیام جدید زیر صفحه فرستاده نمی‌شود؛ یک پاپ‌آپ (Alert) روی همان صفحه نشان داده می‌شود که می‌گوید اول باید یک‌بار وصل شود و بعد می‌تواند استفاده کند. در اشتراک ساعتی هم همین حالت پاپ‌آپ دارد.</blockquote>\n\n"
+            . "<blockquote>🎨 <b>متن پاپ‌آپ قابل تنظیم است</b>\n"
+            . "📍 🎨 شخصی‌سازی ← پیام‌ها و ظاهر سرویس‌های من ← ⚠️ خطاها و پاپ‌آپ‌ها ← «⏳ Alert هنوز به سرویس وصل نشدی»\n"
+            . "📍 وب‌پنل ← متن‌های ربات ← 🛍 پیام‌ها و ظاهر سرویس‌های من\n"
+            . "پاپ‌آپ فقط متن ساده می‌گیرد و تا ۲۰۰ حرف نشان داده می‌شود. متن پیش‌فرض هم تازه و روان‌تر شد.</blockquote>",
+        'en' => "<blockquote>💡 <b>On/off on a service that is not connected yet</b>\n"
+            . "📍 All 5 places: purchase message, test account, referral gift, hourly screen and 🛍 My services\n"
+            . "When a customer taps «💡 On/off» on a service they have not connected to yet (OnHold), no new message is sent under the screen any more; a popup (Alert) shows on that same screen telling them to connect once first and then use it. The hourly subscription has the same popup for this state.</blockquote>\n\n"
+            . "<blockquote>🎨 <b>The popup text can be edited</b>\n"
+            . "📍 🎨 Customize → My services messages and look → ⚠️ Errors and popups → «⏳ Alert: not connected yet»\n"
+            . "📍 Web panel → Bot Texts → 🛍 My services messages and look\n"
+            . "A popup takes plain text only and shows up to 200 characters. The default text is also new and friendlier.</blockquote>",
+    ],
 ];

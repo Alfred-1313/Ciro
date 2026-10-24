@@ -12936,6 +12936,7 @@ if (!function_exists('bt_myservices_plan')) {
             'users.status.svcUsageUnavailable' => 'myservices_actions',
             'users.status.svcLocationMore' => 'myservices_actions',
             'users.status.panelNotConnected' => 'myservices_errors',
+            'users.status.notConnectedCannotChangeStatus' => 'myservices_errors',
             'users.serviceNotYours' => 'myservices_errors',
             'users.subapps.noLink' => 'myservices_errors',
         ];
@@ -21003,6 +21004,7 @@ if (!function_exists('bt_alert_keys')) {
     {
         return [
             'users.status.svcUsageUnavailable',
+            'users.status.notConnectedCannotChangeStatus',
             'users.extend.insufficientBalanceAlert',
             'keyboard.infoRefreshed',
             'users.subapps.noLink',

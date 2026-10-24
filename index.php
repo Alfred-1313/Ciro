@@ -1744,7 +1744,15 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     }
     $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
     if ($DataUserOut['status'] == "on_hold") {
-        sendmessage($from_id, $textbotlang['users']['status']['notConnectedCannotChangeStatus'], null, 'html');
+        // not connected yet: a popup over the screen it was tapped on, not a
+        // new message under it - the same in a bought service, a test account,
+        // a referral gift and 🛍 سرویس‌های من (⏱'s own: paygpause_)
+        telegram('answerCallbackQuery', [
+            'callback_query_id' => $callback_query_id,
+            'text' => $textbotlang['users']['status']['notConnectedCannotChangeStatus'],
+            'show_alert' => true,
+            'cache_time' => 1,
+        ]);
         return;
     }
     if ($DataUserOut['status'] == "Unsuccessful") {
