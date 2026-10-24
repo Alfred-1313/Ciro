@@ -121,6 +121,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($a === 'auto') {
         $old = disc_auto_get($lang, $k);
         $new = $read($old, false);
+        // 📦 which amounts it applies to: all, the ready-made packages, or one of
+        // them (named by its amount, one the bot's own picker would list)
+        unset($new['appliesTo'], $new['appliesAmount']);
+        $applies = (string) ($p['applies'] ?? 'all');
+        if (in_array($applies, ['packages', 'one'], true)) {
+            $new['appliesTo'] = $applies;
+            $pick = (string) ($p['applies_amount'] ?? '');
+            if ($applies === 'one' && in_array($pick, topup_disc_pick_list($lang, $k, $faTx), true)) {
+                $new['appliesAmount'] = $pick;
+            }
+        }
         if ($err === null) {
             if ($scope !== null) {
                 topup_disc_group_set($lang, $scope, $new);
@@ -193,9 +204,22 @@ $card = function (string $k, string $title, string $sub) use ($lang, $t, $faTx, 
         && ((int) ($auto['expiry'] ?? 0) === 0 || time() < (int) $auto['expiry']);
     $codes = topup_disc_codes_for($lang, $k);
     $days = disc_days_left($auto['expiry'] ?? 0);
+    // 📦 the filter: what is stored, the packages it can name, and what is wrong with it
+    [$appMode, $appPkg] = topup_disc_applies($auto);
+    $pickList = topup_disc_pick_list($lang, $k, $faTx);
+    $appWarn = '';
+    if ($appMode !== 'all') {
+        if (!$pickList) {
+            $appWarn = topup_disc_scope_of_key($k) !== null ? $t['discAppliesNoPackagesScope'] : $t['discAppliesNoPackages'];
+        } elseif ($appMode === 'one' && $appPkg === '') {
+            $appWarn = $t['discAppliesNoneChosen'];
+        } elseif ($appMode === 'one' && !in_array($appPkg, array_map('strval', $pickList), true)) {
+            $appWarn = $t['discAppliesGone'];
+        }
+    }
     ?>
 <div class="card fade-up" id="d-<?= htmlspecialchars(str_replace('@', 'g-', $k)) ?>" style="margin-bottom:14px">
-  <div class="card-head"><div><div class="card-title"><?= htmlspecialchars($title) ?><?= $liveAuto ? ' <span class="tag tag-ok">' . htmlspecialchars(topup_disc_admin_value_label($auto, $lang)) . '</span>' : '' ?></div>
+  <div class="card-head"><div><div class="card-title"><?= htmlspecialchars($title) ?><?= $liveAuto ? ' <span class="tag tag-ok">' . htmlspecialchars(topup_disc_admin_value_label($auto, $lang) . ($appMode !== 'all' ? ' 📦' : '')) . '</span>' : '' ?></div>
     <div class="card-subtitle"><?= $sub ?></div></div></div>
   <div class="card-body">
     <form method="POST" action="<?= $action ?>">
@@ -212,6 +236,19 @@ $card = function (string $k, string $title, string $sub) use ($lang, $t, $faTx, 
       <div class="set-row"><div><div class="set-label"><?= $t['discPerUser'] ?></div><div class="set-hint"><?= $t['discPerUserHint'] ?></div></div>
         <div class="set-ctl"><input type="text" class="input" name="per_user" value="<?= (int) ($auto['limitPerUser'] ?? 1) ?>" inputmode="numeric"></div></div>
       <div class="set-row"><div><div class="set-label"><?= $t['discNewOnly'] ?></div><div class="set-hint"><?= $t['discNewOnlyHint'] ?></div></div><div class="set-ctl"><?= $chk('new_only', !empty($auto['newUserOnly']), $t['refOn']) ?></div></div>
+      <div class="set-row"><div><div class="set-label">📦 <?= $t['discApplies'] ?></div><div class="set-hint"><?= $t['discAppliesHint'] ?></div></div>
+        <div class="set-ctl" style="display:flex;gap:6px;flex-wrap:wrap">
+          <select class="select" name="applies" style="width:auto" onchange="this.form.applies_amount.hidden = this.value !== 'one'">
+            <option value="all"<?= $appMode === 'all' ? ' selected' : '' ?>><?= $t['discAppliesAll'] ?></option>
+            <option value="packages"<?= $appMode === 'packages' ? ' selected' : '' ?>><?= $t['discAppliesPackages'] ?></option>
+            <option value="one"<?= $appMode === 'one' ? ' selected' : '' ?>><?= $t['discAppliesOne'] ?></option>
+          </select>
+          <select class="select" name="applies_amount" style="width:auto" title="<?= $t['discAppliesPick'] ?>"<?= $appMode === 'one' ? '' : ' hidden' ?>>
+            <?php if ($appPkg === '' || !in_array($appPkg, array_map('strval', $pickList), true)): ?><option value="">—</option><?php endif; ?>
+            <?php foreach ($pickList as $amt): ?><option value="<?= htmlspecialchars((string) $amt) ?>"<?= abs((float) $amt - (float) $appPkg) < 0.005 && $appPkg !== '' ? ' selected' : '' ?>><?= htmlspecialchars(money($amt, currency_for_lang($lang))) ?></option><?php endforeach; ?>
+          </select>
+        </div></div>
+      <?php if ($appWarn !== ''): ?><div class="notice notice-warn"><?= $appWarn ?></div><?php endif; ?>
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px"><button type="submit" class="btn btn-primary"><?= icon('check', 13) ?> <?= $t['bottextSaveBtn'] ?></button></div>
     </form>
     <form method="POST" action="<?= $action ?>" onsubmit="return confirm(<?= htmlspecialchars(json_encode($t['discResetUsageConfirm'], JSON_UNESCAPED_UNICODE)) ?>)" style="display:flex;justify-content:flex-end;padding-top:6px">

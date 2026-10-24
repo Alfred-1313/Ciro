@@ -1641,6 +1641,11 @@ if (!function_exists('bt_inline_block_keys')) {
             'hardcoded.topupDiscMinPkgPercent',
             'hardcoded.topupDiscMinPkgFixed',
             'hardcoded.topupDiscMinSuffix',
+            // ...and the words for a discount limited to the ready-made packages
+            'hardcoded.topupDiscScopePackages',
+            'hardcoded.topupDiscScopeOne',
+            'hardcoded.topupDiscScopePackagesNote',
+            'hardcoded.topupDiscScopeOneNote',
             // a line inside the service-status caption
             'users.status.svcLocationMore',
             // button labels: there is no message to attach a sticker to, and
@@ -8572,6 +8577,14 @@ if (preg_match('/^btact\|text\|([a-z]{2})\|(.+)$/', $datain, $btm) && $adminrule
             . "\n💡 داخل <b>خودِ فاکتور</b>، وقتی مبلغ انتخاب‌شده به حداقل رسیده باشه.",
         'hardcoded.topupDiscMinSuffix' => "• حداقل مبلغ شارژ: <code>{min}</code>\n"
             . "\n💡 کنار مقدار تخفیف، در صفحه‌ی انتخاب روش پرداخت.",
+        'hardcoded.topupDiscScopePackages' => "این متن بدون متغیره.\n"
+            . "\n💡 بعد از جمله‌ی تخفیف (لیست بسته‌ها، صفحه‌ی مبلغ دلخواه) و کنار مقدار تخفیف در صفحه‌ی روش پرداخت اضافه می‌شه، وقتی تخفیف خودکار روی «📦 فقط بسته‌های آماده» ست شده باشه.",
+        'hardcoded.topupDiscScopeOne' => "• مبلغ همون بسته: <code>{amount}</code>\n"
+            . "\n💡 بعد از جمله‌ی تخفیف (لیست بسته‌ها، صفحه‌ی مبلغ دلخواه) و کنار مقدار تخفیف در صفحه‌ی روش پرداخت اضافه می‌شه، وقتی تخفیف خودکار روی «🎯 فقط یک بسته» ست شده باشه.",
+        'hardcoded.topupDiscScopePackagesNote' => "این متن بدون متغیره.\n"
+            . "\n💡 زیر صفحه‌ی مبلغ دلخواه و داخل فاکتورِ مبلغی که جزو بسته‌های آماده نیست نشون داده می‌شه، وقتی تخفیف خودکار روی «📦 فقط بسته‌های آماده» ست شده باشه.",
+        'hardcoded.topupDiscScopeOneNote' => "• مبلغ همون بسته: <code>{amount}</code>\n"
+            . "\n💡 زیر صفحه‌ی مبلغ دلخواه و داخل فاکتورِ مبلغی که اون بسته نیست نشون داده می‌شه، وقتی تخفیف خودکار روی «🎯 فقط یک بسته» ست شده باشه.",
         'bottext.langPickerCaption' => "• خطوط «زبان خود را انتخاب کنید»، یکی به ازای هر زبان فعال: <code>{lines}</code>\n"
             . "\n💡 این صفحه قبل از اینکه کاربر زبانی داشته باشه نشون داده می‌شه، برای همین متنش چندزبانه‌ست. اگه <code>{lines}</code> رو برداری، کاربر خارجی‌زبان هیچ راهنمایی به زبان خودش نمی‌بینه.\n"
             . "💡 ظاهر خود دکمه‌ها (چیدمان، رنگ، ایموجی، نام) از همون صفحه‌ی 🌐 تنظیمات تغییر زبان کاربر تنظیم می‌شه.",
@@ -20947,6 +20960,58 @@ if ($datain == "linkappsetting") {
     step("dsgrpminv-{$td_m[1]}-{$td_m[2]}", $from_id);
     $td_kb = json_encode(['inline_keyboard' => [[['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "dsgrpauto:{$td_m[1]}:{$td_m[2]}"]], [['text' => '❌ بستن', 'callback_data' => "tpdclose", 'style' => 'danger']]]]);
     Editmessagetext($from_id, $message_id, "💰 حداقل مبلغ شارژ رو بفرست — زیر این مبلغ تخفیف گروهی این دسته اعمال نمی‌شه (فقط عدد، ۰ = بدون حداقل)", $td_kb, 'HTML');
+} elseif (preg_match('/^tpdautoapp:([a-z]{2}):([a-z0-9_]+):(all|packages|one)$/', $datain, $td_m) && $adminrulecheck['rule'] == "administrator") {
+    // 📦 which amounts the automatic discount applies to
+    $td_a = topup_disc_auto_for($td_m[1], $td_m[2]);
+    $td_a['appliesTo'] = $td_m[3];
+    if ($td_m[3] !== 'one') {
+        unset($td_a['appliesAmount']);
+    }
+    topup_disc_auto_set($td_m[1], $td_m[2], $td_a);
+    // «یک بسته» goes straight to choosing which
+    list($td_text, $td_kb) = $td_m[3] === 'one'
+        ? topup_disc_pick_payload($td_m[1], $td_m[2], $textbotlang)
+        : topup_disc_auto_payload($td_m[1], $td_m[2], $textbotlang);
+    Editmessagetext($from_id, $message_id, $td_text, $td_kb, 'HTML');
+} elseif (preg_match('/^tpdautopk:([a-z]{2}):([a-z0-9_]+):([0-9]{1,3})$/', $datain, $td_m) && $adminrulecheck['rule'] == "administrator") {
+    $td_list = topup_disc_pick_list($td_m[1], $td_m[2], $textbotlang);
+    if (!isset($td_list[(int) $td_m[3]])) {
+        return;
+    }
+    $td_a = topup_disc_auto_for($td_m[1], $td_m[2]);
+    $td_a['appliesTo'] = 'one';
+    $td_a['appliesAmount'] = $td_list[(int) $td_m[3]];
+    topup_disc_auto_set($td_m[1], $td_m[2], $td_a);
+    list($td_text, $td_kb) = topup_disc_auto_payload($td_m[1], $td_m[2], $textbotlang);
+    Editmessagetext($from_id, $message_id, $td_text, $td_kb, 'HTML');
+} elseif (preg_match('/^dsgrpapp:([a-z]{2}):([a-z0-9_]+):(all|packages|one)$/', $datain, $td_m) && $adminrulecheck['rule'] == "administrator") {
+    if (!in_array($td_m[2], topup_disc_scopes(), true)) {
+        return;
+    }
+    $td_g = topup_disc_group_for($td_m[1], $td_m[2]);
+    $td_g['appliesTo'] = $td_m[3];
+    if ($td_m[3] !== 'one') {
+        unset($td_g['appliesAmount']);
+    }
+    topup_disc_group_set($td_m[1], $td_m[2], $td_g);
+    list($td_text, $td_kb) = $td_m[3] === 'one'
+        ? topup_disc_pick_payload($td_m[1], topup_disc_scope_key($td_m[2]), $textbotlang)
+        : topup_disc_group_auto_payload($td_m[1], $td_m[2], $textbotlang);
+    Editmessagetext($from_id, $message_id, $td_text, $td_kb, 'HTML');
+} elseif (preg_match('/^dsgrppk:([a-z]{2}):([a-z0-9_]+):([0-9]{1,3})$/', $datain, $td_m) && $adminrulecheck['rule'] == "administrator") {
+    if (!in_array($td_m[2], topup_disc_scopes(), true)) {
+        return;
+    }
+    $td_list = topup_disc_pick_list($td_m[1], topup_disc_scope_key($td_m[2]), $textbotlang);
+    if (!isset($td_list[(int) $td_m[3]])) {
+        return;
+    }
+    $td_g = topup_disc_group_for($td_m[1], $td_m[2]);
+    $td_g['appliesTo'] = 'one';
+    $td_g['appliesAmount'] = $td_list[(int) $td_m[3]];
+    topup_disc_group_set($td_m[1], $td_m[2], $td_g);
+    list($td_text, $td_kb) = topup_disc_group_auto_payload($td_m[1], $td_m[2], $textbotlang);
+    Editmessagetext($from_id, $message_id, $td_text, $td_kb, 'HTML');
 } elseif (preg_match('/^tpdautotog:([a-z]{2}):([a-z0-9_]+)$/', $datain, $td_m) && $adminrulecheck['rule'] == "administrator") {
     $td_a = topup_disc_auto_for($td_m[1], $td_m[2]);
     $td_a['enabled'] = empty($td_a['enabled']);

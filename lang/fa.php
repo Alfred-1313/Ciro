@@ -84,7 +84,7 @@ return array (
 
 <blockquote>💡 این متن‌ها بین <b>همه‌ی درگاه‌ها</b> مشترکن - هر تغییری اینجا بدی، روی همه‌ی درگاه‌ها اعمال می‌شه.
 
-خودِ تخفیف (درصد، مبلغ، مدت، سهمیه) برای هر درگاه و هر دسته جداست و از این مسیر تنظیم می‌شه:
+خودِ تخفیف (درصد، مبلغ، مدت، سهمیه، و اینکه روی همه‌ی مبلغ‌ها اعمال بشه یا فقط روی بسته‌های آماده) برای هر درگاه و هر دسته جداست و از این مسیر تنظیم می‌شه:
 
 🏬 تنظیمات فروشگاه ← 🏦 بسته‌های شارژ ← 🎁 تخفیف شارژ</blockquote>
 
@@ -711,6 +711,32 @@ return array (
         'key' => 'hardcoded.topupDiscMinSuffix',
         'group' => 'topupdisc',
         'section' => 'topupdisc_line_min',
+      ),
+      // a discount the admin limited to the ready-made packages (or to one of
+      // them): what is added after it, and the note for an amount that is not
+      array (
+        'label' => '📦 کنار تخفیف — فقط بسته‌های آماده',
+        'key' => 'hardcoded.topupDiscScopePackages',
+        'group' => 'topupdisc',
+        'section' => 'topupdisc_line_scope',
+      ),
+      array (
+        'label' => '🎯 کنار تخفیف — فقط یک بسته',
+        'key' => 'hardcoded.topupDiscScopeOne',
+        'group' => 'topupdisc',
+        'section' => 'topupdisc_line_scope',
+      ),
+      array (
+        'label' => '📦 یادآوری برای مبلغ دلخواه — فقط بسته‌های آماده',
+        'key' => 'hardcoded.topupDiscScopePackagesNote',
+        'group' => 'topupdisc',
+        'section' => 'topupdisc_line_scope',
+      ),
+      array (
+        'label' => '🎯 یادآوری برای مبلغ دیگر — فقط یک بسته',
+        'key' => 'hardcoded.topupDiscScopeOneNote',
+        'group' => 'topupdisc',
+        'section' => 'topupdisc_line_scope',
       ),
       array (
         'label' => '❌ خطای مبلغ خارج از حداقل/حداکثر',
@@ -9562,6 +9588,16 @@ nowpayments.io
     'discPerUserHint' => '۰ یعنی نامحدود',
     'discNewOnly' => 'فقط کاربران جدید',
     'discNewOnlyHint' => 'فقط کسانی که تا حالا شارژ نکرده‌اند',
+    'discApplies' => 'اعمال روی',
+    'discAppliesHint' => 'همه‌ی مبلغ‌ها، فقط بسته‌های آماده‌ی همین درگاه، یا فقط یکی از آن‌ها. کپشن‌هایی که کاربر می‌بیند خودشان این را اعلام می‌کنند.',
+    'discAppliesAll' => 'همه‌ی مبلغ‌ها',
+    'discAppliesPackages' => 'فقط بسته‌های آماده',
+    'discAppliesOne' => 'فقط یک بسته',
+    'discAppliesPick' => 'کدام بسته',
+    'discAppliesNoPackages' => '⚠️ این درگاه بسته‌ی آماده‌ای ندارد؛ تا در «بسته‌های شارژ» بسته نسازی، این تخفیف به کسی اعمال نمی‌شود.',
+    'discAppliesNoPackagesScope' => '⚠️ هیچ‌کدام از درگاه‌هایی که این تخفیف رویشان است بسته‌ی آماده‌ای ندارند؛ تا بسته نسازی، این تخفیف به کسی اعمال نمی‌شود.',
+    'discAppliesNoneChosen' => '⚠️ هنوز بسته‌ای انتخاب نشده؛ تا انتخاب نکنی این تخفیف به کسی اعمال نمی‌شود.',
+    'discAppliesGone' => '⚠️ بسته‌ی انتخاب‌شده دیگر در لیست بسته‌ها نیست؛ دوباره انتخابش کن.',
     'discResetUsage' => 'صفر کردن سهمیه‌ی استفاده‌شده',
     'discResetUsageConfirm' => 'سهمیه‌ی استفاده‌شده‌ی همه‌ی کاربرها صفر شود؟ تنظیمات تخفیف دست نمی‌خورد.',
     'discResetUsageDone' => 'سهمیه‌ی استفاده‌شده‌ی همه‌ی کاربرها صفر شد.',
@@ -11572,6 +11608,10 @@ nowpayments.io
     'topupDiscMinPkgPercent' => '🎁 چون از {min} به بالا شارژ می‌کنی، {bonus} هم هدیه می‌گیری — یعنی {value}٪ بیشتر!',
     'topupDiscMinPkgFixed' => '🎁 چون از {min} به بالا شارژ می‌کنی، {bonus} هدیه می‌گیری!',
     'topupDiscMinSuffix' => '(از {min} به بالا)',
+    'topupDiscScopePackages' => '📦 (فقط روی بسته‌های آماده)',
+    'topupDiscScopeOne' => '📦 (فقط روی بسته‌ی {amount})',
+    'topupDiscScopePackagesNote' => 'ℹ️ این مبلغ جزو بسته‌های آماده نیست، برای همین هدیه‌ای نمی‌گیری. برای گرفتن هدیه یکی از بسته‌ها رو انتخاب کن.',
+    'topupDiscScopeOneNote' => 'ℹ️ هدیه فقط برای بسته‌ی {amount} فعاله؛ برای این مبلغ هدیه‌ای اضافه نمی‌شه.',
     // 🪫 حجم کم (گیگ) - the fixed low-volume warning's wording, now its tiers' default
     'volumeLowGbDefaultText' => 'با سلام خدمت شما کاربر گرامی 👋
 🚨 از حجم سرویس {username} تنها {remainingvolume} باقی مانده است. لطفاً در صورت تمایل برای خرید حجم اضافه و یا تمدید سرویستون از طریق بخش «{myservices}» اقدام بفرمایین',

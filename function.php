@@ -7981,7 +7981,7 @@ if (!function_exists('topup_custom_screen_show')) {
             '{minprice}' => $floor !== null ? number_format($floor) : '—',
             '{min}' => $pmin !== null ? number_format((float) $pmin) : '—',
             '{max}' => $pmax !== null ? number_format((float) $pmax) : '—',
-        ]) . topup_disc_caption_block($from_id, $lang, $key, $textbotlang), json_encode([
+        ]) . topup_disc_custom_block($from_id, $lang, $key, $textbotlang), json_encode([
             'inline_keyboard' => [$row],
         ]), 'HTML');
         // remembered so it can be taken away once an invoice is actually made -
@@ -12698,9 +12698,19 @@ if (!function_exists('bt_section_meta')) {
                 'label' => '💰 جمله‌ی تخفیف — وقتی حداقل مبلغ ست شده',
                 'alert' => 'فقط برای تخفیفی که «💰 حداقل مبلغ» داره نشون داده می‌شن: دو تا روی لیست بسته‌ها، دو تا داخل فاکتور، یکی کنار تخفیف در صفحه‌ی روش پرداخت. {min} همون حداقل مبلغه.',
             ],
+            'topupdisc_line_scope' => [
+                'label' => '📦 جمله‌ی تخفیف — وقتی فقط روی بسته‌ها ست شده',
+                // an alert is cut at 200 characters
+                'alert' => 'فقط برای تخفیف خودکاری که روی «فقط بسته‌های آماده» یا «فقط یک بسته» گذاشتی: دو جمله کنار خودِ تخفیف، و دو یادآوری برای مبلغ دلخواه و فاکتور. {amount} = مبلغ اون بسته.',
+            ],
             'topupdisc_members' => [
                 'label' => '💳 درگاه‌های این دسته',
                 'alert' => 'دکمه‌ی بالا تخفیف کل این دسته‌ست. دکمه‌های زیر هر درگاه رو جدا تنظیم می‌کنن (تخفیف خودکار و کدهای تخفیف مخصوص همون درگاه). اگه هر دو ست باشن، روی هم سوار نمی‌شن — هرکدوم به کاربر بیشتر بده همون اعمال می‌شه.',
+            ],
+            'topupdisc_auto_apply' => [
+                'label' => '📦 اعمال روی کدوم مبلغ‌ها',
+                // an alert is cut at 200 characters
+                'alert' => "هدیه‌ی خودکار رو محدود کن:\n💰 همه‌ی مبلغ‌ها (عادی)\n📦 فقط بسته‌های آماده\n🎯 فقط یک بسته\nمبلغ دلخواه فقط توی حالت اول هدیه می‌گیره؛ کپشن‌های کاربر هم خودشون این رو می‌گن.",
             ],
             'topupdisc_auto_actions' => [
                 'label' => '⚙️ عملیات',
@@ -15320,8 +15330,15 @@ if (!function_exists('topup_disc_auto_info_text')) {
         }
         $lines = ['🎁 تخفیف خودکار — بدون نیاز به کد'];
         foreach ($autos as $gw => $a) {
+            // limited to packages this gateway has none of: nothing to announce
+            if (!topup_disc_qualifies($lang, $gw, $a, PHP_INT_MAX)) {
+                continue;
+            }
             $val = (($a['mode'] ?? 'percent') === 'fixed') ? money($a['value']) : ('٪' . rtrim(rtrim(number_format((float) $a['value'], 2, '.', ','), '0'), '.'));
-            $lines[] = '• ' . topup_disc_gateway_label($gw, $textbotlang) . ': ' . $val . topup_disc_min_suffix($a, $textbotlang);
+            $lines[] = '• ' . topup_disc_gateway_label($gw, $textbotlang) . ': ' . $val . topup_disc_min_suffix($a, $textbotlang) . topup_disc_scope_suffix($a, $textbotlang, $lang);
+        }
+        if (count($lines) === 1) {
+            return 'در حال حاضر تخفیف خودکاری فعال نیست.';
         }
         $exp = 0;
         foreach ($autos as $a) {
@@ -15364,7 +15381,9 @@ if (!function_exists('topup_disc_method_caption')) {
         $autos = topup_disc_live_autos($lang);
         $eligibleAutos = [];
         foreach ($autos as $gw => $a) {
-            if (topup_disc_auto_eligible($userId, $lang, $gw, $a)) {
+            // a discount limited to packages this gateway has none of would
+            // announce a gift nobody can get
+            if (topup_disc_auto_eligible($userId, $lang, $gw, $a) && topup_disc_qualifies($lang, $gw, $a, PHP_INT_MAX)) {
                 $eligibleAutos[$gw] = $a;
             }
         }
@@ -15377,7 +15396,14 @@ if (!function_exists('topup_disc_method_caption')) {
             }
             $g = topup_disc_group_live($lang, $grp);
             if ($g !== null && topup_disc_group_eligible($userId, $lang, $grp, $g)) {
-                $eligibleGroups[$grp] = $g;
+                // limited to packages: it counts if any gateway it covers has one
+                $reach = topup_disc_applies($g)[0] === 'all';
+                foreach (array_keys(topup_disc_scope_members($grp, $lang, $textbotlang)) as $mk) {
+                    $reach = $reach || topup_disc_qualifies($lang, $mk, $g, PHP_INT_MAX);
+                }
+                if ($reach) {
+                    $eligibleGroups[$grp] = $g;
+                }
             }
         }
         if (!empty($eligibleAutos) || !empty($eligibleGroups)) {
@@ -15387,7 +15413,7 @@ if (!function_exists('topup_disc_method_caption')) {
                 $perUser = intval($g['limitPerUser'] ?? 0);
                 $autoLines[] = topup_disc_render_block('users.Balance.topupDiscAutoLine', $textbotlang, [
                     '{gateway}' => topup_disc_scope_label($grp, $textbotlang, $lang),
-                    '{value}' => topup_disc_admin_value_label($g, $lang) . topup_disc_min_suffix($g, $textbotlang, $lang),
+                    '{value}' => topup_disc_admin_value_label($g, $lang) . topup_disc_min_suffix($g, $textbotlang, $lang) . topup_disc_scope_suffix($g, $textbotlang, $lang),
                     '{uses}' => topup_disc_uses_text($perUser, $perUser > 0 ? topup_disc_group_user_count($userId, $lang, $grp) : 0, $textbotlang),
                 ]);
                 $e = intval($g['expiry'] ?? 0);
@@ -15399,7 +15425,7 @@ if (!function_exists('topup_disc_method_caption')) {
                 $perUser = intval($a['limitPerUser'] ?? 0);
                 $autoLines[] = topup_disc_render_block('users.Balance.topupDiscAutoLine', $textbotlang, [
                     '{gateway}' => topup_disc_gateway_label($gw, $textbotlang, $lang),
-                    '{value}' => topup_disc_admin_value_label($a, $lang) . topup_disc_min_suffix($a, $textbotlang, $lang),
+                    '{value}' => topup_disc_admin_value_label($a, $lang) . topup_disc_min_suffix($a, $textbotlang, $lang) . topup_disc_scope_suffix($a, $textbotlang, $lang),
                     '{uses}' => topup_disc_uses_text($perUser, $perUser > 0 ? topup_disc_auto_user_count($userId, $lang, $gw) : 0, $textbotlang),
                 ]);
                 $e = intval($a['expiry'] ?? 0);
@@ -15510,7 +15536,15 @@ if (!function_exists('topup_disc_caption_line')) {
     // $amount is optional: when given, a percent discount can also state the
     // concrete bonus for that specific package.
     // $lang: the language the discount belongs to, for its currency and names
+    // A discount limited to the ready-made packages (or to one of them) says so
+    // after the line - except inside the invoice, where the amount is already
+    // one of them.
     function topup_disc_caption_line(array $disc, $textbotlang, $amount = null, $forPackage = false, $lang = 'fa')
+    {
+        $line = topup_disc_caption_line_base($disc, $textbotlang, $amount, $forPackage, $lang);
+        return $forPackage ? $line : $line . topup_disc_scope_suffix($disc, $textbotlang, $lang);
+    }
+    function topup_disc_caption_line_base(array $disc, $textbotlang, $amount = null, $forPackage = false, $lang = 'fa')
     {
         $cur = currency_for_lang($lang);
         $value = $disc['value'] ?? 0;
@@ -15586,10 +15620,58 @@ if (!function_exists('topup_disc_caption_block')) {
         // with a minimum would hide the very line that announces that minimum
         $eff = topup_disc_effective($userId, $lang, $gatewayKey, $amount === null ? PHP_INT_MAX : $amount);
         if ($eff === null) {
-            return '';
+            // a discount limited to the ready-made packages that this very
+            // amount is not one of: the invoice says why it carries no gift
+            return ($forPackage && $amount !== null) ? topup_disc_scope_note($userId, $lang, $gatewayKey, $textbotlang, $amount) : '';
         }
         $line = topup_disc_caption_line($eff['disc'], $textbotlang, $amount, $forPackage, $lang);
         return "\n\n<blockquote><b>" . htmlspecialchars($line, ENT_QUOTES) . "</b></blockquote>";
+    }
+}
+if (!function_exists('topup_disc_scope_note')) {
+    // 📦 The quote that tells a customer why an amount earns no gift: an
+    // automatic discount is on for them, but limited to the ready-made packages
+    // (or to one of them) and this is not it. With $amount, the invoice's own
+    // quote; without, the amount screen where a figure is about to be typed.
+    // '' when no such discount stands in the way.
+    function topup_disc_scope_note($userId, $lang, $gatewayKey, $textbotlang, $amount = null)
+    {
+        $unknown = $amount === null;
+        $probe = $unknown ? PHP_INT_MAX : $amount;
+        foreach (topup_disc_auto_candidates($userId, $lang, $gatewayKey, $probe) as $cand) {
+            [$mode, $pkg] = topup_disc_applies($cand['disc']);
+            if ($mode === 'all') {
+                continue;
+            }
+            // typed by hand, an amount is never "the package"; with a real
+            // amount, only a filter that actually turned it away
+            if ($unknown ? !topup_disc_qualifies($lang, $gatewayKey, $cand['disc'], PHP_INT_MAX)
+                : topup_disc_qualifies($lang, $gatewayKey, $cand['disc'], $amount)) {
+                continue;
+            }
+            $hc = is_array($textbotlang) ? ($textbotlang['hardcoded'] ?? []) : [];
+            $tpl = $mode === 'packages'
+                ? ($hc['topupDiscScopePackagesNote'] ?? 'ℹ️ این مبلغ جزو بسته‌های آماده نیست، برای همین هدیه‌ای نمی‌گیری. برای گرفتن هدیه یکی از بسته‌ها رو انتخاب کن.')
+                : ($hc['topupDiscScopeOneNote'] ?? 'ℹ️ هدیه فقط برای بسته‌ی {amount} فعاله؛ برای این مبلغ هدیه‌ای اضافه نمی‌شه.');
+            $text = strtr((string) $tpl, ['{amount}' => $pkg !== '' ? money($pkg, currency_for_lang($lang)) : '']);
+            return "\n\n<blockquote>" . htmlspecialchars($text, ENT_QUOTES) . "</blockquote>";
+        }
+        return '';
+    }
+}
+if (!function_exists('topup_disc_custom_block')) {
+    // The discount quote under the 💵 مبلغ دلخواه screen: what a figure typed by
+    // hand can earn - a code, or an automatic discount with no filter - and, when
+    // an automatic one is limited to the ready-made packages, the note saying so.
+    function topup_disc_custom_block($userId, $lang, $gatewayKey, $textbotlang)
+    {
+        $out = '';
+        $eff = topup_disc_effective($userId, $lang, $gatewayKey, PHP_INT_MAX, null, 'custom');
+        if ($eff !== null) {
+            $line = topup_disc_caption_line($eff['disc'], $textbotlang, null, false, $lang);
+            $out .= "\n\n<blockquote><b>" . htmlspecialchars($line, ENT_QUOTES) . "</b></blockquote>";
+        }
+        return $out . topup_disc_scope_note($userId, $lang, $gatewayKey, $textbotlang);
     }
 }
 if (!function_exists('topup_disc_admin_status_label')) {
@@ -15668,7 +15750,7 @@ if (!function_exists('topup_disc_gw_summary')) {
         $liveAuto = !empty($auto['enabled']) && floatval($auto['value'] ?? 0) > 0
             && (intval($auto['expiry'] ?? 0) === 0 || time() < intval($auto['expiry']));
         if ($liveAuto) {
-            $bits[] = topup_disc_admin_value_label($auto, $lang);
+            $bits[] = topup_disc_admin_value_label($auto, $lang) . (topup_disc_applies($auto)[0] !== 'all' ? ' 📦' : '');
         }
         $codes = topup_disc_codes_for($lang, $key);
         $activeCodes = 0;
@@ -15688,7 +15770,7 @@ if (!function_exists('topup_disc_gw_list_payload')) {
     function topup_disc_group_summary($lang, $group)
     {
         $g = topup_disc_group_live($lang, $group);
-        return $g === null ? '' : topup_disc_admin_value_label($g, $lang);
+        return $g === null ? '' : topup_disc_admin_value_label($g, $lang) . (topup_disc_applies($g)[0] !== 'all' ? ' 📦' : '');
     }
     // Only the discount itself, for a button label - no code counts, no
     // gateway counts. topup_disc_gw_summary() stays the fuller string the
@@ -15698,7 +15780,7 @@ if (!function_exists('topup_disc_gw_list_payload')) {
         $auto = topup_disc_auto_for($lang, $key);
         $live = !empty($auto['enabled']) && floatval($auto['value'] ?? 0) > 0
             && (intval($auto['expiry'] ?? 0) === 0 || time() < intval($auto['expiry']));
-        return $live ? topup_disc_admin_value_label($auto, $lang) : '';
+        return $live ? topup_disc_admin_value_label($auto, $lang) . (topup_disc_applies($auto)[0] !== 'all' ? ' 📦' : '') : '';
     }
     // the category screen: the discount for the whole family, then its gateways
     function topup_disc_group_list_payload($lang, $group, $textbotlang)
@@ -15959,6 +16041,115 @@ if (!function_exists('topup_disc_bulk_off')) {
         return $n;
     }
 }
+if (!function_exists('topup_disc_pick_list')) {
+    // The ready-made amounts an admin can name for «فقط یک بسته»: this gateway's
+    // own packages (their order), or - for a category or every gateway - the
+    // amounts of the gateways it covers, each once, smallest first. The index
+    // into this list is what the picker's buttons carry.
+    function topup_disc_pick_list($lang, $key, $textbotlang)
+    {
+        $scope = topup_disc_scope_of_key($key);
+        $keys = $scope === null ? [$key] : array_keys(topup_disc_scope_members($scope, $lang, $textbotlang));
+        $seen = [];
+        $list = [];
+        foreach ($keys as $k) {
+            foreach (topup_packages_for($lang, $k) as $p) {
+                $a = (string) ($p['amount'] ?? '');
+                if ($a === '' || (float) $a <= 0 || isset($seen[(string) (float) $a])) {
+                    continue;
+                }
+                $seen[(string) (float) $a] = true;
+                $list[] = $a;
+            }
+        }
+        if ($scope !== null) {
+            usort($list, fn($x, $y) => (float) $x <=> (float) $y);
+        }
+        return $list;
+    }
+}
+if (!function_exists('topup_disc_applies_warning')) {
+    // what is wrong with a 📦 filter that, as it stands, gives nobody a gift
+    function topup_disc_applies_warning($lang, $key, array $disc, $textbotlang): string
+    {
+        [$mode, $pkg] = topup_disc_applies($disc);
+        if ($mode === 'all') {
+            return '';
+        }
+        $list = topup_disc_pick_list($lang, $key, $textbotlang);
+        if (!$list) {
+            return "\n⚠️ <b>" . (topup_disc_scope_of_key($key) !== null ? 'هیچ‌کدوم از درگاه‌های این دسته بسته‌ی آماده ندارن' : 'این درگاه بسته‌ی آماده نداره')
+                . "</b> — تا توی 🏦 بسته‌های شارژ بسته نسازی، این تخفیف به کسی اعمال نمی‌شه.\n";
+        }
+        if ($mode !== 'one') {
+            return '';
+        }
+        if ($pkg === '') {
+            return "\n⚠️ <b>هنوز بسته‌ای انتخاب نشده</b> — تا انتخاب نکنی این تخفیف به کسی اعمال نمی‌شه.\n";
+        }
+        foreach ($list as $a) {
+            if (abs((float) $a - (float) $pkg) < 0.005) {
+                return '';
+            }
+        }
+        return "\n⚠️ <b>بسته‌ی انتخاب‌شده دیگه توی لیست بسته‌ها نیست</b> (مبلغش عوض شده یا حذف شده) — دوباره انتخابش کن.\n";
+    }
+}
+if (!function_exists('topup_disc_applies_rows')) {
+    // The three-way switch under an automatic discount's settings. $prefix is the
+    // screen's own callback family: 'tpdauto' (a gateway) or 'dsgrp' (a category
+    // / every gateway); $k its key.
+    function topup_disc_applies_rows($prefix, $lang, $k, array $disc): array
+    {
+        [$mode, $pkg] = topup_disc_applies($disc);
+        $btn = fn($m, $text) => [
+            'text' => ($mode === $m ? '✅ ' : '') . $text,
+            'callback_data' => "{$prefix}app:{$lang}:{$k}:{$m}",
+            'style' => $mode === $m ? 'success' : 'primary',
+        ];
+        return [
+            // the white divider every section of this screen has: tapping it says what the rows below do
+            [['text' => bt_section_meta('topupdisc_auto_apply')['label'], 'callback_data' => 'bt_sep|topupdisc_auto_apply']],
+            [$btn('all', '💰 همه‌ی مبلغ‌ها'), $btn('packages', '📦 فقط بسته‌های آماده')],
+            [$btn('one', '🎯 فقط یک بسته' . ($mode === 'one' && $pkg !== '' ? ' (' . money($pkg, currency_for_lang($lang)) . ')' : ''))],
+        ];
+    }
+}
+if (!function_exists('topup_disc_pick_payload')) {
+    // the picker behind «🎯 فقط یک بسته»: the packages to choose from, the chosen
+    // one ticked. $key is a gateway's key or a scope's ('@rial', '@all').
+    function topup_disc_pick_payload($lang, $key, $textbotlang)
+    {
+        $scope = topup_disc_scope_of_key($key);
+        $disc = $scope === null ? topup_disc_auto_for($lang, $key) : topup_disc_group_for($lang, $scope);
+        $chosen = topup_disc_applies($disc)[1];
+        $list = topup_disc_pick_list($lang, $key, $textbotlang);
+        $prefix = $scope === null ? 'tpdautopk' : 'dsgrppk';
+        $k = $scope ?? $key;
+        $info = "🎯 <b>فقط یک بسته</b> — " . topup_disc_gateway_label($key, $textbotlang, $lang) . "\n➖➖➖➖➖➖➖➖➖➖\n";
+        $info .= "هدیه‌ی خودکار فقط وقتی کاربر <b>همین بسته</b> رو انتخاب کنه اعمال می‌شه؛ بقیه‌ی بسته‌ها و مبلغ دلخواه هدیه‌ای نمی‌گیرن.\n";
+        $info .= $list ? "\n👇 بسته رو انتخاب کن:" : "\n⚠️ بسته‌ی آماده‌ای پیدا نشد — اول توی 🏦 بسته‌های شارژ بسازشون.";
+        $kb = ['inline_keyboard' => []];
+        $row = [];
+        foreach ($list as $i => $a) {
+            $on = $chosen !== '' && abs((float) $a - (float) $chosen) < 0.005;
+            $row[] = [
+                'text' => ($on ? '✅ ' : '') . money($a, currency_for_lang($lang)),
+                'callback_data' => "{$prefix}:{$lang}:{$k}:{$i}",
+                'style' => $on ? 'success' : 'primary',
+            ];
+            if (count($row) === 2) {
+                $kb['inline_keyboard'][] = $row;
+                $row = [];
+            }
+        }
+        if ($row) {
+            $kb['inline_keyboard'][] = $row;
+        }
+        $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت', 'callback_data' => $scope === null ? "tpdauto:{$lang}:{$key}" : "dsgrpauto:{$lang}:{$scope}", 'style' => 'danger']];
+        return [$info, json_encode($kb)];
+    }
+}
 if (!function_exists('topup_disc_hub_payload')) {
     function topup_disc_hub_payload($lang, $key, $textbotlang)
     {
@@ -15970,7 +16161,9 @@ if (!function_exists('topup_disc_hub_payload')) {
         $info .= "کاربر همون مبلغ رو پرداخت می‌کنه، ولی بیشتر شارژ می‌شه.\n";
         $info .= "🎟 کد تخفیف رو کاربر توی «💰 افزایش موجودی» با دکمه‌ی «🎁 کد تخفیف دارم» وارد می‌کنه.\n";
         $info .= "➖➖➖➖➖➖➖➖➖➖\n";
-        $info .= "🎯 تخفیف خودکار (بدون کد): " . ($autoOn ? topup_disc_admin_value_label($auto, $lang) . ' ✅' : 'خاموش') . "\n";
+        $info .= "🎯 تخفیف خودکار (بدون کد): " . ($autoOn
+            ? topup_disc_admin_value_label($auto, $lang) . ' ✅' . (topup_disc_applies($auto)[0] !== 'all' ? ' · 📦 ' . topup_disc_applies_label($auto, $lang) : '')
+            : 'خاموش') . "\n";
         $info .= "🎟 کدهای تخفیف: " . count($codes) . "\n";
         if (!$autoOn && floatval($auto['value'] ?? 0) > 0) {
             $info .= "\n⚠️ <b>تخفیف خودکار مقدار داره ولی خاموشه</b> — روشنش کن تا اعمال بشه.\n";
@@ -16036,6 +16229,7 @@ if (!function_exists('topup_disc_auto_payload')) {
         $info .= "انقضا: " . ($autoExp > 0 ? jdate('Y/m/d - H:i', $autoExp) : 'ندارد') . "\n";
         $info .= "هر کاربر: " . ($perUser > 0 ? "{$perUser} بار" : 'نامحدود') . " (پیش‌فرض: ۱ بار)\n";
         $info .= "فقط کاربران جدید: " . ($newOnly ? 'بله' : 'خیر') . "\n";
+        $info .= "📦 اعمال روی: <b>" . topup_disc_applies_label($auto, $lang) . "</b>\n";
         $resetAt = intval($auto['resetAt'] ?? 0);
         if ($resetAt > 0) {
             $info .= "👥 آخرین ریست سهمیه: " . jdate('Y/m/d - H:i', $resetAt) . " (استفاده‌های قبل از این تاریخ حساب نمی‌شن)\n";
@@ -16046,6 +16240,7 @@ if (!function_exists('topup_disc_auto_payload')) {
         if (!$on && $val > 0) {
             $info .= "\n⚠️ <b>مقدار ست شده ولی تخفیف خاموشه</b> — تا روشنش نکنی به کاربر چیزی اضافه نمی‌شه.\n";
         }
+        $info .= topup_disc_applies_warning($lang, $key, $auto, $textbotlang);
         if ($on && $val > 0) {
             $info .= "\n👁 چیزی که کاربر می‌بینه:\n<blockquote><b>"
                 . htmlspecialchars(topup_disc_caption_line($auto, lang_tab_texts($lang), null, false, $lang), ENT_QUOTES) . "</b></blockquote>";
@@ -16066,6 +16261,10 @@ if (!function_exists('topup_disc_auto_payload')) {
         $kb['inline_keyboard'][] = [['text' => '⏳ مدت اعتبار', 'callback_data' => "tpdautoexp:{$lang}:{$key}", 'style' => $autoExp > 0 ? 'success' : 'primary']];
         $kb['inline_keyboard'][] = [['text' => '👤 سهمیه هر کاربر' . ($perUser > 0 ? " ({$perUser} بار)" : ''), 'callback_data' => "tpdautolimit:{$lang}:{$key}", 'style' => $perUser > 0 ? 'success' : 'primary']];
         $kb['inline_keyboard'][] = [['text' => ($newOnly ? '✅ ' : '') . '🆕 فقط کاربران جدید', 'callback_data' => "tpdautonewonly:{$lang}:{$key}", 'style' => $newOnly ? 'success' : 'primary']];
+        // 📦 which amounts earn it: any, only the ready-made packages, or one of them
+        foreach (topup_disc_applies_rows('tpdauto', $lang, $key, $auto) as $applyRow) {
+            $kb['inline_keyboard'][] = $applyRow;
+        }
         // white divider - everything above edits a SETTING, everything below
         // is a one-tap action with an immediate, wider effect (no confirm
         // step, matching this hub's own existing convention for such buttons)
@@ -16105,6 +16304,7 @@ if (!function_exists('topup_disc_group_auto_payload')) {
         $info .= "انقضا: " . ($exp > 0 ? jdate('Y/m/d - H:i', $exp) : 'ندارد') . "\n";
         $info .= "هر کاربر: " . ($perUser > 0 ? "{$perUser} بار" : 'نامحدود') . " (پیش‌فرض: ۱ بار)\n";
         $info .= "فقط کاربران جدید: " . ($newOnly ? 'بله' : 'خیر') . "\n";
+        $info .= "📦 اعمال روی: <b>" . topup_disc_applies_label($g, $lang) . "</b>\n";
         $info .= "درگاه‌های این دسته: " . implode('، ', array_map(fn($l) => trim(strip_tags((string) $l)), $members)) . "\n";
         $resetAt = intval($g['resetAt'] ?? 0);
         if ($resetAt > 0) {
@@ -16116,6 +16316,7 @@ if (!function_exists('topup_disc_group_auto_payload')) {
         if (!$on && $val > 0) {
             $info .= "\n⚠️ <b>مقدار ست شده ولی تخفیف خاموشه</b> — تا روشنش نکنی به کاربر چیزی اضافه نمی‌شه.\n";
         }
+        $info .= topup_disc_applies_warning($lang, topup_disc_scope_key($group), $g, $textbotlang);
         if ($on && $val > 0) {
             $preview = $g;
             $preview['group'] = $group;
@@ -16138,6 +16339,10 @@ if (!function_exists('topup_disc_group_auto_payload')) {
         $kb['inline_keyboard'][] = [['text' => '⏳ مدت اعتبار', 'callback_data' => "dsgrpexp:{$lang}:{$group}", 'style' => $exp > 0 ? 'success' : 'primary']];
         $kb['inline_keyboard'][] = [['text' => '👤 سهمیه هر کاربر' . ($perUser > 0 ? " ({$perUser} بار)" : ''), 'callback_data' => "dsgrplimit:{$lang}:{$group}", 'style' => $perUser > 0 ? 'success' : 'primary']];
         $kb['inline_keyboard'][] = [['text' => ($newOnly ? '✅ ' : '') . '🆕 فقط کاربران جدید', 'callback_data' => "dsgrpnewonly:{$lang}:{$group}", 'style' => $newOnly ? 'success' : 'primary']];
+        // 📦 which amounts earn it: any, only the ready-made packages, or one of them
+        foreach (topup_disc_applies_rows('dsgrp', $lang, $group, $g) as $applyRow) {
+            $kb['inline_keyboard'][] = $applyRow;
+        }
         $kb['inline_keyboard'][] = [['text' => bt_section_meta('topupdisc_auto_actions')['label'], 'callback_data' => 'bt_sep|topupdisc_auto_actions']];
         $kb['inline_keyboard'][] = [['text' => '👥 ریست سهمیه‌ی استفاده‌شده', 'callback_data' => "dsgrpresetusage:{$lang}:{$group}", 'style' => 'danger']];
         $kb['inline_keyboard'][] = [['text' => '🔄 ریست تنظیمات به پیش‌فرض', 'callback_data' => "dsgrpreset:{$lang}:{$group}", 'style' => 'danger']];
@@ -16235,6 +16440,141 @@ if (!function_exists('topup_disc_auto_for')) {
         return is_array($a) ? $a : [];
     }
 }
+if (!function_exists('topup_disc_applies_clean')) {
+    // 📦 The filter an automatic discount (a gateway's, a category's, the one for
+    // every gateway) can carry - codes never do. 'all' is every amount, how
+    // they have always worked; 'packages' only the ready-made amounts of the
+    // gateway being paid with; 'one' only one of them, named by its amount.
+    // Stored as appliesTo / appliesAmount and written only when it is not 'all',
+    // so a discount saved before this existed reads exactly as it did.
+    function topup_disc_applies_clean(array $in): array
+    {
+        $mode = (string) ($in['appliesTo'] ?? 'all');
+        if ($mode === 'packages') {
+            return ['appliesTo' => 'packages'];
+        }
+        if ($mode === 'one') {
+            $out = ['appliesTo' => 'one'];
+            $amt = trim((string) ($in['appliesAmount'] ?? ''));
+            if ($amt !== '' && is_numeric($amt) && (float) $amt > 0) {
+                $out['appliesAmount'] = $amt;
+            }
+            return $out;
+        }
+        return [];
+    }
+}
+if (!function_exists('topup_disc_applies')) {
+    // [mode, amount] of a stored discount: ['all', ''], ['packages', ''] or
+    // ['one', '500000'] (amount '' while none has been picked)
+    function topup_disc_applies(array $disc): array
+    {
+        $c = topup_disc_applies_clean($disc);
+        return [$c['appliesTo'] ?? 'all', (string) ($c['appliesAmount'] ?? '')];
+    }
+}
+if (!function_exists('topup_disc_amount_unknown')) {
+    // the stand-in amount a caption is asked with before any amount is picked
+    function topup_disc_amount_unknown($amount): bool
+    {
+        return $amount === PHP_INT_MAX || (is_numeric($amount) && (float) $amount >= 9.0e18);
+    }
+}
+if (!function_exists('topup_packages_match')) {
+    // The ready-made package an amount stands for, in this language's list for
+    // this gateway: that package's amount (a float), or null when the amount is
+    // none of them. Exact - except card-to-card with the random amount on: such
+    // an invoice is the package plus a random 100-999 (card_invoice_build), and
+    // that is still the package.
+    function topup_packages_match($lang, $gatewayKey, $amount)
+    {
+        $amount = (float) $amount;
+        $slack = 0.0;
+        if ($gatewayKey === 'card') {
+            $setting = select("setting", "*", null, null, "select");
+            if (($setting['cardRandomAmount'] ?? '0') === '1') {
+                $slack = 999.0;
+            }
+        }
+        $found = null;
+        foreach (topup_packages_for($lang, $gatewayKey) as $p) {
+            $pa = (float) ($p['amount'] ?? 0);
+            if ($pa <= 0) {
+                continue;
+            }
+            $d = $amount - $pa;
+            if ((abs($d) < 0.005 || ($d > 0 && $d <= $slack)) && ($found === null || $pa > $found)) {
+                $found = $pa;
+            }
+        }
+        return $found;
+    }
+}
+if (!function_exists('topup_disc_qualifies')) {
+    // Does this discount's 📦 filter let $amount through on this gateway?
+    // 'all' always. 'packages': only a ready-made amount of this gateway. 'one':
+    // only that one package. With no amount picked yet (the caption on the
+    // amount screens) the question is whether the offer can be taken up AT ALL
+    // here - a filter naming no package this gateway has would otherwise
+    // announce a gift nobody can get.
+    function topup_disc_qualifies($lang, $gatewayKey, array $disc, $amount): bool
+    {
+        [$mode, $pkg] = topup_disc_applies($disc);
+        if ($mode === 'all') {
+            return true;
+        }
+        if (topup_disc_amount_unknown($amount)) {
+            $list = topup_packages_for($lang, $gatewayKey);
+            if ($mode === 'packages') {
+                return !empty($list);
+            }
+            foreach ($list as $p) {
+                if ($pkg !== '' && abs((float) ($p['amount'] ?? 0) - (float) $pkg) < 0.005) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        $hit = topup_packages_match($lang, $gatewayKey, $amount);
+        if ($hit === null) {
+            return false;
+        }
+        return $mode === 'packages' || ($pkg !== '' && abs($hit - (float) $pkg) < 0.005);
+    }
+}
+if (!function_exists('topup_disc_applies_label')) {
+    // the filter in words, for an admin screen
+    function topup_disc_applies_label(array $disc, $lang = 'fa'): string
+    {
+        [$mode, $pkg] = topup_disc_applies($disc);
+        if ($mode === 'packages') {
+            return 'فقط بسته‌های آماده';
+        }
+        if ($mode === 'one') {
+            return $pkg !== '' ? 'فقط بسته‌ی ' . money($pkg, currency_for_lang($lang)) : 'فقط یک بسته (هنوز انتخاب نشده)';
+        }
+        return 'همه‌ی مبلغ‌ها';
+    }
+}
+if (!function_exists('topup_disc_scope_suffix')) {
+    // what the customer reads after the discount's value when it is limited to
+    // the ready-made packages (or to one of them); '' for a discount that is not.
+    // Editable in 🎨 شخصی‌سازی, with the language file as the fallback.
+    function topup_disc_scope_suffix(array $disc, $textbotlang, $lang = 'fa'): string
+    {
+        [$mode, $pkg] = topup_disc_applies($disc);
+        if ($mode === 'all' || ($mode === 'one' && $pkg === '')) {
+            return '';
+        }
+        $hc = is_array($textbotlang) ? ($textbotlang['hardcoded'] ?? []) : [];
+        $tpl = $mode === 'packages'
+            ? ($hc['topupDiscScopePackages'] ?? '📦 (فقط روی بسته‌های آماده)')
+            : ($hc['topupDiscScopeOne'] ?? '📦 (فقط روی بسته‌ی {amount})');
+        // always set off from the sentence before it: a text saved from 🎨 is
+        // trimmed, so a leading space cannot be part of what the admin writes
+        return ' ' . ltrim(strtr((string) $tpl, ['{amount}' => $pkg !== '' ? money($pkg, currency_for_lang($lang)) : '']));
+    }
+}
 if (!function_exists('topup_disc_auto_set')) {
     function topup_disc_auto_set($lang, $gatewayKey, array $auto)
     {
@@ -16248,6 +16588,7 @@ if (!function_exists('topup_disc_auto_set')) {
         $clean['limitPerUser'] = max(0, intval($auto['limitPerUser'] ?? 1));
         $clean['newUserOnly'] = !empty($auto['newUserOnly']);
         $clean['resetAt'] = max(0, intval($auto['resetAt'] ?? 0));
+        $clean += topup_disc_applies_clean($auto);
         $m[$lang][$gatewayKey]['auto'] = $clean;
         topup_disc_save($m);
     }
@@ -16315,7 +16656,7 @@ if (!function_exists('topup_disc_group_set')) {
                 'limitPerUser' => max(0, intval($auto['limitPerUser'] ?? 1)),
                 'newUserOnly' => !empty($auto['newUserOnly']),
                 'resetAt' => max(0, intval($auto['resetAt'] ?? 0)),
-            ],
+            ] + topup_disc_applies_clean($auto),
             'codes' => $codes,
         ];
         topup_disc_group_save($m);
@@ -16740,17 +17081,15 @@ if (!function_exists('topup_disc_bonus_of')) {
         return round(($amount * $value) / 100, 2);
     }
 }
-if (!function_exists('topup_disc_effective')) {
-    // resolves which discount actually applies for this user+gateway+amount.
-    // Both an activated code and a codeless auto-discount may qualify; the one
-    // giving the LARGER bonus wins (never stacked, never silently worse).
-    // Returns ['source'=>'code'|'auto', 'bonus'=>int, 'disc'=>[...], 'code'=>string]
-    // or null when nothing applies. $exceptOrder: the order being credited (see
-    // topup_disc_user_has_any_paid_topup).
-    function topup_disc_effective($userId, $lang, $gatewayKey, $amount, $exceptOrder = null)
+if (!function_exists('topup_disc_auto_candidates')) {
+    // The codeless discounts - the gateway's own, its category's, the one for
+    // every gateway - that are live and open to this user right now, each with
+    // the bonus it would add on $amount. Their 📦 filter is NOT applied here:
+    // topup_disc_effective() applies it, and the invoice note asks which of
+    // these it turned away.
+    function topup_disc_auto_candidates($userId, $lang, $gatewayKey, $amount, $exceptOrder = null)
     {
         $candidates = [];
-        $adminBypass = topup_disc_admin_restrictions_bypassed($userId);
         $auto = topup_disc_auto_for($lang, $gatewayKey);
         $autoLive = !empty($auto['enabled'])
             && (intval($auto['expiry'] ?? 0) === 0 || time() < intval($auto['expiry']));
@@ -16779,6 +17118,31 @@ if (!function_exists('topup_disc_effective')) {
                     $candidates[] = ['source' => 'group', 'bonus' => $b, 'disc' => $gAuto, 'code' => ''];
                 }
             }
+        }
+        return $candidates;
+    }
+}
+if (!function_exists('topup_disc_effective')) {
+    // resolves which discount actually applies for this user+gateway+amount.
+    // Both an activated code and a codeless auto-discount may qualify; the one
+    // giving the LARGER bonus wins (never stacked, never silently worse).
+    // Returns ['source'=>'code'|'auto', 'bonus'=>int, 'disc'=>[...], 'code'=>string]
+    // or null when nothing applies. $exceptOrder: the order being credited (see
+    // topup_disc_user_has_any_paid_topup).
+    // $scope is what an automatic discount's 📦 filter is held against:
+    // 'filter' (the default) the amount itself, 'custom' an amount typed by hand
+    // - so a discount limited to the ready-made packages is out - and 'ignore'
+    // no filter at all.
+    function topup_disc_effective($userId, $lang, $gatewayKey, $amount, $exceptOrder = null, $scope = 'filter')
+    {
+        $candidates = [];
+        $adminBypass = topup_disc_admin_restrictions_bypassed($userId);
+        foreach (topup_disc_auto_candidates($userId, $lang, $gatewayKey, $amount, $exceptOrder) as $cand) {
+            if ($scope === 'custom' ? topup_disc_applies($cand['disc'])[0] !== 'all'
+                : ($scope === 'filter' && !topup_disc_qualifies($lang, $gatewayKey, $cand['disc'], $amount))) {
+                continue;
+            }
+            $candidates[] = $cand;
         }
         $active = topup_disc_user_active($userId);
         if ($active && topup_disc_code_covers($active['gateway'] ?? '', $gatewayKey) && (string) $active['lang'] === (string) $lang) {
