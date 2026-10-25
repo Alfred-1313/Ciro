@@ -520,4 +520,16 @@ return [
             . "This button used to be fixed; only the ❌ Close under it could be changed. Now its name, emoji (even premium), colour, side (left/right) and hiding are set separately for each language, and a reset puts it back. If both buttons of the page are hidden, the message goes out without buttons.\n"
             . "ℹ️ Until you rename it, it keeps the name of the main menu's «Top up balance» button and no colour (as before).</blockquote>",
     ],
+    [
+        'n' => 37,
+        'date' => '2026-10-25',
+        'fa' => "<blockquote>🗓 <b>فیلتر زمان در همه‌ی لیست‌های وب‌پنل + رفتن مستقیم به پروفایل کاربر</b>\n"
+            . "📍 وب‌پنل ← داشبورد، کاربران، سفارشات، تراکنش‌ها، سرویس‌ها و صفحه‌ی هر کاربر؛ دکمه‌ی «همه‌ی زمان‌ها» بالای هر لیست\n"
+            . "🗓 <b>فیلتر زمان</b>: یک ضربه روی «امروز»، «دیروز»، «۲ / ۷ / ۳۰ روز اخیر»، «این ماه» یا «ماه قبل»؛ یا «آخرین [N] روز» با هر عددی؛ یا یک بازه از یک روز تا روز دیگر روی تقویم (شمسی یا میلادی، هر روز هر دو تاریخ را دارد و انتخابت یادش می‌ماند). می‌شود فقط «از» یا فقط «تا» را داد. فیلتر با جستجو، وضعیت، ترتیب، زبان و صفحه‌بندی هم‌زمان کار می‌کند و آدرسش قابل ذخیره و فرستادن است. در داشبورد آمار و آخرین‌ها، و در صفحه‌ی هر کاربر لیست سفارش‌ها، تراکنش‌ها و زیرمجموعه‌هایش همان بازه را نشان می‌دهند (اعداد بالای صفحه‌ی کاربر همان کل می‌مانند).\n"
+            . "👤 <b>پروفایل کاربر</b>: در لیست کاربران یک دکمه‌ی «پروفایل» با نوشته کنار هر ردیف آمد، آیدی و @یوزرنیم لینک‌اند، و وقتی در جستجو دقیقاً آیدی یا @یوزرنیم یک نفر را بنویسی، یک کارت «رفتن به پروفایل» بالای جدول می‌آید. آیدی کاربر در سفارشات، تراکنش‌ها، سرویس‌ها و داشبورد هم به پروفایلش می‌رود.</blockquote>",
+        'en' => "<blockquote>🗓 <b>A time filter on every list of the web panel + straight to a user's profile</b>\n"
+            . "📍 Web panel → Dashboard, Users, Orders, Transactions, Services and each user's page; the «All time» button above every list\n"
+            . "🗓 <b>Time filter</b>: one tap on «Today», «Yesterday», «Last 2 / 7 / 30 days», «This month» or «Last month»; or «Last [N] days» with any number; or a range from one day to another on a calendar (Persian or Gregorian - every day carries both dates, and your choice is remembered). Only «from» or only «until» works too. It combines with search, status, order, language and paging, and its address can be saved or sent. On the dashboard the figures and the latest lists, and on a user's page the orders, transactions and referrals lists, follow the range (the totals at the top of a user's page stay the totals).\n"
+            . "👤 <b>User profile</b>: the users list has a labelled «Profile» button on every row, the id and @username are links, and when what you search for is exactly one user's id or @username a «Go to the profile» card appears above the table. A user's id in Orders, Transactions, Services and the dashboard opens the profile too.</blockquote>",
+    ],
 ];

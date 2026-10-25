@@ -69,6 +69,7 @@ $brandMark = panel_brand_mark();
   <link rel="stylesheet" href="css/fonts.css?v=<?= (int) @filemtime(__DIR__ . '/../css/fonts.css') ?>">
   <link rel="stylesheet" href="css/style.css?v=<?= (int) @filemtime(__DIR__ . '/../css/style.css') ?>">
   <link rel="stylesheet" href="css/shab.css?v=<?= (int) @filemtime(__DIR__ . '/../css/shab.css') ?>">
+  <link rel="stylesheet" href="css/daterange.css?v=<?= (int) @filemtime(__DIR__ . '/../css/daterange.css') ?>">
   <script src="js/theme-init.js?v=<?= (int) @filemtime(__DIR__ . '/../js/theme-init.js') ?>"></script>
   <script>
     window.PANEL_I18N = <?= json_encode(

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/inc/config.php';
 require_once __DIR__ . '/inc/icons.php';
+require_once __DIR__ . '/inc/daterange.php';
 require_auth();
 
 $pageTitle = $textbotlang['panel']['servicesTitle'];
@@ -13,6 +14,11 @@ $page = max(1, (int) ($_GET['page'] ?? 1));
 $perPage = 30;
 $offset = ($page - 1) * $perPage;
 
+// 🗓 the time filter (?range=...)
+$dr = dr_read();
+$drParams = [];
+$drSQL = dr_cond($dr, dr_secs('time'), $drParams);
+
 $where = [];
 $params = [];
 if ($search !== '') {
@@ -22,6 +28,10 @@ if ($search !== '') {
 if ($status !== '') {
   $where[] = "status = ?";
   $params[] = $status;
+}
+if ($drSQL !== '') {
+  $where[] = $drSQL;
+  $params = array_merge($params, $drParams);
 }
 $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
@@ -60,6 +70,7 @@ include __DIR__ . '/inc/layout_head.php';
         <option value="pending" <?= $status === 'pending' ? 'selected' : '' ?>><?= $textbotlang['panel']['serviceColService'] ?></option>
         <option value="reject" <?= $status === 'reject' ? 'selected' : '' ?>><?= $textbotlang['panel']['serviceColStatus'] ?></option>
       </select>
+      <?= dr_control($dr) ?>
       <div class="search-box" style="min-width:240px">
         <?= icon('search', 14) ?>
         <input type="text" name="q" placeholder="<?= htmlspecialchars($textbotlang['panel']['serviceSearchServicePlaceholder']) ?>" value="<?= htmlspecialchars($search) ?>"
@@ -67,7 +78,7 @@ include __DIR__ . '/inc/layout_head.php';
         <button type="button" class="search-clear">✕</button>
         <button type="submit" class="search-btn"><?= $textbotlang['panel']['serviceColDate'] ?></button>
       </div>
-      <?php if ($search || $status): ?>
+      <?php if ($search || $status || $dr['active']): ?>
         <a href="service.php" class="btn-link" style="font-size:.78rem"><?= $textbotlang['panel']['serviceColPanel'] ?></a>
       <?php endif; ?>
     </form>
@@ -100,7 +111,7 @@ include __DIR__ . '/inc/layout_head.php';
                   <rect x="100" y="85" width="30" height="8" rx="4" fill="var(--bd)" />
                   <path d="M60 65 l10 10 l20-20" stroke="var(--ac)" stroke-width="3" stroke-linecap="round" fill="none" />
                 </svg>
-                <p><?= $search ? $textbotlang['panel']['serviceNoServiceFound'] : $textbotlang['panel']['serviceNoManualServiceYet'] ?></p>
+                <p><?= $dr['active'] ? $textbotlang['panel']['drNoneInRange'] : ($search ? $textbotlang['panel']['serviceNoServiceFound'] : $textbotlang['panel']['serviceNoManualServiceYet']) ?></p>
               </div>
             </td>
           </tr>
@@ -117,7 +128,7 @@ include __DIR__ . '/inc/layout_head.php';
             ?>
             <tr>
               <td class="cf"><?= $i++ ?></td>
-              <td class="cm"><?= htmlspecialchars($s['id_user'] ?? '—') ?></td>
+              <td class="cm"><?= user_link($s['id_user'] ?? '') ?></td>
               <td>
                 <?= !empty($s['username']) ? '<span class="cm" style="color:var(--ac)">@' . htmlspecialchars(trunc($s['username'], 18)) . '</span>' : '<span class="cf">—</span>' ?>
               </td>
@@ -135,7 +146,8 @@ include __DIR__ . '/inc/layout_head.php';
   <div class="tbl-foot">
     <span><?= number_format($total) ?> <?= $textbotlang['panel']['serviceDetailPanel'] ?> <?= $page ?> <?= $textbotlang['panel']['serviceCloseBtn'] ?> <?= $totalPages ?></span>
     <div class="pager">
-      <?php $qs = fn($p) => '?q=' . urlencode($search) . '&status=' . urlencode($status) . '&page=' . $p; ?>
+      <?php $drQ = $dr['active'] ? '&' . http_build_query(dr_params($dr)) : '';
+      $qs = fn($p) => '?q=' . urlencode($search) . '&status=' . urlencode($status) . $drQ . '&page=' . $p; ?>
       <a class="<?= $page <= 1 ? 'dis' : '' ?>" href="<?= $qs(max(1, $page - 1)) ?>">‹</a>
       <?php for ($p = max(1, $page - 2); $p <= min($totalPages, $page + 2); $p++): ?>
         <a class="<?= $p === $page ? 'cur' : '' ?>" href="<?= $qs($p) ?>"><?= $p ?></a>

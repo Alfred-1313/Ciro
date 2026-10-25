@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/inc/config.php';
 require_once __DIR__ . '/inc/icons.php';
+require_once __DIR__ . '/inc/daterange.php';
 require_auth();
 
 $id = (int) ($_GET['id'] ?? 0);
@@ -48,6 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $invoices = [];
 $payments = [];
 $referrals = [];
+// 🗓 the time filter (?range=...) shapes the lists below, not the figures at the top
+$dr = dr_read();
 
 try {
     $invoices = db_fetchAll($pdo, "SELECT * FROM invoice WHERE id_user = ? ORDER BY time_sell DESC LIMIT 30", [$id]);
@@ -63,6 +66,26 @@ try {
     // both plans' referrals: 💼 (affiliates) and 🎁 (aff_rw)
     $referrals = db_fetchAll($pdo, "SELECT * FROM user WHERE affiliates = ? OR aff_rw = ? ORDER BY register DESC LIMIT 20", [$id, $id]);
 } catch (Exception $e) {
+}
+
+// what the tables show: the latest few, or - with a range - everything of that range
+$invoicesShown = $invoices;
+$paymentsShown = $payments;
+$referralsShown = $referrals;
+if ($dr['active']) {
+    try {
+        $dp = [];
+        $c = dr_cond($dr, dr_secs('time_sell'), $dp);
+        $invoicesShown = db_fetchAll($pdo, "SELECT * FROM invoice WHERE id_user = ? AND $c ORDER BY CAST(time_sell AS UNSIGNED) DESC LIMIT 500", array_merge([$id], $dp));
+        $dp = [];
+        $c = dr_cond($dr, "(CASE WHEN time REGEXP '^[0-9]+$' THEN CAST(time AS UNSIGNED) ELSE UNIX_TIMESTAMP(STR_TO_DATE(time, '%Y/%m/%d %H:%i:%s')) END)", $dp);
+        $paymentsShown = db_fetchAll($pdo, "SELECT * FROM Payment_report WHERE id_user = ? AND $c ORDER BY id DESC LIMIT 500", array_merge([$id], $dp));
+        $dp = [];
+        $c = dr_cond($dr, dr_secs('register'), $dp);
+        $referralsShown = db_fetchAll($pdo, "SELECT * FROM user WHERE (affiliates = ? OR aff_rw = ?) AND $c ORDER BY CAST(register AS UNSIGNED) DESC LIMIT 500", array_merge([$id, $id], $dp));
+    } catch (Exception $e) {
+        $invoicesShown = $paymentsShown = $referralsShown = [];
+    }
 }
 
 // 🎁 the free configs they have had (and still have), and 💼 what their
@@ -330,7 +353,11 @@ include __DIR__ . '/inc/layout_head.php';
                         </button>
                     <?php endif; ?>
                 </div>
-                <a href="invoice.php?q=<?= urlencode($id) ?>" class="btn-link" style="font-size:.75rem"><?= $textbotlang['panel']['userColTrackingCode'] ?></a>
+                <form method="GET" class="toolbar-end" style="margin-inline-start:auto">
+                    <input type="hidden" name="id" value="<?= htmlspecialchars((string) $id) ?>">
+                    <?= dr_control($dr) ?>
+                    <a href="invoice.php?q=<?= urlencode($id) ?>" class="btn-link" style="font-size:.75rem"><?= $textbotlang['panel']['userColTrackingCode'] ?></a>
+                </form>
             </div>
 
             <div id="paneOrders">
@@ -346,7 +373,7 @@ include __DIR__ . '/inc/layout_head.php';
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (empty($invoices)): ?>
+                            <?php if (empty($invoicesShown)): ?>
                                 <tr>
                                     <td colspan="5">
                                         <div class="empty" style="padding:30px">
@@ -363,7 +390,7 @@ include __DIR__ . '/inc/layout_head.php';
                                     'send_on_hold' => ['tag-plain', $textbotlang['panel']['userStatusWaiting']],
                                     'unpiad' => ['tag-plain', $textbotlang['panel']['userStatusUnpaid']],
                                 ];
-                                foreach ($invoices as $inv):
+                                foreach ($invoicesShown as $inv):
                                     [$tagClass, $label] = $statusMap[$inv['Status'] ?? ''] ?? ['tag-plain', $inv['Status'] ?? '—'];
                                     ?>
                                     <tr>
@@ -398,7 +425,7 @@ include __DIR__ . '/inc/layout_head.php';
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (empty($payments)): ?>
+                            <?php if (empty($paymentsShown)): ?>
                                 <tr>
                                     <td colspan="4">
                                         <div class="empty" style="padding:30px">
@@ -430,7 +457,7 @@ include __DIR__ . '/inc/layout_head.php';
                                     'waiting' => ['tag-warn', $textbotlang['panel']['userStatusWaiting2']],
                                     'pending' => ['tag-warn', $textbotlang['panel']['userStatusWaiting3']],
                                 ];
-                                foreach ($payments as $p):
+                                foreach ($paymentsShown as $p):
                                     $payStatus = $p['payment_Status'] ?? '';
                                     [$tagClass, $label] = $payStatusMap[$payStatus] ?? ['tag-plain', $payStatus ?: '—'];
                                     $method = $methodLabels[$p['Payment_Method'] ?? ''] ?? ($p['Payment_Method'] ?? '—');
@@ -465,7 +492,7 @@ include __DIR__ . '/inc/layout_head.php';
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($referrals as $ref):
+                                <?php foreach ($referralsShown as $ref):
                                     $refName = trim((string) ($ref['first_name'] ?? ''));
                                     if ($refName === '')
                                         $refName = $ref['namecustom'] ?? '';

@@ -218,6 +218,18 @@ function safe_date($ts, string $fmt = 'Y/m/d'): string
         return htmlspecialchars((string) $ts);
     return date($fmt, (int) $ts);
 }
+// A user's id that opens the profile: the number as text, and a link when it is a real
+// id (a «0» or a word stays as it is). One look for every list that names a user.
+function user_link($id): string
+{
+    global $textbotlang;
+    $s = trim((string) $id);
+    if ($s === '' || $s === '0' || !ctype_digit($s)) {
+        return $s === '' ? '—' : htmlspecialchars($s);
+    }
+    return '<a class="ulink" href="user.php?id=' . $s . '" title="' . htmlspecialchars($textbotlang['panel']['ulOpenProfile'], ENT_QUOTES, 'UTF-8') . '">' . $s . '</a>';
+}
+
 function check_login_rate(string $ip): bool
 {
     $file = sys_get_temp_dir() . '/panel_login_' . md5($ip);

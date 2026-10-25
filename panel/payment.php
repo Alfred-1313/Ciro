@@ -2,6 +2,7 @@
 require_once __DIR__ . '/inc/config.php';
 require_once __DIR__ . '/inc/icons.php';
 require_once __DIR__ . '/inc/langsync.php';
+require_once __DIR__ . '/inc/daterange.php';
 require_auth();
 
 $search = trim($_GET['q'] ?? '');
@@ -17,6 +18,15 @@ $page = max(1, (int) ($_GET['page'] ?? 1));
 $perPage = 30;
 $offset = ($page - 1) * $perPage;
 
+// price, time and id_user are text columns: sorted as they are, 900 would
+// come after 250000. And a payment an admin added by hand has its time as
+// «2026/10/21 10:00:00» where every other one has a unix time, so both are
+// read as seconds (PHP's own zone, the one the dates are shown in).
+$secondsSQL = "(CASE WHEN p.time REGEXP '^[0-9]+$' THEN CAST(p.time AS UNSIGNED)"
+  . " ELSE TIMESTAMPDIFF(SECOND, '1970-01-01 00:00:00', STR_TO_DATE(p.time, '%Y/%m/%d %H:%i:%s')) - " . (int) date('Z') . " END)";
+// 🗓 the time filter (?range=...)
+$dr = dr_read();
+
 $where = [];
 $params = [];
 if ($search !== '') {
@@ -31,15 +41,15 @@ if ($lang !== '') {
   $where[] = $langSQL;
   $params = array_merge($params, $langParams);
 }
+$drParams = [];
+$drSQL = dr_cond($dr, $secondsSQL, $drParams);
+if ($drSQL !== '') {
+  $where[] = $drSQL;
+  $params = array_merge($params, $drParams);
+}
 $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
-// price, time and id_user are text columns: sorted as they are, 900 would
-// come after 250000. And a payment an admin added by hand has its time as
-// «2026/10/21 10:00:00» where every other one has a unix time, so both are
-// read as seconds (PHP's own zone, the one the dates are shown in).
 $dirSQL = $sortDir === 'asc' ? 'ASC' : 'DESC';
-$secondsSQL = "(CASE WHEN p.time REGEXP '^[0-9]+$' THEN CAST(p.time AS UNSIGNED)"
-  . " ELSE TIMESTAMPDIFF(SECOND, '1970-01-01 00:00:00', STR_TO_DATE(p.time, '%Y/%m/%d %H:%i:%s')) - " . (int) date('Z') . " END)";
 // amounts of two currencies are not comparable, so the amount order goes one
 // currency at a time (the default one first)
 $curSQL = web_cur_sql('p.currency');
@@ -54,10 +64,10 @@ $langCounts = [];
 try {
   $total = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p $whereSQL", $params);
   $payments = db_fetchAll($pdo, "SELECT p.* FROM Payment_report p LEFT JOIN `user` u ON u.id = p.id_user $whereSQL $orderSQL LIMIT $perPage OFFSET $offset", $params);
-  $langCounts[''] = db_count($pdo, "SELECT COUNT(*) FROM Payment_report");
+  $langCounts[''] = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p WHERE " . ($drSQL !== '' ? $drSQL : '1 = 1'), $drParams);
   foreach (panel_langs() as $l) {
     [$lw, $lp] = stats_lang_where($l, 'p');
-    $langCounts[$l] = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p WHERE $lw", $lp);
+    $langCounts[$l] = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p WHERE $lw" . ($drSQL !== '' ? " AND $drSQL" : ''), array_merge($lp, $drParams));
   }
 } catch (Exception $e) {
   $total = 0;
@@ -69,7 +79,7 @@ $totalPages = max(1, (int) ceil($total / $perPage));
 $totalSuccess = [];
 $todayCount = 0;
 try {
-  $totalSuccess = web_sum_by_currency("SELECT COALESCE(SUM(p.price),0) FROM Payment_report p WHERE p.payment_Status = 'paid' AND p.Payment_Method NOT IN ('add balance by admin', 'low balance by admin') AND {lang}", [], 'p', $lang);
+  $totalSuccess = web_sum_by_currency("SELECT COALESCE(SUM(p.price),0) FROM Payment_report p WHERE p.payment_Status = 'paid' AND p.Payment_Method NOT IN ('add balance by admin', 'low balance by admin')" . ($drSQL !== '' ? " AND $drSQL" : '') . " AND {lang}", $drParams, 'p', $lang);
   $todayCount = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p WHERE p.time > ? AND $langSQL", array_merge([strtotime('today')], $langParams));
 } catch (Exception $e) {
 }
@@ -102,7 +112,7 @@ $methodMap = [
 
 // the page's own address for an order, keeping the filters
 $sortUrl = fn(string $order) => 'payment.php?' . http_build_query(array_filter(
-  ['q' => $search, 'status' => $status, 'lang' => $lang, 'sort' => $order === 'date_desc' ? '' : $order],
+  ['q' => $search, 'status' => $status, 'lang' => $lang, 'sort' => $order === 'date_desc' ? '' : $order] + dr_params($dr),
   fn($v) => $v !== '' && $v !== null
 ));
 // a column's header: a tap puts the highest (newest) first, the next tap the opposite
@@ -130,13 +140,13 @@ include __DIR__ . '/inc/layout_head.php';
 echo web_lang_assets();
 ?>
 
-<?= web_lang_tabs($lang, fn($c) => 'payment.php?' . http_build_query(['lang' => $c ?: null]), true, $langCounts) ?>
+<?= web_lang_tabs($lang, fn($c) => 'payment.php?' . http_build_query(['lang' => $c ?: null] + dr_params($dr)), true, $langCounts) ?>
 
 <div class="stats">
   <div class="stat success">
     <div class="stat-label"><?= $textbotlang['panel']['paymentTransactionsHeading'] ?></div>
     <div class="stat-num"<?= count($totalSuccess) > 1 ? ' style="font-size:1.15rem;line-height:1.6"' : '' ?>><?= web_money_lines($totalSuccess) ?></div>
-    <div class="stat-meta"><?= $textbotlang['panel']['paymentAllMethods'] ?> · <?= $textbotlang['panel']['paySumNote'] ?></div>
+    <div class="stat-meta"><?= $dr['active'] ? htmlspecialchars(dr_text($dr)) . ' · ' : '' ?><?= $textbotlang['panel']['paymentAllMethods'] ?> · <?= $textbotlang['panel']['paySumNote'] ?></div>
   </div>
   <div class="stat">
     <div class="stat-label"><?= $textbotlang['panel']['paymentSearchBtn'] ?></div>
@@ -167,6 +177,7 @@ echo web_lang_assets();
           <option value="<?= $k ?>" <?= $status === $k ? 'selected' : '' ?>><?= $lbl ?></option>
         <?php endforeach; ?>
       </select>
+      <?= dr_control($dr) ?>
       <div class="search-box" style="min-width:230px">
         <?= icon('search', 14) ?>
         <input type="text" name="q" placeholder="<?= htmlspecialchars($textbotlang['panel']['paymentSearchTransactionPlaceholder']) ?>"
@@ -174,7 +185,7 @@ echo web_lang_assets();
         <button type="button" class="search-clear">✕</button>
         <button type="submit" class="search-btn"><?= $textbotlang['panel']['paymentColTrackingCode'] ?></button>
       </div>
-      <?php if ($search || $status || $sort !== 'date_desc'): ?>
+      <?php if ($search || $status || $sort !== 'date_desc' || $dr['active']): ?>
         <a href="payment.php<?= $lang !== '' ? '?lang=' . urlencode($lang) : '' ?>" class="btn-link" style="font-size:.78rem"><?= $textbotlang['panel']['paymentColDate'] ?></a>
       <?php endif; ?>
     </form>
@@ -202,7 +213,7 @@ echo web_lang_assets();
             <td>
               <div class="empty">
                 <div class="empty-mark">—</div>
-                <p><?= $textbotlang['panel']['paymentDetailStatus'] ?></p>
+                <p><?= $dr['active'] ? $textbotlang['panel']['drNoneInRange'] : $textbotlang['panel']['paymentDetailStatus'] ?></p>
               </div>
             </td>
           </tr>
@@ -216,7 +227,7 @@ echo web_lang_assets();
             ?>
             <tr>
               <td style="color:var(--text-dim)"><?= $i++ ?></td>
-              <td class="cell-mono"><?= htmlspecialchars($p['id_user'] ?? '—') ?></td>
+              <td class="cell-mono"><?= user_link($p['id_user'] ?? '') ?></td>
               <td class="cell-mono" style="color:var(--accent)">
                 <?= htmlspecialchars(trunc((string) ($p['id_order'] ?? '—'), 18)) ?>
               </td>
@@ -235,7 +246,8 @@ echo web_lang_assets();
   <div class="tbl-foot">
     <span><?= number_format($total) ?> <?= $textbotlang['panel']['paymentDetailDate'] ?> <?= $page ?> <?= $textbotlang['panel']['paymentCloseBtn'] ?> <?= $totalPages ?></span>
     <div class="pager">
-      <?php $qs = fn($p) => '?q=' . urlencode($search) . '&status=' . urlencode($status) . ($sort !== 'date_desc' ? '&sort=' . urlencode($sort) : '') . ($lang !== '' ? '&lang=' . urlencode($lang) : '') . '&page=' . $p; ?>
+      <?php $drQ = $dr['active'] ? '&' . http_build_query(dr_params($dr)) : '';
+      $qs = fn($p) => '?q=' . urlencode($search) . '&status=' . urlencode($status) . ($sort !== 'date_desc' ? '&sort=' . urlencode($sort) : '') . ($lang !== '' ? '&lang=' . urlencode($lang) : '') . $drQ . '&page=' . $p; ?>
       <a class="<?= $page <= 1 ? 'disabled' : '' ?>" href="<?= $qs(max(1, $page - 1)) ?>">‹</a>
       <?php for ($p2 = max(1, $page - 2); $p2 <= min($totalPages, $page + 2); $p2++): ?>
         <a class="<?= $p2 === $page ? 'active' : '' ?>" href="<?= $qs($p2) ?>"><?= $p2 ?></a>

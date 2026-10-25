@@ -2,6 +2,7 @@
 require_once __DIR__ . '/inc/config.php';
 require_once __DIR__ . '/inc/icons.php';
 require_once __DIR__ . '/inc/langsync.php';
+require_once __DIR__ . '/inc/daterange.php';
 require_auth();
 
 $search = trim($_GET['q'] ?? '');
@@ -12,6 +13,11 @@ $status = $_GET['status'] ?? '';
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $perPage = 30;
 $offset = ($page - 1) * $perPage;
+
+// 🗓 the time filter (?range=...): the day an order was sold
+$dr = dr_read();
+$drParams = [];
+$drSQL = dr_cond($dr, dr_secs('i.time_sell'), $drParams);
 
 $where = [];
 $params = [];
@@ -29,16 +35,20 @@ if ($lang !== '') {
   $where[] = $lw;
   $params = array_merge($params, $lp);
 }
+if ($drSQL !== '') {
+  $where[] = $drSQL;
+  $params = array_merge($params, $drParams);
+}
 $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 $langCounts = [];
 try {
   $total = db_count($pdo, "SELECT COUNT(*) FROM invoice i $whereSQL", $params);
   $invoices = db_fetchAll($pdo, "SELECT * FROM invoice i $whereSQL ORDER BY time_sell DESC LIMIT $perPage OFFSET $offset", $params);
-  $langCounts[''] = db_count($pdo, "SELECT COUNT(*) FROM invoice");
+  $langCounts[''] = db_count($pdo, "SELECT COUNT(*) FROM invoice i WHERE " . ($drSQL !== '' ? $drSQL : '1 = 1'), $drParams);
   foreach (panel_langs() as $l) {
     [$lw, $lp] = stats_lang_where($l, 'i');
-    $langCounts[$l] = db_count($pdo, "SELECT COUNT(*) FROM invoice i WHERE $lw", $lp);
+    $langCounts[$l] = db_count($pdo, "SELECT COUNT(*) FROM invoice i WHERE $lw" . ($drSQL !== '' ? " AND $drSQL" : ''), array_merge($lp, $drParams));
   }
 } catch (Exception $e) {
   $total = 0;
@@ -64,7 +74,7 @@ include __DIR__ . '/inc/layout_head.php';
 echo web_lang_assets();
 ?>
 
-<?= web_lang_tabs($lang, fn($c) => 'invoice.php?' . http_build_query(['lang' => $c ?: null]), true, $langCounts) ?>
+<?= web_lang_tabs($lang, fn($c) => 'invoice.php?' . http_build_query(['lang' => $c ?: null] + dr_params($dr)), true, $langCounts) ?>
 
 <div class="card fade-up">
   <div class="toolbar">
@@ -78,6 +88,7 @@ echo web_lang_assets();
           <option value="<?= $k ?>" <?= $status === $k ? 'selected' : '' ?>><?= $lbl ?></option>
         <?php endforeach; ?>
       </select>
+      <?= dr_control($dr) ?>
       <div class="search-box" style="min-width:240px">
         <?= icon('search', 14) ?>
         <input type="text" name="q" placeholder="<?= htmlspecialchars($textbotlang['panel']['invoiceSearchOrderPlaceholder']) ?>" value="<?= htmlspecialchars($search) ?>"
@@ -85,7 +96,7 @@ echo web_lang_assets();
         <button type="button" class="search-clear">✕</button>
         <button type="submit" class="search-btn"><?= $textbotlang['panel']['invoiceSearchBtn'] ?></button>
       </div>
-      <?php if ($search || $status): ?>
+      <?php if ($search || $status || $dr['active']): ?>
         <a href="invoice.php<?= $lang !== '' ? '?lang=' . urlencode($lang) : '' ?>" class="btn-link" style="font-size:.78rem"><?= $textbotlang['panel']['invoiceClearBtn'] ?></a>
       <?php endif; ?>
     </form>
@@ -115,7 +126,7 @@ echo web_lang_assets();
                   <rect x="45" y="66" width="60" height="6" rx="3" fill="var(--bd)" />
                   <rect x="45" y="80" width="35" height="6" rx="3" fill="var(--bd)" />
                 </svg>
-                <p><?= $search ? $textbotlang['panel']['invoiceNoOrderFound'] : $textbotlang['panel']['invoiceNoOrderYet'] ?></p>
+                <p><?= $dr['active'] ? $textbotlang['panel']['drNoneInRange'] : ($search ? $textbotlang['panel']['invoiceNoOrderFound'] : $textbotlang['panel']['invoiceNoOrderYet']) ?></p>
               </div>
             </td>
           </tr>
@@ -127,7 +138,7 @@ echo web_lang_assets();
             ?>
             <tr>
               <td class="cf"><?= $i++ ?></td>
-              <td class="cm"><?= htmlspecialchars($inv['id_user'] ?? '—') ?></td>
+              <td class="cm"><?= user_link($inv['id_user'] ?? '') ?></td>
               <td class="cs"><?= htmlspecialchars(trunc($inv['name_product'] ?? '—', 28)) ?></td>
               <td class="cn cs"><?= htmlspecialchars(money($inv['price_product'] ?? 0, invoice_currency($inv))) ?></td>
               <td class="cf"><?= safe_date($inv['time_sell'] ?? null, 'Y/m/d') ?></td>
@@ -141,7 +152,8 @@ echo web_lang_assets();
   <div class="tbl-foot">
     <span><?= number_format($total) ?> <?= $textbotlang['panel']['invoiceColService'] ?> <?= $page ?> <?= $textbotlang['panel']['invoiceColPanel'] ?> <?= $totalPages ?></span>
     <div class="pager">
-      <?php $qs = fn($p) => '?q=' . urlencode($search) . '&status=' . urlencode($status) . ($lang !== '' ? '&lang=' . urlencode($lang) : '') . '&page=' . $p; ?>
+      <?php $drQ = $dr['active'] ? '&' . http_build_query(dr_params($dr)) : '';
+      $qs = fn($p) => '?q=' . urlencode($search) . '&status=' . urlencode($status) . ($lang !== '' ? '&lang=' . urlencode($lang) : '') . $drQ . '&page=' . $p; ?>
       <a class="<?= $page <= 1 ? 'dis' : '' ?>" href="<?= $qs(max(1, $page - 1)) ?>">‹</a>
       <?php for ($p = max(1, $page - 2); $p <= min($totalPages, $page + 2); $p++): ?>
         <a class="<?= $p === $page ? 'cur' : '' ?>" href="<?= $qs($p) ?>"><?= $p ?></a>

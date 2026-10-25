@@ -2,6 +2,7 @@
 require_once __DIR__ . '/inc/config.php';
 require_once __DIR__ . '/inc/icons.php';
 require_once __DIR__ . '/inc/langsync.php';
+require_once __DIR__ . '/inc/daterange.php';
 require_auth();
 
 // a language tab ('' = all): its users, orders and payments, the way the bot's 📊 splits them
@@ -10,8 +11,17 @@ $lang = web_lang_pick('lang', '');
 [$iw, $ip] = $lang !== '' ? stats_lang_where($lang, 'i') : ['1 = 1', []];
 [$pw, $pp] = $lang !== '' ? stats_lang_where($lang, 'p') : ['1 = 1', []];
 
+// 🗓 the time filter (?range=...): the figures and the recent lists of that range
+$dr = dr_read();
+$dpU = $dpI = $dpP = [];
+$drU = dr_cond($dr, dr_secs('register'), $dpU);
+$drI = dr_cond($dr, dr_secs('i.time_sell'), $dpI);
+$drP = dr_cond($dr, dr_pay_secs('p.time'), $dpP);
+
 $totalUsers = 0;
 $newToday = 0;
+$newInRange = 0;
+$txInRange = 0;
 $totalRevenue = [];
 $activeNow = 0;
 $pendingPay = 0;
@@ -21,13 +31,16 @@ $langCounts = [];
 try {
     $totalUsers = db_count($pdo, "SELECT COUNT(*) FROM user WHERE $uw", $up);
     $newToday = db_count($pdo, "SELECT COUNT(*) FROM user WHERE register > ? AND $uw", array_merge([strtotime('today')], $up));
+    if ($dr['active']) {
+        $newInRange = db_count($pdo, "SELECT COUNT(*) FROM user WHERE $drU AND $uw", array_merge($dpU, $up));
+    }
     $cnt = um_lang_counts();
     $langCounts = ['' => $cnt['total']] + array_intersect_key($cnt, array_flip(panel_langs()));
 } catch (Exception $e) {
 }
 
 try {
-    $totalRevenue = web_sum_by_currency("SELECT COALESCE(SUM(i.price_product),0) FROM invoice i WHERE i.Status IN ('active','end_of_time','end_of_volume','sendedwarn','send_on_hold') AND {lang}", [], 'i', $lang);
+    $totalRevenue = web_sum_by_currency("SELECT COALESCE(SUM(i.price_product),0) FROM invoice i WHERE i.Status IN ('active','end_of_time','end_of_volume','sendedwarn','send_on_hold')" . ($drI !== '' ? " AND $drI" : '') . " AND {lang}", $dpI, 'i', $lang);
     $activeNow = db_count($pdo, "SELECT COUNT(*) FROM invoice i WHERE i.Status='active' AND $iw", $ip);
 } catch (Exception $e) {
 }
@@ -35,6 +48,9 @@ try {
 try {
     $pendingPay = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p WHERE p.payment_Status='waiting' AND $pw", $pp);
     $txToday = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p WHERE p.time > ? AND $pw", array_merge([strtotime('today')], $pp));
+    if ($dr['active']) {
+        $txInRange = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p WHERE $drP AND $pw", array_merge($dpP, $pp));
+    }
 } catch (Exception $e) {
 }
 
@@ -57,14 +73,17 @@ try {
 $recentInvoices = [];
 $recentUsers = [];
 try {
-    $recentInvoices = db_fetchAll($pdo, "SELECT * FROM invoice i WHERE $iw ORDER BY time_sell DESC LIMIT 8", $ip);
+    $recentInvoices = db_fetchAll($pdo, "SELECT * FROM invoice i WHERE $iw" . ($drI !== '' ? " AND $drI" : '') . " ORDER BY CAST(time_sell AS UNSIGNED) DESC LIMIT 8", array_merge($ip, $dpI));
 } catch (Exception $e) {
 }
 try {
-    $recentUsers = db_fetchAll($pdo, "SELECT * FROM user WHERE $uw ORDER BY register DESC LIMIT 8", $up);
+    $recentUsers = db_fetchAll($pdo, "SELECT * FROM user WHERE $uw" . ($drU !== '' ? " AND $drU" : '') . " ORDER BY CAST(register AS UNSIGNED) DESC LIMIT 8", array_merge($up, $dpU));
 } catch (Exception $e) {
 }
-$langQ = $lang !== '' ? '?lang=' . urlencode($lang) : '';
+$langQ = '?' . http_build_query(array_filter(['lang' => $lang] + dr_params($dr), fn($v) => $v !== '' && $v !== null));
+if ($langQ === '?') {
+    $langQ = '';
+}
 
 $pageTitle = $textbotlang['panel']['dashboardTitle'];
 $activeNav = 'dashboard';
@@ -73,19 +92,26 @@ include __DIR__ . '/inc/layout_head.php';
 echo web_lang_assets();
 ?>
 
-<?= web_lang_tabs($lang, fn($c) => 'index.php?' . http_build_query(['lang' => $c ?: null]), true, $langCounts) ?>
+<?= web_lang_tabs($lang, fn($c) => 'index.php?' . http_build_query(['lang' => $c ?: null] + dr_params($dr)), true, $langCounts) ?>
+
+<form method="GET" class="toolbar-end dash-range">
+    <?php if ($lang !== ''): ?><input type="hidden" name="lang" value="<?= htmlspecialchars($lang) ?>"><?php endif; ?>
+    <?= dr_control($dr) ?>
+</form>
 
 <div class="stats fade-up">
     <div class="stat">
         <div class="stat-label"><?= $textbotlang['panel']['dashTotalUsers'] ?></div>
         <div class="stat-num"><?= number_format($totalUsers) ?></div>
-        <div class="stat-meta"><?= $newToday > 0 ? '<span class="up">+' . $newToday . $textbotlang['panel']['dashTodaySpan'] : $textbotlang['panel']['dashNoChange'] ?>
+        <div class="stat-meta"><?= $dr['active']
+            ? ($newInRange > 0 ? '<span class="up">+' . number_format($newInRange) . '</span> ' . htmlspecialchars(dr_text($dr)) : htmlspecialchars(dr_text($dr)) . ' · ' . $textbotlang['panel']['dashNoChange'])
+            : ($newToday > 0 ? '<span class="up">+' . $newToday . $textbotlang['panel']['dashTodaySpan'] : $textbotlang['panel']['dashNoChange']) ?>
         </div>
     </div>
     <div class="stat ok">
         <div class="stat-label"><?= $textbotlang['panel']['dashTotalRevenue'] ?></div>
         <div class="stat-num"<?= count($totalRevenue) > 1 ? ' style="font-size:1.15rem;line-height:1.6"' : '' ?>><?= web_money_lines($totalRevenue) ?></div>
-        <div class="stat-meta"><?= $textbotlang['panel']['dashTotalSales'] ?></div>
+        <div class="stat-meta"><?= $dr['active'] ? htmlspecialchars(dr_text($dr)) . ' · ' : '' ?><?= $textbotlang['panel']['dashTotalSales'] ?></div>
     </div>
     <div class="stat warn">
         <div class="stat-label"><?= $textbotlang['panel']['dashActiveService'] ?></div>
@@ -94,10 +120,10 @@ echo web_lang_assets();
     <div class="stat <?= $pendingPay > 0 ? 'no' : '' ?>">
         <div class="stat-label"><?= $pendingPay > 0 ? $textbotlang['panel']['dashPendingPayment'] : $textbotlang['panel']['dashTodayTransaction'] ?></div>
         <div class="stat-num" style="<?= $pendingPay > 0 ? 'color:var(--no)' : '' ?>">
-            <?= number_format($pendingPay > 0 ? $pendingPay : $txToday) ?>
+            <?= number_format($pendingPay > 0 ? $pendingPay : ($dr['active'] ? $txInRange : $txToday)) ?>
         </div>
         <div class="stat-meta">
-            <?= $pendingPay > 0 ? $textbotlang['panel']['dashReviewLink'] : $textbotlang['panel']['dashStatusRegistered'] ?>
+            <?= $pendingPay > 0 ? $textbotlang['panel']['dashReviewLink'] : (($dr['active'] ? htmlspecialchars(dr_text($dr)) . ' · ' : '') . $textbotlang['panel']['dashStatusRegistered']) ?>
         </div>
     </div>
     <?php if ($paygEver > 0): ?>
@@ -149,7 +175,7 @@ echo web_lang_assets();
                             [$tagClass, $label] = $statusMap[$inv['Status'] ?? ''] ?? ['tag-plain', $inv['Status'] ?? '—'];
                             ?>
                             <tr>
-                                <td class="cm cf" data-m="0"><?= htmlspecialchars($inv['id_user'] ?? '—') ?></td>
+                                <td class="cm cf" data-m="0"><?= user_link($inv['id_user'] ?? '') ?></td>
                                 <td class="cs"
                                     style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
                                     <?= htmlspecialchars(trunc($inv['name_product'] ?? '—', 20)) ?>
@@ -204,7 +230,7 @@ echo web_lang_assets();
                                 $uname = '';
                             ?>
                             <tr>
-                                <td class="cm cf" data-m="0"><?= htmlspecialchars($u['id']) ?></td>
+                                <td class="cm cf" data-m="0"><?= user_link($u['id']) ?></td>
                                 <td>
                                     <?php if ($name): ?>
                                         <span class="cs"><?= htmlspecialchars(trunc($name, 14)) ?></span>

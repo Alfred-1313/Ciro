@@ -2,6 +2,7 @@
 require_once __DIR__ . '/inc/config.php';
 require_once __DIR__ . '/inc/icons.php';
 require_once __DIR__ . '/inc/langsync.php';
+require_once __DIR__ . '/inc/daterange.php';
 require_auth();
 
 $search = trim($_GET['q'] ?? '');
@@ -17,6 +18,9 @@ $sort = in_array($_GET['sort'] ?? '', $sortOptions, true) ? $_GET['sort'] : 'new
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $perPage = 25;
 $offset = ($page - 1) * $perPage;
+
+// 🗓 the time filter (?range=...): the day the user joined
+$dr = dr_read();
 
 $where = [];
 $params = [];
@@ -43,6 +47,12 @@ if ($lang !== '') {
     $params = array_merge($params, $langParams);
 }
 
+$drParams = [];
+$drSQL = dr_cond($dr, dr_secs('register'), $drParams);
+if ($drSQL !== '') {
+    $where[] = $drSQL;
+    $params = array_merge($params, $drParams);
+}
 $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 // What each user has charged: the paid top-ups, in the wallet they are on now -
@@ -90,7 +100,7 @@ try {
 // a link of this page that keeps the language tab
 // the page's address for an order, keeping the filters
 $sortUrl = fn(string $order) => 'users.php?' . http_build_query(array_filter(
-    ['q' => $search, 'status' => $status, 'role' => $role, 'lang' => $lang, 'sort' => $order === 'new' ? '' : $order],
+    ['q' => $search, 'status' => $status, 'role' => $role, 'lang' => $lang, 'sort' => $order === 'new' ? '' : $order] + dr_params($dr),
     fn($v) => $v !== '' && $v !== null
 ));
 // a column's header that sorts: a tap puts the highest first, the next tap the opposite
@@ -109,7 +119,22 @@ $sortLabels = [
     'balance_desc' => $textbotlang['panel']['usersSortBalanceDesc'],
     'balance_asc' => $textbotlang['panel']['usersSortBalanceAsc'],
 ];
-$here = fn(array $q = []) => 'users.php?' . http_build_query(array_filter(['lang' => $lang] + $q, fn($v) => $v !== '' && $v !== null));
+$here = fn(array $q = []) => 'users.php?' . http_build_query(array_filter(['lang' => $lang] + $q + dr_params($dr), fn($v) => $v !== '' && $v !== null));
+
+// 👤 what was typed is exactly one user's id or @username: a way straight to the profile
+$jump = null;
+if ($search !== '') {
+    $needle = ltrim($search, '@');
+    try {
+        if (ctype_digit($needle)) {
+            $jump = db_fetch($pdo, "SELECT id, username, namecustom FROM `user` WHERE id = ? LIMIT 1", [$needle]);
+        }
+        if (!$jump && preg_match('/^\w{3,64}$/', $needle)) {
+            $jump = db_fetch($pdo, "SELECT id, username, namecustom FROM `user` WHERE LOWER(username) = LOWER(?) LIMIT 1", [$needle]);
+        }
+    } catch (Exception $e) {
+    }
+}
 
 $pageTitle = $textbotlang['panel']['usersTitle'];
 $pageLede = $textbotlang['panel']['usersSubtitle'];
@@ -118,7 +143,7 @@ include __DIR__ . '/inc/layout_head.php';
 echo web_lang_assets();
 ?>
 
-<?= web_lang_tabs($lang, fn($c) => 'users.php?' . http_build_query(['lang' => $c ?: null]), true, $langCounts) ?>
+<?= web_lang_tabs($lang, fn($c) => 'users.php?' . http_build_query(['lang' => $c ?: null] + dr_params($dr)), true, $langCounts) ?>
 
 <div class="card fade-up">
     <div class="toolbar">
@@ -160,6 +185,8 @@ echo web_lang_assets();
                 <option value="n2" <?= $role === 'n2' ? 'selected' : '' ?>><?= $textbotlang['panel']['usersColCustomName'] ?></option>
             </select>
 
+            <?= dr_control($dr) ?>
+
             <div class="search-box" style="min-width:260px">
                 <?= icon('search', 15) ?>
                 <input type="text" name="q" placeholder="<?= $textbotlang['panel']['usersSearchUserPlaceholder'] ?>"
@@ -168,7 +195,7 @@ echo web_lang_assets();
                 <button type="submit" class="search-btn"><?= $textbotlang['panel']['usersAllGroups'] ?></button>
             </div>
 
-            <?php if ($search || $status || $role || $sort !== 'new'): ?>
+            <?php if ($search || $status || $role || $sort !== 'new' || $dr['active']): ?>
                 <a href="<?= htmlspecialchars($here()) ?>" class="btn-link" style="font-size:.78rem;white-space:nowrap"><?= $textbotlang['panel']['usersAllStatuses'] ?></a>
             <?php endif; ?>
         </form>
@@ -179,6 +206,20 @@ echo web_lang_assets();
             <?= htmlspecialchars($sortCol === 'charge' ? $textbotlang['panel']['usersSortNote'] : '') ?>
             <?php if ($manyCurrencies && $lang === ''): ?> <?= htmlspecialchars($textbotlang['panel']['paySortCurrencyNote']) ?><?php endif; ?>
         </div>
+    <?php endif; ?>
+    <?php if ($jump):
+        $jn = $jump['namecustom'] ?? '';
+        $ju = $jump['username'] ?? '';
+        $jn = $jn === 'none' ? '' : $jn;
+        $ju = $ju === 'none' ? '' : $ju;
+        $jl = $jn !== '' ? $jn : ($ju !== '' ? '@' . $ju : '#' . $jump['id']);
+        ?>
+        <a class="jump" href="user.php?id=<?= (int) $jump['id'] ?>">
+            <span class="jump-av" aria-hidden="true"><?= htmlspecialchars(mb_strtoupper(mb_substr(ltrim($jl, '@#'), 0, 1, 'UTF-8'), 'UTF-8')) ?></span>
+            <span class="jump-tx"><b dir="auto"><?= htmlspecialchars(trunc($jl, 28)) ?></b>
+                <small dir="ltr"><?= htmlspecialchars($jump['id']) ?><?= $ju !== '' ? ' · @' . htmlspecialchars($ju) : '' ?></small></span>
+            <span class="jump-go"><?= htmlspecialchars($textbotlang['panel']['ulGoProfile']) ?> <?= icon('eye', 14) ?></span>
+        </a>
     <?php endif; ?>
     <div class="tbl-wrap">
         <table class="tbl-xl">
@@ -194,7 +235,7 @@ echo web_lang_assets();
                     <th><?= $textbotlang['panel']['usersStatusActiveFilter'] ?></th>
                     <th><?= $textbotlang['panel']['usersStatusBlockedFilter'] ?></th>
                     <th><?= $textbotlang['panel']['usersPaginationPrev'] ?></th>
-                    <th style="width:72px"></th>
+                    <th style="width:150px"></th>
                 </tr>
             </thead>
             <tbody>
@@ -208,7 +249,7 @@ echo web_lang_assets();
                                     <path d="M62 105 Q100 88 138 105" stroke="var(--bds)" stroke-width="8"
                                         stroke-linecap="round" fill="none" />
                                 </svg>
-                                <p><?= $search ? $textbotlang['panel']['usersNoResultFound'] : $textbotlang['panel']['usersNoUserYet'] ?></p>
+                                <p><?= $dr['active'] ? $textbotlang['panel']['drNoneInRange'] : ($search ? $textbotlang['panel']['usersNoResultFound'] : $textbotlang['panel']['usersNoUserYet']) ?></p>
                             </div>
                         </td>
                     </tr>
@@ -226,10 +267,10 @@ echo web_lang_assets();
                         ?>
                         <tr>
                             <td class="cf"><?= $i++ ?></td>
-                            <td class="cm"><?= htmlspecialchars($u['id']) ?></td>
+                            <td class="cm"><?= user_link($u['id']) ?></td>
                             <td data-title>
                                 <?php if ($uname): ?>
-                                    <span class="cm" dir="ltr" style="color:var(--ac);display:inline-block">@<?= htmlspecialchars($uname) ?></span>
+                                    <a class="cm ulink" dir="ltr" style="color:var(--ac);display:inline-block" href="user.php?id=<?= (int) $u['id'] ?>" title="<?= htmlspecialchars($textbotlang['panel']['ulOpenProfile']) ?>">@<?= htmlspecialchars($uname) ?></a>
                                 <?php else: ?>
                                     <span class="cf">—</span>
                                 <?php endif; ?>
@@ -263,9 +304,9 @@ echo web_lang_assets();
                             </td>
                             <td>
                                 <div style="display:flex;gap:4px">
-                                    <a href="user.php?id=<?= (int) $u['id'] ?>" class="btn btn-ghost btn-sm btn-icon"
-                                        title="<?= htmlspecialchars($textbotlang['panel']['usersViewBtn']) ?>">
-                                        <?= icon('eye', 14) ?>
+                                    <a href="user.php?id=<?= (int) $u['id'] ?>" class="btn btn-ghost btn-sm prof-btn"
+                                        title="<?= htmlspecialchars($textbotlang['panel']['ulOpenProfile']) ?>">
+                                        <?= icon('eye', 14) ?> <span><?= htmlspecialchars($textbotlang['panel']['ulProfile']) ?></span>
                                     </a>
                                     <?php if ($isBlocked): ?>
                                         <a href="user_action.php?action=unblock&id=<?= (int) $u['id'] ?>&_csrf=<?= csrf_token() ?>&back=users.php"
@@ -292,7 +333,7 @@ echo web_lang_assets();
         <span><?= number_format($total) ?> <?= $textbotlang['panel']['usersColReferrer'] ?> <?= $page ?> <?= $textbotlang['panel']['usersColAffiliateCount'] ?> <?= $totalPages ?></span>
         <div class="pager">
             <?php
-            $qs = fn($p) => '?q=' . urlencode($search)
+            $qs = fn($p) => '?q=' . urlencode($search) . ($dr['active'] ? '&' . http_build_query(dr_params($dr)) : '')
                 . '&status=' . urlencode($status)
                 . '&role=' . urlencode($role)
                 . ($sort !== 'new' ? '&sort=' . urlencode($sort) : '')
