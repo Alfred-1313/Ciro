@@ -325,19 +325,22 @@ if (!function_exists('build_main_keyboard')) {
 $keyboard = build_main_keyboard();
 
 // SHOP surface: the customer's own account screen.
-$kp_accountRows = [
-    // its own callback, so the top-up screen knows it came from this page
-    [['text' => $customer_texts['textbot']['addBalance'], 'callback_data' => "Add_Balance_ac"]],
-];
+$kp_accountRows = [];
 // 🚫 مخفی کردن این دکمه (🎨 شخصی‌سازی) drops the whole row - a row holding
 // nothing is not something Telegram accepts
+if (!bt_button_hidden($users['lang'] ?? 'fa', 'bottext.btnTopupAccount')) {
+    // its own callback, so the top-up screen knows it came from this page; unstyled
+    // unless the shop gives it a colour (🎨 → 👤 → 💰)
+    $kp_accountRows[] = [bt_button($users['lang'] ?? 'fa', 'bottext.btnTopupAccount', $customer_texts['textbot']['addBalance'], 'Add_Balance_ac', '')];
+}
 if (!bt_button_hidden($users['lang'] ?? 'fa', 'bottext.btnCloseAccount')) {
     $kp_accountRows[] = [bt_button($users['lang'] ?? 'fa', 'bottext.btnCloseAccount', $customer_texts['bottext']['btnCloseAccount'] ?? $customer_texts['bottext']['btn_close'], 'mmclose:ac')];
 }
-$keyboardPanel = json_encode([
+// both buttons hidden: the screen goes out with no keyboard at all
+$keyboardPanel = $kp_accountRows ? json_encode([
     'inline_keyboard' => $kp_accountRows,
     'resize_keyboard' => true
-]);
+]) : null;
 if ($adminrulecheck['rule'] == "administrator") {
     $keyboardadmin = json_encode([
         'keyboard' => [

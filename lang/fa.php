@@ -682,6 +682,13 @@ return array (
         'group' => 'account',
         'section' => 'account_main',
       ),
+      'account_topupbtn' =>
+      array (
+        'label' => '💰 دکمه افزایش موجودی (حساب کاربری)',
+        'key' => 'bottext.btnTopupAccount',
+        'group' => 'account',
+        'section' => 'account_main',
+      ),
       'account_closebtn' =>
       array (
         'label' => '❌ دکمه بستن (حساب کاربری)',
@@ -9619,6 +9626,8 @@ nowpayments.io
     'svcBuyBtnsGroupLink' => 'همه‌ی تنظیمات ← افزودن سرویس به برنامه (لیست، صفحه‌ی باز کردن، دانلود، طرح صفحه)',
     'saEntryBtnsHint' => 'اسم، ایموجی، رنگ، جا و مخفی بودنِ دکمه‌ی «🌐 سابسکریپشن» و «📲 افزودن به برنامه» (یکی برای ۵ جا، برای هر زبان جدا):',
     'saEntryBtnsLink' => 'ظاهر دکمه‌ها ← سابسکریپشن و افزودن به برنامه',
+    'acTopupBtnHint' => 'اسم، ایموجی، رنگ، جا و مخفی بودنِ دکمه‌ی «💰 افزایش موجودی» زیر صفحه‌ی حساب کاربری (برای هر زبان جدا):',
+    'acTopupBtnLink' => 'ظاهر دکمه‌ها ← افزایش موجودی (حساب کاربری)',
     'saListBtnsHint' => 'اسم، ایموجی و رنگ دکمه‌ی هر برنامه و دکمه‌ی برگشتِ همین لیست:',
     'saListBtnsLink' => 'ظاهر دکمه‌ها ← لیست برنامه‌ها',
     'svcBtnOrderInvalid' => 'ترتیب هر دکمه باید عددی بین ۱ تا ۹۹ باشد',

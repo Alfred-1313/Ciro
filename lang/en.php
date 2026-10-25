@@ -5253,6 +5253,8 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'svcBuyBtnsGroupLink' => 'Everything → Add service to app (the list, the opening page, download, the look)',
                 'saEntryBtnsHint' => 'The name, emoji, colour, side and hiding of the «🌐 Subscription» and «📲 Add to app» buttons (one for 5 places, separate per language):',
                 'saEntryBtnsLink' => 'Button looks → subscription and app buttons',
+                'acTopupBtnHint' => 'The name, emoji, colour, side and hiding of the «💰 Top up balance» button under the account page (separate per language):',
+                'acTopupBtnLink' => 'Button looks → top-up (account page)',
                 'saListBtnsHint' => 'The name, emoji and colour of each app\'s button and of this list\'s back button:',
                 'saListBtnsLink' => 'Button looks → the list of apps',
                 'svcBtnOrderInvalid' => 'Each button\'s order must be a number from 1 to 99',

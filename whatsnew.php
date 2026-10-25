@@ -508,4 +508,16 @@ return [
             . "A customer who does not have the app and taps «Download» no longer stays on the «App not found» page: it becomes «Downloading …», with a spinning ring around the icon and three steps (Download and install → Come back here → Opens by itself). When the customer returns to this page from the store, the page tries to open the app by itself; if it is installed the app opens with the service, if not the page goes back to «App not found».\n"
             . "ℹ️ The page cannot see the download's progress or the moment the install ends; it only knows the customer is back. If a browser does not allow the automatic opening, «Try again» still works. The texts and the three steps can be changed separately for each language, and the three steps can be taken off in the page's layout.</blockquote>",
     ],
+    [
+        'n' => 36,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>💰 <b>دکمه‌ی «افزایش موجودی» صفحه‌ی حساب کاربری حالا قابل شخصی‌سازی است</b>\n"
+            . "📍 🎨 شخصی‌سازی ← «👤 پیام و دکمه‌های حساب کاربری» ← «💰 دکمه افزایش موجودی (حساب کاربری)»؛ وب‌پنل ← ظاهر دکمه‌ها (همان کارت) و لینکش بالای گروه حساب کاربری در «متن و دکمه‌های ربات»\n"
+            . "این دکمه تا حالا ثابت بود و فقط ❌ بستن زیرش قابل تغییر بود. حالا اسم، ایموجی (حتی پرمیوم)، رنگ، جا (چپ/راست) و مخفی کردنش را برای هر زبان جدا تنظیم می‌کنی و با ریست برمی‌گردد به حالت قبل. اگر هر دو دکمه‌ی صفحه را مخفی کنی، پیام بدون دکمه می‌رود.\n"
+            . "ℹ️ تا وقتی اسمش را عوض نکنی، همان اسم دکمه‌ی «افزایش موجودی» منوی اصلی را دارد و بی‌رنگ می‌ماند (مثل قبل).</blockquote>",
+        'en' => "<blockquote>💰 <b>The account page's «Top up balance» button can now be customized</b>\n"
+            . "📍 🎨 Customize → «👤 Account messages and buttons» → «💰 Top-up button (account)»; Web panel → Button looks (the same card) and its link at the top of the account group in «Bot texts and buttons»\n"
+            . "This button used to be fixed; only the ❌ Close under it could be changed. Now its name, emoji (even premium), colour, side (left/right) and hiding are set separately for each language, and a reset puts it back. If both buttons of the page are hidden, the message goes out without buttons.\n"
+            . "ℹ️ Until you rename it, it keeps the name of the main menu's «Top up balance» button and no colour (as before).</blockquote>",
+    ],
 ];

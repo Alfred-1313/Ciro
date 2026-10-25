@@ -1687,6 +1687,7 @@ if (!function_exists('bt_inline_block_keys')) {
             'bottext.btnCloseBuy',
             'bottext.btnCloseTopup',
             'bottext.btnCloseAccount',
+            'bottext.btnTopupAccount',
             'bottext.btnCloseTest',
             'bottext.btnCloseHelp',
             // alerts: answerCallbackQuery carries text and nothing else

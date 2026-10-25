@@ -266,6 +266,9 @@ echo web_lang_assets();
                         </div>
                     </div>
                 <?php endif; ?>
+                <?php if ($group === 'account'): ?>
+                    <div class="field-hint">🔘 <?= $t['acTopupBtnHint'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-at"><?= $t['acTopupBtnLink'] ?></a></div>
+                <?php endif; ?>
                 <?php if ($group === 'subapps'): $curLook = subapp_look($lang); ?>
                     <div class="field-hint">📲 <?= $t['saLinkHint'] ?> <a href="subapps.php?<?= http_build_query(['lang' => $lang]) ?>"><?= $t['saLinkText'] ?></a></div>
                     <div class="field">

@@ -13546,6 +13546,10 @@ if (!function_exists('genbtn_alias_map')) {
             'ac' => 'bottext.btnCloseAccount',
             'ts' => 'bottext.btnCloseTest',
             'he' => 'bottext.btnCloseHelp',
+            // 💰 افزایش موجودی on the 👤 حساب کاربری screen: its own button
+            // (name, colour, emoji, hide), apart from the main menu's and from the
+            // shared balancebtn widget
+            'at' => 'bottext.btnTopupAccount',
             // own-key trick again - the tutorial list inside a category owns the
             // one button under it, the "back to the category list" row
             'hb' => 'users.help.listCaption',
@@ -13762,6 +13766,11 @@ if (!function_exists('genbtn_defs')) {
         }
         if ($alias === 'ac') {
             return [0 => ['name' => '❌ دکمه بستن (حساب کاربری)', 'text' => $textbotlang['bottext']['btnCloseAccount'], 'style' => 'danger', 'callback_data' => 'none']];
+        }
+        if ($alias === 'at') {
+            // no default colour: it has always gone out unstyled. The name follows the
+            // main menu's «افزایش موجودی» until this button is renamed
+            return [0 => ['name' => '💰 دکمه افزایش موجودی (حساب کاربری)', 'text' => $textbotlang['textbot']['addBalance'], 'style' => '', 'callback_data' => 'none']];
         }
         if ($alias === 'ts') {
             return [0 => ['name' => '❌ دکمه بستن (اکانت تست)', 'text' => $textbotlang['bottext']['btnCloseTest'], 'style' => 'danger', 'callback_data' => 'none']];
@@ -15036,7 +15045,7 @@ if (!function_exists('genbtn_hub_payload')) {
     // back/close buttons, the other sections' close buttons and the 🎯 ones.
     function genbtn_preview_aliases()
     {
-        return ['rc', 'rp', 'bu', 'tp', 'ac', 'ts', 'he', 'sp', 'ar', 'mg', 'sl', 'gb', 'kb'];
+        return ['rc', 'rp', 'bu', 'tp', 'ac', 'at', 'ts', 'he', 'sp', 'ar', 'mg', 'sl', 'gb', 'kb'];
     }
     // The button exactly as this language's customer receives it - built by
     // genbtn_render(), the same function that builds the real one, so rename,
@@ -19957,6 +19966,7 @@ if (!function_exists('bt_button')) {
             'bottext.btnCloseBuy',
             'bottext.btnCloseTopup',
             'bottext.btnCloseAccount',
+            'bottext.btnTopupAccount',
             'bottext.btnCloseTest',
             'bottext.btnCloseHelp',
             // the four buttons of the features 🌐 وضعیت قابلیت‌ها (هر زبان)
@@ -20007,6 +20017,7 @@ if (!function_exists('bt_button')) {
             'bottext.btnCloseBuy' => 'buyflow',
             'bottext.btnCloseTopup' => 'topup',
             'bottext.btnCloseAccount' => 'account',
+            'bottext.btnTopupAccount' => 'account',
             'bottext.btnCloseHelp' => 'help',
             'keyboard.sendPhoneNumber' => 'verify',
             'keyboard.acceptRules' => 'verify',
