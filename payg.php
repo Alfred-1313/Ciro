@@ -132,7 +132,7 @@ if (!function_exists('report_topic_id')) {
             return $id;
         }
         // two reports at the same moment must not make two topics
-        $lock = 'mirza_topic_' . md5((string) $key);
+        $lock = 'ciro_topic_' . md5((string) $key);
         $got = (int) $pdo->query("SELECT GET_LOCK(" . $pdo->quote($lock) . ", 10)")->fetchColumn();
         try {
             [$row, $id] = $have();
@@ -582,7 +582,7 @@ if (!function_exists('payg_row')) {
     function payg_locked($idInvoice, callable $fn)
     {
         global $pdo;
-        $name = 'mirza_payg_' . md5((string) $idInvoice);
+        $name = 'ciro_payg_' . md5((string) $idInvoice);
         $got = (int) $pdo->query("SELECT GET_LOCK(" . $pdo->quote($name) . ", 15)")->fetchColumn();
         if (!$got) {
             return null;

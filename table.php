@@ -509,6 +509,9 @@ try {
         addFieldToTable("marzban_panel", "linksubx", null, "VARCHAR(200)");
         addFieldToTable("marzban_panel", "conecton", "offconecton", "VARCHAR(100)");
         addFieldToTable("marzban_panel", "type", "marzban", "VARCHAR(50)");
+        // the agent panel type was renamed with the project; panels saved
+        // under the name it had before keep working under the new one
+        $pdo->exec("UPDATE marzban_panel SET type = 'ciro_agent' WHERE type = 'mirza_agent'");
         addFieldToTable("marzban_panel", "Methodextend", $textbotlang['keyboard']['resetVolumeTime'], "VARCHAR(100)");
         addFieldToTable("marzban_panel", "namecustom", "vpn", "VARCHAR(100)");
         addFieldToTable("marzban_panel", "limit_panel", "unlimted", "VARCHAR(50)");

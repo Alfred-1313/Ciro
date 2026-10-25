@@ -17,12 +17,12 @@
 On a clean Ubuntu 20.04+ or Debian 11+ server, as root:
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/Alfred-1313/Mirza_Pro_Max/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/Alfred-1313/Ciro/master/install.sh)
 ```
 
 Have ready: a domain already pointed at the server, a bot token from [@BotFather](https://t.me/BotFather) and your numeric id from [@userinfobot](https://t.me/userinfobot).
 
-After installing, manage it with the `ciro` command (the old `mirza` command still works):
+After installing, manage it with the `ciro` command:
 
 | Command | What it does |
 | --- | --- |
@@ -32,7 +32,7 @@ After installing, manage it with the `ciro` command (the old `mirza` command sti
 | `ciro renew` | Reissue the SSL certificate |
 | `ciro --help` | Every command and option |
 
-Already running the original Mirza bot? Run the same install command and choose **Update** or **Migrate** — nothing is reinstalled and no data is lost.
+Already running a bot of the original project, or an older version of this one? Run the same install command and choose **Update** or **Migrate** — nothing is reinstalled and no data is lost.
 
 ## Features
 

@@ -1779,7 +1779,7 @@ $keyboardtypepanel = json_encode([
         ],
         [
             ['text' => $textbotlang['keyboard']['passargadPanel'], 'callback_data' => "typepanel#pasarguard"],
-            ['text' => $textbotlang['keyboard']['mirzaAgentPanel'], 'callback_data' => "typepanel#mirza_agent"]
+            ['text' => $textbotlang['keyboard']['ciroAgentPanel'], 'callback_data' => "typepanel#ciro_agent"]
         ],
         [
             ['text' => $textbotlang['keyboard']['panelTypeSanaei'], 'callback_data' => 'typepanel#x-ui_single'],
@@ -2255,7 +2255,7 @@ function keyboard_config($config_split, $id_invoice, $back_active = true, $kind 
 // SHOP surface: offered to a customer whose test-account limit ran out.
 // (its one button is 🎨's: name, colour, emoji, hidden - see test_limit_kb)
 $keyboard_buy = test_limit_kb($users['lang'] ?? 'fa', $customer_texts);
-$option_mirza = json_encode([
+$option_ciro = json_encode([
     'keyboard' => [
         [['text' => $textbotlang['keyboard']['panelFeatureStatus']]],
         [['text' => $textbotlang['keyboard']['panelName']], ['text' => $textbotlang['keyboard']['deletePanel']]],
@@ -3195,7 +3195,7 @@ $panel_menu_flat = [
     'x-ui_single' => $optionX_ui_single,
     'alireza_single' => $optionalireza_single,
     'hiddify' => $optionhiddfy,
-    'mirza_agent' => $option_mirza,
+    'ciro_agent' => $option_ciro,
 ];
 $panel_menu_top = [];
 foreach ($panel_menu_flat as $__pmtype => $__pmflat) {
@@ -3213,7 +3213,7 @@ $optionManualsale = $panel_menu_top['Manualsale'];
 $optionX_ui_single = $panel_menu_top['x-ui_single'];
 $optionalireza_single = $panel_menu_top['alireza_single'];
 $optionhiddfy = $panel_menu_top['hiddify'];
-$option_mirza = $panel_menu_top['mirza_agent'];
+$option_ciro = $panel_menu_top['ciro_agent'];
 // If the admin is currently sitting inside one of the panel submenus, every
 // "action finished" message should land them back in that submenu instead of
 // bouncing them out to the top menu. The ~50 call sites all send one of the
@@ -3238,7 +3238,7 @@ if (!empty($user['panel_submenu']) && !empty($user['Processing_value'])) {
             $optionX_ui_single = $__pmsub;
             $optionalireza_single = $__pmsub;
             $optionhiddfy = $__pmsub;
-            $option_mirza = $__pmsub;
+            $option_ciro = $__pmsub;
             $optionremnawave = $__pmsub;
         }
     }

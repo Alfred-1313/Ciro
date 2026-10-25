@@ -10610,7 +10610,7 @@ if (in_array($text, $textadmin) || $datain == "admin") {    if ($datain == "admi
         savedata("save", "username", "null");
         savedata("save", "password", "null");
         return;
-    } elseif ($userdata['type'] == "s_ui" || $userdata['type'] == "WGDashboard" || $userdata['type'] == "x-ui_single" || $userdata['type'] == "mirza_agent" || $userdata['type'] == "rebecca" || $userdata['type'] == "remnawave") {
+    } elseif ($userdata['type'] == "s_ui" || $userdata['type'] == "WGDashboard" || $userdata['type'] == "x-ui_single" || $userdata['type'] == "ciro_agent" || $userdata['type'] == "rebecca" || $userdata['type'] == "remnawave") {
         if ($userdata['type'] == "remnawave") {
             sendmessage($from_id, $textbotlang['Admin']['managepanel']['rwTokenHint'], null, 'HTML');
         }
@@ -15452,7 +15452,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     $optionX_ui_single = $panel_menu_top['x-ui_single'];
     $optionalireza_single = $panel_menu_top['alireza_single'];
     $optionhiddfy = $panel_menu_top['hiddify'];
-    $option_mirza = $panel_menu_top['mirza_agent'];
+    $option_ciro = $panel_menu_top['ciro_agent'];
     if ($marzban_list_get['type'] == "marzban") {
         $Check_token = token_panel($marzban_list_get['code_panel'], false);
         if (isset($Check_token['access_token'])) {
@@ -15543,8 +15543,8 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
             $message = strtr($text_x_ui, $replace);
             sendmessage($from_id, $message, $optionX_ui_single, 'HTML');
         }
-    } elseif ($marzban_list_get['type'] == "mirza_agent") {
-        sendmessage($from_id, $textbotlang['users']['selectoption'], $option_mirza, 'HTML');
+    } elseif ($marzban_list_get['type'] == "ciro_agent") {
+        sendmessage($from_id, $textbotlang['users']['selectoption'], $option_ciro, 'HTML');
     } elseif ($marzban_list_get['type'] == "alireza_single") {
         $x_ui_check_connect = login($marzban_list_get['code_panel'], false);
         if ($x_ui_check_connect['success']) {
@@ -22817,16 +22817,16 @@ if ($datain == "linkappsetting") {
     $list_panel_keyboard = ['inline_keyboard' => []];
     foreach ($list_panel as $result) {
         $list_panel_keyboard['inline_keyboard'][] = [
-            ['text' => $result['name_panel'], 'callback_data' => "set_panel_id_mirza:{$result['id']}:{$panel['id']}"],
+            ['text' => $result['name_panel'], 'callback_data' => "set_panel_id_ciro:{$result['id']}:{$panel['id']}"],
         ];
     }
     sendmessage($from_id, $textbotlang['Admin']['addorder']['selectPanel'], json_encode($list_panel_keyboard), 'HTML');
-} elseif (preg_match('/set_panel_id_mirza:(.*):(.*)/', $datain, $dataget)) {
-    $panel_id_mirza = $dataget[1];
+} elseif (preg_match('/set_panel_id_ciro:(.*):(.*)/', $datain, $dataget)) {
+    $panel_id_ciro = $dataget[1];
     $panel_id = $dataget[2];
     deletemessage($from_id, $message_id);
-    update("marzban_panel", "inbounds", $panel_id_mirza, "id", $panel_id);
-    sendmessage($from_id, $textbotlang['Admin']['addorder']['panelSelected'], $option_mirza, 'HTML');
+    update("marzban_panel", "inbounds", $panel_id_ciro, "id", $panel_id);
+    sendmessage($from_id, $textbotlang['Admin']['addorder']['panelSelected'], $option_ciro, 'HTML');
 } elseif ($text == $textbotlang['bottext']['open_button']) {
     list($bt_home, $bt_kb) = keyboard_list_text($user['lang']);
     sendmessage($from_id, $bt_home, $bt_kb, 'HTML');

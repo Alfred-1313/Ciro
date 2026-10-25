@@ -5,7 +5,7 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-INSTALL_LOG="/tmp/mirza_install.log"
+INSTALL_LOG="/tmp/ciro_install.log"
 
 export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
@@ -53,7 +53,7 @@ _step_eta() {
         "Configuring firewall"*)             echo 15 ;;
         "Restarting Apache"*)                echo 5  ;;
         "Setting PHP as the active"*|"Setting PHP "*) echo 6  ;;
-        "Downloading Ciro"*|"Downloading Mirza"*) echo 20 ;;
+        "Downloading Ciro"*)                 echo 20 ;;
         "Extracting source files"*)          echo 5  ;;
         "Configuring MySQL root access"*)    echo 10 ;;
         "Opening firewall ports"*)           echo 4  ;;
@@ -201,8 +201,8 @@ ensure_dns() {
     echo -e "  ${C_WARN}!${CR} ${C_WARN}DNS resolution failed - configuring public DNS...${CR}"
     if [ -L "$RESOLV" ]; then
         rm -f "$RESOLV" 2>/dev/null
-    elif [ -f "$RESOLV" ] && [ ! -f "${RESOLV}.mirza.bak" ]; then
-        cp -a "$RESOLV" "${RESOLV}.mirza.bak" 2>/dev/null
+    elif [ -f "$RESOLV" ] && [ ! -f "${RESOLV}.ciro.bak" ]; then
+        cp -a "$RESOLV" "${RESOLV}.ciro.bak" 2>/dev/null
     fi
     { local d; for d in "${DNS_SERVERS[@]}"; do echo "nameserver $d"; done; } > "$RESOLV" 2>/dev/null
     if command -v resolvectl >/dev/null 2>&1; then
@@ -215,17 +215,14 @@ ensure_dns() {
     return 1
 }
 
-# Ensure /usr/local/bin/ciro - and the old /usr/local/bin/mirza, which the
-# self-update cron and existing habits still call - point at the master script
-_link_mirza() {
-    local master="$1" link="$2" l
+# Ensure /usr/local/bin/ciro points at the master script
+_link_ciro() {
+    local master="$1" link="$2"
     chmod +x "$master" 2>/dev/null
-    for l in "$link" /usr/local/bin/mirza; do
-        if [ ! -e "$l" ] || [ "$(readlink -f "$l" 2>/dev/null)" != "$(readlink -f "$master" 2>/dev/null)" ]; then
-            ln -sf "$master" "$l"
-        fi
-        chmod +x "$l" 2>/dev/null
-    done
+    if [ ! -e "$link" ] || [ "$(readlink -f "$link" 2>/dev/null)" != "$(readlink -f "$master" 2>/dev/null)" ]; then
+        ln -sf "$master" "$link"
+    fi
+    chmod +x "$link" 2>/dev/null
 }
 
 # Self-update: every run, fetch the latest script from GitHub, validate it,
@@ -242,8 +239,8 @@ function self_update_script() {
     done
     local MASTER_PATH="/root/install.sh"
     local BIN_LINK="/usr/local/bin/ciro"
-    local URL="https://raw.githubusercontent.com/Alfred-1313/Mirza_Pro_Max/master/install.sh"
-    local TEMP_FILE="/tmp/mirzabot_update.sh"
+    local URL="https://raw.githubusercontent.com/Alfred-1313/Ciro/master/install.sh"
+    local TEMP_FILE="/tmp/ciro_update.sh"
 
     # Make sure DNS works before reaching GitHub
     ensure_dns >/dev/null 2>&1
@@ -274,14 +271,14 @@ function self_update_script() {
             local SELF; SELF=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null)
             if [ -n "$SELF" ] && [ -r "$SELF" ] && bash -n "$SELF" 2>/dev/null; then
                 install -m 0755 "$SELF" "$MASTER_PATH" 2>/dev/null || { cp "$SELF" "$MASTER_PATH"; chmod +x "$MASTER_PATH"; }
-                _link_mirza "$MASTER_PATH" "$BIN_LINK"
+                _link_ciro "$MASTER_PATH" "$BIN_LINK"
                 echo -e "\e[93mGitHub is unreachable - continuing with this copy of the script.\033[0m"
                 return 0
             fi
             echo -e "\e[91mCritical: no usable copy of the script and GitHub is unreachable.\033[0m"
             exit 1
         fi
-        _link_mirza "$MASTER_PATH" "$BIN_LINK"
+        _link_ciro "$MASTER_PATH" "$BIN_LINK"
         return 0
     fi
 
@@ -301,7 +298,7 @@ function self_update_script() {
         fi
         install -m 0755 "$TEMP_FILE" "$MASTER_PATH" 2>/dev/null || { mv "$TEMP_FILE" "$MASTER_PATH"; chmod +x "$MASTER_PATH"; }
         rm -f "$TEMP_FILE"
-        _link_mirza "$MASTER_PATH" "$BIN_LINK"
+        _link_ciro "$MASTER_PATH" "$BIN_LINK"
         echo -e "\e[32mUpdated. Restarting with the latest version...\033[0m"
         sleep 1
         exec bash "$MASTER_PATH" "$@"
@@ -309,7 +306,7 @@ function self_update_script() {
 
     # Already up to date - just make sure it is linked under /usr/local/bin
     rm -f "$TEMP_FILE"
-    _link_mirza "$MASTER_PATH" "$BIN_LINK"
+    _link_ciro "$MASTER_PATH" "$BIN_LINK"
     echo -e "\e[32mScript is up to date.\033[0m"
 }
 self_update_script "$@"
@@ -318,13 +315,13 @@ self_update_script "$@"
 # are zipped with zip. Checked whenever an admin runs this script - install,
 # the menu, a transfer (both ends) - and installed only when missing; never
 # from the once-a-minute watcher.
-MIRZA_PREREQS="zip"
+CIRO_PREREQS="zip"
 function ensure_prerequisites() {
     for _a in "$@"; do
         case "$_a" in -h|--help|--version|selfupdate-watch) return 0 ;; esac
     done
     local missing="" t
-    for t in $MIRZA_PREREQS; do
+    for t in $CIRO_PREREQS; do
         command -v "$t" >/dev/null 2>&1 || missing="$missing $t"
     done
     [ -z "$missing" ] && return 0
@@ -335,16 +332,16 @@ function ensure_prerequisites() {
 ensure_prerequisites "$@"
 
 # ── Repo / paths ─────────────────────────────────────────────
-BOT_DIR_DEFAULT="/var/www/html/mirzaprobotconfig"
+BOT_DIR_DEFAULT="/var/www/html/ciro"
 CONFIG_FILE_DEFAULT="$BOT_DIR_DEFAULT/config.php"
-GIT_REPO="Alfred-1313/Mirza_Pro_Max"
-IP_CACHE="/tmp/.mirza_server_ip"
+GIT_REPO="Alfred-1313/Ciro"
+IP_CACHE="/tmp/.ciro_server_ip"
 
 # ── Resumable-install state engine ───────────────────────────
 # Survives reboots / network drops. Lets a failed install resume
 # from the last completed phase instead of starting from scratch.
-STATE_DIR="/root/confmirza"
-STATE_FILE="$STATE_DIR/.mirza_install_state"
+STATE_DIR="/root/ciro"
+STATE_FILE="$STATE_DIR/.install_state"
 
 state_init() {
     mkdir -p "$STATE_DIR" 2>/dev/null
@@ -451,7 +448,7 @@ php_repo_disable() {
     local f n=0
     for f in /etc/apt/sources.list.d/*ondrej*php*.sources /etc/apt/sources.list.d/*ondrej*php*.list; do
         [ -f "$f" ] || continue
-        mv -f "$f" "$f.disabled-by-mirza" && n=$((n + 1))
+        mv -f "$f" "$f.disabled-by-ciro" && n=$((n + 1))
     done
     [ "$n" -gt 0 ]
 }
@@ -503,17 +500,17 @@ export -f resolve_php_ver
 
 # Configure MySQL root login (all output captured by run_step's log).
 setup_mysql_root() {
-    sudo mkdir -p /root/confmirza || return 1
-    touch /root/confmirza/dbrootmirza.txt || return 1
-    sudo chmod -R 777 /root/confmirza/dbrootmirza.txt || return 1
+    sudo mkdir -p /root/ciro || return 1
+    touch /root/ciro/dbroot.txt || return 1
+    sudo chmod -R 777 /root/ciro/dbroot.txt || return 1
     local randomdbpasstxt passs userrr RANDOM_NUMBER
     randomdbpasstxt=$(openssl rand -base64 10 | tr -dc 'a-zA-Z0-9' | cut -c1-8)
     RANDOM_NUMBER=$(openssl rand -base64 12 | tr -dc 'a-zA-Z0-9' | cut -c1-12)
-    echo "\$user = 'root';"               >> /root/confmirza/dbrootmirza.txt
-    echo "\$pass = '${randomdbpasstxt}';" >> /root/confmirza/dbrootmirza.txt
-    echo "\$path = '${RANDOM_NUMBER}';"   >> /root/confmirza/dbrootmirza.txt
-    passs=$(grep '$pass' /root/confmirza/dbrootmirza.txt | cut -d"'" -f2)
-    userrr=$(grep '$user' /root/confmirza/dbrootmirza.txt | cut -d"'" -f2)
+    echo "\$user = 'root';"               >> /root/ciro/dbroot.txt
+    echo "\$pass = '${randomdbpasstxt}';" >> /root/ciro/dbroot.txt
+    echo "\$path = '${RANDOM_NUMBER}';"   >> /root/ciro/dbroot.txt
+    passs=$(grep '$pass' /root/ciro/dbroot.txt | cut -d"'" -f2)
+    userrr=$(grep '$user' /root/ciro/dbroot.txt | cut -d"'" -f2)
     local alter_ok=0
     if sudo mysql -u "$userrr" -p"$passs" -e "alter user '$userrr'@'localhost' identified with mysql_native_password by '$passs';FLUSH PRIVILEGES;"; then
         alter_ok=1
@@ -534,7 +531,7 @@ setup_mysql_root() {
         [ -d "$d" ] && { dropin_dir="$d"; break; }
     done
     [ -n "$dropin_dir" ] || return 1
-    local dropin="$dropin_dir/zz-mirza-recovery.cnf"
+    local dropin="$dropin_dir/zz-ciro-recovery.cnf"
     printf '[mysqld]\nskip-grant-tables\n' | sudo tee "$dropin" >/dev/null || return 1
     sudo systemctl restart mysql
     sudo mysql <<EOF
@@ -655,7 +652,7 @@ _pkg_installed_glob() {
 }
 
 # Refuse to install on a server that already has conflicting software.
-# Only runs on a brand-new install (never on resume / Mirza's own partial state).
+# Only runs on a brand-new install (never on resume / a partial state of its own).
 precheck_fresh_server() {
     # A package being installed is not a reason to refuse - an empty LAMP
     # stack is fine and gets reconfigured. What blocks the install is
@@ -749,7 +746,7 @@ precheck_fresh_server() {
     printf "    ${C_TXT}what is running now, so the installer stops here.${CR}\n"
     echo ""
     printf "    ${C_DIM}Install on a clean server, or remove the software listed above first.${CR}\n"
-    printf "    ${C_DIM}If this server already runs Ciro or Mirza, choose ${CR}${C_KEY}2 (Update)${CR}${C_DIM} instead.${CR}\n"
+    printf "    ${C_DIM}If this server already runs a bot, choose ${CR}${C_KEY}2 (Update)${CR}${C_DIM} instead.${CR}\n"
     return 1
 }
 
@@ -1075,7 +1072,7 @@ function renew_ssl() {
         show_menu; return 0
     fi
     if [ -z "$domain" ]; then
-        local cfg="/var/www/html/mirzaprobotconfig/config.php"
+        local cfg="/var/www/html/ciro/config.php"
         [ -f "$cfg" ] && domain=$(hosts_domain "$(grep -E "\\\$domainhosts" "$cfg" 2>/dev/null | head -1 | cut -d"'" -f2)")
     fi
     [ -z "$domain" ] && domain="$(state_get DOMAIN)"
@@ -1199,7 +1196,7 @@ function backup_bot() {
 
     local backup_date
     backup_date=$(date +"%Y-%m-%d_%H-%M-%S")
-    local backup_file="/root/mirza_backup_${backup_date}.sql"
+    local backup_file="/root/ciro_backup_${backup_date}.sql"
 
     run_step "Exporting database (${dbname})" \
         "mysqldump -h '$dbhost' -u '$dbuser' -p'$dbpass' --no-tablespaces --ssl-mode=DISABLED '$dbname' > '$backup_file'" \
@@ -1336,7 +1333,7 @@ _restore_prepare() {
     fi
     # A dummy password is ignored by an unprotected zip and simply fails on a
     # protected one - unzip never stops to ask on the terminal this way.
-    unzip -p -P "mirza-no-password" "$f" "$RESTORE_ENTRY" > "$work/restore.sql" 2>/dev/null
+    unzip -p -P "ciro-no-password" "$f" "$RESTORE_ENTRY" > "$work/restore.sql" 2>/dev/null
     rc=$?
     if [ "$rc" -ne 0 ]; then
         printf "    ${C_DIM}This zip is password-protected (the password from the bot's backup settings).${CR}\n"
@@ -1374,11 +1371,11 @@ _restore_pause() {
     read -r _
 }
 
-# What a restore replaced is kept in MIRZA_BACKUP_DIR (next to the update
-# snapshots) instead of /root itself - the newest MIRZA_SNAPSHOTS_KEEP of
+# What a restore replaced is kept in CIRO_BACKUP_DIR (next to the update
+# snapshots) instead of /root itself - the newest CIRO_SNAPSHOTS_KEEP of
 # each kind for each bot. $1: the name up to its date.
 _restore_prune() {
-    ls -1t "$MIRZA_BACKUP_DIR/$1"[0-9]* 2>/dev/null | tail -n +$((MIRZA_SNAPSHOTS_KEEP + 1)) \
+    ls -1t "$CIRO_BACKUP_DIR/$1"[0-9]* 2>/dev/null | tail -n +$((CIRO_SNAPSHOTS_KEEP + 1)) \
         | while IFS= read -r f; do rm -f "$f"; done
 }
 
@@ -1469,7 +1466,7 @@ function import_bot() {
 # Returns 0 done or cancelled, 1 failed, 2 backed out.
 _restore_db() {
     local file="$1" dir="$2" name="$3" dbhost="$4" dbuser="$5" dbpass="$6" dbname="$7" rc
-    local work; work=$(mktemp -d /var/tmp/mirza_restore.XXXXXX)
+    local work; work=$(mktemp -d /var/tmp/ciro_restore.XXXXXX)
     echo ""
     _restore_prepare "$file" "$work"; rc=$?
     if [ "$rc" -ne 0 ]; then
@@ -1501,8 +1498,8 @@ _restore_db() {
     fi
     echo ""
 
-    mkdir -p "$MIRZA_BACKUP_DIR"
-    local safe="$MIRZA_BACKUP_DIR/pre-restore_db_${dbname}_$(date +%Y%m%d_%H%M%S).sql"
+    mkdir -p "$CIRO_BACKUP_DIR"
+    local safe="$CIRO_BACKUP_DIR/pre-restore_db_${dbname}_$(date +%Y%m%d_%H%M%S).sql"
     local my="mysql -h '$dbhost' -u '$dbuser' -p'$dbpass' '$dbname'"
     if ! run_step "Saving the current database" \
         "mysqldump -h '$dbhost' -u '$dbuser' -p'$dbpass' --no-tablespaces --ssl-mode=DISABLED '$dbname' > '$safe'"; then
@@ -1550,7 +1547,7 @@ _restore_files() {
     local file="$1" dir="$2" name="$3" dbname="$4"
     local prefix from work rc pw src owner confirm tag snap bad c
     prefix=$(_restore_bot_prefix "$file") || return 1
-    work=$(mktemp -d /var/tmp/mirza_restore.XXXXXX)
+    work=$(mktemp -d /var/tmp/ciro_restore.XXXXXX)
     from="$work/new/${prefix}"
     echo ""
     if unzip -Z -v "$file" "${prefix}index.php" 2>/dev/null | grep -q 'file security status:[[:space:]]*encrypted'; then
@@ -1600,8 +1597,8 @@ _restore_files() {
     # named like the update snapshots - after the bot's @username, or its directory
     tag=$(grep '^\$usernamebot' "$dir/config.php" 2>/dev/null | cut -d"'" -f2 | tr -cd 'A-Za-z0-9_' | cut -c1-32)
     [ -z "$tag" ] && tag=$(basename "$dir" | tr -cd 'A-Za-z0-9_' | cut -c1-32)
-    mkdir -p "$MIRZA_BACKUP_DIR"
-    snap="$MIRZA_BACKUP_DIR/pre-restore_files_${tag}_$(date +%Y%m%d_%H%M%S).tar.gz"
+    mkdir -p "$CIRO_BACKUP_DIR"
+    snap="$CIRO_BACKUP_DIR/pre-restore_files_${tag}_$(date +%Y%m%d_%H%M%S).tar.gz"
     if ! run_step "Saving the current files" \
         "tar --warning=no-file-changed -czf '$snap' -C '$(dirname "$dir")' --exclude='*.bak*' --exclude='.git' '$(basename "$dir")'"; then
         show_step_error; rm -f "$snap"
@@ -1645,7 +1642,7 @@ function show_menu() {
     # and call show_menu again - forever. Every error path in this script
     # returns to this menu, so guarding it in this one place is what makes all
     # 57 of them safe to reach unattended.
-    if [ -n "$MIRZA_NONINTERACTIVE" ]; then
+    if [ -n "$CIRO_NONINTERACTIVE" ]; then
         return 0
     fi
     show_logo
@@ -1653,7 +1650,7 @@ function show_menu() {
     _mi "1" "Install"   "set up the bot on a clean server"
     _mi "2" "Update"    "newest code, keeps all your data"
     _mi "3" "Remove"    "delete the bot and its packages"
-    _mi "4" "Migrate"   "move an original Mirza bot to Ciro ${C_WARN}(beta)${CR}"
+    _mi "4" "Migrate"   "move a bot of the original project to Ciro ${C_WARN}(beta)${CR}"
     _mi "5" "Renew SSL" "reissue the domain certificate"
     _mi "6" "Backup"    "database dump, sent to Telegram"
     _mi "7" "Restore"   "a database or bot folder backup ${C_WARN}(beta)${CR}"
@@ -1670,7 +1667,7 @@ function show_menu() {
         1) install_bot ;;
         2) update_bot ;;
         3) remove_bot ;;
-        4) migrate_to_pro ;;
+        4) migrate_to_ciro ;;
         5) renew_ssl ;;
         6) backup_bot ;;
         7) import_bot ;;
@@ -1692,7 +1689,7 @@ function show_help_screen() {
     _kv "install" "${C_DIM}Install Ciro${CR}"
     _kv "update" "${C_DIM}Update Ciro to the latest code${CR}"
     _kv "remove" "${C_DIM}Remove Ciro and its services${CR}"
-    _kv "migrate" "${C_DIM}Migrate an original Mirza bot to Ciro${CR}"
+    _kv "migrate" "${C_DIM}Migrate a bot of the original project to Ciro${CR}"
     _kv "addbot" "${C_DIM}Install a second, independent bot on this server${CR}"
     _kv "renew" "${C_DIM}Renew the bot domain SSL certificate${CR}"
     _kv "backup" "${C_DIM}Backup database & send to Telegram${CR}"
@@ -1751,11 +1748,11 @@ function fix_update_issues() {
     local target="" fmt=""
     if [ -f "$DEB822" ]; then target="$DEB822"; fmt="deb822"
     else target="$LEGACY"; fmt="legacy"; fi
-    [ -f "$target" ] && cp "$target" "$target.mirzabackup"
+    [ -f "$target" ] && cp "$target" "$target.cirobackup"
 
     local parked=""
     if [ "$fmt" = "deb822" ] && [ -s "$LEGACY" ]; then
-        cp "$LEGACY" "$LEGACY.mirzabackup" && : > "$LEGACY" && parked="$LEGACY"
+        cp "$LEGACY" "$LEGACY.cirobackup" && : > "$LEGACY" && parked="$LEGACY"
     fi
 
     # arm64/armhf live on ports.ubuntu.com, not the archive mirrors.
@@ -1799,17 +1796,17 @@ EOF
         fi
         if apt-get update --allow-releaseinfo-change 2>/dev/null; then
             echo -e "\e[32mSuccessfully updated using mirror: $mirror\033[0m"
-            rm -f "$target.mirzabackup"
-            [ -n "$parked" ] && rm -f "$parked.mirzabackup"
+            rm -f "$target.cirobackup"
+            [ -n "$parked" ] && rm -f "$parked.cirobackup"
             return 0
         fi
     done
-    if [ -f "$target.mirzabackup" ]; then
-        mv "$target.mirzabackup" "$target"
+    if [ -f "$target.cirobackup" ]; then
+        mv "$target.cirobackup" "$target"
     else
         rm -f "$target"
     fi
-    [ -n "$parked" ] && [ -f "$parked.mirzabackup" ] && mv "$parked.mirzabackup" "$parked"
+    [ -n "$parked" ] && [ -f "$parked.cirobackup" ] && mv "$parked.cirobackup" "$parked"
     echo -e "\e[91mAll mirrors failed. Restored original apt sources\033[0m"
     return 1
 }
@@ -1876,7 +1873,7 @@ hosts_of()     { if [ "${2:-443}" = "443" ]; then echo "$1"; else echo "$1:$2"; 
 # server that only ever had the one bot never sees any of this - the
 # registry silently carries a single entry and every picker below returns
 # it without a prompt, exactly like before this existed.
-BOTS_REGISTRY="/root/confmirza/bots.json"
+BOTS_REGISTRY="/root/ciro/bots.json"
 
 _ensure_jq() {
     command -v jq >/dev/null 2>&1 || apt-get install -y jq >/dev/null 2>&1
@@ -1886,16 +1883,20 @@ _ensure_jq() {
 # seed it from whatever is already installed at the default path.
 bots_registry_ensure() {
     _ensure_jq
-    mkdir -p /root/confmirza
+    mkdir -p /root/ciro
     [ -f "$BOTS_REGISTRY" ] || echo '[]' > "$BOTS_REGISTRY"
-    if [ "$(jq 'length' "$BOTS_REGISTRY" 2>/dev/null)" = "0" ] \
-        && [ -f "$BOT_DIR_DEFAULT/config.php" ]; then
+    local seed
+    for seed in "$BOT_DIR_DEFAULT" "$LEGACY_BOT_DIR"; do
+        [ -f "$seed/config.php" ] && break
+        seed=""
+    done
+    if [ "$(jq 'length' "$BOTS_REGISTRY" 2>/dev/null)" = "0" ] && [ -n "$seed" ]; then
         local name hosts
-        name=$(grep '^\$usernamebot' "$BOT_DIR_DEFAULT/config.php" 2>/dev/null | cut -d"'" -f2)
+        name=$(grep '^\$usernamebot' "$seed/config.php" 2>/dev/null | cut -d"'" -f2)
         [ -z "$name" ] && name="Bot 1"
-        hosts=$(grep '^\$domainhosts' "$BOT_DIR_DEFAULT/config.php" 2>/dev/null | cut -d"'" -f2)
-        bots_registry_add "$name" "$BOT_DIR_DEFAULT" "$(hosts_domain "$hosts")"
-        [ "$(hosts_port "$hosts")" != "443" ] && bots_registry_set_bot_port "$BOT_DIR_DEFAULT" "$(hosts_port "$hosts")"
+        hosts=$(grep '^\$domainhosts' "$seed/config.php" 2>/dev/null | cut -d"'" -f2)
+        bots_registry_add "$name" "$seed" "$(hosts_domain "$hosts")"
+        [ "$(hosts_port "$hosts")" != "443" ] && bots_registry_set_bot_port "$seed" "$(hosts_port "$hosts")"
     fi
 }
 
@@ -1905,7 +1906,7 @@ bots_registry_ensure() {
 bots_registry_add() {
     local name="$1" dir="$2" domain="$3"
     _ensure_jq
-    mkdir -p /root/confmirza
+    mkdir -p /root/ciro
     [ -f "$BOTS_REGISTRY" ] || echo '[]' > "$BOTS_REGISTRY"
     local tmp; tmp=$(mktemp)
     jq --arg name "$name" --arg dir "$dir" --arg domain "$domain" '
@@ -1941,10 +1942,10 @@ pick_bot_instance() {
     # file was found in that very directory), so it says so outright. Without
     # this, a server with two bots would reach the "which bot?" prompt with no
     # one there to answer it.
-    if [ -n "$MIRZA_BOT_DIR" ] && [ -d "$MIRZA_BOT_DIR" ]; then
-        PICKED_DIR="$MIRZA_BOT_DIR"
-        PICKED_NAME=$(jq -r --arg d "$MIRZA_BOT_DIR" '.[] | select(.dir==$d) | .name' "$BOTS_REGISTRY" 2>/dev/null | head -1)
-        PICKED_DOMAIN=$(jq -r --arg d "$MIRZA_BOT_DIR" '.[] | select(.dir==$d) | .domain' "$BOTS_REGISTRY" 2>/dev/null | head -1)
+    if [ -n "$CIRO_BOT_DIR" ] && [ -d "$CIRO_BOT_DIR" ]; then
+        PICKED_DIR="$CIRO_BOT_DIR"
+        PICKED_NAME=$(jq -r --arg d "$CIRO_BOT_DIR" '.[] | select(.dir==$d) | .name' "$BOTS_REGISTRY" 2>/dev/null | head -1)
+        PICKED_DOMAIN=$(jq -r --arg d "$CIRO_BOT_DIR" '.[] | select(.dir==$d) | .domain' "$BOTS_REGISTRY" 2>/dev/null | head -1)
         [ -z "$PICKED_NAME" ] && PICKED_NAME="Bot"
         return 0
     fi
@@ -1990,7 +1991,7 @@ pick_bot_instance() {
 # The registry's pma_port is the source of truth; pma_sync_all turns it
 # into Apache config.
 PMA_CONF="/etc/apache2/conf-available/phpmyadmin.conf"
-PMA_PORTS_CONF="/etc/apache2/conf-available/mirza-pma-ports.conf"
+PMA_PORTS_CONF="/etc/apache2/conf-available/ciro-pma-ports.conf"
 
 # bots_registry_pma_port DIR - that bot's phpMyAdmin port (the bot's own
 # port when unset: phpMyAdmin inside the bot's own site)
@@ -2174,10 +2175,10 @@ _pma_restore() {
 # marked, so it can come back - while nothing uses 443: with Xray on 443
 # Apache would not even start otherwise. Every other port goes in
 # $PMA_PORTS_CONF. Opens the ports in UFW when it is active.
-mirza_listen_sync() {
+ciro_listen_sync() {
     local need p others=""
     need="$* $(jq -r '.[] | select(.domain != null and .domain != "" and .domain != "null" and (.stopped // false) != true) | "\(.port // 443) \(.pma_port // .port // 443)"' "$BOTS_REGISTRY" 2>/dev/null)"
-    # a site the registry does not know (an original Mirza bot) may be on 443 too
+    # a site the registry does not know (a bot of the original project) may be on 443 too
     grep -qsE '^[[:space:]]*<VirtualHost[^>]*:443[[:space:]>]' /etc/apache2/sites-enabled/* && need="$need 443"
     need=$(printf '%s\n' $need | grep -E '^[0-9]+$' | sort -un | tr '\n' ' ')
     for p in $need; do
@@ -2188,15 +2189,15 @@ mirza_listen_sync() {
             echo "# Written by the Ciro script: the HTTPS ports a bot or its phpMyAdmin uses besides 443."
             for p in $others; do echo "Listen $p https"; done
         } > "$PMA_PORTS_CONF"
-        a2enconf mirza-pma-ports >/dev/null 2>&1
+        a2enconf ciro-pma-ports >/dev/null 2>&1
     else
-        a2disconf mirza-pma-ports >/dev/null 2>&1
+        a2disconf ciro-pma-ports >/dev/null 2>&1
         rm -f "$PMA_PORTS_CONF"
     fi
     if [[ " $need " == *" 443 "* ]]; then
-        sed -i -E 's/^([[:space:]]*)#mirza# (Listen 443)/\1\2/' /etc/apache2/ports.conf 2>/dev/null
+        sed -i -E 's/^([[:space:]]*)#ciro# (Listen 443)/\1\2/' /etc/apache2/ports.conf 2>/dev/null
     else
-        sed -i -E 's/^([[:space:]]*)(Listen 443([[:space:]]|$))/\1#mirza# \2/' /etc/apache2/ports.conf 2>/dev/null
+        sed -i -E 's/^([[:space:]]*)(Listen 443([[:space:]]|$))/\1#ciro# \2/' /etc/apache2/ports.conf 2>/dev/null
     fi
     if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
         for p in $others; do ufw allow "$p/tcp" >/dev/null 2>&1; done
@@ -2218,7 +2219,7 @@ pma_sync_all() {
     # Nothing ever moved: leave Apache exactly as the installer wrote it
     if [ -z "$(printf '%s\n' "$rows" | awk '($2 != "" && $2 != 443) || ($3 != "" && $3 != 443)')" ] \
         && [ ! -f "$PMA_PORTS_CONF" ] && ! ls "$sa"/*-pma.conf >/dev/null 2>&1 \
-        && ! grep -q '^[[:space:]]*#mirza# Listen 443' /etc/apache2/ports.conf 2>/dev/null; then
+        && ! grep -q '^[[:space:]]*#ciro# Listen 443' /etc/apache2/ports.conf 2>/dev/null; then
         return 0
     fi
     local bak; bak=$(mktemp -d)
@@ -2271,7 +2272,7 @@ EOF
         a2disconf phpmyadmin >/dev/null 2>&1
     fi
     # every port a bot or a phpMyAdmin is on - 443 too, or not at all
-    mirza_listen_sync
+    ciro_listen_sync
     ports=$(sed -n 's/^Listen \([0-9]*\) https$/\1/p' "$PMA_PORTS_CONF" 2>/dev/null | tr '\n' ' ')
 
     local out
@@ -2339,7 +2340,7 @@ db_set_password() {
     dbname=$(grep '^\$dbname' "$cfg" | cut -d"'" -f2)
     dbhost=$(grep '^\$dbhost' "$cfg" | cut -d"'" -f2)
     old=$(grep '^\$passworddb' "$cfg" | cut -d"'" -f2)
-    rootpass=$(grep '$pass' /root/confmirza/dbrootmirza.txt 2>/dev/null | cut -d"'" -f2)
+    rootpass=$(grep '$pass' /root/ciro/dbroot.txt 2>/dev/null | cut -d"'" -f2)
     [ -z "$dbhost" ] && dbhost="localhost"
     if ! valid_db_ident "$dbuser"; then echo "config.php has no usable database username."; return 1; fi
     if [ -z "$rootpass" ]; then echo "Could not read the MySQL root password."; return 1; fi
@@ -2560,17 +2561,20 @@ preflight() {
 }
 
 function install_bot() {
-    BOT_DIR="/var/www/html/mirzaprobotconfig"
+    BOT_DIR="/var/www/html/ciro"
     PHP_VER="$(state_get PHP_VER)"
     [ -z "$PHP_VER" ] && PHP_VER="8.2"
 
     # ── Guard: only block when a PREVIOUS install fully COMPLETED ──
-    if [ -f "$CONFIG_FILE_DEFAULT" ] && ! has_resumable_state; then
+    local _installed=""
+    [ -f "$LEGACY_BOT_DIR/config.php" ] && _installed="$LEGACY_BOT_DIR"
+    [ -f "$CONFIG_FILE_DEFAULT" ] && _installed="$BOT_DIR_DEFAULT"
+    if [ -n "$_installed" ] && ! has_resumable_state; then
         clear 2>/dev/null || true
         banner
         _sec "Install blocked"
         printf "    ${C_BAD}●${CR} ${C_BAD}Ciro is already installed on this server.${CR}\n"
-        printf "    ${C_DIM}Path:${CR} %s\n" "$BOT_DIR_DEFAULT"
+        printf "    ${C_DIM}Path:${CR} %s\n" "$_installed"
         echo ""
         echo ""
         printf "    ${C_KEY}[1]${CR} ${C_TXT}Update it instead${CR}\n"
@@ -2710,9 +2714,9 @@ function install_bot() {
             || { show_step_error; install_pause "Setting PHP ${PHP_VER} as default"; }
 
         echo 'phpmyadmin phpmyadmin/dbconfig-install boolean true' | sudo debconf-set-selections
-        echo 'phpmyadmin phpmyadmin/app-password-confirm password mirzahipass' | sudo debconf-set-selections
-        echo 'phpmyadmin phpmyadmin/mysql/admin-pass password mirzahipass' | sudo debconf-set-selections
-        echo 'phpmyadmin phpmyadmin/mysql/app-pass password mirzahipass' | sudo debconf-set-selections
+        echo 'phpmyadmin phpmyadmin/app-password-confirm password cirohipass' | sudo debconf-set-selections
+        echo 'phpmyadmin phpmyadmin/mysql/admin-pass password cirohipass' | sudo debconf-set-selections
+        echo 'phpmyadmin phpmyadmin/mysql/app-pass password cirohipass' | sudo debconf-set-selections
         echo 'phpmyadmin phpmyadmin/reconfigure-webserver multiselect apache2' | sudo debconf-set-selections
         run_step "Installing phpMyAdmin" \
             "DEBIAN_FRONTEND=noninteractive apt-get install -y phpmyadmin" \
@@ -2770,7 +2774,7 @@ function install_bot() {
             install_pause "Creating bot directory"
         fi
 
-        TEMP_DIR="/tmp/mirzaprobot"
+        TEMP_DIR="/tmp/cirobot"
         rm -rf "$TEMP_DIR"; mkdir -p "$TEMP_DIR"
         run_step "Downloading Ciro (${SRC_LABEL_RESUME})" "wget -O '$TEMP_DIR/bot.zip' '$ZIP_URL'" \
             || { show_step_error; install_pause "Downloading bot files"; }
@@ -2800,7 +2804,7 @@ function install_bot() {
 
     # ╭──────────────────────── PHASE: DBROOT ──────────────────────╮
     if ! phase_done DBROOT; then
-        if [ ! -f "/root/confmirza/dbrootmirza.txt" ] || ! grep -q '\$pass' /root/confmirza/dbrootmirza.txt 2>/dev/null; then
+        if [ ! -f "/root/ciro/dbroot.txt" ] || ! grep -q '\$pass' /root/ciro/dbroot.txt 2>/dev/null; then
             run_step "Configuring MySQL root access" "setup_mysql_root" \
                 || { show_step_error; install_pause "MySQL root setup"; }
         fi
@@ -2842,7 +2846,7 @@ function install_bot() {
         state_set DOMAIN "$domainname"
     fi
     DOMAIN_NAME="$domainname"
-    PATHS=$(cat /root/confmirza/dbrootmirza.txt | grep '$path' | cut -d"'" -f2)
+    PATHS=$(cat /root/ciro/dbroot.txt | grep '$path' | cut -d"'" -f2)
 
     # ── The bot's port: 443, or 8443/88 when something (Xray) holds 443 ──
     BOT_PORT="$(state_get BOT_PORT)"
@@ -2916,7 +2920,7 @@ EOF
 EOF
         # Apache listens on the bot's port - and leaves 443 alone when the
         # bot is not on it, or Apache could not start beside Xray at all
-        mirza_listen_sync "$BOT_PORT"
+        ciro_listen_sync "$BOT_PORT"
         run_step "Configuring Apache virtual hosts" \
             "a2ensite '${DOMAIN_NAME}.conf' && a2ensite '${DOMAIN_NAME}-ssl.conf' ; a2dissite 000-default.conf 2>/dev/null ; a2dissite 000-default-le-ssl.conf 2>/dev/null ; a2dissite default-ssl.conf 2>/dev/null ; rm -f /etc/apache2/sites-enabled/000-default.conf /etc/apache2/sites-enabled/000-default-le-ssl.conf /etc/apache2/sites-enabled/default-ssl.conf ; rm -f /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/000-default-le-ssl.conf /etc/apache2/sites-available/default-ssl.conf ; a2enmod ssl ; a2enmod rewrite ; systemctl restart apache2" \
             || { show_step_error; install_pause "Configuring Apache virtual hosts"; }
@@ -3025,7 +3029,7 @@ EOF
         state_set PMA_PORT "$PMA_PORT"
     fi
 
-    ROOT_PASSWORD=$(cat /root/confmirza/dbrootmirza.txt | grep '$pass' | cut -d"'" -f2)
+    ROOT_PASSWORD=$(cat /root/ciro/dbroot.txt | grep '$pass' | cut -d"'" -f2)
     ROOT_USER="root"
     echo "SELECT 1" | mysql -u$ROOT_USER -p$ROOT_PASSWORD 2>/dev/null || {
         echo -e "\e[91mError: MySQL connection failed.\033[0m"
@@ -3034,7 +3038,7 @@ EOF
 
     randomdbpass=$(openssl rand -base64 10 | tr -dc 'a-zA-Z0-9' | cut -c1-8)
     randomdbdb=$(openssl rand -base64 10 | tr -dc 'a-zA-Z' | cut -c1-8)
-    dbname="mirzaprobot"
+    dbname="ciro"
 
     # ╭──────────────────────── PHASE: DB ──────────────────────────╮
     if ! phase_done DB; then
@@ -3093,7 +3097,7 @@ EOF
     if ! phase_done CONFIG; then
         wait
         sleep 1
-        file_path="/var/www/html/mirzaprobotconfig/config.php"
+        file_path="/var/www/html/ciro/config.php"
         if [ -f "$file_path" ]; then
             rm "$file_path" || {
                 echo -e "\e[91mError: Failed to delete old config.php.\033[0m"
@@ -3106,7 +3110,7 @@ EOF
             secrettoken=$(openssl rand -base64 10 | tr -dc 'a-zA-Z0-9' | cut -c1-8)
             state_set SECRET "$secrettoken"
         fi
-        cat <<EOF > /var/www/html/mirzaprobotconfig/config.php
+        cat <<EOF > /var/www/html/ciro/config.php
 <?php
 // This variable added for high load panels which their response time is long and bot can't communicate with online panel!
 // null for default settings
@@ -3127,7 +3131,7 @@ try { \$pdo = new PDO(\$dsn, \$usernamedb, \$passworddb, \$options); } catch (\P
 \$usernamebot = '${YOUR_BOTNAME}';
 ?>
 EOF
-        sudo chown www-data:www-data /var/www/html/mirzaprobotconfig/config.php 2>/dev/null
+        sudo chown www-data:www-data /var/www/html/ciro/config.php 2>/dev/null
         mark_phase CONFIG
     else
         secrettoken="$(state_get SECRET)"
@@ -3206,7 +3210,6 @@ EOF
     echo ""
 
     chmod +x /root/install.sh
-    ln -sf /root/install.sh /usr/local/bin/mirza
     ln -sf /root/install.sh /usr/local/bin/ciro
     _ensure_selfupdate_cron
     self_update_script
@@ -3220,7 +3223,7 @@ function install_second_bot() {
     printf "    ${C_DIM}installed here are not touched.${CR}\n"
     echo ""
 
-    if [ ! -f "/root/confmirza/dbrootmirza.txt" ]; then
+    if [ ! -f "/root/ciro/dbroot.txt" ]; then
         printf "    ${C_BAD}●${CR} ${C_BAD}No Ciro install found on this server yet. Use option 1 (Install) first.${CR}\n"
         sleep 2; show_menu; return 1
     fi
@@ -3231,13 +3234,13 @@ function install_second_bot() {
 
     # ── Pick a free directory + database name ────────────────
     local n=2 NEW_BOT_DIR NEW_DB ROOT_PASSWORD
-    ROOT_PASSWORD=$(cat /root/confmirza/dbrootmirza.txt 2>/dev/null | grep '$pass' | cut -d"'" -f2)
-    while [ -d "/var/www/html/mirzaprobotconfig${n}" ] \
-        || mysql -u root -p"$ROOT_PASSWORD" -N -e "SHOW DATABASES LIKE 'mirzaprobot${n}';" 2>/dev/null | grep -q "mirzaprobot${n}"; do
+    ROOT_PASSWORD=$(cat /root/ciro/dbroot.txt 2>/dev/null | grep '$pass' | cut -d"'" -f2)
+    while [ -d "/var/www/html/ciro${n}" ] \
+        || mysql -u root -p"$ROOT_PASSWORD" -N -e "SHOW DATABASES LIKE 'ciro${n}';" 2>/dev/null | grep -q "ciro${n}"; do
         n=$((n+1))
     done
-    NEW_BOT_DIR="/var/www/html/mirzaprobotconfig${n}"
-    NEW_DB="mirzaprobot${n}"
+    NEW_BOT_DIR="/var/www/html/ciro${n}"
+    NEW_DB="ciro${n}"
     _kv "Directory" "${C_KEY}${NEW_BOT_DIR}${CR}"
     _kv "Database"  "${C_KEY}${NEW_DB}${CR}"
     echo ""
@@ -3297,7 +3300,7 @@ function install_second_bot() {
     local ZIP_URL="$SRC_ZIP_URL" TARGET_LABEL="$SRC_LABEL"
 
     mkdir -p "$NEW_BOT_DIR"
-    local TEMP_DIR="/tmp/mirzaprobot_second"
+    local TEMP_DIR="/tmp/cirobot_second"
     rm -rf "$TEMP_DIR"; mkdir -p "$TEMP_DIR"
     run_step "Downloading Ciro (${TARGET_LABEL})" "wget -O '$TEMP_DIR/bot.zip' '$ZIP_URL'" \
         || { show_step_error; echo -e "\033[31mDownload failed.\033[0m"; rm -rf "$TEMP_DIR"; sleep 2; show_menu; return 1; }
@@ -3405,7 +3408,7 @@ EOF
     CustomLog \${APACHE_LOG_DIR}/${DOMAIN_NAME}-access.log combined
 </VirtualHost>
 EOF
-        mirza_listen_sync "$BOT_PORT"
+        ciro_listen_sync "$BOT_PORT"
         run_step "Enabling the HTTPS virtual host" "a2ensite '${DOMAIN_NAME}-ssl.conf' && a2enmod ssl && systemctl reload apache2" \
             || show_step_error
         # a reload does not always open a brand-new port
@@ -3475,7 +3478,7 @@ function update_bot() {
     BOT_DIR="$PICKED_DIR"
     # table.php runs in this update and would announce what is new by itself;
     # the closing message (step 10) says it instead, in the same message
-    export MIRZA_WHATSNEW_MERGE=1
+    export CIRO_WHATSNEW_MERGE=1
     local BOT_LABEL="$PICKED_NAME"
     [ -n "$PICKED_DOMAIN" ] && [ "$PICKED_DOMAIN" != "null" ] && BOT_LABEL="$PICKED_NAME · $PICKED_DOMAIN"
     if [ ! -d "$BOT_DIR" ]; then
@@ -3497,15 +3500,14 @@ function update_bot() {
     fi
 
     # ── What are we updating FROM? ───────────────────────────
-    # The original Mirza (mahdiMGF2/mirzabot) installs to this same directory
-    # with the same config.php variables, so it can be upgraded in place. It
-    # simply has no "version" file of ours.
+    # A bot of the original project uses the same config.php variables, so it
+    # can be upgraded in place. It simply has no "version" file of ours.
     local current flavour
     current=$(get_installed_version "$BOT_DIR")
     if [ -n "$current" ]; then
         flavour="Ciro ${current}"
     elif [ -f "$BOT_DIR/index.php" ] && [ -f "$BOT_DIR/table.php" ]; then
-        flavour="original Mirza (no version file)"
+        flavour="original project (no version file)"
         current="original"
     else
         flavour="unknown"
@@ -3539,7 +3541,7 @@ function update_bot() {
     _kv "Target" "${C_KEY}${TARGET_LABEL}${CR}"
     echo ""
     local confirm
-    if [ -n "$MIRZA_NONINTERACTIVE" ]; then
+    if [ -n "$CIRO_NONINTERACTIVE" ]; then
         # the admin already confirmed, in the bot, before the request was written
         confirm="y"
     else
@@ -3559,7 +3561,7 @@ function update_bot() {
     print_header "Updating Ciro"
 
     # ── 1. Safety net: a restorable snapshot BEFORE anything moves ──
-    local BK_DIR="/root/mirza-backups"
+    local BK_DIR="/root/ciro-backups"
     local STAMP; STAMP=$(date +%Y%m%d_%H%M%S)
     # Named after the bot it belongs to - its @username, or its directory when
     # config.php has none - so two bots' snapshots are told apart at a glance
@@ -3574,12 +3576,12 @@ function update_bot() {
     run_step "Backing up the current install" \
         "tar --warning=no-file-changed -czf '$ROLLBACK' -C '$(dirname "$BOT_DIR")' --exclude='*.bak*' --exclude='.git' --exclude='log.txt' --exclude='error_log' --exclude='update_request' --exclude='update_request.running' --exclude='rollback_request' --exclude='update_progress.json' --exclude='update_status.json' --exclude='update_backups.json' '$(basename "$BOT_DIR")'" \
         || { show_step_error; printf "  ${C_BAD}Could not create a rollback archive. Refusing to continue.${CR}\n"; sleep 3; show_menu; return 1; }
-    # keep only this bot's newest MIRZA_SNAPSHOTS_KEEP - the bot lists exactly
+    # keep only this bot's newest CIRO_SNAPSHOTS_KEEP - the bot lists exactly
     # these for "بازگشت به نسخه قبلی"; another bot's are never touched
     _snapshots_prune "$BOT_DIR"
 
     # ── 2. Fetch and validate the new code ───────────────────
-    TEMP_DIR="/tmp/mirzaprobot_update"
+    TEMP_DIR="/tmp/cirobot_update"
     rm -rf "$TEMP_DIR"; mkdir -p "$TEMP_DIR"
     run_step "Downloading ${TARGET_LABEL}" \
         "curl -fsSL --max-time 180 -o '$TEMP_DIR/bot.zip' '$ZIP_URL' || wget -q -O '$TEMP_DIR/bot.zip' '$ZIP_URL'" \
@@ -3628,7 +3630,7 @@ function update_bot() {
 
     # ── 6. Database migration (additive, never destructive) ──
     # table.php only ever CREATEs missing tables and ADDs missing columns, so
-    # it upgrades an original-Mirza schema without touching existing rows.
+    # it upgrades an original-project schema without touching existing rows.
     local DOMAIN_URL DOMAIN_NAME
     DOMAIN_URL=$(grep "^\$domainhosts" "$CONFIG_PATH" | cut -d"'" -f2)
     DOMAIN_NAME=$(hosts_domain "$DOMAIN_URL")
@@ -3671,7 +3673,6 @@ function update_bot() {
         if bash -n "$BOT_DIR/install.sh" 2>/dev/null; then
             install -m 0755 "$BOT_DIR/install.sh" /root/install.sh 2>/dev/null || \
                 { cp "$BOT_DIR/install.sh" /root/install.sh; chmod +x /root/install.sh; }
-            ln -sf /root/install.sh /usr/local/bin/mirza
             ln -sf /root/install.sh /usr/local/bin/ciro
         fi
     fi
@@ -3690,7 +3691,7 @@ function update_bot() {
         # the closing message is built by the bot's own code (function.php,
         # bot_update_notify_admins): the notice, and under it what each update
         # the admin missed added - one message, in the admin's language
-        cat > /tmp/mirza_notify.php <<'NOTIFYEOF'
+        cat > /tmp/ciro_notify.php <<'NOTIFYEOF'
 <?php
 // the same set, in the same order, every cronbot entry point takes
 require 'config.php';
@@ -3699,13 +3700,13 @@ require 'panels.php';
 require 'function.php';
 require 'jdf.php';
 require 'vendor/autoload.php';
-echo bot_update_notify_admins(getenv('MIRZA_DOMAIN') ?: '', getenv('MIRZA_NEW') ?: '', getenv('MIRZA_BACKUP') ?: '');
+echo bot_update_notify_admins(getenv('CIRO_DOMAIN') ?: '', getenv('CIRO_NEW') ?: '', getenv('CIRO_BACKUP') ?: '');
 NOTIFYEOF
         local SENT
-        SENT=$( cd "$BOT_DIR" && MIRZA_OLD="$flavour" MIRZA_NEW="$newver" \
-            MIRZA_DOMAIN="$DOMAIN_NAME" MIRZA_DB="$DB_STATE" MIRZA_BACKUP="$ROLLBACK" \
-            php /tmp/mirza_notify.php 2>/dev/null )
-        rm -f /tmp/mirza_notify.php
+        SENT=$( cd "$BOT_DIR" && CIRO_OLD="$flavour" CIRO_NEW="$newver" \
+            CIRO_DOMAIN="$DOMAIN_NAME" CIRO_DB="$DB_STATE" CIRO_BACKUP="$ROLLBACK" \
+            php /tmp/ciro_notify.php 2>/dev/null )
+        rm -f /tmp/ciro_notify.php
         if [ -n "$SENT" ] && [ "$SENT" -gt 0 ] 2>/dev/null; then
             printf "    ${C_OK}✔${CR} ${C_DIM}Update announced to ${SENT} admin(s) in Telegram${CR}\n"
         else
@@ -3724,7 +3725,7 @@ NOTIFYEOF
     echo ""
     # the success report above is the whole point of the run when nobody is
     # watching; the admin is told in Telegram by step 10 either way
-    if [ -n "$MIRZA_NONINTERACTIVE" ]; then
+    if [ -n "$CIRO_NONINTERACTIVE" ]; then
         return 0
     fi
     printf "  ${C_PROMPT}❯${CR} Press Enter to return to the menu... "
@@ -3761,19 +3762,19 @@ _rollback_update() {
 # root's crontab - is what actually updates. No sudo rights are handed to the
 # web server, so the worst a compromised bot could ask for is the same update
 # an admin could already have started from the terminal.
-MIRZA_UPDATE_REQUEST="update_request"
-MIRZA_UPDATE_STATUS="update_status.json"
-MIRZA_ROLLBACK_REQUEST="rollback_request"
-MIRZA_BACKUPS_LIST="update_backups.json"
+CIRO_UPDATE_REQUEST="update_request"
+CIRO_UPDATE_STATUS="update_status.json"
+CIRO_ROLLBACK_REQUEST="rollback_request"
+CIRO_BACKUPS_LIST="update_backups.json"
 # the same folder update_bot() drops its pre-update snapshot into
-MIRZA_BACKUP_DIR="/root/mirza-backups"
+CIRO_BACKUP_DIR="/root/ciro-backups"
 # how many of those each bot keeps - on the server and so in its own
 # "بازگشت به نسخه قبلی" list (bot_update_backups() shows no more either)
-MIRZA_SNAPSHOTS_KEEP=2
+CIRO_SNAPSHOTS_KEEP=2
 # where the bot leaves the chat, message and already-translated wording for the
 # progress bar. Written next to the request rather than inside it: the request
 # is claimed and deleted early, and this has to outlive that.
-MIRZA_PROGRESS_CTX="update_progress.json"
+CIRO_PROGRESS_CTX="update_progress.json"
 
 # ── The bot's own message, redrawn as the work goes ──────────
 # Only root can do this. The update runs here, not in the bot, and a bot that
@@ -3785,7 +3786,7 @@ MZ_TOKEN=""; MZ_CHAT=""; MZ_MSG=""; MZ_LANG=""
 MZ_TPL_PROGRESS=""; MZ_TPL_DONE=""; MZ_TPL_FAIL=""
 
 _selfupdate_ctx_load() {
-    local dir="$1" ctx="${dir}/${MIRZA_PROGRESS_CTX}"
+    local dir="$1" ctx="${dir}/${CIRO_PROGRESS_CTX}"
     MZ_TOKEN=""; MZ_CHAT=""; MZ_MSG=""; MZ_LANG=""
     MZ_TPL_PROGRESS=""; MZ_TPL_DONE=""; MZ_TPL_FAIL=""
     [ -f "$ctx" ] || return 1
@@ -3841,7 +3842,7 @@ _selfupdate_finish_php() {
     [ -n "$MZ_CHAT" ] && [ -n "$MZ_MSG" ] || return 1
     command -v php >/dev/null 2>&1 || return 1
     grep -q 'function bot_update_finish_edit' "$dir/function.php" 2>/dev/null || return 1
-    cat > /tmp/mirza_update_finish.php <<'FINEOF'
+    cat > /tmp/ciro_update_finish.php <<'FINEOF'
 <?php
 // the same set, in the same order, every cronbot entry point takes
 require 'config.php';
@@ -3861,9 +3862,9 @@ bot_update_finish_edit(
 FINEOF
     ( cd "$dir" && MZ_CHAT="$MZ_CHAT" MZ_MSG="$MZ_MSG" MZ_LANG="$MZ_LANG" \
         MZ_BACKUP="$backup" MZ_KIND="$kind" MZ_OK="$ok" \
-        php /tmp/mirza_update_finish.php ) >> /tmp/mirza_selfupdate.log 2>&1
+        php /tmp/ciro_update_finish.php ) >> /tmp/ciro_selfupdate.log 2>&1
     rc=$?
-    rm -f /tmp/mirza_update_finish.php
+    rm -f /tmp/ciro_update_finish.php
     return $rc
 }
 
@@ -3884,22 +3885,22 @@ _selfupdate_final() {
 _selfupdate_status() {
     local dir="$1" state="$2" detail="$3"
     printf '{"state":"%s","detail":"%s","at":%s}\n' "$state" "$detail" "$(date +%s)" \
-        > "${dir}/${MIRZA_UPDATE_STATUS}" 2>/dev/null
-    chown www-data:www-data "${dir}/${MIRZA_UPDATE_STATUS}" 2>/dev/null
-    chmod 664 "${dir}/${MIRZA_UPDATE_STATUS}" 2>/dev/null
+        > "${dir}/${CIRO_UPDATE_STATUS}" 2>/dev/null
+    chown www-data:www-data "${dir}/${CIRO_UPDATE_STATUS}" 2>/dev/null
+    chmod 664 "${dir}/${CIRO_UPDATE_STATUS}" 2>/dev/null
 }
 
-# _snapshots_prune BOTDIR - delete all but that bot's MIRZA_SNAPSHOTS_KEEP
+# _snapshots_prune BOTDIR - delete all but that bot's CIRO_SNAPSHOTS_KEEP
 # newest snapshots. The folder is shared by every bot on the server; a
 # snapshot belongs to the bot whose directory it holds (where it would unpack
 # to), so another bot's are never counted or deleted.
 _snapshots_prune() {
     local base; base=$(basename "$1")
     local n=0 f
-    for f in $(ls -1t "$MIRZA_BACKUP_DIR"/pre-update_*.tar.gz 2>/dev/null); do
+    for f in $(ls -1t "$CIRO_BACKUP_DIR"/pre-update_*.tar.gz 2>/dev/null); do
         [ "$(tar -tzf "$f" 2>/dev/null | head -1 | cut -d/ -f1)" = "$base" ] || continue
         n=$((n + 1))
-        [ "$n" -gt "$MIRZA_SNAPSHOTS_KEEP" ] && rm -f "$f"
+        [ "$n" -gt "$CIRO_SNAPSHOTS_KEEP" ] && rm -f "$f"
     done
 }
 
@@ -3914,7 +3915,7 @@ _selfupdate_publish_backups() {
     _snapshots_prune "$dir"
     local base; base=$(basename "$dir")
     local out="[" first=1 f top ver at size
-    for f in $(ls -1t "$MIRZA_BACKUP_DIR"/pre-update_*.tar.gz 2>/dev/null); do
+    for f in $(ls -1t "$CIRO_BACKUP_DIR"/pre-update_*.tar.gz 2>/dev/null); do
         top=$(tar -tzf "$f" 2>/dev/null | head -1 | cut -d/ -f1)
         [ "$top" = "$base" ] || continue
         ver=$(tar -xzOf "$f" "${base}/version" 2>/dev/null | tr -cd '[:alnum:]._-')
@@ -3926,15 +3927,13 @@ _selfupdate_publish_backups() {
         out="${out}{\"name\":\"$(basename "$f")\",\"version\":\"${ver}\",\"at\":${at},\"size\":${size}}"
     done
     out="${out}]"
-    printf '%s\n' "$out" > "${dir}/${MIRZA_BACKUPS_LIST}" 2>/dev/null
-    chown www-data:www-data "${dir}/${MIRZA_BACKUPS_LIST}" 2>/dev/null
-    chmod 664 "${dir}/${MIRZA_BACKUPS_LIST}" 2>/dev/null
+    printf '%s\n' "$out" > "${dir}/${CIRO_BACKUPS_LIST}" 2>/dev/null
+    chown www-data:www-data "${dir}/${CIRO_BACKUPS_LIST}" 2>/dev/null
+    chmod 664 "${dir}/${CIRO_BACKUPS_LIST}" 2>/dev/null
 }
 
 selfupdate_watch() {
-    # the command is called ciro now; a server updated by an older copy of
-    # this script only has the old mirza link until this first tick adds it
-    [ -e /usr/local/bin/ciro ] || ln -sf /root/install.sh /usr/local/bin/ciro 2>/dev/null
+    _legacy_migrate locked >> /tmp/ciro_selfupdate.log 2>&1
     bots_registry_ensure
     local dirs; dirs=$(jq -r '.[].dir' "$BOTS_REGISTRY" 2>/dev/null)
     [ -z "$dirs" ] && return 0
@@ -3948,13 +3947,13 @@ selfupdate_watch() {
         # saying "a job is running" for ever, with no way back from inside the
         # bot. Nothing else can be running while this tick holds the lock, so an
         # old one here is by definition finished.
-        claimed="${dir}/${MIRZA_UPDATE_REQUEST}.running"
+        claimed="${dir}/${CIRO_UPDATE_REQUEST}.running"
         if [ -f "$claimed" ] \
             && [ $(( $(date +%s) - $(stat -c %Y "$claimed" 2>/dev/null || echo 0) )) -gt 1800 ]; then
             rm -f "$claimed"
             # deliberately no status write: whatever the last real run reported
             # is still the truth, and overwriting it would hide it
-            echo "[$(date '+%F %T')] cleared a stale claim in $dir" >> /tmp/mirza_selfupdate.log
+            echo "[$(date '+%F %T')] cleared a stale claim in $dir" >> /tmp/ciro_selfupdate.log
         fi
         # Refresh the list the bot shows only when a new snapshot has actually
         # appeared - rebuilding it means reading inside every archive, which is
@@ -3962,14 +3961,14 @@ selfupdate_watch() {
         # A list naming more than are kept was written before the limit (or by
         # an older copy of this script) - rebuilding it prunes the folder too,
         # so the limit holds within the minute, not only after the next update.
-        newest=$(ls -1t "$MIRZA_BACKUP_DIR"/pre-update_*.tar.gz 2>/dev/null | head -1)
-        if [ ! -f "${dir}/${MIRZA_BACKUPS_LIST}" ] \
-            || { [ -n "$newest" ] && [ "$newest" -nt "${dir}/${MIRZA_BACKUPS_LIST}" ]; } \
-            || [ "$(jq 'length' "${dir}/${MIRZA_BACKUPS_LIST}" 2>/dev/null || echo 0)" -gt "$MIRZA_SNAPSHOTS_KEEP" ]; then
+        newest=$(ls -1t "$CIRO_BACKUP_DIR"/pre-update_*.tar.gz 2>/dev/null | head -1)
+        if [ ! -f "${dir}/${CIRO_BACKUPS_LIST}" ] \
+            || { [ -n "$newest" ] && [ "$newest" -nt "${dir}/${CIRO_BACKUPS_LIST}" ]; } \
+            || [ "$(jq 'length' "${dir}/${CIRO_BACKUPS_LIST}" 2>/dev/null || echo 0)" -gt "$CIRO_SNAPSHOTS_KEEP" ]; then
             _selfupdate_publish_backups "$dir"
         fi
         # ── going back to an earlier snapshot ────────────────
-        rbreq="${dir}/${MIRZA_ROLLBACK_REQUEST}"
+        rbreq="${dir}/${CIRO_ROLLBACK_REQUEST}"
         if [ -f "$rbreq" ]; then
             want=$(head -c 200 "$rbreq" 2>/dev/null | tr -d '\r\n')
             rm -f "$rbreq"
@@ -3981,7 +3980,7 @@ selfupdate_watch() {
                 pre-update_*.tar.gz) ;;
                 *) _selfupdate_status "$dir" "failed" "نام نسخه پشتیبان معتبر نبود"; continue ;;
             esac
-            arc="${MIRZA_BACKUP_DIR}/${want}"
+            arc="${CIRO_BACKUP_DIR}/${want}"
             top=$(tar -tzf "$arc" 2>/dev/null | head -1 | cut -d/ -f1)
             if [ ! -f "$arc" ] || [ "$top" != "$(basename "$dir")" ]; then
                 _selfupdate_status "$dir" "failed" "نسخه پشتیبان پیدا نشد"
@@ -3996,7 +3995,7 @@ selfupdate_watch() {
             # Unpacking is one long call with no steps to count, so the bar is
             # walked forward on a timer instead - slowly, and never past 90, so
             # it cannot claim to be finished while the work is still running.
-            ( _rollback_update "$arc" "$dir" >> /tmp/mirza_selfupdate.log 2>&1 ) &
+            ( _rollback_update "$arc" "$dir" >> /tmp/ciro_selfupdate.log 2>&1 ) &
             rbpid=$!
             rbpct=10
             while kill -0 "$rbpid" 2>/dev/null; do
@@ -4019,10 +4018,10 @@ selfupdate_watch() {
                 _selfupdate_status "$dir" "failed" "بازگشت به نسخه قبلی ناموفق بود"
                 _selfupdate_final "fail" "$want"
             fi
-            rm -f "${dir}/${MIRZA_PROGRESS_CTX}"
+            rm -f "${dir}/${CIRO_PROGRESS_CTX}"
             continue
         fi
-        req="${dir}/${MIRZA_UPDATE_REQUEST}"
+        req="${dir}/${CIRO_UPDATE_REQUEST}"
         [ -f "$req" ] || continue
         # Claim it by moving it aside FIRST. If this run is killed half way the
         # request is already gone, so the next minute can never start a second
@@ -4045,7 +4044,7 @@ selfupdate_watch() {
         # seven is how many run_step calls update_bot makes, and run_step moves
         # the bar itself, so a step added later is counted without anyone
         # remembering to touch this.
-        ( MIRZA_NONINTERACTIVE=1 MIRZA_BOT_DIR="$dir" STEP_TOTAL=7 update_bot ) >> /tmp/mirza_selfupdate.log 2>&1
+        ( CIRO_NONINTERACTIVE=1 CIRO_BOT_DIR="$dir" STEP_TOTAL=7 update_bot ) >> /tmp/ciro_selfupdate.log 2>&1
         rc=$?
         rm -f "$claimed"
         # the snapshot this run just took is what the admin would go back to -
@@ -4053,7 +4052,7 @@ selfupdate_watch() {
         _selfupdate_publish_backups "$dir"
         if [ "$rc" -eq 0 ]; then
             _selfupdate_status "$dir" "done" "آپدیت با موفقیت انجام شد"
-            newbk=$(jq -r '.[0].name // empty' "${dir}/${MIRZA_BACKUPS_LIST}" 2>/dev/null)
+            newbk=$(jq -r '.[0].name // empty' "${dir}/${CIRO_BACKUPS_LIST}" 2>/dev/null)
             _selfupdate_finish_php "$dir" "update" "$newbk" 1 || _selfupdate_final "done" "$newbk"
         else
             # update_bot restores its own pre-update snapshot before returning
@@ -4061,7 +4060,7 @@ selfupdate_watch() {
             _selfupdate_status "$dir" "failed" "آپدیت ناموفق بود - نسخه قبلی برگردانده شد"
             _selfupdate_final "fail" ""
         fi
-        rm -f "${dir}/${MIRZA_PROGRESS_CTX}"
+        rm -f "${dir}/${CIRO_PROGRESS_CTX}"
     done <<< "$dirs"
 }
 
@@ -4080,9 +4079,9 @@ _bot_webhook_secret() {
 # whole line so a hand-edited schedule is never duplicated.
 _ensure_selfupdate_cron() {
     command -v crontab >/dev/null 2>&1 || return 0
-    crontab -l 2>/dev/null | grep -Fq "mirza selfupdate-watch" && return 0
+    crontab -l 2>/dev/null | grep -Fq "ciro selfupdate-watch" && return 0
     ( crontab -l 2>/dev/null; \
-      echo "* * * * * flock -n /tmp/mirza_selfupdate.lock /usr/local/bin/mirza selfupdate-watch >/dev/null 2>&1" \
+      echo "* * * * * flock -n /tmp/ciro_selfupdate.lock /usr/local/bin/ciro selfupdate-watch >/dev/null 2>&1" \
     ) | crontab - 2>/dev/null
 }
 
@@ -4135,7 +4134,7 @@ EOF
     fi
     a2ensite "${domain}.conf" >/dev/null 2>&1 || true
     a2enmod rewrite ssl >/dev/null 2>&1 || true
-    mirza_listen_sync "$port"
+    ciro_listen_sync "$port"
     if apache2ctl configtest >/dev/null 2>&1; then
         systemctl reload apache2 >/dev/null 2>&1 || systemctl restart apache2 >/dev/null 2>&1
         printf "    ${C_OK}✔${CR} ${C_DIM}Apache vhost written and reloaded${CR}\n"
@@ -4151,9 +4150,9 @@ EOF
 # returns 0, or returns 1 when it could not be saved.
 _db_dump_before_remove() {
     local dbname="$1" rootpass dump
-    rootpass=$(grep '$pass' /root/confmirza/dbrootmirza.txt 2>/dev/null | cut -d"'" -f2)
+    rootpass=$(grep '$pass' /root/ciro/dbroot.txt 2>/dev/null | cut -d"'" -f2)
     [ -n "$dbname" ] && [ -n "$rootpass" ] || return 1
-    dump="/root/mirza_before_remove_${dbname}_$(date +%Y-%m-%d_%H-%M-%S).sql"
+    dump="/root/ciro_before_remove_${dbname}_$(date +%Y-%m-%d_%H-%M-%S).sql"
     if mysqldump -u root -p"$rootpass" --no-tablespaces "$dbname" > "$dump" 2>/dev/null && [ -s "$dump" ]; then
         echo "$dump"; return 0
     fi
@@ -4238,7 +4237,7 @@ remove_bot_scoped() {
     fi
     if [ -n "$dbname" ]; then
         local ROOT_PASS
-        ROOT_PASS=$(grep '$pass' /root/confmirza/dbrootmirza.txt 2>/dev/null | cut -d"'" -f2)
+        ROOT_PASS=$(grep '$pass' /root/ciro/dbroot.txt 2>/dev/null | cut -d"'" -f2)
         if [ -n "$ROOT_PASS" ]; then
             if mysql -u root -p"$ROOT_PASS" -e "DROP DATABASE IF EXISTS \`$dbname\`;" 2>/dev/null; then
                 printf "    ${C_OK}✔${CR} ${C_DIM}Database %s removed${CR}\n" "$dbname"
@@ -4260,7 +4259,7 @@ remove_bot_scoped() {
         certbot delete --cert-name "$domain" --non-interactive >/dev/null 2>&1 \
             && printf "    ${C_OK}✔${CR} ${C_DIM}SSL certificate removed${CR}\n"
     fi
-    MIRZA_SNAPSHOTS_KEEP=0 _snapshots_prune "$dir"
+    CIRO_SNAPSHOTS_KEEP=0 _snapshots_prune "$dir"
     printf "    ${C_OK}✔${CR} ${C_DIM}Rollback snapshots removed${CR}\n"
     if [ -d "$dir" ]; then
         if rm -rf "$dir"; then
@@ -4297,10 +4296,10 @@ function remove_bot() {
     echo "Log file: $LOG_FILE" > "$LOG_FILE"
     # The last bot left is not always in the default directory: remove the
     # first of two bots and the second one is all that remains.
-    BOT_DIR="/var/www/html/mirzaprobotconfig"
+    BOT_DIR="/var/www/html/ciro"
     [ "$_bot_count" = "1" ] && BOT_DIR=$(jq -r '.[0].dir' "$BOTS_REGISTRY" 2>/dev/null)
     if [ -z "$BOT_DIR" ] || [ ! -d "$BOT_DIR" ]; then
-        echo -e "\e[31m[ERROR]\033[0m Ciro is not installed (${BOT_DIR:-/var/www/html/mirzaprobotconfig} not found)." | tee -a "$LOG_FILE"
+        echo -e "\e[31m[ERROR]\033[0m Ciro is not installed (${BOT_DIR:-/var/www/html/ciro} not found)." | tee -a "$LOG_FILE"
         echo -e "\e[33mNothing to remove.\033[0m" | tee -a "$LOG_FILE"
         sleep 2
         show_menu
@@ -4337,9 +4336,9 @@ function remove_bot() {
         fi
     fi
     _bot_crons_remove "$_hosts" && echo -e "\e[92mScheduled jobs removed.\033[0m" | tee -a "$LOG_FILE"
-    MIRZA_SNAPSHOTS_KEEP=0 _snapshots_prune "$BOT_DIR"
-    rmdir "$MIRZA_BACKUP_DIR" 2>/dev/null
-    ( crontab -l 2>/dev/null | grep -vF "mirza selfupdate-watch" ) | crontab - 2>/dev/null
+    CIRO_SNAPSHOTS_KEEP=0 _snapshots_prune "$BOT_DIR"
+    rmdir "$CIRO_BACKUP_DIR" 2>/dev/null
+    ( crontab -l 2>/dev/null | grep -vF "ciro selfupdate-watch" ) | crontab - 2>/dev/null
     if [ -f "$CONFIG_PATH" ]; then
         sudo shred -u -n 5 "$CONFIG_PATH" && echo -e "\e[92mConfig file securely removed: $CONFIG_PATH\033[0m" | tee -a "$LOG_FILE" || {
             echo -e "\e[91mFailed to securely remove config file: $CONFIG_PATH\033[0m" | tee -a "$LOG_FILE"
@@ -4397,16 +4396,16 @@ function remove_bot() {
     echo -e "\e[33mResetting firewall rules (except SSL)...\033[0m" | tee -a "$LOG_FILE"
     sudo ufw delete allow 'Apache' 2>/dev/null
     sudo ufw reload 2>/dev/null
-    # Clear Mirza install state so a fresh install is allowed afterwards
-    sudo rm -rf /root/confmirza
+    # Clear the install state so a fresh install is allowed afterwards
+    sudo rm -rf /root/ciro
     echo -e "\e[92mCiro, MySQL, and their dependencies have been completely removed.\033[0m" | tee -a "$LOG_FILE"
     [ -n "$_dump" ] && echo -e "\e[92mThe bot's database is kept in $_dump\033[0m" | tee -a "$LOG_FILE"
 }
 
-# ── Migrate an original Mirza to Pro Max ──────────────────────
+# ── Migrate a bot of the original project to Ciro ─────────────
 # The old bot keeps running, untouched, until the new code is completely
 # ready beside it. Its database stays exactly where it is - same name, user
-# and password - and table.php only ADDS what Pro Max needs, the way Update
+# and password - and table.php only ADDS what Ciro needs, the way Update
 # upgrades an original install, so no table, row, setting, admin, channel or
 # panel status is dropped or changed. The database and the old files are
 # copied to /root first, and a failure before the switch leaves the old bot
@@ -4432,24 +4431,24 @@ _mig_undo_files() {
     fi
 }
 
-function migrate_to_pro() {
+function migrate_to_ciro() {
     clear 2>/dev/null || true
     banner
     _sec "Migrate to Ciro"
 
-    # 1) The original install: a config.php and no Pro Max version file
-    local OLD_BOT_DIR="" _cand _promax=""
-    for _cand in "/var/www/html/mirzabotconfig" "/var/www/html/mirzaprobotconfig"; do
+    # 1) The original install: a config.php and no version file of ours
+    local OLD_BOT_DIR="" _cand _ours=""
+    for _cand in "$LEGACY_ORIGINAL_DIR" "$LEGACY_BOT_DIR" "$BOT_DIR_DEFAULT"; do
         [ -f "$_cand/config.php" ] || continue
-        if [ -f "$_cand/version" ]; then _promax="$_cand"; continue; fi
+        if [ -f "$_cand/version" ]; then _ours="$_cand"; continue; fi
         OLD_BOT_DIR="$_cand"; break
     done
     if [ -z "$OLD_BOT_DIR" ]; then
-        if [ -n "$_promax" ]; then
+        if [ -n "$_ours" ]; then
             _mig_fail "This server already runs Ciro - there is nothing to migrate." \
                 "Use option 2 (Update) to bring it up to date."
         else
-            _mig_fail "No original Mirza install found (looked in /var/www/html/mirzabotconfig and mirzaprobotconfig)."
+            _mig_fail "No bot of the original project found on this server."
         fi
         return 1
     fi
@@ -4496,11 +4495,11 @@ function migrate_to_pro() {
         return 1
     fi
 
-    # 3) Where it goes: the first Pro Max folder not already taken by another
-    #    bot - so a Pro Max bot already on this server is never written over
+    # 3) Where it goes: the first Ciro folder not already taken by another
+    #    bot - so a Ciro bot already on this server is never written over
     local TARGET n=""
     while :; do
-        TARGET="/var/www/html/mirzaprobotconfig${n}"
+        TARGET="/var/www/html/ciro${n}"
         { [ "$TARGET" = "$OLD_BOT_DIR" ] || [ ! -e "$TARGET" ]; } && break
         n=$(( ${n:-1} + 1 ))
     done
@@ -4520,7 +4519,7 @@ function migrate_to_pro() {
         others="${others}${_d}"$'\n'
     done
 
-    _kv "Old bot" "${C_KEY}${botname:+@}${botname:-?}${CR} ${C_DIM}· original Mirza${CR}"
+    _kv "Old bot" "${C_KEY}${botname:+@}${botname:-?}${CR} ${C_DIM}· original project${CR}"
     _kv "Domain" "${C_DIM}${domain}${CR}"
     _kv "From" "${C_DIM}${OLD_BOT_DIR}${CR}"
     _kv "To" "${C_DIM}${TARGET}${CR}"
@@ -4546,8 +4545,8 @@ function migrate_to_pro() {
 
     # 4) Copies first
     local stamp; stamp=$(date +%Y-%m-%d_%H-%M-%S)
-    local DB_BK="/root/mirza_before_migrate_${dbname}_${stamp}.sql"
-    local FILES_BK="/root/mirza_before_migrate_files_${stamp}.tar.gz"
+    local DB_BK="/root/ciro_before_migrate_${dbname}_${stamp}.sql"
+    local FILES_BK="/root/ciro_before_migrate_files_${stamp}.tar.gz"
     run_step "Saving the database" \
         "mysqldump -h '$dbhost' -u '$dbuser' -p'$dbpass' --no-tablespaces '$dbname' > '$DB_BK' && [ -s '$DB_BK' ]" \
         || { show_step_error; rm -f "$DB_BK"; _mig_fail "Could not save the database." "Nothing was changed."; return 1; }
@@ -4557,7 +4556,7 @@ function migrate_to_pro() {
 
     # 5) The new code, built beside the running bot (outside the web root)
     choose_source
-    local STAGE="/var/www/.mirzaprobot_migrate" TEMP_DIR="/tmp/mirzabot_mig"
+    local STAGE="/var/www/.ciro_migrate" TEMP_DIR="/tmp/cirobot_mig"
     rm -rf "$STAGE" "$TEMP_DIR"; mkdir -p "$TEMP_DIR"
     run_step "Downloading Ciro" \
         "curl -fsSL --max-time 180 -o '$TEMP_DIR/bot.zip' '$SRC_ZIP_URL' || wget -q -O '$TEMP_DIR/bot.zip' '$SRC_ZIP_URL'" \
@@ -4711,7 +4710,7 @@ EOF
                     -e "SELECT bot_token, id_user, username FROM botsaz;" 2>/dev/null)
     fi
 
-    # 8) A Pro Max bot like any other from here on
+    # 8) A Ciro bot like any other from here on
     bots_registry_add "${botname:-Bot}" "$TARGET" "$domain"
     _ensure_selfupdate_cron
     # the old bot's scheduled jobs call its old address; the new bot adds its
@@ -4723,7 +4722,6 @@ EOF
     elif [ "$TARGET" != "$OLD_BOT_DIR" ]; then
         rm -rf "$OLD_BOT_DIR"
     fi
-    ln -sf /root/install.sh /usr/local/bin/mirza 2>/dev/null
     ln -sf /root/install.sh /usr/local/bin/ciro 2>/dev/null
 
     _sec "Migrated to Ciro"
@@ -4794,9 +4792,9 @@ _tr_back() {
 # Its settings arrive in the lines written above it.
 _tr_import_script() {
     cat <<'EOF'
-cd /root/mirza_transfer || exit 9
-BOT=/var/www/html/mirzaprobotconfig
-ROOTPASS=$(grep '$pass' /root/confmirza/dbrootmirza.txt 2>/dev/null | cut -d"'" -f2)
+cd /root/ciro_transfer || exit 9
+BOT=/var/www/html/ciro
+ROOTPASS=$(grep '$pass' /root/ciro/dbroot.txt 2>/dev/null | cut -d"'" -f2)
 DB=$(grep '^\$dbname' "$BOT/config.php" | cut -d"'" -f2)
 [ -n "$ROOTPASS" ] && [ -n "$DB" ] || { echo "RESULT=NO_DB_ACCESS"; exit 2; }
 drop=$(mysql -u root -p"$ROOTPASS" -N -B "$DB" -e 'SHOW FULL TABLES' 2>/dev/null \
@@ -4804,8 +4802,8 @@ drop=$(mysql -u root -p"$ROOTPASS" -N -B "$DB" -e 'SHOW FULL TABLES' 2>/dev/null
         if [ "$ty" = "VIEW" ]; then echo "DROP VIEW IF EXISTS \`$t\`;"; else echo "DROP TABLE IF EXISTS \`$t\`;"; fi
       done)
 if ! { echo 'SET FOREIGN_KEY_CHECKS=0;'; printf '%s\n' "$drop"; gunzip -c db.sql.gz | sed -E '/^(CREATE DATABASE |USE `)/d'; } \
-        | mysql -u root -p"$ROOTPASS" "$DB" 2>/root/mirza_transfer/import.err; then
-    echo "RESULT=IMPORT_FAILED"; tail -n 3 /root/mirza_transfer/import.err; exit 3
+        | mysql -u root -p"$ROOTPASS" "$DB" 2>/root/ciro_transfer/import.err; then
+    echo "RESULT=IMPORT_FAILED"; tail -n 3 /root/ciro_transfer/import.err; exit 3
 fi
 tar -xzf files.tar.gz -C "$BOT" || { echo "RESULT=FILES_FAILED"; exit 4; }
 if [ "$SRC_DIR" != "$BOT" ]; then
@@ -4819,7 +4817,7 @@ chown -R www-data:www-data "$BOT"
 systemctl reload apache2 >/dev/null 2>&1
 # its scheduled jobs (payment checks, notices...) - registered the way its
 # admin panel does, as www-data, instead of waiting for the admin to open it
-cat > /tmp/mirza_cron_setup.php <<PHPEOF
+cat > /tmp/ciro_cron_setup.php <<PHPEOF
 <?php
 chdir('$BOT');
 require 'config.php';
@@ -4831,9 +4829,9 @@ require 'vendor/autoload.php';
 if (!function_exists('activecron')) { exit(3); }
 activecron();
 PHPEOF
-chmod 644 /tmp/mirza_cron_setup.php
-if ( cd "$BOT" && runuser -u www-data -- php /tmp/mirza_cron_setup.php ) >/dev/null 2>&1; then echo "CRONS=1"; fi
-rm -f /tmp/mirza_cron_setup.php
+chmod 644 /tmp/ciro_cron_setup.php
+if ( cd "$BOT" && runuser -u www-data -- php /tmp/ciro_cron_setup.php ) >/dev/null 2>&1; then echo "CRONS=1"; fi
+rm -f /tmp/ciro_cron_setup.php
 # the address (and port) the install there gave the bot
 echo "HOSTS=$(grep '^\$domainhosts' "$BOT/config.php" | cut -d"'" -f2)"
 echo "RESULT=OK"
@@ -4907,22 +4905,24 @@ function transfer_bot() {
     # 2) Only onto a clean Ubuntu/Debian server, with room for it. An install
     #    left unfinished by an earlier try resumes; one that finished for THIS
     #    domain (the data move failed last time) only gets the data again.
-    local info os has_mirza their_domain free need skip_install=0
-    info=$(_tr_ssh 'bash -s' <<'EOF'
+    local info os has_ciro their_domain free need skip_install=0
+    # $1 there is LEGACY_NAME: that server may have been set up under the old name
+    info=$(_tr_ssh "bash -s -- $LEGACY_NAME" <<'EOF'
 . /etc/os-release 2>/dev/null; echo "OS=$ID"
-if grep -qx "PHASE:COMPLETE" /root/confmirza/.mirza_install_state 2>/dev/null \
-    || grep -q '"dir"' /root/confmirza/bots.json 2>/dev/null; then
-    echo "MIRZA=yes"
-    echo "DOMAIN=$(grep '^\$domainhosts' /var/www/html/mirzaprobotconfig/config.php 2>/dev/null | cut -d"'" -f2)"
-    echo "BOTS=$(grep -o '"dir"' /root/confmirza/bots.json 2>/dev/null | wc -l)"
+L="$1"
+if grep -qx "PHASE:COMPLETE" /root/ciro/.install_state "/root/conf$L/.${L}_install_state" 2>/dev/null \
+    || grep -q '"dir"' /root/ciro/bots.json "/root/conf$L/bots.json" 2>/dev/null; then
+    echo "CIRO=yes"
+    echo "DOMAIN=$(grep -h '^\$domainhosts' /var/www/html/ciro/config.php "/var/www/html/${L}probotconfig/config.php" 2>/dev/null | head -1 | cut -d"'" -f2)"
+    echo "BOTS=$(cat /root/ciro/bots.json "/root/conf$L/bots.json" 2>/dev/null | grep -o '"dir"' | wc -l)"
 else
-    echo "MIRZA=no"
+    echo "CIRO=no"
 fi
 echo "FREE=$(df -Pm / | awk 'NR==2{print $4}')"
 EOF
 )
     os=$(printf '%s\n' "$info" | sed -n 's/^OS=//p')
-    has_mirza=$(printf '%s\n' "$info" | sed -n 's/^MIRZA=//p')
+    has_ciro=$(printf '%s\n' "$info" | sed -n 's/^CIRO=//p')
     their_domain=$(hosts_domain "$(printf '%s\n' "$info" | sed -n 's/^DOMAIN=//p')")
     free=$(printf '%s\n' "$info" | sed -n 's/^FREE=//p')
     need=$(( $(du -sm "$dir" 2>/dev/null | cut -f1) + 3000 ))
@@ -4930,7 +4930,7 @@ EOF
         ubuntu|debian) ;;
         *) _tr_back "The new server must run Ubuntu or Debian (it runs: ${os:-unknown})."; return 1 ;;
     esac
-    if [ "$has_mirza" = "yes" ]; then
+    if [ "$has_ciro" = "yes" ]; then
         if [ "$their_domain" = "$domain" ] && [ "$(printf '%s\n' "$info" | sed -n 's/^BOTS=//p')" -le 1 ] 2>/dev/null; then
             skip_install=1
             printf "    ${C_DIM}%s already has this bot's install from an earlier try - only the data moves again.${CR}\n" "$TR_HOST"
@@ -4976,7 +4976,7 @@ EOF
 
     # 5) Pack it: database, folder (its own config.php and vendor/ stay behind -
     #    the new install makes its own), certificate
-    local work; work=$(mktemp -d /root/.mirza_transfer.XXXXXX)
+    local work; work=$(mktemp -d /root/.ciro_transfer.XXXXXX)
     run_step "Saving the database" \
         "set -o pipefail; mysqldump -h '$dbhost' -u '$dbuser' -p'$dbpass' --no-tablespaces '$dbname' | gzip > '$work/db.sql.gz' && [ \$(gunzip -c '$work/db.sql.gz' | head -c 100 | wc -c) -gt 0 ]" \
         || { show_step_error; rm -rf "$work"; _tr_back "Could not save the database." "Nothing was changed."; return 1; }
@@ -4990,25 +4990,25 @@ EOF
     fi
     local stamp; stamp=$(date +%Y-%m-%d_%H-%M-%S)
     if [ "$keep_copy" -eq 1 ]; then
-        cp "$work/db.sql.gz" "/root/mirza_transfer_${dbname}_${stamp}.sql.gz"
-        cp "$work/files.tar.gz" "/root/mirza_transfer_files_${dbname}_${stamp}.tar.gz"
-        printf "    ${C_OK}✔${CR} ${C_DIM}Copies kept in /root (mirza_transfer_*_%s)${CR}\n" "$stamp"
+        cp "$work/db.sql.gz" "/root/ciro_transfer_${dbname}_${stamp}.sql.gz"
+        cp "$work/files.tar.gz" "/root/ciro_transfer_files_${dbname}_${stamp}.tar.gz"
+        printf "    ${C_OK}✔${CR} ${C_DIM}Copies kept in /root (ciro_transfer_*_%s)${CR}\n" "$stamp"
     fi
 
     # 6) Send it
     local script_src="/root/install.sh"
     [ -f "$script_src" ] || script_src=$(readlink -f "$0")
-    if ! _tr_ssh 'rm -rf /root/mirza_transfer && mkdir -p /root/mirza_transfer && chmod 700 /root/mirza_transfer'; then
+    if ! _tr_ssh 'rm -rf /root/ciro_transfer && mkdir -p /root/ciro_transfer && chmod 700 /root/ciro_transfer'; then
         rm -rf "$work"; _tr_back "Could not prepare $TR_HOST."; return 1
     fi
     { printf 'SRC_DIR=%q\n' "$dir"; _tr_import_script; } > "$work/import.sh"
     local f sent=1
     printf "    ${C_DIM}Sending to %s...${CR}\n" "$TR_HOST"
     for f in db.sql.gz files.tar.gz import.sh; do
-        _tr_scp "$work/$f" /root/mirza_transfer/ || sent=0
+        _tr_scp "$work/$f" /root/ciro_transfer/ || sent=0
     done
-    [ "$have_cert" -eq 1 ] && { _tr_scp "$work/cert.tar.gz" /root/mirza_transfer/ || sent=0; }
-    _tr_scp "$script_src" /root/mirza_transfer/install.sh || sent=0
+    [ "$have_cert" -eq 1 ] && { _tr_scp "$work/cert.tar.gz" /root/ciro_transfer/ || sent=0; }
+    _tr_scp "$script_src" /root/ciro_transfer/install.sh || sent=0
     if [ "$sent" -ne 1 ]; then
         rm -rf "$work"; _tr_back "Sending the files to $TR_HOST failed." "Nothing was changed here."; return 1
     fi
@@ -5016,7 +5016,7 @@ EOF
     # the certificate goes in before the install, which then uses it as it is
     # (no new certificate needed), and both web ports are open
     _tr_ssh 'bash -s' <<'EOF'
-if [ -f /root/mirza_transfer/cert.tar.gz ]; then mkdir -p /etc/letsencrypt && tar -xzf /root/mirza_transfer/cert.tar.gz -C /etc/letsencrypt; fi
+if [ -f /root/ciro_transfer/cert.tar.gz ]; then mkdir -p /etc/letsencrypt && tar -xzf /root/ciro_transfer/cert.tar.gz -C /etc/letsencrypt; fi
 if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/dev/null; fi
 EOF
 
@@ -5029,11 +5029,13 @@ EOF
         printf "    ${C_DIM}The bot keeps port %s if it is free there; if not, it asks for another.${CR}\n" "$(hosts_port "$hosts")"
         echo ""
         local icmd
-        icmd=$(printf 'bash /root/mirza_transfer/install.sh install --name %q --token %q --admin %q --domain %q --port %q --db-user %q --db-pass %q' \
+        icmd=$(printf 'bash /root/ciro_transfer/install.sh install --name %q --token %q --admin %q --domain %q --port %q --db-user %q --db-pass %q' \
             "$botname" "$token" "$admin" "$domain" "$(hosts_port "$hosts")" "$dbuser" "$dbpass")
         _tr_ssh -t "$icmd"
     fi
-    if ! _tr_ssh 'grep -qx "PHASE:COMPLETE" /root/confmirza/.mirza_install_state 2>/dev/null && [ -f /var/www/html/mirzaprobotconfig/config.php ]'; then
+    # an install left there by an earlier try may still carry the old names
+    [ "$skip_install" -eq 1 ] && _tr_ssh 'bash /root/ciro_transfer/install.sh rename-legacy' >/dev/null 2>&1
+    if ! _tr_ssh 'grep -qx "PHASE:COMPLETE" /root/ciro/.install_state 2>/dev/null && [ -f /var/www/html/ciro/config.php ]'; then
         rm -rf "$work"
         _tr_back "The install on $TR_HOST did not finish." \
             "Nothing here was changed. Fix what it reported, then run Transfer again (it resumes)."
@@ -5043,18 +5045,18 @@ EOF
     # 8) The bot's own data over the fresh install
     echo ""
     local res
-    res=$(_tr_ssh 'bash /root/mirza_transfer/import.sh' 2>&1)
+    res=$(_tr_ssh 'bash /root/ciro_transfer/import.sh' 2>&1)
     if ! printf '%s\n' "$res" | grep -qx "RESULT=OK"; then
         rm -rf "$work"
         printf '%s\n' "$res" | tail -n 4 | sed 's/^/      /'
         _tr_back "Moving the data onto $TR_HOST failed." \
-            "The bot here is untouched and still has everything. The files are left in /root/mirza_transfer on $TR_HOST."
+            "The bot here is untouched and still has everything. The files are left in /root/ciro_transfer on $TR_HOST."
         return 1
     fi
     printf "    ${C_OK}✔${CR} ${C_DIM}Database and bot folder in place on %s${CR}\n" "$TR_HOST"
     printf '%s\n' "$res" | grep -q '^TABLE_WARN=1' \
         && printf "    ${C_WARN}!${CR} ${C_WARN}table.php reported a problem there - run option 2 (Update) on it once.${CR}\n"
-    _tr_ssh 'rm -rf /root/mirza_transfer' >/dev/null 2>&1
+    _tr_ssh 'rm -rf /root/ciro_transfer' >/dev/null 2>&1
     rm -rf "$work"
 
     # 9) Is it the live one now? (on the port the new server gave it)
@@ -5117,7 +5119,7 @@ EOF
 # non-zero when the bot's code could not do it.
 _bot_register_crons() {
     local dir="$1" php_file rc
-    php_file=$(mktemp /tmp/mirza_cron_XXXXXX.php)
+    php_file=$(mktemp /tmp/ciro_cron_XXXXXX.php)
     cat > "$php_file" <<EOF
 <?php
 chdir('$dir');
@@ -5270,24 +5272,23 @@ print_usage() {
   Usage:
     ciro                       open the interactive menu
     ciro <command> [options]
-                               (the old command, mirza, still works)
 
   Commands:
     install            Set up the bot on a clean server (Ubuntu/Debian)
     update             Fetch the newest code and migrate the database.
                        Your config.php, your database rows and any file the
                        project does not ship are kept. A rollback archive is
-                       written to /root/mirza-backups/ before anything moves.
-                       Works on an original Mirza install too - it upgrades
+                       written to /root/ciro-backups/ before anything moves.
+                       Works on a bot of the original project too - it upgrades
                        in place, it does not reinstall.
     remove             Delete the bot directory and the packages it installed
-    migrate            Migrate an original Mirza install to Ciro (beta)
+    migrate            Migrate a bot of the original project to Ciro (beta)
     addbot             Install a second, independent bot on this server
     renew              Reissue the domain's SSL certificate
     backup             Dump the database and send it to Telegram
     import             Restore the database from a .sql or .zip backup, or the
                        bot's files from its botfolder zip (beta). What it
-                       replaces is kept in /root/mirza-backups/ first.
+                       replaces is kept in /root/ciro-backups/ first.
     menu               Open the interactive menu (default)
 
   Options:
@@ -5315,6 +5316,238 @@ print_usage() {
       missing, so upgrading keeps every existing user, order and setting.
 
 USAGE
+}
+
+# ── Servers set up before the rename ─────────────────────────
+# This project used to go by another name, and a server installed under it
+# still carries that name on everything this script left there: the state
+# folder, the update snapshots, the command, root's cron line, the phpMyAdmin
+# port file and the bots' folders. LEGACY_NAME is that name. It is written
+# here and nowhere else, because those things have to be found to be moved;
+# _legacy_migrate gives each of them its Ciro name once, and on a server with
+# nothing old on it, does nothing at all.
+LEGACY_NAME="mirza"
+LEGACY_STATE_DIR="/root/conf${LEGACY_NAME}"
+LEGACY_BACKUP_DIR="/root/${LEGACY_NAME}-backups"
+LEGACY_BIN="/usr/local/bin/${LEGACY_NAME}"
+LEGACY_LOCK="/tmp/${LEGACY_NAME}_selfupdate.lock"
+LEGACY_PMA_CONF="/etc/apache2/conf-available/${LEGACY_NAME}-pma-ports.conf"
+LEGACY_BOT_DIR="/var/www/html/${LEGACY_NAME}probotconfig"
+# where the original project installs its own bot - migrate looks there
+LEGACY_ORIGINAL_DIR="/var/www/html/${LEGACY_NAME}botconfig"
+
+_legacy_present() {
+    [ -d "$LEGACY_STATE_DIR" ] || [ -d "$LEGACY_BACKUP_DIR" ] || [ -L "$LEGACY_BIN" ] \
+        || [ -f "$LEGACY_PMA_CONF" ] \
+        || grep -qs "#${LEGACY_NAME}# " /etc/apache2/ports.conf \
+        || grep -qs "/${LEGACY_NAME}[a-z]*[0-9]*\"" "$BOTS_REGISTRY" \
+        || { command -v crontab >/dev/null 2>&1 \
+             && crontab -l 2>/dev/null | grep -Fq "${LEGACY_NAME} selfupdate-watch"; }
+}
+
+# A bot's folder is renamed only when it is served the way this script serves
+# it - a site of its own whose DocumentRoot is the folder. Any other layout
+# has the folder's name inside its addresses (webhook, scheduled jobs), and
+# renaming it would cut them off, so such a bot keeps its folder.
+_legacy_dir_movable() {
+    local d="$1" hosts
+    [ -f "$d/config.php" ] || return 1
+    hosts=$(grep '^\$domainhosts' "$d/config.php" 2>/dev/null | head -1 | cut -d"'" -f2)
+    case "$hosts" in ""|*/*) return 1 ;; esac
+    grep -qsE "^[[:space:]]*DocumentRoot[[:space:]]+\"?${d}/?\"?[[:space:]]*$" /etc/apache2/sites-available/*.conf
+}
+
+# Point everything that names folder $1 at $2: Apache's sites, the bots list
+# and the agents' bots inside it. The snapshots follow later, once Apache has
+# taken the change.
+_legacy_repoint() {
+    local old="$1" new="$2" f tmp
+    for f in /etc/apache2/sites-available/*.conf /etc/apache2/sites-enabled/*.conf; do
+        [ -f "$f" ] && [ ! -L "$f" ] || continue
+        grep -qF "$old" "$f" || continue
+        sed -i -E "s#${old}([/[:space:]\">]|\$)#${new}\1#g" "$f"
+    done
+    tmp=$(mktemp)
+    jq --arg o "$old" --arg n "$new" 'map(if .dir == $o then .dir = $n else . end)' "$BOTS_REGISTRY" > "$tmp" \
+        && mv "$tmp" "$BOTS_REGISTRY"
+    for f in "$new"/vpnbot/*/config.php; do
+        [ -f "$f" ] && grep -qF "${old}/" "$f" && sed -i "s#${old}/#${new}/#g" "$f"
+    done
+}
+
+# A snapshot belongs to the bot whose folder it unpacks to, so the ones taken
+# while a bot had its old folder name are repacked under the new one - with
+# their dates kept - or that bot's «بازگشت به نسخه قبلی» would lose them.
+_legacy_repack_snapshots() {
+    local oldbase="$1" newbase="$2" f top tmp
+    for f in "$CIRO_BACKUP_DIR"/pre-*.tar.gz; do
+        [ -f "$f" ] || continue
+        top=$(tar -tzf "$f" 2>/dev/null | head -1 | cut -d/ -f1)
+        [ "$top" = "$oldbase" ] || continue
+        tmp=$(mktemp -d "$CIRO_BACKUP_DIR/.repack.XXXXXX") || continue
+        if tar -xzf "$f" -C "$tmp" 2>/dev/null && mv "$tmp/$oldbase" "$tmp/$newbase" \
+            && tar -czf "$tmp/new.tar.gz" -C "$tmp" "$newbase" 2>/dev/null; then
+            touch -r "$f" "$tmp/new.tar.gz"
+            mv -f "$tmp/new.tar.gz" "${f//_${oldbase}_/_${newbase}_}"
+            [ "${f//_${oldbase}_/_${newbase}_}" != "$f" ] && rm -f "$f"
+        fi
+        rm -rf "$tmp"
+    done
+}
+
+# $1 = "locked" from the watcher, whose cron line already holds its lock.
+# Anyone else takes both the watcher's lock and the one its old cron line
+# used, so nothing is moved while an update runs; returns 2 when it cannot.
+_legacy_migrate() {
+    _legacy_present || return 0
+    if [ "${1:-}" != "locked" ]; then
+        exec 8>"/tmp/ciro_selfupdate.lock" 9>"$LEGACY_LOCK"
+        if ! flock -n 8 || ! flock -n 9; then
+            exec 8>&- 9>&-
+            return 2
+        fi
+    fi
+    _ensure_jq
+    local f b did="" moved="" abak="" d base suffix target n
+
+    # the state folder: MySQL's root login, the bots list, the install progress
+    if [ -d "$LEGACY_STATE_DIR" ]; then
+        mkdir -p /root/ciro
+        for f in "$LEGACY_STATE_DIR"/* "$LEGACY_STATE_DIR"/.[!.]*; do
+            [ -e "$f" ] || continue
+            b=$(basename "$f")
+            case "$b" in
+                "dbroot${LEGACY_NAME}.txt") b="dbroot.txt" ;;
+                ".${LEGACY_NAME}_install_state") b=".install_state" ;;
+            esac
+            # a bots list this script just created empty is not one to keep
+            if [ ! -e "/root/ciro/$b" ] \
+                || { [ "$b" = "bots.json" ] && [ "$(jq 'length' /root/ciro/bots.json 2>/dev/null)" = "0" ]; }; then
+                rm -rf "/root/ciro/$b"
+                mv "$f" "/root/ciro/$b"
+            fi
+        done
+        rm -rf "$LEGACY_STATE_DIR"
+        did=1
+    fi
+    # the update snapshots
+    if [ -d "$LEGACY_BACKUP_DIR" ]; then
+        mkdir -p "$CIRO_BACKUP_DIR"
+        for f in "$LEGACY_BACKUP_DIR"/* "$LEGACY_BACKUP_DIR"/.[!.]*; do
+            [ -e "$f" ] || continue
+            [ -e "$CIRO_BACKUP_DIR/$(basename "$f")" ] || mv "$f" "$CIRO_BACKUP_DIR"/
+        done
+        rmdir "$LEGACY_BACKUP_DIR" 2>/dev/null
+        did=1
+    fi
+
+    # the bots' folders, and Apache's files that carry the old name
+    bots_registry_ensure
+    local todo="" apache_changed=""
+    if command -v apache2ctl >/dev/null 2>&1; then
+        while IFS= read -r d; do
+            [ -n "$d" ] && [ -d "$d" ] || continue
+            base=$(basename "$d")
+            case "$base" in
+                "${LEGACY_NAME}probotconfig"*) suffix="${base#"${LEGACY_NAME}probotconfig"}" ;;
+                "${LEGACY_NAME}botconfig") suffix="" ;;
+                *) continue ;;
+            esac
+            [[ "$suffix" =~ ^[0-9]*$ ]] || continue
+            _legacy_dir_movable "$d" && todo="${todo}${d}"$'\t'"${suffix}"$'\n'
+        done < <(jq -r '.[].dir // empty' "$BOTS_REGISTRY" 2>/dev/null)
+    fi
+    # Apache has to be fine before anything moves, or a failure afterwards
+    # could not be told apart from one that was already there; and a rename
+    # Apache once refused is not tried again every minute
+    if { [ -n "$todo" ] || [ -f "$LEGACY_PMA_CONF" ]; } \
+        && [ ! -f /root/ciro/.legacy_folders_kept ] && apache2ctl configtest >/dev/null 2>&1; then
+        abak=$(mktemp -d)
+        cp -a /etc/apache2/sites-available /etc/apache2/sites-enabled \
+              /etc/apache2/conf-available /etc/apache2/conf-enabled "$abak"/ 2>/dev/null
+        cp -a /etc/apache2/ports.conf "$abak"/ 2>/dev/null
+        cp -a "$BOTS_REGISTRY" "$abak/bots.json" 2>/dev/null
+        while IFS=$'\t' read -r d suffix; do
+            [ -n "$d" ] || continue
+            target="/var/www/html/ciro${suffix}"
+            n=2
+            while [ -e "$target" ]; do target="/var/www/html/ciro${n}"; n=$((n + 1)); done
+            mv "$d" "$target" || continue
+            _legacy_repoint "$d" "$target"
+            moved="${moved}${d}"$'\t'"${target}"$'\n'
+            apache_changed=1
+        done <<< "$todo"
+        if [ -f "$LEGACY_PMA_CONF" ]; then
+            local pma_on=""
+            [ -e "/etc/apache2/conf-enabled/$(basename "$LEGACY_PMA_CONF")" ] && pma_on=1
+            a2disconf "$(basename "$LEGACY_PMA_CONF" .conf)" >/dev/null 2>&1
+            [ -f "$PMA_PORTS_CONF" ] || sed "1s/.*/# Written by the Ciro script: the HTTPS ports a bot or its phpMyAdmin uses besides 443./" \
+                "$LEGACY_PMA_CONF" > "$PMA_PORTS_CONF"
+            rm -f "$LEGACY_PMA_CONF"
+            [ -n "$pma_on" ] && a2enconf ciro-pma-ports >/dev/null 2>&1
+            apache_changed=1
+        fi
+        if [ -n "$apache_changed" ]; then
+            local ok=1
+            apache2ctl configtest >/dev/null 2>&1 || ok=0
+            if [ "$ok" -eq 1 ]; then
+                systemctl reload apache2 >/dev/null 2>&1 || systemctl restart apache2 >/dev/null 2>&1
+                systemctl is-active --quiet apache2 || ok=0
+            fi
+            if [ "$ok" -eq 0 ]; then
+                # every folder back where it was, Apache and the list as they were
+                while IFS=$'\t' read -r d target; do
+                    [ -n "$d" ] && mv "$target" "$d"
+                    for f in "$d"/vpnbot/*/config.php; do
+                        [ -f "$f" ] && sed -i "s#${target}/#${d}/#g" "$f"
+                    done
+                done <<< "$moved"
+                _pma_restore "$abak"
+                cp -a "$abak/bots.json" "$BOTS_REGISTRY" 2>/dev/null
+                systemctl restart apache2 >/dev/null 2>&1
+                touch /root/ciro/.legacy_folders_kept
+                echo -e "  \e[93m!\033[0m Apache did not accept the renamed folders - they were left as they were."
+                moved=""
+            else
+                did=1
+                while IFS=$'\t' read -r d target; do
+                    [ -n "$d" ] || continue
+                    _legacy_repack_snapshots "$(basename "$d")" "$(basename "$target")"
+                    _selfupdate_publish_backups "$target"
+                    echo "  ✔ ${d} → ${target}"
+                done <<< "$moved"
+            fi
+        fi
+        rm -rf "$abak"
+    fi
+    # only a marker on a commented-out line: nothing for Apache to reload
+    grep -qs "#${LEGACY_NAME}# " /etc/apache2/ports.conf \
+        && sed -i "s/#${LEGACY_NAME}# /#ciro# /" /etc/apache2/ports.conf && did=1
+
+    # root's watcher line and the command; the line first, so nothing is left
+    # calling a command that is gone
+    if command -v crontab >/dev/null 2>&1 && crontab -l 2>/dev/null | grep -Fq "${LEGACY_NAME} selfupdate-watch"; then
+        ( crontab -l 2>/dev/null | grep -vF "${LEGACY_NAME} selfupdate-watch" ) | crontab - 2>/dev/null
+        _ensure_selfupdate_cron
+        did=1
+    fi
+    [ -f /root/install.sh ] && _link_ciro /root/install.sh /usr/local/bin/ciro
+    if [ -L "$LEGACY_BIN" ]; then
+        rm -f "$LEGACY_BIN"
+        did=1
+    fi
+    # what the script left behind under the old name elsewhere
+    if [ -f "${RESOLV}.${LEGACY_NAME}.bak" ]; then
+        [ -f "${RESOLV}.ciro.bak" ] || mv "${RESOLV}.${LEGACY_NAME}.bak" "${RESOLV}.ciro.bak"
+        rm -f "${RESOLV}.${LEGACY_NAME}.bak"
+    fi
+    for f in /etc/apt/sources.list.d/*".disabled-by-${LEGACY_NAME}"; do
+        [ -f "$f" ] && mv -f "$f" "${f%".disabled-by-${LEGACY_NAME}"}.disabled-by-ciro"
+    done
+
+    [ -n "$did" ] && echo -e "  \e[92m●\033[0m This server's files now carry the Ciro name; the command is \e[1mciro\033[0m."
+    [ "${1:-}" != "locked" ] && exec 8>&- 9>&-
+    return 0
 }
 
 process_arguments() {
@@ -5349,7 +5582,7 @@ process_arguments() {
         # internal: root's crontab, not something an admin types
         selfupdate-watch) selfupdate_watch ;;
         remove)  remove_bot ;;
-        migrate) migrate_to_pro ;;
+        migrate) migrate_to_ciro ;;
         renew)   renew_ssl ;;
         backup)  backup_bot ;;
         import)  import_bot ;;
@@ -5357,4 +5590,19 @@ process_arguments() {
         menu|*)  show_menu ;;
     esac
 }
+
+# A server set up under the old name has its files renamed before anything
+# reads a path (the watcher does it from its own tick, under its own lock).
+case "${1:-}" in
+    -h|--help|--version|selfupdate-watch) ;;
+    *)
+        _legacy_migrate
+        if [ $? -eq 2 ] && [ -d "$LEGACY_STATE_DIR" ]; then
+            echo -e "\e[93mAn update is running on this server right now - run the command again in a minute.\033[0m"
+            exit 1
+        fi
+        ;;
+esac
+# internal: the transfer runs only the renaming on the new server
+[ "${1:-}" = "rename-legacy" ] && exit 0
 process_arguments "$@"

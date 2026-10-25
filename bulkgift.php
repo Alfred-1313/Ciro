@@ -677,7 +677,7 @@ if (!function_exists('bulkgift_job')) {
             $p['late_until'] = $p['win_to'] + 86400;
         }
         // two admins pressing at once must not start two
-        $got = (int) $pdo->query("SELECT GET_LOCK('mirza_bulkgift_new', 5)")->fetchColumn();
+        $got = (int) $pdo->query("SELECT GET_LOCK('ciro_bulkgift_new', 5)")->fetchColumn();
         try {
             if (bulkgift_active_job($live) !== null) {
                 return ['error' => $live ? $t['busyLive'] : $t['busy']];
@@ -688,7 +688,7 @@ if (!function_exists('bulkgift_job')) {
             return ['id' => (int) $pdo->lastInsertId()];
         } finally {
             if ($got === 1) {
-                $pdo->query("SELECT RELEASE_LOCK('mirza_bulkgift_new')");
+                $pdo->query("SELECT RELEASE_LOCK('ciro_bulkgift_new')");
             }
         }
     }
@@ -726,7 +726,7 @@ if (!function_exists('bulkgift_job')) {
         $pdo->prepare("UPDATE bulk_gift_job SET cancel_req = 1 WHERE id = ?")->execute([(int) $jobId]);
         $pdo->prepare("UPDATE bulk_gift_item SET state = 'cancelled', reason = 'cancelled', updated_at = ? WHERE job_id = ? AND state = 'pending'")
             ->execute([time(), (int) $jobId]);
-        if ((int) $pdo->query("SELECT GET_LOCK('mirza_bulkgift', 0)")->fetchColumn() === 1) {
+        if ((int) $pdo->query("SELECT GET_LOCK('ciro_bulkgift', 0)")->fetchColumn() === 1) {
             try {
                 bulkgift_stale_claims($jobId);
                 $job = bulkgift_job($jobId);
@@ -734,7 +734,7 @@ if (!function_exists('bulkgift_job')) {
                     bulkgift_finish($job);
                 }
             } finally {
-                $pdo->query("SELECT RELEASE_LOCK('mirza_bulkgift')");
+                $pdo->query("SELECT RELEASE_LOCK('ciro_bulkgift')");
             }
         }
         return true;
@@ -1231,7 +1231,7 @@ if (!function_exists('bulkgift_work')) {
             return ['skipped', $ev['skip']];
         }
         // these two take whole days only: the hours go to the nearest day
-        if (isset($ev['hours']) && in_array((string) $panel['type'], ['hiddify', 'mirza_agent'], true)) {
+        if (isset($ev['hours']) && in_array((string) $panel['type'], ['hiddify', 'ciro_agent'], true)) {
             $ev['hours'] = (int) round($ev['hours'] / 24) * 24;
             if ($ev['hours'] < 24) {
                 return ['skipped', 'small'];
@@ -1790,7 +1790,7 @@ if (!function_exists('bulkgift_progress_payload')) {
         if ($job === null || $job['state'] !== 'done' || bulkgift_is_live(bulkgift_job_params($job))) {
             return ['error' => $t['retryNone']];
         }
-        $got = (int) $pdo->query("SELECT GET_LOCK('mirza_bulkgift_new', 5)")->fetchColumn();
+        $got = (int) $pdo->query("SELECT GET_LOCK('ciro_bulkgift_new', 5)")->fetchColumn();
         try {
             if (bulkgift_active_job(false) !== null) {
                 return ['error' => $t['busy']];
@@ -1808,7 +1808,7 @@ if (!function_exists('bulkgift_progress_payload')) {
             return ['n' => count($ids)];
         } finally {
             if ($got === 1) {
-                $pdo->query("SELECT RELEASE_LOCK('mirza_bulkgift_new')");
+                $pdo->query("SELECT RELEASE_LOCK('ciro_bulkgift_new')");
             }
         }
     }
@@ -1901,7 +1901,7 @@ if (!function_exists('bulkgift_cron')) {
         if (!bulkgift_active_jobs() && !bulkgift_late_jobs()) {
             return 'idle';
         }
-        if ((int) $pdo->query("SELECT GET_LOCK('mirza_bulkgift', 0)")->fetchColumn() !== 1) {
+        if ((int) $pdo->query("SELECT GET_LOCK('ciro_bulkgift', 0)")->fetchColumn() !== 1) {
             return 'busy';
         }
         $result = 'idle';
@@ -1924,7 +1924,7 @@ if (!function_exists('bulkgift_cron')) {
             }
             return $result;
         } finally {
-            $pdo->query("SELECT RELEASE_LOCK('mirza_bulkgift')");
+            $pdo->query("SELECT RELEASE_LOCK('ciro_bulkgift')");
             if ($kick) {
                 bulkgift_kick();
             }

@@ -5094,7 +5094,7 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'zarinPalMerchant' => 'ZarinPal merchant',
                 'zeroBalance' => '0️⃣ Reset balance to zero',
                 'panelSetting' => '🎛 Panel Settings',
-                'mirzaAgentPanel' => 'Ciro / Mirza agent',
+                'ciroAgentPanel' => 'Ciro agent',
                 'setGroupName' => '🎛 Set group name',
                 'subLinkDomain' => '🔗 Subscription link domain',
                 'panelTypeSanaei' => 'Sanaei single port',

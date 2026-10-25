@@ -181,7 +181,7 @@ $L = $textbotlang['panel'];
     </section>
   </main>
   <p class="aside credit"><?= htmlspecialchars(trim($L['loginSubtitle'])) ?>
-    <a href="https://github.com/Alfred-1313/Mirza_Pro_Max" target="_blank" rel="noopener"><?= htmlspecialchars($L['loginUsernameLabel']) ?></a>
+    <a href="https://github.com/Alfred-1313/Ciro" target="_blank" rel="noopener"><?= htmlspecialchars($L['loginUsernameLabel']) ?></a>
     <?= htmlspecialchars(trim($L['loginUsernamePlaceholder'])) ?> · © <?= date('Y') ?> <?= htmlspecialchars(trim($L['loginPasswordLabel'])) ?></p>
   <script src="js/login.js?v=<?= (int) @filemtime(__DIR__ . '/js/login.js') ?>"></script>
 </body>

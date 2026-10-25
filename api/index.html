@@ -2032,7 +2032,7 @@
 
         /* ---------------- theme ---------------- */
         const themeBtn = document.getElementById("themeBtn");
-        const stored = localStorage.getItem("mirza-docs-theme");
+        const stored = localStorage.getItem("ciro-docs-theme");
         if (stored) document.documentElement.dataset.theme = stored;
 
         themeBtn.addEventListener("click", () => {
@@ -2040,7 +2040,7 @@
             const current = document.documentElement.dataset.theme || (prefersDark ? "dark" : "light");
             const next = current === "dark" ? "light" : "dark";
             document.documentElement.dataset.theme = next;
-            localStorage.setItem("mirza-docs-theme", next);
+            localStorage.setItem("ciro-docs-theme", next);
         });
     </script>
 </body>

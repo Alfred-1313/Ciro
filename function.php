@@ -4213,9 +4213,9 @@ if (!function_exists('sms_forward_regenerate_secret')) {
 if (!function_exists('bot_update_request_path')) {
     // The bot is served as www-data; every step of an update needs root, so it
     // can never run the updater itself. Instead it leaves a note in its own
-    // directory and root's own watcher (`mirza selfupdate-watch`, a crontab
+    // directory and root's own watcher (`ciro selfupdate-watch`, a crontab
     // line install.sh adds) picks it up within the minute and runs the very
-    // same `mirza update` an admin would have typed - pre-update snapshot,
+    // same `ciro update` an admin would have typed - pre-update snapshot,
     // config.php kept, additive database migration and automatic rollback on a
     // failed syntax check all included, because it IS that same code path.
     function bot_update_request_path()
@@ -4239,7 +4239,7 @@ if (!function_exists('bot_update_request_path')) {
             || file_exists(__DIR__ . '/rollback_request');
     }
     // The snapshots root's watcher says belong to this bot, newest first - at
-    // most the two the server keeps (MIRZA_SNAPSHOTS_KEEP in install.sh); a
+    // most the two the server keeps (CIRO_SNAPSHOTS_KEEP in install.sh); a
     // list written by an older watcher may still name more.
     function bot_update_backups()
     {
@@ -4433,7 +4433,7 @@ if (!function_exists('bot_update_request_path')) {
         if (time() - (int) ($c['at'] ?? 0) < 600) {
             return !empty($c['v']) ? (string) $c['v'] : null;
         }
-        $ch = curl_init('https://raw.githubusercontent.com/Alfred-1313/Mirza_Pro_Max/master/version');
+        $ch = curl_init('https://raw.githubusercontent.com/Alfred-1313/Ciro/master/version');
         curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 4, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_FOLLOWLOCATION => true]);
         $body = curl_exec($ch);
         $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -4656,9 +4656,9 @@ if (!function_exists('bot_update_request_path')) {
 // every entry newer than the last one told (storage/whatsnew_seen holds its
 // number): an admin who skipped updates gets each one he missed, oldest first.
 //
-// Two ways it reaches them. `mirza update` (and the bot's own button, which runs
+// Two ways it reaches them. `ciro update` (and the bot's own button, which runs
 // the same script) ends with bot_update_notify_admins(): ONE message - the
-// «ربات آپدیت شد» notice with the notes under it - and sets MIRZA_WHATSNEW_MERGE
+// «ربات آپدیت شد» notice with the notes under it - and sets CIRO_WHATSNEW_MERGE
 // so that table.php, which runs earlier in the same update, stays quiet. Where
 // that is not set (an older install.sh, table.php opened in a browser) table.php
 // sends the notes by itself, as messages of their own.
@@ -4742,7 +4742,7 @@ if (!function_exists('bot_whatsnew_pending')) {
     }
     function bot_whatsnew_announce($freshInstall = false)
     {
-        if (getenv('MIRZA_WHATSNEW_MERGE') === '1' && !$freshInstall) {
+        if (getenv('CIRO_WHATSNEW_MERGE') === '1' && !$freshInstall) {
             return 0; // the updater says it in its own closing message
         }
         $p = bot_whatsnew_pending($freshInstall);
@@ -9766,7 +9766,7 @@ function addFieldToTable($tableName, $fieldName, $defaultValue = null, $datatype
 }
 function outtypepanel($typepanel, $message)
 {
-    global $from_id, $optionMarzban, $optionX_ui_single, $optionhiddfy, $option_mirza, $optionalireza_single, $optionmarzneshin, $option_mikrotik, $optionwg, $options_ui, $optionibsng, $optionrebecca, $optionremnawave;
+    global $from_id, $optionMarzban, $optionX_ui_single, $optionhiddfy, $option_ciro, $optionalireza_single, $optionmarzneshin, $option_mikrotik, $optionwg, $options_ui, $optionibsng, $optionrebecca, $optionremnawave;
     if ($typepanel == "marzban") {
         sendmessage($from_id, $message, $optionMarzban, 'HTML');
     } elseif ($typepanel == "x-ui_single") {
@@ -9785,8 +9785,8 @@ function outtypepanel($typepanel, $message)
         sendmessage($from_id, $message, $optionibsng, 'HTML');
     } elseif ($typepanel == "mikrotik") {
         sendmessage($from_id, $message, $option_mikrotik, 'HTML');
-    } elseif ($typepanel == "mirza_agent") {
-        sendmessage($from_id, $message, $option_mirza, 'HTML');
+    } elseif ($typepanel == "ciro_agent") {
+        sendmessage($from_id, $message, $option_ciro, 'HTML');
     } elseif ($typepanel == "rebecca") {
         sendmessage($from_id, $message, $optionrebecca, 'HTML');
     } elseif ($typepanel == "remnawave") {
@@ -21889,7 +21889,7 @@ if (!function_exists('webhook_register')) {
         if ($secret !== '' && is_string($got) && hash_equals($secret, $got)) {
             return true;
         }
-        $stamp = sys_get_temp_dir() . '/mirza_webhook_' . md5(__DIR__ . '|' . ($bot === null ? '' : (string) ($bot['bot_token'] ?? '')));
+        $stamp = sys_get_temp_dir() . '/ciro_webhook_' . md5(__DIR__ . '|' . ($bot === null ? '' : (string) ($bot['bot_token'] ?? '')));
         if (!is_file($stamp) || time() - (int) @filemtime($stamp) >= 60) {
             @touch($stamp);
             webhook_register($bot);

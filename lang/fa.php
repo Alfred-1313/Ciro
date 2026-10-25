@@ -6805,7 +6805,7 @@ n2',
 🔹 | همچنین اگر نیاز به <b>راهنمایی</b> یا کمک دارید، می‌توانید از طریق دایرکت با تیم پشتیبانی در ارتباط باشید.
 
 📩 | برای ارسال گزارش، پیشنهاد یا درخواست راهنمایی، در بخش <b>Issues</b> صفحه گیت‌هاب Ciro بنویسید:
-<a href="https://github.com/Alfred-1313/Mirza_Pro_Max/issues" rel="nofollow" target="_blank">Ciro در گیت‌هاب</a>',
+<a href="https://github.com/Alfred-1313/Ciro/issues" rel="nofollow" target="_blank">Ciro در گیت‌هاب</a>',
       'ask_select_panel' => '🪚 برای استفاده از این قابلیت یکی از پنل های زیر را انتخاب نمایید',
       'err_admin' => '❌ این بخش فقط در دسترس ادمین اصلی است',
       'err_notfound_set_settings' => '❌  امکان مشاهده تنظیمات نود ها وجود ندارد',
@@ -7066,7 +7066,7 @@ f,n.n2',
       'msg_panel_admin_bot_report' => '💎 | Version Bot: %s
 📌 | Version Mini App: 0.1.1
 
-<blockquote>🔹 | Ciro کاملاً رایگان است و نسخه فورک‌شده ربات میرزا است؛ با تشکر از سازنده اصلی میرزا</blockquote>
+<blockquote>🔹 | Ciro کاملاً رایگان است</blockquote>
 
 <blockquote>🔹 | هرگونه فروش یا دریافت وجه بابت این ربات تخلف محسوب می‌شود.</blockquote>
 
@@ -9648,7 +9648,7 @@ nowpayments.io
     'frenzyExCallbackSecret' => 'رمز کالبک فرنزی‌اکس',
     'zeroBalance' => '0️⃣ صفر کردن موجودی',
     'panelSetting' => '🎛 تنظیم پنل',
-    'mirzaAgentPanel' => 'نمایندگی Ciro / میرزا',
+    'ciroAgentPanel' => 'نمایندگی Ciro',
     'setGroupName' => '🎛 تنظیم نام گروه',
     'subLinkDomain' => '🔗 دامنه لینک ساب',
     'panelTypeSanaei' => '3x-ui',
@@ -11160,7 +11160,7 @@ nowpayments.io
     'keyboard_php' => 
     array (
       'panelSetting' => '🎛 تنظیم پنل',
-      'mirzaAgentPanel' => 'نمایندگی Ciro / میرزا',
+      'ciroAgentPanel' => 'نمایندگی Ciro',
       'setGroupName' => '🎛 تنظیم نام گروه',
       'subLinkDomain' => '🔗 دامنه لینک ساب',
       'panelTypeSanaei' => '3x-ui',

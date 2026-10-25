@@ -306,7 +306,7 @@ if (!function_exists('bulkspeed_job')) {
         }
         $p['pnames'] = $p['panels'] ? array_map(fn($r) => (string) $r['name_panel'], $panels) : [];
         // two admins pressing at once must not start two
-        $got = (int) $pdo->query("SELECT GET_LOCK('mirza_bulkspeed_new', 5)")->fetchColumn();
+        $got = (int) $pdo->query("SELECT GET_LOCK('ciro_bulkspeed_new', 5)")->fetchColumn();
         try {
             if (bulkspeed_active_job() !== null) {
                 return ['error' => $t['busy']];
@@ -316,7 +316,7 @@ if (!function_exists('bulkspeed_job')) {
             return ['id' => (int) $pdo->lastInsertId()];
         } finally {
             if ($got === 1) {
-                $pdo->query("SELECT RELEASE_LOCK('mirza_bulkspeed_new')");
+                $pdo->query("SELECT RELEASE_LOCK('ciro_bulkspeed_new')");
             }
         }
     }
@@ -354,7 +354,7 @@ if (!function_exists('bulkspeed_job')) {
         $pdo->prepare("UPDATE bulk_speed_job SET cancel_req = 1 WHERE id = ?")->execute([(int) $jobId]);
         $pdo->prepare("UPDATE bulk_speed_item SET state = 'cancelled', reason = 'cancelled', updated_at = ? WHERE job_id = ? AND state = 'pending'")
             ->execute([time(), (int) $jobId]);
-        if ((int) $pdo->query("SELECT GET_LOCK('mirza_bulkspeed', 0)")->fetchColumn() === 1) {
+        if ((int) $pdo->query("SELECT GET_LOCK('ciro_bulkspeed', 0)")->fetchColumn() === 1) {
             try {
                 bulkspeed_stale_claims($jobId);
                 $job = bulkspeed_job($jobId);
@@ -362,7 +362,7 @@ if (!function_exists('bulkspeed_job')) {
                     bulkspeed_finish($job);
                 }
             } finally {
-                $pdo->query("SELECT RELEASE_LOCK('mirza_bulkspeed')");
+                $pdo->query("SELECT RELEASE_LOCK('ciro_bulkspeed')");
             }
         }
         return true;
@@ -760,7 +760,7 @@ if (!function_exists('bulkspeed_progress_payload')) {
         if ($job === null || $job['state'] !== 'done') {
             return ['error' => $t['retryNone']];
         }
-        $got = (int) $pdo->query("SELECT GET_LOCK('mirza_bulkspeed_new', 5)")->fetchColumn();
+        $got = (int) $pdo->query("SELECT GET_LOCK('ciro_bulkspeed_new', 5)")->fetchColumn();
         try {
             if (bulkspeed_active_job() !== null) {
                 return ['error' => $t['busy']];
@@ -778,7 +778,7 @@ if (!function_exists('bulkspeed_progress_payload')) {
             return ['n' => $n];
         } finally {
             if ($got === 1) {
-                $pdo->query("SELECT RELEASE_LOCK('mirza_bulkspeed_new')");
+                $pdo->query("SELECT RELEASE_LOCK('ciro_bulkspeed_new')");
             }
         }
     }
@@ -823,7 +823,7 @@ if (!function_exists('bulkspeed_cron')) {
         if ($job === null) {
             return 'idle';
         }
-        if ((int) $pdo->query("SELECT GET_LOCK('mirza_bulkspeed', 0)")->fetchColumn() !== 1) {
+        if ((int) $pdo->query("SELECT GET_LOCK('ciro_bulkspeed', 0)")->fetchColumn() !== 1) {
             return 'busy';
         }
         $kick = false;
@@ -832,7 +832,7 @@ if (!function_exists('bulkspeed_cron')) {
             $kick = $r === 'preparing' || ($r === 'more' && $worked > 0);
             return $r;
         } finally {
-            $pdo->query("SELECT RELEASE_LOCK('mirza_bulkspeed')");
+            $pdo->query("SELECT RELEASE_LOCK('ciro_bulkspeed')");
             if ($kick) {
                 bulkgift_kick();
             }

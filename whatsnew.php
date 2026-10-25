@@ -616,12 +616,28 @@ return [
         'n' => 46,
         'date' => '2026-10-25',
         'fa' => "<blockquote>✨ <b>اسم ربات حالا Ciro است</b>\n"
-            . "اسم پروژه از میرزا پرومکس به Ciro تغییر کرد: اسکریپت نصب، پنل وب، صفحه مستندات API و متن‌های ربات.\n"
-            . "• دستور مدیریت روی سرور حالا <code>ciro</code> است (<code>ciro update</code>، <code>ciro backup</code> و...). دستور قبلی <code>mirza</code> هم همچنان کار می‌کند و چیزی روی سرور جابه‌جا نشده.\n"
-            . "• صفحه گیت‌هاب کوتاه‌تر شد و پایینش آمده که Ciro نسخه فورک‌شده ربات میرزا است و رایگان در همان صفحه در دسترس است.</blockquote>",
+            . "اسم پروژه به Ciro تغییر کرد: اسکریپت نصب، پنل وب، صفحه مستندات API و متن‌های ربات.\n"
+            . "• دستور مدیریت روی سرور حالا <code>ciro</code> است (<code>ciro update</code>، <code>ciro backup</code> و...).\n"
+            . "• صفحه گیت‌هاب پروژه کوتاه‌تر و خلاصه‌تر شد.</blockquote>",
         'en' => "<blockquote>✨ <b>The bot is now called Ciro</b>\n"
-            . "The project was renamed from Mirza Pro Max to Ciro: the install script, the web panel, the API docs page and the bot's texts.\n"
-            . "• The management command on the server is now <code>ciro</code> (<code>ciro update</code>, <code>ciro backup</code>, ...). The old <code>mirza</code> command still works and nothing on the server was moved.\n"
-            . "• The GitHub page is shorter and now says at the bottom that Ciro is a fork of the Mirza bot, available free on that page.</blockquote>",
+            . "The project was renamed to Ciro: the install script, the web panel, the API docs page and the bot's texts.\n"
+            . "• The management command on the server is now <code>ciro</code> (<code>ciro update</code>, <code>ciro backup</code>, ...).\n"
+            . "• The project's GitHub page is shorter.</blockquote>",
+    ],
+    [
+        'n' => 47,
+        'date' => '2026-10-25',
+        'fa' => "<blockquote>🏷 <b>همه‌جا Ciro</b>\n"
+            . "اسم قبلی از کد، اسکریپت نصب و صفحه گیت‌هاب کامل برداشته شد.\n"
+            . "• روی سرورهایی که از قبل نصب بودن، فایل‌های ربات خودشون اسم Ciro می‌گیرن: پوشه ربات (<code>/var/www/html/ciro</code>)، تنظیمات اسکریپت (<code>/root/ciro</code>)، نسخه‌های پشتیبان (<code>/root/ciro-backups</code>)، کرون آپدیت و دستور. وبهوک، دیتابیس و تنظیمات دست نمی‌خورن؛ اگه Apache تغییر رو قبول نکنه، همه‌چیز همون‌طور که بود می‌مونه.\n"
+            . "• دستور مدیریت فقط <code>ciro</code> است؛ دستور قبلی برداشته شد.\n"
+            . "• نوع پنل «نمایندگی» حالا «نمایندگی Ciro» است و پنل‌هایی که قبلاً ساخته بودی خودکار منتقل می‌شن.\n"
+            . "• آدرس گیت‌هاب پروژه: <code>github.com/Alfred-1313/Ciro</code></blockquote>",
+        'en' => "<blockquote>🏷 <b>Ciro everywhere</b>\n"
+            . "The previous name is gone from the code, the install script and the GitHub page.\n"
+            . "• On servers installed earlier, the bot's own files take the Ciro name: the bot folder (<code>/var/www/html/ciro</code>), the script's settings (<code>/root/ciro</code>), the backups (<code>/root/ciro-backups</code>), the update cron and the command. The webhook, the database and the settings are not touched; if Apache does not accept the change, everything stays as it was.\n"
+            . "• The management command is <code>ciro</code> only; the previous one was removed.\n"
+            . "• The «agent» panel type is now «Ciro agent», and panels you already added move over by themselves.\n"
+            . "• The project's GitHub address: <code>github.com/Alfred-1313/Ciro</code></blockquote>",
     ],
 ];
