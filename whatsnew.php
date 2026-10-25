@@ -532,4 +532,14 @@ return [
             . "🗓 <b>Time filter</b>: one tap on «Today», «Yesterday», «Last 2 / 7 / 30 days», «This month» or «Last month»; or «Last [N] days» with any number; or a range from one day to another on a calendar (Persian or Gregorian - every day carries both dates, and your choice is remembered). Only «from» or only «until» works too. It combines with search, status, order, language and paging, and its address can be saved or sent. On the dashboard the figures and the latest lists, and on a user's page the orders, transactions and referrals lists, follow the range (the totals at the top of a user's page stay the totals).\n"
             . "👤 <b>User profile</b>: the users list has a labelled «Profile» button on every row, the id and @username are links, and when what you search for is exactly one user's id or @username a «Go to the profile» card appears above the table. A user's id in Orders, Transactions, Services and the dashboard opens the profile too.</blockquote>",
     ],
+    [
+        'n' => 38,
+        'date' => '2026-10-25',
+        'fa' => "<blockquote>💬 <b>باز کردن پی‌وی تلگرام کاربر از وب‌پنل</b>\n"
+            . "📍 وب‌پنل ← کاربران ← پروفایل هر کاربر ← کارت «عملیات»\n"
+            . "یک دکمه‌ی «باز کردن پی‌وی تلگرام» زیر «افزایش موجودی» آمد. اگر کاربر @یوزرنیم دارد، چتش در تب تازه با لینک t.me باز می‌شود (هرجا کار می‌کند)؛ اگر یوزرنیم ندارد، لینک با آیدی را باز می‌کند که فقط وقتی کار می‌کند که تلگرامِ خودت قبلاً این کاربر را دیده باشد، و زیر دکمه همین را نوشته.</blockquote>",
+        'en' => "<blockquote>💬 <b>Open a user's Telegram chat from the web panel</b>\n"
+            . "📍 Web panel → Users → a user's page → the «Operations» card\n"
+            . "A «Open the Telegram chat» button now sits under «Add balance». For a user with an @username it opens their chat in a new tab with a t.me link (works anywhere); for one without, it opens the link by id, which only works when your own Telegram has already seen that user - and the button says so.</blockquote>",
+    ],
 ];

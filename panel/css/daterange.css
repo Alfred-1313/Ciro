@@ -108,3 +108,8 @@
 
 /* the dashboard: the filter sits at the end of its own row */
 .dash-range{display:flex;justify-content:flex-end;margin:0 0 12px}
+
+/* 💬 the user's private chat in Telegram (their page, under عملیات) */
+.btn-tg{background:rgba(42,171,238,.14);color:#2AABEE;border-color:rgba(42,171,238,.32);text-decoration:none}
+.btn-tg:active{transform:scale(.96)}
+@media (hover:hover) and (pointer:fine){.btn-tg:hover{background:#2AABEE;color:#fff;border-color:#2AABEE}}

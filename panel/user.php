@@ -306,6 +306,19 @@ include __DIR__ . '/inc/layout_head.php';
                 <button class="btn btn-primary btn-sm" style="justify-content:center" onclick="openModal('addModal')">
                     <?= icon('plus', 13) ?> <?= $textbotlang['panel']['userColAmount'] ?>
                 </button>
+                <?php
+                // their private chat in Telegram: by @username (opens anywhere), else by id (the app,
+                // and only for someone Telegram already knows to the admin)
+                $pvHref = $username !== '' ? 'https://t.me/' . rawurlencode($username) : 'tg://user?id=' . $id;
+                ?>
+                <a href="<?= htmlspecialchars($pvHref) ?>" class="btn btn-tg btn-sm" style="justify-content:center"
+                    <?= $username !== '' ? 'target="_blank" rel="noopener noreferrer"' : '' ?>
+                    title="<?= htmlspecialchars($username !== '' ? '@' . $username : $textbotlang['panel']['userOpenPvNoName']) ?>">
+                    <?= icon('send', 13) ?> <?= $textbotlang['panel']['userOpenPv'] ?>
+                </a>
+                <?php if ($username === ''): ?>
+                    <div class="field-hint" style="margin:-2px 2px 2px"><?= $textbotlang['panel']['userOpenPvNoName'] ?></div>
+                <?php endif; ?>
                 <button class="btn btn-ghost btn-sm" style="justify-content:center" onclick="openModal('roleModal')">
                     <?= icon('users', 13) ?> <?= $textbotlang['panel']['userColMethod'] ?>
                 </button>

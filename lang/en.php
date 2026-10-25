@@ -5257,6 +5257,8 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'acTopupBtnLink' => 'Button looks → top-up (account page)',
                 'ulOpenProfile' => 'Open the user\'s profile',
                 'ulProfile' => 'Profile',
+                'userOpenPv' => 'Open the Telegram chat',
+                'userOpenPvNoName' => 'This user has no username; the link by id only opens when your own Telegram has already seen this user.',
                 'ulGoProfile' => 'Go to the profile',
                 'drLabel' => 'Time filter',
                 'drToday' => 'Today',
