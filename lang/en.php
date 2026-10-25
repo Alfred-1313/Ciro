@@ -1903,12 +1903,12 @@ To use the default name, press the green button; to cancel and go back to the me
                         'pageMissing' => 'Install {app} first, then come back and tap “Open” - the subscription is added automatically.',
                         'pageRetry' => 'Try again',
                         'pageOpened' => '{app} opened. If the subscription was not added, tap “Open” again.',
-                        'pageStoreCaption' => 'Get it from',
+                        'pageStoreCaption' => 'Or get it from',
                         'pageStoreGoogle' => 'Google Play',
                         'pageStoreGithub' => 'GitHub (latest release)',
                         'pageStoreApple' => 'App Store',
                         'pageStoreSite' => 'Official site',
-                        'pageNoPlatform' => 'This app has no version for your phone; the links below are its other versions.',
+                        'pageNoPlatform' => 'This app has no version for your phone; these links are its other versions.',
                 ],
                 // ⏱ hourly subscription (payg.php)
                 'payg' => [

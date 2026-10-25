@@ -118,7 +118,9 @@ $sa_mix = function ($a, $b, $t) {
     $y = sscanf($b, '#%02x%02x%02x');
     return sprintf('#%02x%02x%02x', ...array_map(fn($i) => (int) round($y[$i] + ($x[$i] - $y[$i]) * $t), [0, 1, 2]));
 };
+// the big button is the first place to get it; the small ones under it are the OTHERS - the same link is never shown twice
 $sa_dl = $sa_stores ? $sa_stores[0]['url'] : '';
+$sa_more = array_slice($sa_stores, 1);
 // what the page says in each of its three states (the first is what it opens in;
 // a preview can ask for another)
 $sa_words = [
@@ -285,7 +287,9 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
 .primary,[data-state=missing] .dl{border:0;background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;box-shadow:0 16px 30px -14px var(--accent)}
 .dl{font-weight:600;font-size:15.5px;min-height:50px}
 .dl .ic,.dl .tx{display:contents}
-.dl .tx small,.dl .chev{display:none}
+.dl .chev{display:none}
+.dl .tx small{font-size:12.5px;font-weight:500;opacity:.62}
+.dl .tx small::before{content:"\00b7";margin-inline-end:10px}
 .dl .tx b{font-weight:inherit}
 [data-state=missing] .dl{font-weight:700;font-size:16px;min-height:54px}
 #retry{display:none;margin-top:14px;min-height:48px;font-size:15px;font-weight:600}
@@ -314,7 +318,8 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
 [data-look=minimal] .dl{justify-content:flex-start;gap:13px;min-height:0;padding:14px 16px;border-radius:20px;background:var(--chip);color:var(--text);font-weight:700;font-size:15.5px;box-shadow:none;text-align:start}
 [data-look=minimal] .dl .ic{display:grid;place-items:center;flex:none;width:38px;height:38px;border-radius:12px;background:var(--soft);color:var(--accentText)}
 [data-look=minimal] .dl .tx{display:flex;flex:1;min-width:0;flex-direction:column;align-items:flex-start;line-height:1.55}
-[data-look=minimal] .dl .tx small{display:block;font-size:12.5px;font-weight:500;color:var(--muted)}
+[data-look=minimal] .dl .tx small{display:block;font-size:12.5px;font-weight:500;color:var(--muted);opacity:1}
+[data-look=minimal] .dl .tx small::before{content:none}
 [data-look=minimal] .dl .chev{display:block;width:18px;height:18px;color:var(--muted)}
 [data-look=minimal] [data-state=missing] .dl{justify-content:center;gap:10px;padding:0 18px;text-align:center}
 [data-look=minimal] [data-state=missing] .dl .ic{display:contents}
@@ -363,18 +368,22 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
     <p class="note" id="note" data-el="note" data-tk="<?= $sa_tk[$sa_state]['note'] ?>"<?= $sa_hid('note') ?>><?= htmlspecialchars($sa_words[$sa_state]['note'], ENT_QUOTES, 'UTF-8') ?></p>
 <?php if ($sa_dl !== ''): ?>
     <div class="dlbox">
-      <a class="btn dl" data-el="download"<?= $sa_hid('download') ?> href="<?= htmlspecialchars($sa_dl, ENT_QUOTES) ?>" target="_blank" rel="noopener noreferrer"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></span><span class="tx"><b data-tk="pageDownload"><?= $sa_txt('pageDownload') ?></b><small><?= $sa_stores[0]['label'] ?></small></span><svg class="chev flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
+      <a class="btn dl" data-el="download"<?= $sa_hid('download') ?> href="<?= htmlspecialchars($sa_dl, ENT_QUOTES) ?>" target="_blank" rel="noopener noreferrer"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></span><span class="tx"><b data-tk="pageDownload"><?= $sa_txt('pageDownload') ?></b><small data-tk="<?= $sa_names[$sa_stores[0]['k']] ?>"><?= $sa_stores[0]['label'] ?></small></span><svg class="chev flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
+<?php if ($sa_more || $sa_noplat): ?>
       <div class="stores" data-el="stores"<?= $sa_hid('stores') ?>>
+<?php if ($sa_more): ?>
         <span class="cap" data-tk="pageStoreCaption"><?= $sa_txt('pageStoreCaption') ?></span>
         <div class="row">
-<?php foreach ($sa_stores as $st): ?>
+<?php foreach ($sa_more as $st): ?>
           <a class="store" href="<?= htmlspecialchars($st['url'], ENT_QUOTES) ?>" target="_blank" rel="noopener noreferrer"><?= $sa_glyph[$st['k']] ?><span data-tk="<?= $sa_names[$st['k']] ?>"><?= $st['label'] ?></span></a>
 <?php endforeach; ?>
         </div>
+<?php endif; ?>
 <?php if ($sa_noplat): ?>
         <span class="cap" data-tk="pageNoPlatform"><?= $sa_txt('pageNoPlatform') ?></span>
 <?php endif; ?>
       </div>
+<?php endif; ?>
     </div>
 <?php endif; ?>
     <button type="button" class="btn" id="retry" data-el="retry"<?= $sa_hid('retry') ?>><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg><span data-tk="pageRetry"><?= $sa_txt('pageRetry') ?></span></button>

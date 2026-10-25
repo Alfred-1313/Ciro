@@ -474,4 +474,16 @@ return [
             . "🗑 <b>Remove</b>: fade out the picked part with its small bar or the Delete key, and bring it back the same way. ↶ ↷ or Ctrl+Z undo; the arrow keys move too.\n"
             . "ℹ️ The «unsaved» marker keeps its place, so the preview no longer jumps mid-drag. All of it is saved separately for each language.</blockquote>",
     ],
+    [
+        'n' => 33,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>📲 <b>صفحه‌ی باز کردن برنامه: لینک دانلود تکراری نشان داده نمی‌شود</b>\n"
+            . "📍 صفحه‌ای که مشتری با «📲 افزودن سرویس به برنامه» باز می‌کند\n"
+            . "دکمه‌ی بزرگ «دانلود» همیشه اولین جای دانلود است (حالا اسم همان جا، مثلاً «Google Play»، کنارش نوشته می‌شود) و زیرش با «یا دانلود از» فقط جاهای <b>دیگر</b> می‌آیند. برنامه‌ای که برای گوشی مشتری فقط یک جا دارد (مثلاً v2rayNG روی اندروید: فقط GitHub) دیگر همان لینک را دوبار نشان نمی‌دهد و ردیف زیرش نمی‌آید.\n"
+            . "ℹ️ متن‌های «یا دانلود از» و پیام «نسخه‌ی جدا ندارد» هم کمی ساده‌تر شد؛ هر متنی که خودت عوض کرده بودی همان می‌ماند.</blockquote>",
+        'en' => "<blockquote>📲 <b>App-opening page: the same download link is no longer shown twice</b>\n"
+            . "📍 The page a customer opens with «📲 Add service to app»\n"
+            . "The big «Download» button is always the first place to get the app (it now also says where, e.g. «Google Play», beside it) and under it «Or get it from» lists only the <b>other</b> places. An app with just one place for the customer's phone (e.g. v2rayNG on Android: GitHub only) no longer shows that link twice and the row under it is gone.\n"
+            . "ℹ️ The «Or get it from» line and the «no version for your phone» note were also made a little simpler; any text you changed yourself stays as it is.</blockquote>",
+    ],
 ];
