@@ -2265,13 +2265,8 @@ function keyboard_config($config_split, $id_invoice, $back_active = true, $kind 
     return json_encode($keyboard_config);
 }
 // SHOP surface: offered to a customer whose test-account limit ran out.
-$keyboard_buy = json_encode([
-    'inline_keyboard' => [
-        [
-            ['text' => $customer_texts['keyboard']['buySubscription'], 'callback_data' => 'buy'],
-        ],
-    ]
-]);
+// (its one button is 🎨's: name, colour, emoji, hidden - see test_limit_kb)
+$keyboard_buy = test_limit_kb($users['lang'] ?? 'fa', $customer_texts);
 $option_mirza = json_encode([
     'keyboard' => [
         [['text' => $textbotlang['keyboard']['panelFeatureStatus']]],

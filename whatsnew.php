@@ -550,4 +550,14 @@ return [
         'en' => "<blockquote>📋 <b>The «Copy QR» button was taken out</b>\n"
             . "Telegram does not let a bot copy a picture inside Telegram with a button, and the button only opened a web page, so it is gone. The button, its QR page and their texts left all 5 places, 🎨 Customize and the web panel; anything changed for them has no effect now. The service's own QR is still under the same messages as before (in Telegram Desktop, right-click the picture and choose «Copy Image»).</blockquote>",
     ],
+    [
+        'n' => 42,
+        'date' => '2026-10-25',
+        'fa' => "<blockquote>⚠️ <b>پیام «محدودیت ساخت اشتراک تست شما به پایان رسید» و دکمه‌ی «خرید اشتراک»ش قابل شخصی‌سازی شد</b>\n"
+            . "📍 🎨 شخصی‌سازی ← «⚠️ پیام «محدودیت ساخت اکانت تست تموم شد»» (و وب‌پنل ← متن و دکمه‌های ربات، ظاهر دکمه‌ها)\n"
+            . "پیامی که وقتی سهمیه‌ی اکانت تست کاربر تموم شده و دوباره «🎁 اکانت تست» را می‌زند می‌رود، تا حالا ثابت بود. حالا متنش (با استیکر و ریاکشن) و دکمه‌ی «🛍 خرید اشتراک» زیرش — اسم، ایموجی (حتی پرمیوم)، رنگ، مخفی بودن — برای هر زبان جدا قابل تغییر است. پیش‌فرض‌ها همان قبلی‌اند (دکمه بی‌رنگ).</blockquote>",
+        'en' => "<blockquote>⚠️ <b>The «your test subscription limit has been reached» message and its «Buy a subscription» button can be customized</b>\n"
+            . "📍 🎨 Customize → «⚠️ The «test account limit reached» message» (and Web panel → Bot texts and buttons, Button looks)\n"
+            . "The message a user gets when their test-account allowance is used up and they tap «🎁 Test account» again was fixed until now. Its text (with sticker and reaction) and the «🛍 Buy subscription» button under it - name, emoji (even premium), colour, hiding - can now be changed separately for each language. The defaults are as before (the button has no colour).</blockquote>",
+    ],
 ];

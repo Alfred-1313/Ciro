@@ -277,6 +277,12 @@ return array (
         'label' => '⏰ پیام اتمام اکانت تست',
         'key' => 'textbot.testExpired',
       ),
+      // a string key: an unkeyed entry here would take the next number and be overwritten by the explicit 17
+      'test_limit' =>
+      array (
+        'label' => '⚠️ پیام «محدودیت ساخت اکانت تست تموم شد»',
+        'key' => 'users.usertest.limitwarning',
+      ),
       17 => 
       array (
         'label' => '❓ متن سؤالات متداول',

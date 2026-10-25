@@ -13519,6 +13519,8 @@ if (!function_exists('genbtn_alias_map')) {
             // caption already covers its one button for free
             'ns' => 'users.sell.service_not_available',
             'te' => 'textbot.testExpired',
+            // the same for «محدودیت ساخت اشتراک تست شما به پایان رسید» and its one button
+            'tl' => 'users.usertest.limitwarning',
             // same "own-key" trick as 'ns' - service_sell's one static button
             // (the list's close button; the per-service rows above it are a
             // live listing, not something a label override could apply to)
@@ -13650,7 +13652,7 @@ if (!function_exists('genbtn_alias_to_key')) {
         if (preg_match('/^k[btrh]$/', (string) $alias)) {
             return isset(subapp_apps()[(int) $idx]) || (int) $idx === subapp_back_idx();
         }
-        $extras = ['ab' => [0], 'ut' => [0], 'rw' => [0], 'bc' => [0], 'ns' => [0], 'te' => [0], 'sc' => [0, 2], 'hb' => [0], 'hv' => [0], 'td' => [0, 1], 'su' => [1], 'pu' => [1]];
+        $extras = ['ab' => [0], 'ut' => [0], 'rw' => [0], 'bc' => [0], 'ns' => [0], 'te' => [0], 'tl' => [0], 'sc' => [0, 2], 'hb' => [0], 'hv' => [0], 'td' => [0, 1], 'su' => [1], 'pu' => [1]];
         return in_array((int) $idx, $extras[$alias] ?? [], true);
     }
 }
@@ -13698,6 +13700,12 @@ if (!function_exists('genbtn_defs')) {
         if ($alias === 'te') {
             return [
                 0 => ['name' => '🔵 دکمه خرید سرویس', 'text' => $textbotlang['keyboard']['buyService'], 'style' => 'primary', 'callback_data' => 'buy'],
+            ];
+        }
+        if ($alias === 'tl') {
+            // no default colour: it has always gone out unstyled
+            return [
+                0 => ['name' => '🛍 دکمه خرید اشتراک', 'text' => $textbotlang['keyboard']['buySubscription'], 'style' => '', 'callback_data' => 'buy'],
             ];
         }
         if ($alias === 'sc') {
@@ -14684,6 +14692,19 @@ if (!function_exists('sell_noservice_kb')) {
         return json_encode(['inline_keyboard' => [[genbtn_render($defs[0], $ov, $defs[0]['callback_data'])]]]);
     }
 }
+if (!function_exists('test_limit_kb')) {
+    // under «محدودیت ساخت اشتراک تست شما به پایان رسید»: the buy button, as this tab
+    // has it (renamed, coloured, with an emoji) - none while 🎨 hides it
+    function test_limit_kb($lang, $textbotlang)
+    {
+        $defs = genbtn_defs('tl', $textbotlang);
+        $ov = genbtn_override($lang, 'users.usertest.limitwarning', 0);
+        if (genbtn_is_hidden($defs[0], $ov)) {
+            return null;
+        }
+        return json_encode(['inline_keyboard' => [[genbtn_render($defs[0], $ov, $defs[0]['callback_data'])]]]);
+    }
+}
 if (!function_exists('test_expired_kb')) {
     function test_expired_kb($lang, $textbotlang)
     {
@@ -14870,7 +14891,7 @@ if (!function_exists('genbtn_hub_payload')) {
             return bt_origin_get($from_id, "bt_edit|{$lang}|{$key}") ?? bt_btnitem_back_cb($key, $lang);
         }
         // 'cf' points at textbot.preInvoice (the normal-purchase تأیید خرید)
-        $backKeyMap = ['su' => 'users.sell.selectUsernamePrompt', 'pu' => 'users.payg.askUsername', 'cf' => 'textbot.preInvoice', 'ns' => 'users.sell.service_not_available', 'te' => 'textbot.testExpired', 'sc' => 'users.sell.service_sell', 'bc' => 'users.Balance.chargeSuccess', 'rn' => 'users.extend.invoiceCreated', 'cl' => 'users.changeLink.warnchange', 'td' => 'users.Balance.topupDiscPrompt', 'hb' => 'users.help.listCaption', 'hv' => 'users.help.categoryCaption', 'ab' => 'textbot.afterPay', 'ut' => 'textbot.afterText', 'rw' => 'users.affiliates.rewardAfterPay', 'lc' => 'users.channel.left_channel', 'ma' => 'users.support.messageFromAdminAlt'];
+        $backKeyMap = ['su' => 'users.sell.selectUsernamePrompt', 'pu' => 'users.payg.askUsername', 'cf' => 'textbot.preInvoice', 'ns' => 'users.sell.service_not_available', 'te' => 'textbot.testExpired', 'tl' => 'users.usertest.limitwarning', 'sc' => 'users.sell.service_sell', 'bc' => 'users.Balance.chargeSuccess', 'rn' => 'users.extend.invoiceCreated', 'cl' => 'users.changeLink.warnchange', 'td' => 'users.Balance.topupDiscPrompt', 'hb' => 'users.help.listCaption', 'hv' => 'users.help.categoryCaption', 'ab' => 'textbot.afterPay', 'ut' => 'textbot.afterText', 'rw' => 'users.affiliates.rewardAfterPay', 'lc' => 'users.channel.left_channel', 'ma' => 'users.support.messageFromAdminAlt'];
         $backKey = ($origin === 'u') ? 'users.usertest.selectUsernamePrompt' : ($backKeyMap[$alias] ?? 'users.sell.selectUsernamePrompt');
         return "bt_edit|{$lang}|{$backKey}";
     }

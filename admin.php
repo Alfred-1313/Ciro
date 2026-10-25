@@ -1187,6 +1187,9 @@ if (!function_exists('bottext_item_menu_payload')) {
         if ($bt_key === 'textbot.testExpired') {
             $bt_extra_note = "\nℹ️ این پیام وقتی برای کاربر می‌ره که اکانت تستش تموم بشه یا پاک بشه - به زبان خود کاربر.\n💡 دکمه‌ی زیرش از پایین همین صفحه قابل تنظیمه.\n";
         }
+        if ($bt_key === 'users.usertest.limitwarning') {
+            $bt_extra_note = "\nℹ️ این پیام وقتی میاد که تعداد دفعات اکانت تستِ کاربر تموم شده باشه و دوباره «🎁 اکانت تست» رو بزنه. دکمه‌ی «🛍 خرید اشتراک» زیرش از همین‌جا قابل ویرایشه.\n";
+        }
         if ($bt_key === 'users.channel.left_channel') {
             $bt_extra_note = "\nℹ️ این پیام وقتی برای کاربر فرستاده می‌شه که از کانال خارج بشه - به زبان خود همون کاربر.\n💡 دکمه‌ی زیرش («📌 عضویت مجدد») کاربر رو به همون کانال برمی‌گردونه؛ اسم/رنگ/ایموجیش از دکمه‌ی پایین همین صفحه قابل تنظیمه.\n⚠️ ربات باید توی اون کانال ادمین باشه، وگرنه تلگرام خبر خروج کاربر رو به ربات نمی‌ده و این پیام فرستاده نمی‌شه.\n";
         }
@@ -1340,7 +1343,7 @@ if (!function_exists('bottext_item_menu_payload')) {
         // separate configDisplayBuy/configColOrderBuy pair, so it gets its own
         // forward link straight from the myservices list (keyboard.php) instead
         // of the generic $bt_btn_label/$bt_btn_custom status line below.
-        $bt_has_buttons = in_array($bt_key, ['users.usertest.selectUsernamePrompt', 'users.Balance.insufficientBalanceSimple', 'users.sell.selectUsernamePrompt', 'users.sell.preInvoice', 'users.sell.preInvoice2', 'textbot.preInvoice', 'users.sell.service_not_available', 'textbot.testExpired', 'users.sell.service_sell', 'users.status.infoFull', 'users.Balance.chargeSuccess', 'textbot.channel', 'users.channel.left_channel', 'users.extend.invoiceCreated', 'users.changeLink.warnchange', 'textbot.afterPay', 'textbot.afterText', 'users.affiliates.rewardAfterPay', 'users.subapps.listBuy'], true);
+        $bt_has_buttons = in_array($bt_key, ['users.usertest.selectUsernamePrompt', 'users.Balance.insufficientBalanceSimple', 'users.sell.selectUsernamePrompt', 'users.sell.preInvoice', 'users.sell.preInvoice2', 'textbot.preInvoice', 'users.sell.service_not_available', 'textbot.testExpired', 'users.usertest.limitwarning', 'users.sell.service_sell', 'users.status.infoFull', 'users.Balance.chargeSuccess', 'textbot.channel', 'users.channel.left_channel', 'users.extend.invoiceCreated', 'users.changeLink.warnchange', 'textbot.afterPay', 'textbot.afterText', 'users.affiliates.rewardAfterPay', 'users.subapps.listBuy'], true);
         $info = "📝 <b>{$bt_label}</b>\n➖➖➖➖➖➖➖➖➖➖\n{$bt_extra_note}";
         $info .= "✏️ متن: " . ($bt_custom ? "سفارشی ✅" : "پیش‌فرض") . "\n";
         if (!$bt_nosticker) {
@@ -1363,6 +1366,8 @@ if (!function_exists('bottext_item_menu_payload')) {
                 $bt_btn_label = '🔘 دکمه تهیه اشتراک';
             } elseif ($bt_key === 'textbot.testExpired') {
                 $bt_btn_label = '🔘 دکمه خرید سرویس';
+            } elseif ($bt_key === 'users.usertest.limitwarning') {
+                $bt_btn_label = '🔘 دکمه خرید اشتراک';
             } elseif ($bt_key === 'users.sell.service_sell') {
                 $bt_btn_label = '🔘 دکمه‌های لیست (بستن، جستجو، صفحه‌ها)';
             } elseif ($bt_key === 'users.status.infoFull') {
@@ -1510,6 +1515,8 @@ if (!function_exists('bottext_item_menu_payload')) {
             $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '🔘 ویرایش دکمه تهیه اشتراک', "gbs|hub|{$bt_lang}|ns", $bt_btn_custom)];
         } elseif ($bt_key === 'textbot.testExpired') {
             $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '🔘 ویرایش دکمه خرید سرویس', "gbs|hub|{$bt_lang}|te", $bt_btn_custom)];
+        } elseif ($bt_key === 'users.usertest.limitwarning') {
+            $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '🔘 ویرایش دکمه خرید اشتراک', "gbs|hub|{$bt_lang}|tl", $bt_btn_custom)];
         } elseif ($bt_key === 'users.sell.service_sell') {
             $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های لیست (بستن، جستجو، صفحه‌ها)', 'callback_data' => "gbs|hub|{$bt_lang}|sc", 'style' => 'primary']];
         } elseif ($bt_key === 'users.status.infoFull') {
