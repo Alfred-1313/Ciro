@@ -456,4 +456,22 @@ return [
             . "🧩 🎨 also has «Page layout» (moving the parts, showing or removing them, the logo's size, shape and place, the text alignment).\n"
             . "ℹ️ All of it is separate for each language and one for all 5 places. The «📲 Add service to app settings» entry also moved from under 🛍 to under «🛡 Admin access and limits», with a heading above it saying it is one for all 5 places.</blockquote>",
     ],
+    [
+        'n' => 32,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>🖐 <b>ویرایشگر زنده‌ی صفحه‌ی باز کردن برنامه: بگیر و ببر، دوبار بزن</b>\n"
+            . "📍 وب‌پنل ← افزودن سرویس به برنامه ← «ویرایش زنده‌ی صفحه»\n"
+            . "✋ <b>بکش</b>: هر بخش را (لوگو، اسم، نام سرویس، خط وضعیت، دکمه‌ها) با موس یا انگشت بگیر و ببر: بالا و پایین = جای بخش، چپ و راست = سمتش. بخش‌های دیگر همان لحظه کنار می‌روند و جایش را باز می‌کنند.\n"
+            . "↔️ <b>اندازه</b>: گوشه‌ی لوگو را بکش تا بزرگ یا کوچک شود (عدد را هم نشان می‌دهد).\n"
+            . "✏️ <b>متن</b>: روی هر متن دوبار بزن و همان‌جا عوضش کن (Enter = تأیید، Esc = انصراف).\n"
+            . "🗑 <b>حذف</b>: بخش انتخاب‌شده را با نوار کوچکش یا کلید Delete کم‌رنگ کن و با همان نوار برگردان. ↶ ↷ یا Ctrl+Z برای برگشت؛ کلیدهای جهت‌دار هم جابه‌جا می‌کنند.\n"
+            . "ℹ️ نشانگر «ذخیره‌نشده» جا را همیشه نگه می‌دارد و پیش‌نمایش وسط کشیدن نمی‌پرد. همه برای هر زبان جدا ذخیره می‌شود.</blockquote>",
+        'en' => "<blockquote>🖐 <b>Live editor for the app-opening page: grab, drag, double-tap</b>\n"
+            . "📍 Web panel → Add service to app → «Live page editor»\n"
+            . "✋ <b>Drag</b>: grab any part (logo, app name, service name, status line, buttons) with the mouse or a finger and move it: up and down = its place in the page, left and right = its side. The other parts make way at once.\n"
+            . "↔️ <b>Size</b>: pull the logo's corner to make it bigger or smaller (the number is shown as you go).\n"
+            . "✏️ <b>Text</b>: double-tap any text and change it right there (Enter = accept, Esc = cancel).\n"
+            . "🗑 <b>Remove</b>: fade out the picked part with its small bar or the Delete key, and bring it back the same way. ↶ ↷ or Ctrl+Z undo; the arrow keys move too.\n"
+            . "ℹ️ The «unsaved» marker keeps its place, so the preview no longer jumps mid-drag. All of it is saved separately for each language.</blockquote>",
+    ],
 ];

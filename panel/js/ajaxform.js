@@ -140,6 +140,7 @@
                 f = fresh;
             }
             show(notes);
+            document.dispatchEvent(new CustomEvent('ajaxform:saved', { detail: { form: f } }));
         }).catch(function () {
             show([[(window.t && window.t('jsSaveFailed')) || 'Connection problem - nothing was saved. Try again.', 'no']]);
         }).then(function () {

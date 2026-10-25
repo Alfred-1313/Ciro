@@ -14238,11 +14238,28 @@ if (!function_exists('subapp_kind')) {
     // app icon: its size and shape; where the stage sits; the text's alignment
     function subapp_layout_choices()
     {
-        return ['size' => ['sm', 'md', 'lg', 'xl'], 'shape' => ['squircle', 'circle', 'square'], 'stageAlign' => ['center', 'start', 'end'], 'align' => ['center', 'start']];
+        return ['size' => ['sm', 'md', 'lg', 'xl'], 'shape' => ['squircle', 'circle', 'square'], 'stageAlign' => ['center', 'start', 'end'], 'align' => ['center', 'start', 'end']];
+    }
+    // the blocks whose own side the admin may set (the buttons' block fills the width)
+    function subapp_layout_aligned_blocks()
+    {
+        return ['title', 'chip', 'status'];
     }
     function subapp_layout_defaults()
     {
-        return ['hide' => [], 'order' => subapp_layout_blocks(), 'size' => 'md', 'shape' => 'squircle', 'stageAlign' => 'center', 'align' => 'center'];
+        // px: the logo's exact size when dragged to one (0 = the size above); balign: a block's own side
+        return ['hide' => [], 'order' => subapp_layout_blocks(), 'size' => 'md', 'px' => 0, 'shape' => 'squircle', 'stageAlign' => 'center', 'align' => 'center', 'balign' => []];
+    }
+    function subapp_layout_clean_extras(array $raw)
+    {
+        $px = (int) ($raw['px'] ?? 0);
+        $out = ['px' => ($px >= 56 && $px <= 200) ? $px : 0, 'balign' => []];
+        foreach ((array) ($raw['balign'] ?? []) as $b => $v) {
+            if (in_array($b, subapp_layout_aligned_blocks(), true) && in_array($v, subapp_layout_choices()['align'], true)) {
+                $out['balign'][$b] = $v;
+            }
+        }
+        return $out;
     }
     // what is saved for a language, checked, on top of the defaults
     function subapp_layout($lang)
@@ -14257,6 +14274,7 @@ if (!function_exists('subapp_kind')) {
                 $lay[$k] = $raw[$k];
             }
         }
+        $lay = array_merge($lay, subapp_layout_clean_extras($raw));
         if (isset($raw['hide']) && is_array($raw['hide'])) {
             $lay['hide'] = array_values(array_intersect(subapp_layout_elements(), $raw['hide']));
         }
@@ -14275,6 +14293,7 @@ if (!function_exists('subapp_kind')) {
                 $clean[$k] = $lay[$k];
             }
         }
+        $clean = array_merge($clean, subapp_layout_clean_extras($lay));
         $clean['hide'] = array_values(array_intersect(subapp_layout_elements(), (array) ($lay['hide'] ?? [])));
         $ord = array_values(array_unique(array_intersect((array) ($lay['order'] ?? []), subapp_layout_blocks())));
         $clean['order'] = array_merge($ord, array_values(array_diff(subapp_layout_blocks(), $ord)));
