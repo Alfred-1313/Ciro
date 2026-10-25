@@ -598,4 +598,18 @@ return [
             . "• ☎️ New section «Support, gift code and other messages»: support, gift code, agent request, app download link, channel membership, blocking, lottery and general errors.\n"
             . "• The «⛔️ test account disabled» text did not save before; fixed.</blockquote>",
     ],
+    [
+        'n' => 45,
+        'date' => '2026-10-25',
+        'fa' => "<blockquote>🌐 <b>پیام‌های بعد از تایید پرداخت حالا به زبان خود مشتری‌ان</b>\n"
+            . "وقتی ادمین رسید کارت‌به‌کارت رو تایید می‌کرد (یا درگاه و کرون پرداخت رو تایید می‌کرد)، پیام‌های مشتری - سرویس ساخته شد، تمدید شد، حجم/زمان اضافه شد، برگشت مبلغ و خطاها - به زبان همون کسی که تایید می‌کرد می‌رفت؛ مشتری انگلیسی متن فارسی می‌گرفت. حالا همه به زبان خود مشتری و با متنی که توی 🎨 برای همون زبان گذاشتی می‌رن، دکمه‌هاش هم.\n"
+            . "• پیام تمدید موفق، حجم و زمان اضافه بعد از تایید پرداخت همون پیام‌های 🎨 ‏(✅ تمدید موفق، ✅ حجم اضافه شد، ✅ زمان اضافه شد) رو استفاده می‌کنن؛ یه بار تغییرشون بدی، هر دو مسیر عوض می‌شن.\n"
+            . "• خطای خرید زمان اضافه به‌جای مشتری برای ادمینِ تاییدکننده می‌رفت و «حجم اضافه» می‌گفت؛ درست شد و متن خودش رو داره.\n"
+            . "• پیام‌های برگشت مبلغ (سرویس ساخته/تمدید نشد)، خطای تمدید بعد از تایید و «حساب احراز هویت شد» متن انگلیسی گرفتن و به 🎨 اضافه شدن.</blockquote>",
+        'en' => "<blockquote>🌐 <b>Messages after a payment is approved now go in the customer's own language</b>\n"
+            . "When an admin approved a card-to-card receipt (or a gateway or the payment cron approved a payment), the customer's messages - service created, renewed, extra volume/time added, refunds and errors - went in the approver's language; an English customer got Persian text. Now they all go in the customer's language, with the text set in 🎨 for that language, buttons included.\n"
+            . "• The renewal, extra volume and extra time messages after an approved payment use the same 🎨 messages (✅ Renewed, ✅ Volume added, ✅ Time added); change them once and both paths follow.\n"
+            . "• The extra time error went to the approving admin instead of the customer and said «extra volume»; fixed, with a text of its own.\n"
+            . "• The refund messages (service not created / not renewed), the renewal error after approval and «account verified» got English texts and were added to 🎨.</blockquote>",
+    ],
 ];

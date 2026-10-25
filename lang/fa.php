@@ -1323,6 +1323,7 @@ return array (
       'cx_b20' => array ('label' => '✅ پیام اکانت تست (پنل WGDashboard)', 'key' => 'users.sell.created'),
       // under its own heading: it sat after 🧾 تأیید خرید and drew a second «🛍 مراحل انتخاب خرید»
       'cx_b0' => array ('label' => '⛔️ پیام «سرویسی برای فروش نیست»', 'key' => 'users.sell.nullPanel', 'group' => 'buyflow', 'section' => 'buy_errors'),
+      'cx_b33' => array ('label' => '💎 سرویس ساخته نشد، مبلغ به کیف پول برگشت', 'key' => 'hardcoded.serviceCreateFailedRefund', 'group' => 'buyflow', 'section' => 'buy_errors'),
       'cx_b21' => array ('label' => '⛔️ موجودی این سرویس تموم شده', 'key' => 'users.sell.stockFinished', 'group' => 'buyflow', 'section' => 'buy_errors'),
       'cx_b22' => array ('label' => '⛔️ موجودی این سرویس تموم شده (سرویس دیگه بخر)', 'key' => 'users.sell.stockFinishedBuyAnother', 'group' => 'buyflow', 'section' => 'buy_errors'),
       'cx_b23' => array ('label' => '⛔️ ظرفیت ساخت اکانت پر شده', 'key' => 'users.sell.capacityFull', 'group' => 'buyflow', 'section' => 'buy_errors'),
@@ -1352,6 +1353,8 @@ return array (
       'cx_s15' => array ('label' => '❌ خطای تمدید (دکمه‌ی تمدید منوی اصلی)', 'key' => 'users.extend.renewalerror', 'group' => 'msmore', 'section' => 'ms_extendmsg'),
       'cx_s16' => array ('label' => '❌ خطا، مراحل تمدید از اول', 'key' => 'users.extend.restartError', 'group' => 'msmore', 'section' => 'ms_extendmsg'),
       'cx_s17' => array ('label' => '❌ خطای تمدید، با پشتیبانی در تماس باش', 'key' => 'users.extend.errorSupport', 'group' => 'msmore', 'section' => 'ms_extendmsg'),
+      'cx_s68' => array ('label' => '💎 تمدید نشد، مبلغ به کیف پول برگشت', 'key' => 'hardcoded.serviceRenewFailedRefund', 'group' => 'msmore', 'section' => 'ms_extendmsg'),
+      'cx_s69' => array ('label' => '❌ خطای تمدید بعد از تایید پرداخت', 'key' => 'hardcoded.renewGenericError', 'group' => 'msmore', 'section' => 'ms_extendmsg'),
       'cx_s18' => array ('label' => '🔋 درخواست مقدار حجم اضافه', 'key' => 'users.extraVolume.prompt', 'group' => 'msmore', 'section' => 'ms_extra'),
       'cx_s19' => array ('label' => '📜 فاکتور حجم اضافه', 'key' => 'users.extraVolume.invoiceCreated', 'group' => 'msmore', 'section' => 'ms_extra'),
       'cx_s20' => array ('label' => '✅ حجم اضافه شد', 'key' => 'users.extraVolume.success', 'group' => 'msmore', 'section' => 'ms_extra'),
@@ -1364,6 +1367,8 @@ return array (
       'cx_s27' => array ('label' => '📜 فاکتور زمان اضافه', 'key' => 'users.extraTime.invoiceCreated', 'group' => 'msmore', 'section' => 'ms_extra'),
       'cx_s28' => array ('label' => '✅ زمان اضافه شد', 'key' => 'users.extraTime.success', 'group' => 'msmore', 'section' => 'ms_extra'),
       'cx_s29' => array ('label' => '⛔️ زمان اضافه روی این پنل ممکن نیست', 'key' => 'users.extraTime.notSupportedPanel', 'group' => 'msmore', 'section' => 'ms_extra'),
+      'cx_s67' => array ('label' => '❌ خطای خرید زمان اضافه', 'key' => 'users.extraTime.serviceError', 'group' => 'msmore', 'section' => 'ms_extra'),
+      'cx_s70' => array ('label' => '💎 حجم/زمان اضافه نشد، مبلغ برگشت', 'key' => 'hardcoded.extraFailedRefundFn', 'group' => 'msmore', 'section' => 'ms_extra'),
       'cx_s30' => array ('label' => '✅ لینک عوض شد', 'key' => 'users.changeLink.updated', 'group' => 'msmore', 'section' => 'ms_linkres'),
       'cx_s31' => array ('label' => '⛔️ سرویس خاموشه، لینک عوض نمی‌شه', 'key' => 'users.changeLink.serviceInactive', 'group' => 'msmore', 'section' => 'ms_linkres'),
       'cx_s32' => array ('label' => '❌ خطای تغییر لینک', 'key' => 'users.changeLink.error', 'group' => 'msmore', 'section' => 'ms_linkres'),
@@ -1451,6 +1456,7 @@ return array (
       'cx_m26' => array ('label' => '🚫 پیام بلاک شدن کاربر', 'key' => 'users.block.descriptions', 'group' => 'misc', 'section' => 'misc_access'),
       'cx_m27' => array ('label' => '📌 بلاک شدن به خاطر اسپم', 'key' => 'users.spam.spamedMessage', 'group' => 'misc', 'section' => 'misc_access'),
       'cx_m28' => array ('label' => '⚠️ حساب احراز هویت نشده', 'key' => 'users.account.notVerifiedNotice', 'group' => 'misc', 'section' => 'misc_access'),
+      'cx_m39' => array ('label' => '✅ حساب احراز هویت شد (با کد دعوت)', 'key' => 'hardcoded.accountVerifiedSuccess', 'group' => 'misc', 'section' => 'misc_access'),
       'cx_m29' => array ('label' => '🎁 برنده‌ی قرعه‌کشی', 'key' => 'hardcoded.lotteryWinnerNotice', 'group' => 'misc', 'section' => 'misc_access'),
       'cx_m30' => array ('label' => '❌ این قابلیت الان در دسترس نیست', 'key' => 'users.featureUnavailable', 'group' => 'misc', 'section' => 'misc_errors'),
       'cx_m31' => array ('label' => '❌ این قابلیت الان در دسترس نیست (۲)', 'key' => 'users.featureUnavailable2', 'group' => 'misc', 'section' => 'misc_errors'),
@@ -2515,6 +2521,7 @@ https://t.me/%s?start=%s',
       'extratimecheck' => 'تایید و دریافت زمان اضافه',
       'title' => '⏳ خرید زمان اضافه',
       'notSupportedPanel' => '❌ امکان خرید زمان اضافه در این پنل وجود ندارد',
+      'serviceError' => '❌خطایی در خرید زمان اضافه سرویس رخ داده با پشتیبانی در ارتباط باشید',
       'invoiceCreated' => '📜 فاکتور خرید زمان اضافه برای شما ایجاد شد.
         
 📌 تعرفه هر روز زمان اضافه : %s تومان

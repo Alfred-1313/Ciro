@@ -946,6 +946,26 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
     $Payment_report = select("Payment_report", "*", "id_order", $order_id, "select");
     $format_price_cart = number_format($Payment_report['price']);
     $Balance_id = select("user", "*", "id", $Payment_report['id_user'], "select");
+    // What the payer reads comes in the payer's own language and from 🎨 on
+    // that tab. This runs for an admin approving a card receipt, a gateway's
+    // callback and the crons too, where $textbotlang is the reader of that
+    // request - the reports and the approving admin's screen keep it.
+    $ct = payer_texts($Payment_report['id_user']);
+    $ctKeyboard = main_keyboard_for_user($Balance_id);
+    // a name stored with an invoice was written in its buyer's language then
+    $dp_namesOf = function ($path) {
+        $names = [];
+        foreach (panel_langs() as $dp_l) {
+            $dp_v = lang_tab_texts($dp_l);
+            foreach (explode('.', $path) as $dp_p) {
+                $dp_v = is_array($dp_v) ? ($dp_v[$dp_p] ?? null) : null;
+            }
+            if (is_string($dp_v) && $dp_v !== '') {
+                $names[] = $dp_v;
+            }
+        }
+        return $names;
+    };
     $steppay = explode("|", $Payment_report['id_invoice']);
     update("user", "Processing_value", "0", "id", $Balance_id['id']);
     update("user", "Processing_value_one", "0", "id", $Balance_id['id']);
@@ -958,10 +978,10 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         $stmt->bindParam(':Service_location', $get_invoice['Service_location'], PDO::PARAM_STR);
         $stmt->execute();
         $info_product = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($get_invoice['name_product'] == $textbotlang['extracted']['index_php']['customVolumeButton'] || $get_invoice['name_product'] == $textbotlang['extracted']['index_php']['customServiceButton']) {
+        if (in_array($get_invoice['name_product'], array_merge($dp_namesOf('extracted.index_php.customVolumeButton'), $dp_namesOf('extracted.index_php.customServiceButton')), true)) {
             $info_product['data_limit_reset'] = "no_reset";
             $info_product['Volume_constraint'] = $get_invoice['Volume'];
-            $info_product['name_product'] = $textbotlang['users']['customSellVolume']['title'];
+            $info_product['name_product'] = $ct['users']['customSellVolume']['title'];
             $info_product['code_product'] = "customvolume";
             $info_product['Service_time'] = $get_invoice['Service_time'];
             $info_product['price_product'] = $get_invoice['price_product'];
@@ -992,8 +1012,8 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
             $dataoutput['msg'] = json_encode($dataoutput['msg']);
             $balance = $Balance_id['Balance'] + $Payment_report['price'];
             update("user", "Balance", $balance, "id", $Balance_id['id']);
-            sendmessage($Balance_id['id'], $textbotlang['users']['sell']['errorConfig'], $keyboard, 'HTML');
-            sendmessage($Balance_id['id'], sprintf($textbotlang['hardcoded']['serviceCreateFailedRefund'], $balance), $keyboard, 'HTML');
+            sendmessage($Balance_id['id'], $ct['users']['sell']['errorConfig'], $ctKeyboard, 'HTML');
+            sendmessage($Balance_id['id'], sprintf($ct['hardcoded']['serviceCreateFailedRefund'], $balance), $ctKeyboard, 'HTML');
             $texterros = sprintf($textbotlang['hardcoded']['configCreateError'], $dataoutput['msg'], $Balance_id['id'], $Balance_id['username'], $marzban_list_get['name_panel']);
             if (strlen($setting['Channel_Report']) > 0) {
                 telegram('sendmessage', [
@@ -1005,7 +1025,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
             }
             return;
         }
-        $Shoppinginfo = afterpay_help_kb($Balance_id['lang'] ?? 'fa', $textbotlang);
+        $Shoppinginfo = afterpay_help_kb($Balance_id['lang'] ?? 'fa', $ct);
         $output_config_link = "";
         $config = "";
         if ($marzban_list_get['config'] == "onconfig" && is_array($dataoutput['configs'])) {
@@ -1014,18 +1034,20 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
             }
         }
         $output_config_link = $marzban_list_get['sublink'] == "onsublink" ? $dataoutput['subscription_url'] : "";
-        $textbotlang['textbot']['afterPay'] = $marzban_list_get['type'] == "Manualsale" ? $textbotlang['textbot']['manual'] : $textbotlang['textbot']['afterPay'];
-        $textbotlang['textbot']['afterPay'] = $marzban_list_get['type'] == "WGDashboard" ? $textbotlang['textbot']['wgDashboard'] : $textbotlang['textbot']['afterPay'];
-        $textbotlang['textbot']['afterPay'] = $marzban_list_get['type'] == "ibsng" || $marzban_list_get['type'] == "mikrotik" ? $textbotlang['textbot']['afterPayIbsng'] : $textbotlang['textbot']['afterPay'];
+        // the panel's own kind of message, as a purchase paid from the wallet gets
+        $dp_afterPay = $ct['textbot']['afterPay'];
+        $dp_afterPay = $marzban_list_get['type'] == "Manualsale" ? $ct['textbot']['manual'] : $dp_afterPay;
+        $dp_afterPay = $marzban_list_get['type'] == "WGDashboard" ? $ct['textbot']['wgDashboard'] : $dp_afterPay;
+        $dp_afterPay = $marzban_list_get['type'] == "ibsng" || $marzban_list_get['type'] == "mikrotik" ? $ct['textbot']['afterPayIbsng'] : $dp_afterPay;
         if (intval($get_invoice['Service_time']) == 0)
-            $get_invoice['Service_time'] = $textbotlang['users']['status']['unlimited'];
-        $textcreatuser = str_replace('{username}', $dataoutput['username'], $textbotlang['textbot']['afterPay']);
+            $get_invoice['Service_time'] = $ct['users']['status']['unlimited'];
+        $textcreatuser = str_replace('{username}', $dataoutput['username'], $dp_afterPay);
         $textcreatuser = str_replace('{name_service}', $get_invoice['name_product'], $textcreatuser);
         $textcreatuser = str_replace('{location}', $marzban_list_get['name_panel'], $textcreatuser);
         $textcreatuser = str_replace('{day}', $get_invoice['Service_time'], $textcreatuser);
         $textcreatuser = str_replace('{volume}', $get_invoice['Volume'], $textcreatuser);
-        $textcreatuser = str_replace('{time_human}', service_days_text(intval($get_invoice['Service_time']), $textbotlang), $textcreatuser);
-        $textcreatuser = str_replace('{volume_human}', service_volume_text((float) $get_invoice['Volume'] * 1024, $textbotlang), $textcreatuser);
+        $textcreatuser = str_replace('{time_human}', service_days_text(intval($get_invoice['Service_time']), $ct), $textcreatuser);
+        $textcreatuser = str_replace('{volume_human}', service_volume_text((float) $get_invoice['Volume'] * 1024, $ct), $textcreatuser);
         $textcreatuser = str_replace('{config}', "<code>{$output_config_link}</code>", $textcreatuser);
         $textcreatuser = str_replace('{links}', $config, $textcreatuser);
         $textcreatuser = str_replace('{links2}', "{$output_config_link}", $textcreatuser);
@@ -1141,7 +1163,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         $data_order = $stmt->fetch(PDO::FETCH_ASSOC);
         $service_other = $data_order;
         if ($service_other == false) {
-            sendmessage($Balance_id['id'], $textbotlang['hardcoded']['renewGenericError'], $keyboard, 'HTML');
+            sendmessage($Balance_id['id'], $ct['hardcoded']['renewGenericError'], $ctKeyboard, 'HTML');
             return;
         }
         $service_other = json_decode($service_other['value'], true);
@@ -1159,7 +1181,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
             $stmt->execute([':mp2' => $nameloc['Service_location'], ':mp3' => $Balance_id['agent'], ':mp4' => $codeproduct]);
             $prodcut = $stmt->fetch(PDO::FETCH_ASSOC);
         }
-        if ($nameloc['name_product'] == $textbotlang['hardcoded']['testServiceNameFn']) {
+        if (in_array($nameloc['name_product'], $dp_namesOf('hardcoded.testServiceNameFn'), true)) {
             update("invoice", "name_product", $prodcut['name_product'], "id_invoice", $nameloc['id_invoice']);
             update("invoice", "price_product", $prodcut['price_product'], "id_invoice", $nameloc['id_invoice']);
         }
@@ -1172,11 +1194,11 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         if ($extend['status'] == false) {
             $balance = $Balance_id['Balance'] + $Payment_report['price'];
             update("user", "Balance", $balance, "id", $Balance_id['id']);
-            sendmessage($Balance_id['id'], $textbotlang['users']['sell']['errorConfig'], $keyboard, 'HTML');
-            sendmessage($Balance_id['id'], sprintf($textbotlang['hardcoded']['serviceRenewFailedRefund'], $balance), $keyboard, 'HTML');
+            sendmessage($Balance_id['id'], $ct['users']['sell']['errorConfig'], $ctKeyboard, 'HTML');
+            sendmessage($Balance_id['id'], sprintf($ct['hardcoded']['serviceRenewFailedRefund'], $balance), $ctKeyboard, 'HTML');
             $extend['msg'] = json_encode($extend['msg']);
             $textreports = sprintf($textbotlang['hardcoded']['renewServiceErrorFn'], $marzban_list_get['name_panel'], $nameloc['username'], $extend['msg']);
-            sendmessage($nameloc['id_user'], $textbotlang['extracted']['index_php']['renewServiceError'], null, 'HTML');
+            sendmessage($nameloc['id_user'], $ct['users']['extend']['errorSupport'], null, 'HTML');
             if (strlen($setting['Channel_Report']) > 0) {
                 telegram('sendmessage', [
                     'chat_id' => $setting['Channel_Report'],
@@ -1193,10 +1215,10 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         $keyboardextendfnished = json_encode([
             'inline_keyboard' => [
                 [
-                    ['text' => $textbotlang['users']['status']['backlist'], 'callback_data' => "backorder"],
+                    ['text' => $ct['users']['status']['backlist'], 'callback_data' => "backorder"],
                 ],
                 [
-                    ['text' => $textbotlang['users']['status']['backservice'], 'callback_data' => "product_" . $nameloc['id_invoice']],
+                    ['text' => $ct['users']['status']['backservice'], 'callback_data' => "product_" . $nameloc['id_invoice']],
                 ]
             ]
         ]);
@@ -1209,10 +1231,11 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
             $result = ($prodcut['price_product'] * $valurcashbackextend) / 100;
             $pricelastextend = $result;
             update("user", "Balance", $pricelastextend, "id", $Balance_id['id']);
-            sendmessage($Balance_id['id'], sprintf($textbotlang['hardcoded']['renewGiftChargedFn'], $result), null, 'HTML');
+            sendmessage($Balance_id['id'], sprintf($ct['users']['extend']['giftCharged'], $result), null, 'HTML');
         }
         $priceproductformat = number_format($prodcut['price_product']);
-        $textextend = sprintf($textbotlang['hardcoded']['renewServiceSuccessFn'], $usernamepanel, $prodcut['name_product'], $priceproductformat);
+        // the words of a renewal paid from the wallet (🎨 ✅ تمدید موفق)
+        $textextend = sprintf($ct['users']['extend']['success'], $usernamepanel, $prodcut['name_product'], $priceproductformat);
         sendmessage($Balance_id['id'], $textextend, $keyboardextendfnished, 'HTML');
         if (score_on($Balance_id['lang'] ?? 'fa', $setting) and !in_array($Balance_id['id'], $admin_ids)) {
             sendmessage($Balance_id['id'], payer_texts($Balance_id['id'])['users']['affiliates']['pointsEarned2Alt'], null, 'html');
@@ -1259,7 +1282,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         if ($extra_volume['status'] == false) {
             $extra_volume['msg'] = json_encode($extra_volume['msg']);
             $textreports = sprintf($textbotlang['hardcoded']['extraVolumeErrorFn'], $marzban_list_get['name_panel'], $nameloc['username'], $extra_volume['msg']);
-            sendmessage($nameloc['id_user'], $textbotlang['extracted']['index_php']['extraVolumeServiceError'], null, 'HTML');
+            sendmessage($nameloc['id_user'], $ct['users']['extraVolume']['serviceError'], null, 'HTML');
             if (strlen($setting['Channel_Report']) > 0) {
                 telegram('sendmessage', [
                     'chat_id' => $setting['Channel_Report'],
@@ -1283,7 +1306,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         $keyboardextrafnished = json_encode([
             'inline_keyboard' => [
                 [
-                    ['text' => $textbotlang['users']['status']['backservice'], 'callback_data' => "product_" . $nameloc['id_invoice']],
+                    ['text' => $ct['users']['status']['backservice'], 'callback_data' => "product_" . $nameloc['id_invoice']],
                 ]
             ]
         ]);
@@ -1293,7 +1316,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
             $scorenew = $Balance_id['score'] + 1;
             update("user", "score", $scorenew, "id", $Balance_id['id']);
         }
-        $textvolume = sprintf($textbotlang['hardcoded']['extraVolumeSuccessFn'], $steppay[0], $volume, $volumesformat);
+        $textvolume = sprintf($ct['users']['extraVolume']['success'], $steppay[0], $volume, $volumesformat);
         sendmessage($Balance_id['id'], $textvolume, $keyboardextrafnished, 'HTML');
         $volumes = $volume;
         if ($Payment_report['Payment_Method'] == "cart to cart") {
@@ -1336,7 +1359,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         if ($extra_time['status'] == false) {
             $extra_time['msg'] = json_encode($extra_time['msg']);
             $textreports = sprintf($textbotlang['hardcoded']['extraTimeErrorFn'], $marzban_list_get['name_panel'], $nameloc['username'], $extra_time['msg']);
-            sendmessage($from_id, $textbotlang['extracted']['index_php']['extraVolumeServiceError'], null, 'HTML');
+            sendmessage($nameloc['id_user'], $ct['users']['extraTime']['serviceError'], null, 'HTML');
             if (strlen($setting['Channel_Report']) > 0) {
                 telegram('sendmessage', [
                     'chat_id' => $setting['Channel_Report'],
@@ -1360,7 +1383,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         $keyboardextrafnished = json_encode([
             'inline_keyboard' => [
                 [
-                    ['text' => $textbotlang['users']['status']['backservice'], 'callback_data' => "product_" . $nameloc['id_invoice']],
+                    ['text' => $ct['users']['status']['backservice'], 'callback_data' => "product_" . $nameloc['id_invoice']],
                 ]
             ]
         ]);
@@ -1370,7 +1393,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
             $scorenew = $Balance_id['score'] + 1;
             update("user", "score", $scorenew, "id", $Balance_id['id']);
         }
-        $textextratime = sprintf($textbotlang['hardcoded']['extraTimeSuccessFn'], $steppay[0], $tmieextra, $volumesformat);
+        $textextratime = sprintf($ct['users']['extraTime']['success'], $steppay[0], $tmieextra, $volumesformat);
         sendmessage($Balance_id['id'], $textextratime, $keyboardextrafnished, 'HTML');
         $volumes = $tmieextra;
         if ($Payment_report['Payment_Method'] == "cart to cart") {
@@ -2755,6 +2778,23 @@ if (!function_exists('payer_texts')) {
         $row = select("user", "lang", "id", $userId, "select");
         $lang = (is_array($row) && !empty($row['lang'])) ? $row['lang'] : 'fa';
         return lang_tab_texts($lang);
+    }
+    // $userRow's own main menu (their language, their grid) for a message sent
+    // to them from someone else's request - an admin approving their receipt,
+    // a gateway's callback. null where the menu cannot be drawn (no
+    // keyboard.php loaded): no keyboard beats the reader's.
+    function main_keyboard_for_user($userRow)
+    {
+        if (!is_array($userRow) || !function_exists('build_main_keyboard')) {
+            return null;
+        }
+        $saved = $GLOBALS['users'] ?? null;
+        $GLOBALS['users'] = $userRow;
+        try {
+            return build_main_keyboard();
+        } finally {
+            $GLOBALS['users'] = $saved;
+        }
     }
 }
 if (!function_exists('feature_lang_map')) {
@@ -22498,7 +22538,9 @@ function sendMessageService($panel_info, $config, $sub_link, $username_service, 
         $cd_hintKey = ['usertest' => 'textbot.getConfigHintTest', 'affrw' => 'users.affiliates.rewardConfigHint'][$kind] ?? 'textbot.getConfigHintBuy';
         // an admin can be the one approving a 🎁 gift, so it is worded in the
         // recipient's language rather than the reader's
-        $cd_hintText = bottext_resolve_key($cd_hintKey, $kind === 'affrw' ? $sms_lang : null);
+        // the recipient's tab, as everything else here: an admin approving a
+        // receipt or a 🎁 gift is the one whose request this is
+        $cd_hintText = bottext_resolve_key($cd_hintKey, $sms_lang);
         // sendMessageService's own $kind is 'purchase'|'usertest' - keyboard_config()'s
         // is 'usertest'|'buy', so normalize rather than let 'purchase' silently
         // fall through to the usertest column/button settings below.
@@ -22511,7 +22553,7 @@ function sendMessageService($panel_info, $config, $sub_link, $username_service, 
                 $cd_kb['inline_keyboard'][] = $cd_row;
             }
         }
-        sendmessage($user_id, $cd_hintText !== '' ? $cd_hintText : $textbotlang['hardcoded']['getConfigHint'], json_encode($cd_kb), 'HTML');
+        sendmessage($user_id, $cd_hintText !== '' ? $cd_hintText : lang_tab_texts($sms_lang)['hardcoded']['getConfigHint'], json_encode($cd_kb), 'HTML');
         return;
     }
     // the full message, split when it runs past Telegram's length limit; the

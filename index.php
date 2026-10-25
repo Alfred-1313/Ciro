@@ -3202,7 +3202,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     if ($extra_time['status'] == false) {
         $extra_time['msg'] = json_encode($extra_time['msg']);
         $textreports = sprintf($textbotlang['Admin']['reportgroup']['errorExtraTime'], $marzban_list_get['name_panel'], $nameloc['username'], $extra_time['msg']);
-        sendmessage($from_id, $textbotlang['users']['extraVolume']['serviceError'], null, 'HTML');
+        sendmessage($from_id, $textbotlang['users']['extraTime']['serviceError'], null, 'HTML');
         if (strlen($setting['Channel_Report']) > 0) {
             telegram('sendmessage', [
                 'chat_id' => $setting['Channel_Report'],

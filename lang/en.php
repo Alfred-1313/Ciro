@@ -1333,6 +1333,7 @@ You can now use the bot ✔️',
                         'extratimecheck' => 'Confirm and receive extra time',
                         'title' => '⏳ Purchase extra time',
                         'notSupportedPanel' => '❌ Purchasing extra time is not possible on this panel',
+                        'serviceError' => '❌ An error occurred while purchasing extra time for the service. Please contact support',
                         'invoiceCreated' => '📜 An extra time purchase invoice was created for you.
         
 📌 Daily rate for extra time : %s Dollar
@@ -6541,7 +6542,13 @@ Payment tracking code : %s',
                 'departmanGeneral' => '☎️ General section',
         ],
         'hardcoded' => [
-                'extraFailedRefundFn' => '💎 Dear user, the extra volume/time could not be added, so your payment (%s) was returned to your wallet.\n\n💰 Current balance: %s',
+                'extraFailedRefundFn' => '💎 Dear user, the extra volume/time could not be added, so your payment (%s) was returned to your wallet.
+
+💰 Current balance: %s',
+                'serviceCreateFailedRefund' => '💎 Dear user, as the service could not be created, %s Dollar was added to your wallet.',
+                'serviceRenewFailedRefund' => '💎 Dear user, as the service could not be renewed, %s Dollar was added to your wallet.',
+                'renewGenericError' => '❌ An error occurred during the renewal. Please contact support',
+                'accountVerifiedSuccess' => '✅ Your account has been verified successfully',
                 'topupDiscPercentCaption' => '🎁 Top up your balance and get {value}% extra!',
                 'topupDiscFixedCaption' => '🎁 Every top-up comes with a {value} gift!',
                 'topupDiscGroupPercentCaption' => '🎁 Top up with {group} and get {value}% extra!',
