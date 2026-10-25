@@ -486,4 +486,14 @@ return [
             . "The big «Download» button is always the first place to get the app (it now also says where, e.g. «Google Play», beside it) and under it «Or get it from» lists only the <b>other</b> places. An app with just one place for the customer's phone (e.g. v2rayNG on Android: GitHub only) no longer shows that link twice and the row under it is gone.\n"
             . "ℹ️ The «Or get it from» line and the «no version for your phone» note were also made a little simpler; any text you changed yourself stays as it is.</blockquote>",
     ],
+    [
+        'n' => 34,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>🖼 <b>آیکن هر برنامه بالای مرورگر</b>\n"
+            . "📍 صفحه‌ای که مشتری با «📲 افزودن سرویس به برنامه» باز می‌کند\n"
+            . "صفحه‌ی باز کردن هر برنامه حالا آیکن خودِ همان برنامه را در تب مرورگر نشان می‌دهد (به جای آیکن کره‌ی زمین) و اگر مشتری صفحه را به صفحه‌ی اصلی گوشی اضافه کند، همان آیکن می‌آید. برای هر ۶ برنامه جدا.</blockquote>",
+        'en' => "<blockquote>🖼 <b>Each app's icon in the browser tab</b>\n"
+            . "📍 The page a customer opens with «📲 Add service to app»\n"
+            . "The page of each app now shows that app's own icon in the browser tab (instead of the globe), and the same icon comes if the customer adds the page to the phone's home screen. Separate for each of the 6 apps.</blockquote>",
+    ],
 ];

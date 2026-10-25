@@ -166,6 +166,13 @@ $sa_justify = ['center' => 'center', 'start' => 'flex-start', 'end' => 'flex-end
 <meta name="theme-color" content="<?= $sa_theme === 'dark' ? $sa_bgDark : $sa_bgLight ?>">
 <?php endif; ?>
 <title><?= $sa_ok ? htmlspecialchars($sa_app['name']) : '⛔️' ?></title>
+<?php
+// the app's own icon in the browser's tab (and on a phone's home screen): a rounded one for the tab, a full square for the phone
+$sa_tab = 'subapp_assets/icons/tab/' . $sa_app['icon'];
+if ($sa_ok && $sa_app['icon'] !== '' && is_file(__DIR__ . '/' . $sa_tab . '-64.png')): ?>
+<link rel="icon" type="image/png" sizes="64x64" href="<?= htmlspecialchars($sa_tab, ENT_QUOTES) ?>-64.png">
+<link rel="apple-touch-icon" sizes="180x180" href="<?= htmlspecialchars($sa_tab, ENT_QUOTES) ?>-180.png">
+<?php endif; ?>
 <link rel="preload" href="subapp_assets/fonts/estedad-<?= $sa_rtl ? 'arabic' : 'latin' ?>.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:Estedad;font-weight:100 900;font-display:swap;src:url(subapp_assets/fonts/estedad-arabic.woff2) format("woff2");unicode-range:U+0600-06FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE80-FEFC}
