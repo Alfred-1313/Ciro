@@ -1491,7 +1491,16 @@ if (!function_exists('bottext_item_menu_payload')) {
             // it sent the customer here from the home list before, where it read
             // as a child of whatever section was last on screen; its own back
             // button already pointed at this screen
-            $kb['inline_keyboard'][] = [['text' => '⛔️ پیام «اکانت تست غیرفعال است»', 'callback_data' => "bt_edit|{$bt_lang}|users.usertest.noPanel", 'style' => 'primary']];
+            $kb['inline_keyboard'][] = [['text' => '⛔️ پیام «اکانت تست غیرفعال است»', 'callback_data' => "bt_edit|{$bt_lang}|users.usertest.noPanel", 'style' => $bt_is_customized('users.usertest.noPanel') ? 'success' : 'primary']];
+            // the other messages of this flow, each on its own screen with this one as its back
+            foreach ([
+                'users.usertest.limitwarning' => '⚠️ پیام «محدودیت ساخت اکانت تست تموم شد»',
+                'users.usertest.unavailable' => '📌 پیام «سرویس تست در دسترس نیست»',
+                'users.usertest.errorcreat' => '❌ خطای ساخت اکانت تست',
+                'users.sell.created' => '✅ پیام اکانت تست (پنل WGDashboard)',
+            ] as $bt_ut_key => $bt_ut_label) {
+                $kb['inline_keyboard'][] = [['text' => $bt_ut_label, 'callback_data' => "bt_edit|{$bt_lang}|{$bt_ut_key}", 'style' => $bt_is_customized($bt_ut_key) ? 'success' : 'primary']];
+            }
             $kb['inline_keyboard'][] = [['text' => '📦 پیام بعد از دریافت اکانت تست', 'callback_data' => "bt_edit|{$bt_lang}|textbot.afterText", 'style' => 'primary']];
             $kb['inline_keyboard'][] = [['text' => '📌 نحوه‌ی نمایش کانفیگ', 'callback_data' => "cfgdeliv|list|{$bt_lang}|u", 'style' => 'primary']];
             // 🌐 / 📲 and the app list are one group for all five places, on the
@@ -1593,7 +1602,7 @@ if (!function_exists('bottext_item_menu_payload')) {
             $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_edit|{$bt_lang}|users.Balance.chargeSuccess", 'style' => 'danger']];
         } elseif ($bt_key === 'users.channel.left_channel') {
             $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_edit|{$bt_lang}|textbot.channel", 'style' => 'danger']];
-        } elseif ($bt_key === 'textbot.afterText' || $bt_key === 'users.usertest.noPanel' || $bt_key === 'textbot.selectLocationTest') {
+        } elseif (in_array($bt_key, ['textbot.afterText', 'users.usertest.noPanel', 'textbot.selectLocationTest', 'users.usertest.limitwarning', 'users.usertest.unavailable', 'users.usertest.errorcreat', 'users.sell.created'], true)) {
             $kb['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_edit|{$bt_lang}|users.usertest.selectUsernamePrompt", 'style' => 'danger']];
         } elseif (in_array($bt_key, notice_section_keys(), true)) {
             // it lives in 🔋 پیام‌های هشدار و اتمام سرویس
@@ -1697,6 +1706,14 @@ if (!function_exists('bt_inline_block_keys')) {
             'users.extend.insufficientBalanceAlert',
             'keyboard.infoRefreshed',
             'users.subapps.noLink',
+            'users.Balance.waiting',
+            'users.Balance.sending',
+            'users.Balance.finished',
+            'users.Balance.Failed',
+            'users.Balance.refunded',
+            'users.Balance.expired',
+            'users.channel.confirmed',
+            'users.channel.notconfirmed',
             // the texts of the page an app of 📲's list opens through
             // (subapp.php) - not a message of the bot's either
             ...subapp_page_keys(),

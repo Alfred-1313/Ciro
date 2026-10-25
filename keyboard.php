@@ -2395,7 +2395,9 @@ function keyboard_list_text($lang, $groupFilter = null)
         // second row here would make their back button ambiguous
         'bottext.langPickerCaption',
         // opened from inside 📯 پیام عضویت اجباری کانال, whose back it uses
-        'users.channel.left_channel'];
+        'users.channel.left_channel',
+        // the test account's other messages: on 🔑 تنظیم اکانت تست's own screen
+        'users.usertest.noPanel', 'users.usertest.unavailable', 'users.usertest.errorcreat', 'users.usertest.limitwarning', 'users.sell.created'];
     $bt_can_react_keys = bt_react_keys();
     $bt_list_setting = select("setting", "*", null, null, "select");
     $bt_list_edit = json_decode((string) ($bt_list_setting['text_edit'] ?? ''), true);
@@ -2601,6 +2603,20 @@ function keyboard_list_text($lang, $groupFilter = null)
                 $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['Admin']['LangScope']['productStyleBtn'], 'callback_data' => "btnstyle_kindhub:product:{$lang}", 'style' => 'primary']];
             }
         }
+        // what the service screen's buttons lead to (renewal, extra volume,
+        // transfer ...) is a page of its own: one heading and one row here
+        if ($groupFilter === 'myservices' && !empty($bt_grouped['msmore'])) {
+            $bt_mm_custom = false;
+            foreach ($bt_grouped['msmore'] as $bt_g) {
+                list(, $bt_g_style) = $bt_decorate($bt_g['key'], $bt_g['label']);
+                if ($bt_g_style !== '') {
+                    $bt_mm_custom = true;
+                    break;
+                }
+            }
+            $keyboard_text['inline_keyboard'][] = [['text' => bt_section_meta('myservices_more')['label'], 'callback_data' => 'bt_sep|myservices_more']];
+            $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupMsMoreLabel'], 'callback_data' => "bt_group|$lang|msmore", 'style' => $bt_mm_custom ? 'success' : 'primary']];
+        }
         if ($groupFilter === 'referral') {
             // the gift config itself - how it is shown, and its account's
             // rules - under a white heading of its own
@@ -2709,6 +2725,10 @@ function keyboard_list_text($lang, $groupFilter = null)
             if ($bt_sa_from !== null) {
                 $keyboard_text['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => $bt_sa_from, 'style' => 'danger']];
             }
+            // the service actions' messages are a page of 🛍 سرویس‌های من
+            if ($groupFilter === 'msmore') {
+                $keyboard_text['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_group|$lang|myservices", 'style' => 'danger']];
+            }
             // 👤's screen goes back to 👤 مدیریت کاربر, on this same tab
             $keyboard_text['inline_keyboard'][] = $groupFilter === 'usermgmt'
                 ? [['text' => '🔙 بازگشت به مدیریت کاربر', 'callback_data' => "umlang:$lang", 'style' => 'danger']]
@@ -2727,6 +2747,8 @@ function keyboard_list_text($lang, $groupFilter = null)
             'referral' => 'groupReferralCaption',
             'usermgmt' => 'groupUserMgmtCaption',
             'payg' => 'groupPaygCaption',
+            'misc' => 'groupMiscCaption',
+            'msmore' => 'groupMsMoreCaption',
         ][$groupFilter] ?? 'groupBuyflowCaption';
         $bt_caption_tpl = isset($bt_payg_subs[$groupFilter]) ? $bt_payg_subs[$groupFilter]['caption'] : $textbotlang['bottext'][$bt_captionKey];
         $bt_caption = strtr($bt_caption_tpl, ['{lang}' => $textbotlang['bottext']['langs'][$lang] ?? $lang]);
@@ -2882,6 +2904,19 @@ function keyboard_list_text($lang, $groupFilter = null)
                 'callback_data' => "bt_edit|$lang|users.unknownMsg",
                 'style' => ($bt_um_style !== '' ? $bt_um_style : 'primary'),
             ]];
+            // ☎️ support, the gift code, the agent request, app downloads and the
+            // bot's own error messages: one row into their group
+            if (!empty($bt_grouped['misc'])) {
+                $bt_misc_custom = false;
+                foreach ($bt_grouped['misc'] as $bt_g) {
+                    list(, $bt_g_style) = $bt_decorate($bt_g['key'], $bt_g['label']);
+                    if ($bt_g_style !== '') {
+                        $bt_misc_custom = true;
+                        break;
+                    }
+                }
+                $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupMiscLabel'], 'callback_data' => "bt_group|$lang|misc", 'style' => $bt_misc_custom ? 'success' : 'primary']];
+            }
         }
     }
     // Anything ungrouped that isn't in one of the sections above still needs to

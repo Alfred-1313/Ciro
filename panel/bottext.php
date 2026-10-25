@@ -21,7 +21,7 @@ $labels = [];
 foreach ($bt['items'] as $it) {
     if (!empty($it['key'])) {
         $g = $it['group'] ?? '';
-        $labels[$it['key']] = ['label' => $it['label'] ?? $it['key'], 'group' => isset($paygSubs[$g]) ? 'payg' : $g, 'sub' => isset($paygSubs[$g]) ? $g : '', 'sec' => in_array($g, ['myservices', 'subapps'], true) ? (string) ($it['section'] ?? '') : ''];
+        $labels[$it['key']] = ['label' => $it['label'] ?? $it['key'], 'group' => isset($paygSubs[$g]) ? 'payg' : $g, 'sub' => isset($paygSubs[$g]) ? $g : '', 'sec' => (string) ($it['section'] ?? '')];
     }
 }
 foreach (bottext_all_item_keys($textbotlang) as $key) {
@@ -164,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // each group named as its screen in the bot names it
 $captionOf = ['myservices' => 'groupServicesCaption', 'subapps' => 'groupSubappsCaption', 'topup' => 'groupTopupCaption', 'topupdisc' => 'groupTopupDiscCaption', 'account' => 'groupAccountCaption',
     'help' => 'groupHelpCaption', 'verify' => 'groupVerifyCaption', 'wheel' => 'groupWheelCaption', 'referral' => 'groupReferralCaption', 'usermgmt' => 'groupUserMgmtCaption', 'buyflow' => 'groupBuyflowCaption',
-    'payg' => 'groupPaygCaption'];
+    'payg' => 'groupPaygCaption', 'misc' => 'groupMiscCaption', 'msmore' => 'groupMsMoreCaption'];
 $groupName = function ($g) use ($bt, $captionOf, $t) {
     if ($g === '') {
         return $t['bottextHomeGroup'];
@@ -196,7 +196,7 @@ foreach ($labels as $key => $meta) {
     }
     $groupCounts[$meta['group']] = ($groupCounts[$meta['group']] ?? 0) + 1;
     if ($group === '*' || $meta['group'] === $group) {
-        $visible[$key] = ['label' => $meta['label'], 'sub' => $meta['sub'], 'sec' => in_array($group, ['myservices', 'subapps'], true) ? ($meta['sec'] ?? '') : '', 'current' => $current, 'default' => $default, 'textChanged' => $own !== null, 'changed' => $changed,
+        $visible[$key] = ['label' => $meta['label'], 'sub' => $meta['sub'], 'sec' => $group !== '*' ? ($meta['sec'] ?? '') : '', 'current' => $current, 'default' => $default, 'textChanged' => $own !== null, 'changed' => $changed,
             'sticker' => $ownSticker, 'reaction' => $ownReaction];
     }
 }

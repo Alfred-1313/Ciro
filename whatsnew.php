@@ -578,4 +578,24 @@ return [
             . "• A premium emoji in the language picker's text now shows properly.\n"
             . "• The repeated «📲 Add service to app» rows were removed from the test account and the other paths; it is set in one place on 🎨's first screen.</blockquote>",
     ],
+    [
+        'n' => 44,
+        'date' => '2026-10-25',
+        'fa' => "<blockquote>🎨 <b>حدود ۱۶۰ پیام دیگه‌ی ربات به 🎨 شخصی‌سازی اضافه شد</b>\n"
+            . "پیام‌هایی که تا حالا به مشتری می‌رسید ولی هیچ جا قابل تغییر نبود، حالا متن (با ایموجی پریمیوم)، استیکر و ری‌اکشنشون برای هر زبان جدا قابل تنظیمه - توی ربات و وب‌پنل (متن و دکمه‌های ربات):\n"
+            . "• 🛒 مراحل خرید: انتخاب مدت زمان، یادداشت کانفیگ، حجم و زمان دلخواه، خرید عمده، پیام بعد از خرید برای پنل دستی / WGDashboard / IBSng و میکروتیک، و خطاهای خرید.\n"
+            . "• 🛍 سرویس‌های من ← «♻️ تمدید، حجم اضافه، انتقال، لوکیشن و ...»: همه‌ی پیام‌های تمدید، حجم و زمان اضافه، تغییر لینک، انتقال، تغییر لوکیشن، یادداشت، حذف سرویس، روشن/خاموش، گزارش اختلال و جستجو.\n"
+            . "• 💰 افزایش موجودی: پیام‌های رسید، پاپ‌آپ‌های وضعیت پرداخت و خطاهای پرداخت.\n"
+            . "• 🔑 اکانت تست: «سرویس تست در دسترس نیست»، خطای ساخت، پیام WGDashboard و «محدودیت ساخت اکانت تست تموم شد» حالا توی صفحه‌ی خود اکانت تست‌ان.\n"
+            . "• ☎️ بخش جدید «پشتیبانی، کد هدیه و پیام‌های دیگر»: پشتیبانی، کد هدیه، درخواست نمایندگی، لینک دانلود برنامه، عضویت کانال، بلاک، قرعه‌کشی و خطاهای عمومی.\n"
+            . "• متن «⛔️ اکانت تست غیرفعال است» قبلاً ذخیره نمی‌شد؛ درست شد.</blockquote>",
+        'en' => "<blockquote>🎨 <b>About 160 more bot messages added to 🎨 Customize</b>\n"
+            . "Messages customers were getting that could not be changed anywhere now have their text (premium emoji included), sticker and reaction set per language - in the bot and the web panel (Bot texts and buttons):\n"
+            . "• 🛒 Purchase steps: choosing the duration, the config note, custom volume and time, bulk purchase, the post-purchase message for manual / WGDashboard / IBSng and MikroTik panels, and purchase errors.\n"
+            . "• 🛍 My services → «♻️ Renewal, extra volume, transfer, location ...»: every renewal, extra volume and time, link change, transfer, location change, note, service removal, on/off, outage report and search message.\n"
+            . "• 💰 Top-up: receipt messages, payment status popups and payment errors.\n"
+            . "• 🔑 Test account: «test service unavailable», the creation error, the WGDashboard message and «test account limit reached» are now on the test account's own screen.\n"
+            . "• ☎️ New section «Support, gift code and other messages»: support, gift code, agent request, app download link, channel membership, blocking, lottery and general errors.\n"
+            . "• The «⛔️ test account disabled» text did not save before; fixed.</blockquote>",
+    ],
 ];
