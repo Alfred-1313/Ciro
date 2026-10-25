@@ -554,4 +554,14 @@ return [
             . "A «📋 Copy QR» button now sits under each service's page (My services), the purchase message, the test-account message, the referral-gift config message and the hourly service page. A Telegram bot cannot put a picture on the clipboard itself, so the button opens a small page that shows the service's QR; one tap on the QR (or the «Copy QR» button) copies it as a picture, ready to paste anywhere. If the phone does not allow copying a picture (e.g. Telegram's own browser), «Save or share the picture» is right there. The picture is the plain, light QR (about 1 KB), not the bot's photo with its background.\n"
             . "🔘 Each place has its own button: its name, emoji (even premium), colour, side and hiding are set separately for each place and each language. The page's texts can be changed per language too. The button shows only when the service has a subscription link.</blockquote>",
     ],
+    [
+        'n' => 40,
+        'date' => '2026-10-25',
+        'fa' => "<blockquote>📋 <b>«کپی QR»: خودش کپی می‌شود، بدون ضربه‌ی دوم (هرجا مرورگر اجازه بدهد)</b>\n"
+            . "📍 صفحه‌ای که دکمه‌ی «📋 کپی QR» باز می‌کند\n"
+            . "ربات تلگرام راهی ندارد که با زدن یک دکمه، عکس را همان‌جا داخل تلگرام کپی کند (فقط متن را می‌تواند). برای همین دکمه صفحه‌ی QR را باز می‌کند، و حالا صفحه همان لحظه که باز شد خودش عکس را کپی می‌کند و تیک می‌زند. روی کروم و اج کامپیوتر و کروم اندروید معمولاً همین یک ضربه کافی است؛ روی سافاری آیفون و فایرفاکس مرورگر ضربه می‌خواهد، پس راهنمای «روی QR بزن» می‌ماند و یک ضربه روی خود QR کپی می‌کند.</blockquote>",
+        'en' => "<blockquote>📋 <b>«Copy QR»: it copies itself, with no second tap (wherever the browser allows)</b>\n"
+            . "📍 The page the «📋 Copy QR» button opens\n"
+            . "A Telegram bot has no way to copy a picture right inside Telegram from a button (it can only copy text), so the button opens the QR page - and that page now copies the picture the moment it opens and shows a tick. On desktop Chrome and Edge and on Android Chrome that one tap is usually all it takes; iPhone Safari and Firefox want a tap, so the «Tap the QR» hint stays and one tap on the QR copies it.</blockquote>",
+    ],
 ];

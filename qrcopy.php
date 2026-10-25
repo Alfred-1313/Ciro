@@ -177,6 +177,20 @@ h1{margin:0;font-size:22px;font-weight:800;line-height:1.4}
   }
   document.getElementById('qr').addEventListener('click', copy);
   document.getElementById('copy').addEventListener('click', copy);
+  // The button was the tap, so try to have it copied before another one is asked for: desktop
+  // Chrome / Edge and Android Chrome let the page in front write the clipboard; Safari and
+  // Firefox want a tap - then nothing shows, and the tap hint stays. Tried again when the
+  // window gets focus (it may not have it yet when the page opens), until it works, for a minute.
+  var autoDone = false, born = Date.now();
+  function auto() {
+    if (autoDone || Date.now() - born > 60000 || !navigator.clipboard || !window.ClipboardItem || !navigator.clipboard.write) return;
+    try {
+      navigator.clipboard.write([new ClipboardItem({ 'image/png': blob() })]).then(function () { autoDone = true; done(); }, function () {});
+    } catch (e) {}
+  }
+  auto();
+  window.addEventListener('focus', auto);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) auto(); });
   // no clipboard for a picture here (Telegram's own browser, an old phone): share or save it
   document.getElementById('save').addEventListener('click', function () {
     blob().then(function (b) {
