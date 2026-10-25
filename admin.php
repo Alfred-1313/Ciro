@@ -1690,11 +1690,6 @@ if (!function_exists('bt_inline_block_keys')) {
             'bottext.btnTopupAccount',
             'bottext.btnCloseTest',
             'bottext.btnCloseHelp',
-            'bottext.qrBtnMine',
-            'bottext.qrBtnBuy',
-            'bottext.qrBtnTest',
-            'bottext.qrBtnRef',
-            'bottext.qrBtnPayg',
             // alerts: answerCallbackQuery carries text and nothing else
             'users.status.svcUsageUnavailable',
             'users.status.notConnectedCannotChangeStatus',
@@ -1702,9 +1697,8 @@ if (!function_exists('bt_inline_block_keys')) {
             'keyboard.infoRefreshed',
             'users.subapps.noLink',
             // the texts of the page an app of 📲's list opens through
-            // (subapp.php) and of 📋's QR page - not a message of the bot's either
+            // (subapp.php) - not a message of the bot's either
             ...subapp_page_keys(),
-            ...qrcopy_page_keys(),
         ];
     }
     // These ARE messages of their own, but they leave as a photo or a document
