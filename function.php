@@ -11408,7 +11408,10 @@ if (!function_exists('svc_action_rows')) {
         // password in that field). Only on the service screen: the pair has its
         // own 🎨 entry per kind, and the purchase message keeps its buttons apart.
         if ($kind === 'mine' && !in_array($marzban['type'], ['ibsng', 'mikrotik'], true)) {
-            array_splice($keyboardsetting['inline_keyboard'], 0, 0, subapp_entry_rows($lang, $tx, $subUrl, $nameloc['id_invoice']));
+            array_splice($keyboardsetting['inline_keyboard'], 0, 0, array_merge(
+                subapp_entry_rows($lang, $tx, $subUrl, $nameloc['id_invoice']),
+                qrcopy_rows('mine', $lang, $tx, $subUrl, $nameloc['id_invoice'])
+            ));
         }
         return $keyboardsetting['inline_keyboard'];
     }
@@ -11452,7 +11455,10 @@ if (!function_exists('delivery_action_rows')) {
         }
         $rows = svc_action_rows($kind, $inv, $panel, $status, '', $userRow, $tx);
         if (!in_array($panel['type'] ?? '', ['ibsng', 'mikrotik'], true)) {
-            array_splice($rows, 0, 0, subapp_entry_rows($lang, $tx, $sub, $inv['id_invoice'], true));
+            array_splice($rows, 0, 0, array_merge(
+                subapp_entry_rows($lang, $tx, $sub, $inv['id_invoice'], true),
+                qrcopy_rows($kind, $lang, $tx, $sub, $inv['id_invoice'])
+            ));
         }
         return $rows;
     }
@@ -13272,6 +13278,10 @@ if (!function_exists('bt_section_meta')) {
                 'label' => '⏳ وقتی مشتری داره برنامه رو دانلود می‌کنه',
                 'alert' => 'بعد از اینکه مشتری روی «دانلود» می‌زنه، صفحه همین‌جا می‌مونه و منتظر برگشتنش می‌مونه: تیتر «در حال دانلود»، توضیح، سه مرحله و جمله‌ی لحظه‌ی برگشتن. وقتی برگشت، صفحه خودش برنامه رو باز می‌کنه.',
             ],
+            'subapps_qr' => [
+                'label' => '📋 کپی QR',
+                'alert' => 'دکمه‌ی «📋 کپی QR» (برای هر یکی از ۵ جا جدا) و متن‌های صفحه‌ای که با زدنش باز می‌شه: یه ضربه روی QR و عکسش کپی می‌شه.',
+            ],
             'subapps_stores' => [
                 'label' => '⬇️ دانلود و فروشگاه‌ها',
                 'alert' => 'دکمه‌ی دانلود صفحه و لینک‌های زیرش: Google Play، آخرین نسخه‌ی GitHub، App Store و سایت رسمی برنامه.',
@@ -13550,6 +13560,14 @@ if (!function_exists('genbtn_alias_map')) {
             // (name, colour, emoji, hide), apart from the main menu's and from the
             // shared balancebtn widget
             'at' => 'bottext.btnTopupAccount',
+            // 📋 کپی QR: a button of its own in each of the five places that show a
+            // service (🛍 سرویس‌های من, the purchase / test / 🎁 messages, ⏱) - not one
+            // for all, so each can be named, coloured or hidden on its own
+            'qm' => 'bottext.qrBtnMine',
+            'qb' => 'bottext.qrBtnBuy',
+            'qt' => 'bottext.qrBtnTest',
+            'qr' => 'bottext.qrBtnRef',
+            'qh' => 'bottext.qrBtnPayg',
             // own-key trick again - the tutorial list inside a category owns the
             // one button under it, the "back to the category list" row
             'hb' => 'users.help.listCaption',
@@ -13766,6 +13784,11 @@ if (!function_exists('genbtn_defs')) {
         }
         if ($alias === 'ac') {
             return [0 => ['name' => '❌ دکمه بستن (حساب کاربری)', 'text' => $textbotlang['bottext']['btnCloseAccount'], 'style' => 'danger', 'callback_data' => 'none']];
+        }
+        if (in_array($alias, ['qm', 'qb', 'qt', 'qr', 'qh'], true)) {
+            $qrNames = ['qm' => '🛍 صفحه‌ی هر سرویس توی «سرویس‌های من»', 'qb' => '🛒 پیام بعد از خرید', 'qt' => '🔑 پیام اکانت تست', 'qr' => '🎁 پیام کانفیگ هدیه‌ی دعوت', 'qh' => '⏱ صفحه‌ی اشتراک ساعتی'];
+            return [0 => ['name' => '📋 دکمه‌ی کپی QR (' . $qrNames[$alias] . ')', 'text' => $textbotlang['users']['qrcopy']['btn'], 'style' => '', 'callback_data' => 'none',
+                'note' => 'این دکمه یه صفحه‌ی کوچیک باز می‌کنه که با یه ضربه روی QR، عکسش کپی می‌شه (ربات خودش نمی‌تونه عکس رو کپی کنه). فقط وقتی میاد که سرویس لینک اشتراک داشته باشه.']];
         }
         if ($alias === 'at') {
             // no default colour: it has always gone out unstyled. The name follows the
@@ -14573,6 +14596,53 @@ if (!function_exists('subapp_kind')) {
         }
         return genbtn_group_rows($alias, $lang, $btns, $tx);
     }
+    // ---- 📋 کپی QR: a page that copies the service's QR as a picture ----
+    // The bot cannot put a picture on someone's clipboard, so the button is a link
+    // to qrcopy.php: it shows the QR and a tap on it copies it. Signed with the
+    // bot's token like subapp.php's links; the subscription itself never travels in it.
+    function qrcopy_sig($invoiceId)
+    {
+        global $APIKEY;
+        return substr(hash_hmac('sha256', "qrcopy|{$invoiceId}", (string) $APIKEY), 0, 20);
+    }
+    function qrcopy_link($invoiceId)
+    {
+        global $domainhosts;
+        return "https://{$domainhosts}/qrcopy.php?" . http_build_query(['i' => $invoiceId, 's' => qrcopy_sig($invoiceId)]);
+    }
+    // the five places and the genbtn alias of each one's own button
+    function qrcopy_alias($path)
+    {
+        return ['mine' => 'qm', 'buy' => 'qb', 'test' => 'qt', 'ref' => 'qr', 'payg' => 'qh'][$path] ?? null;
+    }
+    // the row (or none) with 📋 for a place: the shop's own button for that place in
+    // this tab; nothing while hidden, or when the subscription has no address
+    function qrcopy_rows($path, $lang, $tx, $sub, $invoiceId)
+    {
+        $alias = qrcopy_alias($path);
+        if ($alias === null || strpos((string) $sub, 'http') !== 0) {
+            return [];
+        }
+        $key = genbtn_alias_to_key($alias);
+        $d = genbtn_defs($alias, $tx)[0] ?? null;
+        $ov = genbtn_override($lang, $key, 0);
+        if ($d === null || genbtn_is_hidden($d, $ov)) {
+            return [];
+        }
+        $b = genbtn_render($d, $ov, 'none');
+        unset($b['callback_data']);
+        $b['url'] = qrcopy_link($invoiceId);
+        return [[$b]];
+    }
+    // the texts of the page (📋's own, in 🎨 and the web panel)
+    function qrcopy_page_keys()
+    {
+        $keys = [];
+        foreach (['PageTitle', 'PageTap', 'PageCopy', 'PageCopied', 'PageFail', 'PageSave', 'PageError'] as $k) {
+            $keys[] = 'users.qrcopy.' . lcfirst($k);
+        }
+        return $keys;
+    }
     // 📲's screen: [text, keyboard] - the caption, each app a link to
     // subapp.php, ↪️ back to the service's own screen. One screen for every
     // kind of service
@@ -15045,7 +15115,7 @@ if (!function_exists('genbtn_hub_payload')) {
     // back/close buttons, the other sections' close buttons and the 🎯 ones.
     function genbtn_preview_aliases()
     {
-        return ['rc', 'rp', 'bu', 'tp', 'ac', 'at', 'ts', 'he', 'sp', 'ar', 'mg', 'sl', 'gb', 'kb'];
+        return ['rc', 'rp', 'bu', 'tp', 'ac', 'at', 'ts', 'he', 'sp', 'ar', 'mg', 'sl', 'gb', 'kb', 'qm', 'qb', 'qt', 'qr', 'qh'];
     }
     // The button exactly as this language's customer receives it - built by
     // genbtn_render(), the same function that builds the real one, so rename,
@@ -19969,6 +20039,12 @@ if (!function_exists('bt_button')) {
             'bottext.btnTopupAccount',
             'bottext.btnCloseTest',
             'bottext.btnCloseHelp',
+            // 📋 کپی QR, one in each of the five places
+            'bottext.qrBtnMine',
+            'bottext.qrBtnBuy',
+            'bottext.qrBtnTest',
+            'bottext.qrBtnRef',
+            'bottext.qrBtnPayg',
             // the four buttons of the features 🌐 وضعیت قابلیت‌ها (هر زبان)
             // switches on and off. sendPhoneNumber and acceptRules can land on
             // a REPLY keyboard, where Telegram has no colour or callback - only
@@ -20018,6 +20094,11 @@ if (!function_exists('bt_button')) {
             'bottext.btnCloseTopup' => 'topup',
             'bottext.btnCloseAccount' => 'account',
             'bottext.btnTopupAccount' => 'account',
+            'bottext.qrBtnMine' => 'subapps',
+            'bottext.qrBtnBuy' => 'subapps',
+            'bottext.qrBtnTest' => 'subapps',
+            'bottext.qrBtnRef' => 'subapps',
+            'bottext.qrBtnPayg' => 'subapps',
             'bottext.btnCloseHelp' => 'help',
             'keyboard.sendPhoneNumber' => 'verify',
             'keyboard.acceptRules' => 'verify',
@@ -21588,7 +21669,7 @@ if (!function_exists('bt_nosticker_keys')) {
             'users.serviceNotYours',
             // 🌐 / 📲's buttons, their popup and the page an app opens through
             'users.subapps.entryBuy',
-            'users.subapps.noLink', ...subapp_page_keys(),
+            'users.subapps.noLink', ...subapp_page_keys(), ...qrcopy_page_keys(),
             'users.affiliates.purchaseCommissionInfo',
             // 🎁 کانفیگ رایگان's status lines and service name, the same
             'users.affiliates.rewardStatusAuto',
@@ -22252,7 +22333,7 @@ function generateAuthStr($length = 10)
     $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     return substr(str_shuffle(str_repeat($characters, ceil($length / strlen($characters)))), 0, $length);
 }
-function createqrcode($contents)
+function createqrcode($contents, $size = 500, $margin = 10)
 {
     $builder = new Builder(
         writer: new PngWriter(),
@@ -22260,8 +22341,8 @@ function createqrcode($contents)
         data: $contents,
         encoding: new Encoding('UTF-8'),
         errorCorrectionLevel: ErrorCorrectionLevel::High,
-        size: 500,
-        margin: 10,
+        size: (int) $size,
+        margin: (int) $margin,
     );
 
     $result = $builder->build();

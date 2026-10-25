@@ -299,6 +299,8 @@ echo web_lang_assets();
                             <div class="field-hint">🔘 <a href="svclook.php?<?= http_build_query(['lang' => $lang, 'part' => 'status']) ?>"><?= htmlspecialchars($bt['msSections']['myservices_screenBtns']) ?></a></div>
                         <?php elseif ($sec === 'subapps_entry'): ?>
                             <div class="field-hint">🔘 <?= $t['saEntryBtnsHint'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-gb"><?= $t['saEntryBtnsLink'] ?></a></div>
+                        <?php elseif ($sec === 'subapps_qr'): ?>
+                            <div class="field-hint">🔘 <?= $t['saQrBtnsHint'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-qm"><?= $t['saQrBtnsLink'] ?></a></div>
                         <?php elseif ($sec === 'subapps_list'): ?>
                             <div class="field-hint">🔘 <?= $t['saListBtnsHint'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-kb"><?= $t['saListBtnsLink'] ?></a></div>
                         <?php endif; ?>

@@ -2586,6 +2586,11 @@ function keyboard_list_text($lang, $groupFilter = null)
             }
             // a button item shows the button itself, as this tab has it now
             $bt_live = in_array($data['key'], bt_btnitem_keys(), true) ? genbtn_row_label($data['key'], $lang) : null;
+            // 📋 کپی QR is the same button in five places: the row says which one it is
+            $bt_qr_tag = ['bottext.qrBtnMine' => '🛍 سرویس‌های من', 'bottext.qrBtnBuy' => '🛒 بعد از خرید', 'bottext.qrBtnTest' => '🔑 اکانت تست', 'bottext.qrBtnRef' => '🎁 هدیه‌ی دعوت', 'bottext.qrBtnPayg' => '⏱ ساعتی'][$data['key']] ?? '';
+            if ($bt_live !== null && $bt_qr_tag !== '') {
+                $bt_live[0] .= '  ‹' . $bt_qr_tag . '›';
+            }
             // ...and so does a button whose only store is its text ('live'):
             // its words in this tab, edits included
             if ($bt_live === null && !empty($data['live'])) {

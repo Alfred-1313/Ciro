@@ -542,4 +542,16 @@ return [
             . "📍 Web panel → Users → a user's page → the «Operations» card\n"
             . "A «Open the Telegram chat» button now sits under «Add balance». For a user with an @username it opens their chat in a new tab with a t.me link (works anywhere); for one without, it opens the link by id, which only works when your own Telegram has already seen that user - and the button says so.</blockquote>",
     ],
+    [
+        'n' => 39,
+        'date' => '2026-10-25',
+        'fa' => "<blockquote>📋 <b>دکمه‌ی «کپی QR» برای ۵ مسیر، با شخصی‌سازیِ جدا</b>\n"
+            . "📍 🎨 شخصی‌سازی ← «📲 تنظیمات افزودن سرویس به برنامه» ← «📋 کپی QR»؛ وب‌پنل ← ظاهر دکمه‌ها (۵ کارت) و متن‌های صفحه در «متن و دکمه‌های ربات» ← افزودن سرویس به برنامه\n"
+            . "زیر صفحه‌ی هر سرویس (سرویس‌های من)، پیام بعد از خرید، پیام اکانت تست، پیام کانفیگ هدیه‌ی دعوت و صفحه‌ی اشتراک ساعتی یک دکمه‌ی «📋 کپی QR» آمد. ربات تلگرام خودش نمی‌تواند عکس را روی کلیپ‌بورد بگذارد؛ برای همین دکمه یک صفحه‌ی کوچک باز می‌کند که QR سرویس را نشان می‌دهد و با یک ضربه روی خود QR (یا دکمه‌ی «کپی QR») عکسش کپی می‌شود تا هرجا خواستی پیست کنی. اگر گوشی اجازه‌ی کپی عکس نداد (مثلاً مرورگرِ داخل تلگرام)، همان‌جا «ذخیره یا ارسال عکس» هست. عکس، QR ساده و کم‌حجم (حدود ۱ کیلوبایت) است، نه عکس پس‌زمینه‌دار ربات.\n"
+            . "🔘 هر مسیر دکمه‌ی خودش را دارد: اسم، ایموجی (حتی پرمیوم)، رنگ، جا و مخفی بودنش را جدا برای هر مسیر و هر زبان تنظیم می‌کنی. متن‌های صفحه هم برای هر زبان قابل تغییرند. دکمه فقط وقتی می‌آید که سرویس لینک اشتراک داشته باشد.</blockquote>",
+        'en' => "<blockquote>📋 <b>A «Copy QR» button for the 5 places, each customized on its own</b>\n"
+            . "📍 🎨 Customize → «📲 Add service to app settings» → «📋 Copy QR»; Web panel → Button looks (5 cards) and the page's texts in «Bot texts and buttons» → Add service to app\n"
+            . "A «📋 Copy QR» button now sits under each service's page (My services), the purchase message, the test-account message, the referral-gift config message and the hourly service page. A Telegram bot cannot put a picture on the clipboard itself, so the button opens a small page that shows the service's QR; one tap on the QR (or the «Copy QR» button) copies it as a picture, ready to paste anywhere. If the phone does not allow copying a picture (e.g. Telegram's own browser), «Save or share the picture» is right there. The picture is the plain, light QR (about 1 KB), not the bot's photo with its background.\n"
+            . "🔘 Each place has its own button: its name, emoji (even premium), colour, side and hiding are set separately for each place and each language. The page's texts can be changed per language too. The button shows only when the service has a subscription link.</blockquote>",
+    ],
 ];

@@ -1505,7 +1505,8 @@ if (!function_exists('payg_rates_text')) {
             // 🌐 / 📲 on top - the pair every screen has (genbtn 'gb'), in its
             // owner's tab; the rest two to a row, 🗑 alone - away from a stray tap
             $sub = (string) ($subUrl ?? (is_array($panelData) && is_array($panelData['data'] ?? null) ? ($panelData['data']['subscription_url'] ?? '') : ''));
-            $rows = subapp_entry_rows((string) (is_array($u) && !empty($u['lang']) ? $u['lang'] : $svc['lang']), $tx, $sub, $id);
+            $pgLang = (string) (is_array($u) && !empty($u['lang']) ? $u['lang'] : $svc['lang']);
+            $rows = array_merge(subapp_entry_rows($pgLang, $tx, $sub, $id), qrcopy_rows('payg', $pgLang, $tx, $sub, $id));
             $rows[] = [
                 ['text' => $w['btnRefresh'], 'callback_data' => "paygref_{$id}", 'style' => 'primary'],
                 ['text' => $tx['users']['status']['linksub'], 'callback_data' => "subscriptionurl_{$id}", 'style' => 'primary'],
