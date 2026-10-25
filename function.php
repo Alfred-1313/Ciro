@@ -4414,7 +4414,7 @@ if (!function_exists('bot_update_request_path')) {
             return bot_update_text(
                 $textbotlang,
                 'writeFailed',
-                "❌ نتوانستم درخواست را ثبت کنم.\n\nاحتمالاً پوشه ربات برای وب‌سرور قابل نوشتن نیست. یک بار <code>mirza update</code> را از ترمینال اجرا کن تا درست شود."
+                "❌ نتوانستم درخواست را ثبت کنم.\n\nاحتمالاً پوشه ربات برای وب‌سرور قابل نوشتن نیست. یک بار <code>ciro update</code> را از ترمینال اجرا کن تا درست شود."
             );
         }
         return bot_update_progress_now($textbotlang, 'rollback', 0);
@@ -4609,7 +4609,7 @@ if (!function_exists('bot_update_request_path')) {
             return bot_update_text(
                 $textbotlang,
                 'writeFailed',
-                "❌ نتوانستم درخواست را ثبت کنم.\n\nاحتمالاً پوشه ربات برای وب‌سرور قابل نوشتن نیست. یک بار <code>mirza update</code> را از ترمینال اجرا کن تا درست شود."
+                "❌ نتوانستم درخواست را ثبت کنم.\n\nاحتمالاً پوشه ربات برای وب‌سرور قابل نوشتن نیست. یک بار <code>ciro update</code> را از ترمینال اجرا کن تا درست شود."
             );
         }
         return bot_update_progress_now($textbotlang, 'update', 0);

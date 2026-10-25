@@ -53,7 +53,7 @@ _step_eta() {
         "Configuring firewall"*)             echo 15 ;;
         "Restarting Apache"*)                echo 5  ;;
         "Setting PHP as the active"*|"Setting PHP "*) echo 6  ;;
-        "Downloading Mirza"*)                echo 20 ;;
+        "Downloading Ciro"*|"Downloading Mirza"*) echo 20 ;;
         "Extracting source files"*)          echo 5  ;;
         "Configuring MySQL root access"*)    echo 10 ;;
         "Opening firewall ports"*)           echo 4  ;;
@@ -171,7 +171,7 @@ _drule()  { printf "  ${C_ACCENT}%s${CR}\n" "$(_repeat "━" "$UI_W")"; }
 banner()  {
     echo
     _drule
-    printf "  ${C_ACCENT}◆${CR}  ${C_TITLE}MIRZA PRO MAX${CR}\n"
+    printf "  ${C_ACCENT}◆${CR}  ${C_TITLE}CIRO${CR}\n"
     printf "     ${C_DIM}one bot, a different shop for every language${CR}\n"
     _drule
 }
@@ -215,14 +215,17 @@ ensure_dns() {
     return 1
 }
 
-# Ensure /usr/local/bin/mirza points at the master script
+# Ensure /usr/local/bin/ciro - and the old /usr/local/bin/mirza, which the
+# self-update cron and existing habits still call - point at the master script
 _link_mirza() {
-    local master="$1" link="$2"
+    local master="$1" link="$2" l
     chmod +x "$master" 2>/dev/null
-    if [ ! -e "$link" ] || [ "$(readlink -f "$link" 2>/dev/null)" != "$(readlink -f "$master" 2>/dev/null)" ]; then
-        ln -sf "$master" "$link"
-    fi
-    chmod +x "$link" 2>/dev/null
+    for l in "$link" /usr/local/bin/mirza; do
+        if [ ! -e "$l" ] || [ "$(readlink -f "$l" 2>/dev/null)" != "$(readlink -f "$master" 2>/dev/null)" ]; then
+            ln -sf "$master" "$l"
+        fi
+        chmod +x "$l" 2>/dev/null
+    done
 }
 
 # Self-update: every run, fetch the latest script from GitHub, validate it,
@@ -238,7 +241,7 @@ function self_update_script() {
         case "$_a" in -h|--help|--version|selfupdate-watch) return 0 ;; esac
     done
     local MASTER_PATH="/root/install.sh"
-    local BIN_LINK="/usr/local/bin/mirza"
+    local BIN_LINK="/usr/local/bin/ciro"
     local URL="https://raw.githubusercontent.com/Alfred-1313/Mirza_Pro_Max/master/install.sh"
     local TEMP_FILE="/tmp/mirzabot_update.sh"
 
@@ -741,12 +744,12 @@ precheck_fresh_server() {
         printf "      ${C_DIM}%-16s${CR} ${C_BAD}%s${CR}  ${C_DIM}%s${CR}\n" "$label" "$name" "$detail"
     done
     echo ""
-    printf "    ${C_TXT}Installing Mirza resets the MySQL root password, rewrites the Apache${CR}\n"
+    printf "    ${C_TXT}Installing Ciro resets the MySQL root password, rewrites the Apache${CR}\n"
     printf "    ${C_TXT}configuration and reinstalls phpMyAdmin. On the above that breaks${CR}\n"
     printf "    ${C_TXT}what is running now, so the installer stops here.${CR}\n"
     echo ""
     printf "    ${C_DIM}Install on a clean server, or remove the software listed above first.${CR}\n"
-    printf "    ${C_DIM}If this server already runs Mirza, choose ${CR}${C_KEY}2 (Update)${CR}${C_DIM} instead.${CR}\n"
+    printf "    ${C_DIM}If this server already runs Ciro or Mirza, choose ${CR}${C_KEY}2 (Update)${CR}${C_DIM} instead.${CR}\n"
     return 1
 }
 
@@ -779,7 +782,7 @@ install_pause() {
     echo -e "  ${C_DIM}This is usually caused by the server losing internet or a network error.${CR}"
     echo ""
     echo -e "  ${C_TXT}Completed steps are saved. Just run it again:${CR}"
-    echo -e "      ${C_KEY}mirza install${CR}"
+    echo -e "      ${C_KEY}ciro install${CR}"
     echo -e "  ${C_DIM}It resumes from this step; values you already entered (domain/token/...) will not be asked again.${CR}"
     echo -e "  ${C_WARN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${CR}"
     echo ""
@@ -1088,7 +1091,7 @@ function renew_ssl() {
     _kv "Domain" "${C_KEY}${domain}${CR}"
 
     if ! command -v certbot >/dev/null 2>&1; then
-        echo -e "  ${C_BAD}●${CR} ${C_BAD}certbot is not installed. Install Mirza first.${CR}"
+        echo -e "  ${C_BAD}●${CR} ${C_BAD}certbot is not installed. Install Ciro first.${CR}"
         sleep 1; show_menu; return 1
     fi
 
@@ -1163,7 +1166,7 @@ function backup_bot() {
     fi
     CONFIG_PATH="$PICKED_DIR/config.php"
     if [ ! -f "$CONFIG_PATH" ]; then
-        printf "    ${C_BAD}●${CR} ${C_BAD}Mirza is not installed. config.php not found.${CR}\n"
+        printf "    ${C_BAD}●${CR} ${C_BAD}Ciro is not installed. config.php not found.${CR}\n"
         echo ""
         printf "  ${C_PROMPT}❯${CR} Press Enter to return to the menu... "
         read -r _
@@ -1213,7 +1216,7 @@ function backup_bot() {
         send_result=$(curl -s -o /dev/null -w "%{http_code}" \
             -F "chat_id=${admin_id}" \
             -F "document=@${backup_file}" \
-            -F "caption=📦 Mirza DB Backup (${backup_date})" \
+            -F "caption=📦 Ciro DB Backup (${backup_date})" \
             "https://api.telegram.org/bot${bot_token}/sendDocument" 2>/dev/null)
         if [ "$send_result" = "200" ]; then
             _kv "Telegram" "$(_dot ok) ${C_OK}Backup sent to admin chat (${admin_id})${CR}"
@@ -1394,7 +1397,7 @@ function import_bot() {
     fi
     local dir="$PICKED_DIR" name="$PICKED_NAME" cfg="$PICKED_DIR/config.php"
     if [ ! -f "$cfg" ]; then
-        printf "    ${C_BAD}●${CR} ${C_BAD}Mirza is not installed. config.php not found.${CR}\n"
+        printf "    ${C_BAD}●${CR} ${C_BAD}Ciro is not installed. config.php not found.${CR}\n"
         echo ""; printf "  ${C_PROMPT}❯${CR} Press Enter to return to the menu... "; read -r _
         show_menu; return 1
     fi
@@ -1650,7 +1653,7 @@ function show_menu() {
     _mi "1" "Install"   "set up the bot on a clean server"
     _mi "2" "Update"    "newest code, keeps all your data"
     _mi "3" "Remove"    "delete the bot and its packages"
-    _mi "4" "Migrate"   "move an original Mirza to Pro Max ${C_WARN}(beta)${CR}"
+    _mi "4" "Migrate"   "move an original Mirza bot to Ciro ${C_WARN}(beta)${CR}"
     _mi "5" "Renew SSL" "reissue the domain certificate"
     _mi "6" "Backup"    "database dump, sent to Telegram"
     _mi "7" "Restore"   "a database or bot folder backup ${C_WARN}(beta)${CR}"
@@ -1686,10 +1689,10 @@ function show_help_screen() {
     banner
 
     _sec "Commands"
-    _kv "install" "${C_DIM}Install Mirza${CR}"
-    _kv "update" "${C_DIM}Update Mirza to the latest code${CR}"
-    _kv "remove" "${C_DIM}Remove Mirza and its services${CR}"
-    _kv "migrate" "${C_DIM}Migrate an original Mirza to Pro Max${CR}"
+    _kv "install" "${C_DIM}Install Ciro${CR}"
+    _kv "update" "${C_DIM}Update Ciro to the latest code${CR}"
+    _kv "remove" "${C_DIM}Remove Ciro and its services${CR}"
+    _kv "migrate" "${C_DIM}Migrate an original Mirza bot to Ciro${CR}"
     _kv "addbot" "${C_DIM}Install a second, independent bot on this server${CR}"
     _kv "renew" "${C_DIM}Renew the bot domain SSL certificate${CR}"
     _kv "backup" "${C_DIM}Backup database & send to Telegram${CR}"
@@ -1707,13 +1710,13 @@ function show_help_screen() {
     _kv "-h, --help" "${C_DIM}Show CLI help and exit${CR}"
 
     _sec "Examples"
-    printf "    ${C_KEY}mirza install${CR}\n"
-    printf "    ${C_KEY}mirza install --name myvpnbot --token 123:ABC \\\\${CR}\n"
+    printf "    ${C_KEY}ciro install${CR}\n"
+    printf "    ${C_KEY}ciro install --name myvpnbot --token 123:ABC \\\\${CR}\n"
     printf "    ${C_DIM}            --admin 111 --domain bot.example.com${CR}\n"
-    printf "    ${C_KEY}mirza update${CR}\n"
-    printf "    ${C_KEY}mirza remove${CR}\n"
-    printf "    ${C_KEY}mirza backup${CR}\n"
-    printf "    ${C_KEY}mirza import${CR}\n"
+    printf "    ${C_KEY}ciro update${CR}\n"
+    printf "    ${C_KEY}ciro remove${CR}\n"
+    printf "    ${C_KEY}ciro backup${CR}\n"
+    printf "    ${C_KEY}ciro import${CR}\n"
 
     echo ""
     _rule
@@ -1947,7 +1950,7 @@ pick_bot_instance() {
     fi
     local count; count=$(jq 'length' "$BOTS_REGISTRY" 2>/dev/null)
     if [ -z "$count" ] || [ "$count" = "0" ]; then
-        printf "    ${C_BAD}●${CR} ${C_BAD}No Mirza bot found on this server.${CR}\n"
+        printf "    ${C_BAD}●${CR} ${C_BAD}No Ciro bot found on this server.${CR}\n"
         return 1
     fi
     if [ "$count" = "1" ]; then
@@ -2182,7 +2185,7 @@ mirza_listen_sync() {
     done
     if [ -n "${others// /}" ]; then
         {
-            echo "# Written by the mirza script: the HTTPS ports a bot or its phpMyAdmin uses besides 443."
+            echo "# Written by the Ciro script: the HTTPS ports a bot or its phpMyAdmin uses besides 443."
             for p in $others; do echo "Listen $p https"; done
         } > "$PMA_PORTS_CONF"
         a2enconf mirza-pma-ports >/dev/null 2>&1
@@ -2566,7 +2569,7 @@ function install_bot() {
         clear 2>/dev/null || true
         banner
         _sec "Install blocked"
-        printf "    ${C_BAD}●${CR} ${C_BAD}Mirza is already installed on this server.${CR}\n"
+        printf "    ${C_BAD}●${CR} ${C_BAD}Ciro is already installed on this server.${CR}\n"
         printf "    ${C_DIM}Path:${CR} %s\n" "$BOT_DIR_DEFAULT"
         echo ""
         echo ""
@@ -2769,7 +2772,7 @@ function install_bot() {
 
         TEMP_DIR="/tmp/mirzaprobot"
         rm -rf "$TEMP_DIR"; mkdir -p "$TEMP_DIR"
-        run_step "Downloading Mirza (${SRC_LABEL_RESUME})" "wget -O '$TEMP_DIR/bot.zip' '$ZIP_URL'" \
+        run_step "Downloading Ciro (${SRC_LABEL_RESUME})" "wget -O '$TEMP_DIR/bot.zip' '$ZIP_URL'" \
             || { show_step_error; install_pause "Downloading bot files"; }
         run_step "Extracting source files" "unzip -o '$TEMP_DIR/bot.zip' -d '$TEMP_DIR'" \
             || { show_step_error; install_pause "Extracting bot files"; }
@@ -3163,7 +3166,7 @@ EOF
             "curl -s -F \"url=https://$(hosts_of "$YOUR_DOMAIN" "$BOT_PORT")/index.php\" -F \"secret_token=${secrettoken}\" \"https://api.telegram.org/bot${YOUR_BOT_TOKEN}/setWebhook\"" \
             || { show_step_error; install_pause "Setting Telegram webhook"; }
 
-        MESSAGE="✅ The Mirza bot is installed! for start the bot send /start command."
+        MESSAGE="✅ The Ciro bot is installed! Send /start to the bot to begin."
         curl -s -X POST "https://api.telegram.org/bot${YOUR_BOT_TOKEN}/sendMessage" -d chat_id="${YOUR_CHAT_ID}" -d text="$MESSAGE" > /dev/null 2>&1
         mark_phase WEBHOOK
     fi
@@ -3181,7 +3184,7 @@ EOF
     clear 2>/dev/null || true
     banner
     _sec "Installation complete"
-    printf "    ${C_OK}●${CR} ${C_OK}Mirza is installed and the webhook is set.${CR}\n"
+    printf "    ${C_OK}●${CR} ${C_OK}Ciro is installed and the webhook is set.${CR}\n"
     printf "    ${C_DIM}Open Telegram and send ${CR}${C_KEY}/start${CR}${C_DIM} to your bot.${CR}\n"
 
     _sec "Access"
@@ -3197,13 +3200,14 @@ EOF
     printf "    ${C_WARN}!${CR} ${C_DIM}Save these credentials somewhere safe.${CR}\n"
 
     _sec "Manage"
-    _kv "Command" "${C_DIM}run ${CR}${C_KEY}mirza${CR}${C_DIM} anytime to open this panel${CR}"
+    _kv "Command" "${C_DIM}run ${CR}${C_KEY}ciro${CR}${C_DIM} anytime to open this panel${CR}"
     echo ""
     _rule
     echo ""
 
     chmod +x /root/install.sh
     ln -sf /root/install.sh /usr/local/bin/mirza
+    ln -sf /root/install.sh /usr/local/bin/ciro
     _ensure_selfupdate_cron
     self_update_script
 }
@@ -3211,13 +3215,13 @@ function install_second_bot() {
     clear 2>/dev/null || true
     banner
     _sec "Install another bot"
-    printf "    ${C_DIM}Sets up a second, independent Mirza Pro Max on this server:${CR}\n"
+    printf "    ${C_DIM}Sets up a second, independent Ciro bot on this server:${CR}\n"
     printf "    ${C_DIM}its own directory, database and domain. Bot(s) already${CR}\n"
     printf "    ${C_DIM}installed here are not touched.${CR}\n"
     echo ""
 
     if [ ! -f "/root/confmirza/dbrootmirza.txt" ]; then
-        printf "    ${C_BAD}●${CR} ${C_BAD}No Mirza install found on this server yet. Use option 1 (Install) first.${CR}\n"
+        printf "    ${C_BAD}●${CR} ${C_BAD}No Ciro install found on this server yet. Use option 1 (Install) first.${CR}\n"
         sleep 2; show_menu; return 1
     fi
     if ! ensure_connectivity; then
@@ -3295,7 +3299,7 @@ function install_second_bot() {
     mkdir -p "$NEW_BOT_DIR"
     local TEMP_DIR="/tmp/mirzaprobot_second"
     rm -rf "$TEMP_DIR"; mkdir -p "$TEMP_DIR"
-    run_step "Downloading Mirza (${TARGET_LABEL})" "wget -O '$TEMP_DIR/bot.zip' '$ZIP_URL'" \
+    run_step "Downloading Ciro (${TARGET_LABEL})" "wget -O '$TEMP_DIR/bot.zip' '$ZIP_URL'" \
         || { show_step_error; echo -e "\033[31mDownload failed.\033[0m"; rm -rf "$TEMP_DIR"; sleep 2; show_menu; return 1; }
     run_step "Extracting source files" "unzip -o '$TEMP_DIR/bot.zip' -d '$TEMP_DIR'" \
         || { show_step_error; echo -e "\033[31mExtraction failed.\033[0m"; rm -rf "$TEMP_DIR"; sleep 2; show_menu; return 1; }
@@ -3423,7 +3427,7 @@ EOF
     run_step "Setting Telegram webhook" \
         "curl -s -F \"url=${proto}://${hosts}/index.php\" -F \"secret_token=${secrettoken}\" \"https://api.telegram.org/bot${YOUR_BOT_TOKEN}/setWebhook\"" \
         || show_step_error
-    curl -s -X POST "https://api.telegram.org/bot${YOUR_BOT_TOKEN}/sendMessage" -d chat_id="${YOUR_CHAT_ID}" -d text="✅ The Mirza bot is installed! for start the bot send /start command." > /dev/null 2>&1
+    curl -s -X POST "https://api.telegram.org/bot${YOUR_BOT_TOKEN}/sendMessage" -d chat_id="${YOUR_CHAT_ID}" -d text="✅ The Ciro bot is installed! Send /start to the bot to begin." > /dev/null 2>&1
     bots_registry_add "$YOUR_BOTLABEL" "$NEW_BOT_DIR" "$DOMAIN_NAME"
     bots_registry_set_bot_port "$NEW_BOT_DIR" "$BOT_PORT"
     local pma_note=""
@@ -3463,7 +3467,7 @@ function update_bot() {
         # [0] in the bot list is "back", not "nothing installed"
         [ "$(bots_registry_count)" != "0" ] && { show_menu; return 1; }
         _sec "Update"
-        printf "    ${C_BAD}●${CR} ${C_BAD}Mirza is not installed here. Use option 1 to install it first.${CR}\n"
+        printf "    ${C_BAD}●${CR} ${C_BAD}Ciro is not installed here. Use option 1 to install it first.${CR}\n"
         sleep 2
         show_menu
         return 1
@@ -3476,7 +3480,7 @@ function update_bot() {
     [ -n "$PICKED_DOMAIN" ] && [ "$PICKED_DOMAIN" != "null" ] && BOT_LABEL="$PICKED_NAME · $PICKED_DOMAIN"
     if [ ! -d "$BOT_DIR" ]; then
         _sec "Update"
-        printf "    ${C_BAD}●${CR} ${C_BAD}Mirza is not installed here. Use option 1 to install it first.${CR}\n"
+        printf "    ${C_BAD}●${CR} ${C_BAD}Ciro is not installed here. Use option 1 to install it first.${CR}\n"
         sleep 2
         show_menu
         return 1
@@ -3499,7 +3503,7 @@ function update_bot() {
     local current flavour
     current=$(get_installed_version "$BOT_DIR")
     if [ -n "$current" ]; then
-        flavour="Mirza Pro Max ${current}"
+        flavour="Ciro ${current}"
     elif [ -f "$BOT_DIR/index.php" ] && [ -f "$BOT_DIR/table.php" ]; then
         flavour="original Mirza (no version file)"
         current="original"
@@ -3552,7 +3556,7 @@ function update_bot() {
             ;;
     esac
 
-    print_header "Updating Mirza"
+    print_header "Updating Ciro"
 
     # ── 1. Safety net: a restorable snapshot BEFORE anything moves ──
     local BK_DIR="/root/mirza-backups"
@@ -3587,7 +3591,7 @@ function update_bot() {
     NEW_DIR=$(find "$TEMP_DIR" -mindepth 1 -maxdepth 1 -type d | head -1)
     # Sanity-check the payload before letting it near a working bot
     if [ -z "$NEW_DIR" ] || [ ! -f "$NEW_DIR/index.php" ] || [ ! -f "$NEW_DIR/table.php" ] || [ ! -f "$NEW_DIR/admin.php" ]; then
-        printf "  ${C_BAD}●${CR} ${C_BAD}The downloaded package does not look like Mirza. Aborting.${CR}\n"
+        printf "  ${C_BAD}●${CR} ${C_BAD}The downloaded package does not look like Ciro. Aborting.${CR}\n"
         printf "  ${C_DIM}Your install was not touched.${CR}\n"
         rm -rf "$TEMP_DIR"; sleep 3; show_menu; return 1
     fi
@@ -3668,6 +3672,7 @@ function update_bot() {
             install -m 0755 "$BOT_DIR/install.sh" /root/install.sh 2>/dev/null || \
                 { cp "$BOT_DIR/install.sh" /root/install.sh; chmod +x /root/install.sh; }
             ln -sf /root/install.sh /usr/local/bin/mirza
+            ln -sf /root/install.sh /usr/local/bin/ciro
         fi
     fi
     # an install that predates the button gets its watcher here, so the very
@@ -3927,6 +3932,9 @@ _selfupdate_publish_backups() {
 }
 
 selfupdate_watch() {
+    # the command is called ciro now; a server updated by an older copy of
+    # this script only has the old mirza link until this first tick adds it
+    [ -e /usr/local/bin/ciro ] || ln -sf /root/install.sh /usr/local/bin/ciro 2>/dev/null
     bots_registry_ensure
     local dirs; dirs=$(jq -r '.[].dir' "$BOTS_REGISTRY" 2>/dev/null)
     [ -z "$dirs" ] && return 0
@@ -4284,7 +4292,7 @@ function remove_bot() {
         return 0
     fi
 
-    echo -e "\e[33mStarting Mirza Bot removal process...\033[0m"
+    echo -e "\e[33mStarting Ciro removal process...\033[0m"
     LOG_FILE="/var/log/remove_bot.log"
     echo "Log file: $LOG_FILE" > "$LOG_FILE"
     # The last bot left is not always in the default directory: remove the
@@ -4292,20 +4300,20 @@ function remove_bot() {
     BOT_DIR="/var/www/html/mirzaprobotconfig"
     [ "$_bot_count" = "1" ] && BOT_DIR=$(jq -r '.[0].dir' "$BOTS_REGISTRY" 2>/dev/null)
     if [ -z "$BOT_DIR" ] || [ ! -d "$BOT_DIR" ]; then
-        echo -e "\e[31m[ERROR]\033[0m Mirza Bot is not installed (${BOT_DIR:-/var/www/html/mirzaprobotconfig} not found)." | tee -a "$LOG_FILE"
+        echo -e "\e[31m[ERROR]\033[0m Ciro is not installed (${BOT_DIR:-/var/www/html/mirzaprobotconfig} not found)." | tee -a "$LOG_FILE"
         echo -e "\e[33mNothing to remove.\033[0m" | tee -a "$LOG_FILE"
         sleep 2
         show_menu
         return 1
     fi
-    read -p "Are you sure you want to remove Mirza Bot and its dependencies? (y/n): " choice
+    read -p "Are you sure you want to remove Ciro and its dependencies? (y/n): " choice
     if [[ ! "$choice" =~ ^[Yy]$ ]]; then
         echo "Aborting..." | tee -a "$LOG_FILE"
         sleep 1
         show_menu
         return 0
     fi
-    echo "Removing Mirza Bot..." | tee -a "$LOG_FILE"
+    echo "Removing Ciro..." | tee -a "$LOG_FILE"
     CONFIG_PATH="$BOT_DIR/config.php"
     # Before anything goes: a copy of the database (MySQL itself is purged
     # below), and what this bot has outside its directory - its scheduled
@@ -4391,7 +4399,7 @@ function remove_bot() {
     sudo ufw reload 2>/dev/null
     # Clear Mirza install state so a fresh install is allowed afterwards
     sudo rm -rf /root/confmirza
-    echo -e "\e[92mMirza Bot, MySQL, and their dependencies have been completely removed.\033[0m" | tee -a "$LOG_FILE"
+    echo -e "\e[92mCiro, MySQL, and their dependencies have been completely removed.\033[0m" | tee -a "$LOG_FILE"
     [ -n "$_dump" ] && echo -e "\e[92mThe bot's database is kept in $_dump\033[0m" | tee -a "$LOG_FILE"
 }
 
@@ -4427,7 +4435,7 @@ _mig_undo_files() {
 function migrate_to_pro() {
     clear 2>/dev/null || true
     banner
-    _sec "Migrate to Pro Max"
+    _sec "Migrate to Ciro"
 
     # 1) The original install: a config.php and no Pro Max version file
     local OLD_BOT_DIR="" _cand _promax=""
@@ -4438,7 +4446,7 @@ function migrate_to_pro() {
     done
     if [ -z "$OLD_BOT_DIR" ]; then
         if [ -n "$_promax" ]; then
-            _mig_fail "This server already runs Mirza Pro Max - there is nothing to migrate." \
+            _mig_fail "This server already runs Ciro - there is nothing to migrate." \
                 "Use option 2 (Update) to bring it up to date."
         else
             _mig_fail "No original Mirza install found (looked in /var/www/html/mirzabotconfig and mirzaprobotconfig)."
@@ -4465,7 +4473,7 @@ function migrate_to_pro() {
     # 2) Everything that would stop it half way is checked before anything moves
     local phpv; phpv=$(php -r 'echo PHP_VERSION_ID;' 2>/dev/null)
     if [ -z "$phpv" ] || [ "$phpv" -lt 80200 ]; then
-        _mig_fail "Pro Max needs PHP 8.2 or newer; this server runs PHP $(active_php_ver)." "Nothing was changed."
+        _mig_fail "Ciro needs PHP 8.2 or newer; this server runs PHP $(active_php_ver)." "Nothing was changed."
         return 1
     fi
     if ! mysql -h "$dbhost" -u "$dbuser" -p"$dbpass" -e "SELECT 1;" "$dbname" >/dev/null 2>&1; then
@@ -4480,7 +4488,7 @@ function migrate_to_pro() {
     fi
     bots_registry_ensure
     if jq -e --arg d "$domain" --arg o "$OLD_BOT_DIR" 'any(.[]; .domain == $d and .dir != $o)' "$BOTS_REGISTRY" >/dev/null 2>&1; then
-        _mig_fail "Another Pro Max bot on this server already uses ${domain}." "Nothing was changed."
+        _mig_fail "Another Ciro bot on this server already uses ${domain}." "Nothing was changed."
         return 1
     fi
     if ! ensure_connectivity; then
@@ -4520,7 +4528,7 @@ function migrate_to_pro() {
     [ "${#agents[@]}" -gt 0 ] && _kv "Agent bots" "${C_DIM}${#agents[@]} - moved along${CR}"
     echo ""
     printf "    ${C_DIM}Nothing is deleted from the database: users, orders, settings,${CR}\n"
-    printf "    ${C_DIM}admins, channels and panels all stay; Pro Max only adds to it.${CR}\n"
+    printf "    ${C_DIM}admins, channels and panels all stay; Ciro only adds to it.${CR}\n"
     printf "    ${C_DIM}The database and the old files are saved to /root first.${CR}\n"
     if [ -n "$others" ]; then
         printf "\n    ${C_WARN}!${CR} ${C_WARN}The old setup also served these folders; after the move they no${CR}\n"
@@ -4551,7 +4559,7 @@ function migrate_to_pro() {
     choose_source
     local STAGE="/var/www/.mirzaprobot_migrate" TEMP_DIR="/tmp/mirzabot_mig"
     rm -rf "$STAGE" "$TEMP_DIR"; mkdir -p "$TEMP_DIR"
-    run_step "Downloading Mirza Pro Max" \
+    run_step "Downloading Ciro" \
         "curl -fsSL --max-time 180 -o '$TEMP_DIR/bot.zip' '$SRC_ZIP_URL' || wget -q -O '$TEMP_DIR/bot.zip' '$SRC_ZIP_URL'" \
         || { show_step_error; rm -rf "$TEMP_DIR"; _mig_fail "Download failed." "Nothing was changed."; return 1; }
     run_step "Extracting the package" "unzip -o -q '$TEMP_DIR/bot.zip' -d '$TEMP_DIR'" \
@@ -4559,7 +4567,7 @@ function migrate_to_pro() {
     local EXTRACTED; EXTRACTED=$(find "$TEMP_DIR" -mindepth 1 -maxdepth 1 -type d | head -1)
     if [ -z "$EXTRACTED" ] || [ ! -f "$EXTRACTED/index.php" ] || [ ! -f "$EXTRACTED/table.php" ] || [ ! -f "$EXTRACTED/admin.php" ]; then
         rm -rf "$TEMP_DIR"
-        _mig_fail "The downloaded package does not look like Mirza Pro Max." "Nothing was changed."
+        _mig_fail "The downloaded package does not look like Ciro." "Nothing was changed."
         return 1
     fi
     rm -f "$EXTRACTED/config.php"
@@ -4716,8 +4724,9 @@ EOF
         rm -rf "$OLD_BOT_DIR"
     fi
     ln -sf /root/install.sh /usr/local/bin/mirza 2>/dev/null
+    ln -sf /root/install.sh /usr/local/bin/ciro 2>/dev/null
 
-    _sec "Migrated to Pro Max"
+    _sec "Migrated to Ciro"
     _kv "Bot" "${C_KEY}${botname:+@}${botname:-?}${CR}"
     _kv "Domain" "${C_DIM}https://${domain}${CR}"
     _kv "Folder" "${C_DIM}${TARGET}${CR}"
@@ -4733,7 +4742,7 @@ EOF
     echo ""
     printf "    ${C_WARN}!${CR} ${C_WARN}Open the admin panel in the bot once: that is when it sets up its${CR}\n"
     printf "    ${C_WARN}  scheduled jobs (payment checks, notices).${CR}\n"
-    printf "    ${C_DIM}Manage it with ${CR}${C_KEY}mirza${CR}${C_DIM} from now on.${CR}\n"
+    printf "    ${C_DIM}Manage it with ${CR}${C_KEY}ciro${CR}${C_DIM} from now on.${CR}\n"
     echo ""
     printf "  ${C_PROMPT}❯${CR} Press Enter to return to the menu... "
     read -r _
@@ -4926,7 +4935,7 @@ EOF
             skip_install=1
             printf "    ${C_DIM}%s already has this bot's install from an earlier try - only the data moves again.${CR}\n" "$TR_HOST"
         else
-            _tr_back "Mirza is already installed on $TR_HOST." "Transfer goes to a clean server - nothing was changed."
+            _tr_back "Ciro is already installed on $TR_HOST." "Transfer goes to a clean server - nothing was changed."
             return 1
         fi
     fi
@@ -5256,11 +5265,12 @@ ARG_DBUSER=""   ARG_DBPASS=""  ARG_PORT=""
 print_usage() {
     cat <<USAGE
 
-  Mirza Pro Max - install and management script
+  Ciro - install and management script
 
   Usage:
-    mirza                      open the interactive menu
-    mirza <command> [options]
+    ciro                       open the interactive menu
+    ciro <command> [options]
+                               (the old command, mirza, still works)
 
   Commands:
     install            Set up the bot on a clean server (Ubuntu/Debian)
@@ -5271,7 +5281,7 @@ print_usage() {
                        Works on an original Mirza install too - it upgrades
                        in place, it does not reinstall.
     remove             Delete the bot directory and the packages it installed
-    migrate            Migrate an original Mirza install to Pro Max (beta)
+    migrate            Migrate an original Mirza install to Ciro (beta)
     addbot             Install a second, independent bot on this server
     renew              Reissue the domain's SSL certificate
     backup             Dump the database and send it to Telegram
@@ -5292,10 +5302,10 @@ print_usage() {
     -h, --help         Show this help
 
   Examples:
-    mirza install
-    mirza install --name myvpnbot --token 123456:ABC --admin 111222333 \\
-                  --domain bot.example.com --db-user mirza --db-pass s3cret_1
-    mirza update
+    ciro install
+    ciro install --name myvpnbot --token 123456:ABC --admin 111222333 \\
+                 --domain bot.example.com --db-user ciro --db-pass s3cret_1
+    ciro update
 
   Notes:
     - Run as root.

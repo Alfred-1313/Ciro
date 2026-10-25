@@ -4147,7 +4147,7 @@ trojan://xyz',
       'on' => 'روشن گردید',
       'intro' => '📌 از لیست زیر میتوانید درگاه ها را مدیریت کنید.
 
-⚠️ تیم میرزا هیچ تضمینی برای درگاه ها نخواهد داشت و استفاده  و تمامی مسئولیت ها به عهده شما می باشد',
+⚠️ تیم Ciro هیچ تضمینی برای درگاه ها نخواهد داشت و استفاده  و تمامی مسئولیت ها به عهده شما می باشد',
       'btnPerfectMoneyHelp' => '📚 تنظیم آموزش پرفکت مانی',
       'askPlisioApi' => '⚙️ لطفاً API Key درگاه Plisio را ارسال نمایید.
 
@@ -6804,8 +6804,8 @@ n2',
 ➖➖➖➖➖➖➖➖➖➖➖
 🔹 | همچنین اگر نیاز به <b>راهنمایی</b> یا کمک دارید، می‌توانید از طریق دایرکت با تیم پشتیبانی در ارتباط باشید.
 
-📩 | برای ارسال گزارش، پیشنهاد یا درخواست راهنمایی، در <b>گروه میرزا</b> پیام بگذارید:
-<a href="https://t.me/mirzapanelgroup" rel="nofollow" target="_blank">Mirza Group</a>',
+📩 | برای ارسال گزارش، پیشنهاد یا درخواست راهنمایی، در بخش <b>Issues</b> صفحه گیت‌هاب Ciro بنویسید:
+<a href="https://github.com/Alfred-1313/Mirza_Pro_Max/issues" rel="nofollow" target="_blank">Ciro در گیت‌هاب</a>',
       'ask_select_panel' => '🪚 برای استفاده از این قابلیت یکی از پنل های زیر را انتخاب نمایید',
       'err_admin' => '❌ این بخش فقط در دسترس ادمین اصلی است',
       'err_notfound_set_settings' => '❌  امکان مشاهده تنظیمات نود ها وجود ندارد',
@@ -6820,7 +6820,7 @@ n2',
       'ok_success_delete_1' => '✅ نود با موفقیت حذف گردید',
       'msg_manage_gateway' => '📌 از لیست زیر میتوانید درگاه ها را مدیریت کنید.
 
-⚠️ تیم میرزا هیچ تضمینی برای درگاه ها نخواهد داشت و استفاده  و تمامی مسئولیت ها به عهده شما می باشد',
+⚠️ تیم Ciro هیچ تضمینی برای درگاه ها نخواهد داشت و استفاده  و تمامی مسئولیت ها به عهده شما می باشد',
       'ask_send_user_sub_enable' => '📌 مقدار درصدی که می خواهید حساب کاربر بعد از تمدید به عنوان هدیه شارژ شود را ارسال کنید.
 ⚠️ در صورتی که میخواهید غیرفعال باشد عدد 0 را ارسال کنید',
       'ask_select_user_2' => '📌 نوع کاربری را انتخاب نمایید
@@ -7066,7 +7066,7 @@ f,n.n2',
       'msg_panel_admin_bot_report' => '💎 | Version Bot: %s
 📌 | Version Mini App: 0.1.1
 
-<blockquote>🔹 | این ربات کاملاً رایگان است و توسط تیم میرزا توسعه داده شده است</blockquote>
+<blockquote>🔹 | Ciro کاملاً رایگان است و نسخه فورک‌شده ربات میرزا است؛ با تشکر از سازنده اصلی میرزا</blockquote>
 
 <blockquote>🔹 | هرگونه فروش یا دریافت وجه بابت این ربات تخلف محسوب می‌شود.</blockquote>
 
@@ -9648,7 +9648,7 @@ nowpayments.io
     'frenzyExCallbackSecret' => 'رمز کالبک فرنزی‌اکس',
     'zeroBalance' => '0️⃣ صفر کردن موجودی',
     'panelSetting' => '🎛 تنظیم پنل',
-    'mirzaAgentPanel' => 'نمایندگی میرزا',
+    'mirzaAgentPanel' => 'نمایندگی Ciro / میرزا',
     'setGroupName' => '🎛 تنظیم نام گروه',
     'subLinkDomain' => '🔗 دامنه لینک ساب',
     'panelTypeSanaei' => '3x-ui',
@@ -10562,7 +10562,7 @@ nowpayments.io
     'jsThemeActivated' => 'تم «{name}» فعال شد',
     'jsNavCollapse' => 'جمع کردن منو',
     'jsNavExpand' => 'باز کردن منو',
-    'layoutBrandName' => 'پنل مدیریت میرزا بات',
+    'layoutBrandName' => 'پنل مدیریت Ciro',
     'layoutDefaultAdminName' => 'ادمین',
     'layoutFooterCopyright' => 'داشبورد',
     'layoutFooterLinkDocs' => 'تنظیمات',
@@ -10579,7 +10579,7 @@ nowpayments.io
     'layoutNavLogout' => 'مدیریت',
     'layoutNavOrders' => 'بله، ادامه',
     'layoutNavPayments' => '· پنل',
-    'layoutNavProducts' => 'میرزا',
+    'layoutNavProducts' => 'Ciro',
     'layoutNavServices' => 'انصراف',
     'layoutNavSettings' => 'داشبورد',
     'layoutNavUsers' => 'آیا اطمینان دارید؟ این عملیات قابل بازگشت نیست.',
@@ -10591,7 +10591,7 @@ nowpayments.io
     'layoutPageTitleProduct' => 'محصولات',
     'layoutPageTitleService' => 'سرویس‌ها',
     'layoutPageTitleSettings' => 'تنظیمات',
-    'layoutPageTitleSuffix' => 'میرزا',
+    'layoutPageTitleSuffix' => 'Ciro',
     'layoutPageTitleUsers' => 'کاربران',
     'layoutProfileMenuLabel' => 'تنظیمات',
     'layoutSearchBoxPlaceholder' => 'تراکنش‌ها',
@@ -10602,11 +10602,11 @@ nowpayments.io
     'loginEnterCredentials' => 'نام کاربری و رمز عبور را وارد کنید.',
     'loginErrorTitle' => 'رمز عبور',
     'loginFooter' => 'نام کاربری',
-    'loginHeading' => 'پنل مدیریت میرزا',
+    'loginHeading' => 'پنل مدیریت Ciro',
     'loginHidePassword' => 'دسترسی به این پنل فقط برای مدیران مجاز است.',
-    'loginPanelTitle' => 'ورود — پنل مدیریت میرزا',
-    'loginPasswordLabel' => 'پنل مدیریت میرزا',
-    'loginPasswordPlaceholder' => '· نسخه 1.0 میرزا',
+    'loginPanelTitle' => 'ورود — پنل مدیریت Ciro',
+    'loginPasswordLabel' => 'پنل مدیریت Ciro',
+    'loginPasswordPlaceholder' => '· Ciro',
     'loginPwShow' => 'نمایش رمز عبور',
     'loginRemember' => 'ذخیره ورود · ۲۴ ساعت روی همین آی‌پی',
     'loginPwHide' => 'پنهان کردن رمز عبور',
@@ -10615,8 +10615,7 @@ nowpayments.io
     'loginSubtitle' => 'برای حمایت لطفا به',
     'loginTooManyAttempts' => 'تعداد تلاش‌های ناموفق بیش از حد. لطفاً ۱۵ دقیقه صبر کنید.',
     'loginUsernameLabel' => 'پروژه',
-    'loginUsernamePlaceholder' => 'استار و
-          دونیت دهید',
+    'loginUsernamePlaceholder' => 'استار بدهید',
     'loginWelcomeBack' => 'خوش آمدید، ',
     'loginWrongCredentials' => 'نام کاربری یا رمز عبور اشتباه است.',
     'loginPanelOff' => '⛔️ پنل تحت وب ربات خاموش است. برای روشن کردنش، داخل ربات بزن: «پنل تحت وب ربات 🤖» ← «🤖 پنل تحت وب: خاموش ❌».',
@@ -11161,7 +11160,7 @@ nowpayments.io
     'keyboard_php' => 
     array (
       'panelSetting' => '🎛 تنظیم پنل',
-      'mirzaAgentPanel' => 'نمایندگی میرزا',
+      'mirzaAgentPanel' => 'نمایندگی Ciro / میرزا',
       'setGroupName' => '🎛 تنظیم نام گروه',
       'subLinkDomain' => '🔗 دامنه لینک ساب',
       'panelTypeSanaei' => '3x-ui',
@@ -11460,11 +11459,11 @@ nowpayments.io
     'backupZipToolMissing' => '❌ بکاپ {what} ساخته نشد: برنامه‌ی zip روی سرور نصب نیست.
 روی سرور این دستور رو بزن:
 <code>apt install -y zip</code>
-(یا فقط یک بار دستور <code>mirza</code> رو روی سرور اجرا کن، خودش نصبش می‌کنه.)',
+(یا فقط یک بار دستور <code>ciro</code> رو روی سرور اجرا کن، خودش نصبش می‌کنه.)',
     'backupPasswordNeedsZip' => '🔐 بکاپ {what} فرستاده نشد: براش رمز گذاشتی، ولی برنامه‌ی zip روی سرور نصب نیست و بدون اون رمز روی فایل نمی‌شینه. برای اینکه فایل بی‌رمز بیرون نره، اصلاً فرستاده نشد.
 روی سرور این دستور رو بزن:
 <code>apt install -y zip</code>
-(یا فقط یک بار دستور <code>mirza</code> رو روی سرور اجرا کن، خودش نصبش می‌کنه.)',
+(یا فقط یک بار دستور <code>ciro</code> رو روی سرور اجرا کن، خودش نصبش می‌کنه.)',
     'balanceAddedNotice' => '💎 کاربر عزیز مبلغ %s تومان به موجودی کیف پول تان اضافه گردید.',
     'balanceChargedThanks' => '💲 کاربر گرامی مبلغ %s تومان به کیف پول شما واریز گردید.
                 

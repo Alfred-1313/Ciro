@@ -12460,7 +12460,7 @@ elseif ($datain == "systemsms") {
     $tm_cfg = topup_memo_config($tm_m[2], 'ton');
     if ($tm_m[1] === 'prefix') {
         $tm_ask = "🔤 <b>پیشوند ممو را بفرستید</b>\n\n"
-            . "فقط حروف انگلیسی و عدد، حداکثر {$tm_lim['prefixMax']} کاراکتر. مثال: <code>MirzaPro</code>\n\n"
+            . "فقط حروف انگلیسی و عدد، حداکثر {$tm_lim['prefixMax']} کاراکتر. مثال: <code>CiroVPN</code>\n\n"
             . "مقدار فعلی: " . ($tm_cfg['prefix'] === '' ? '<i>ندارد</i>' : "<code>{$tm_cfg['prefix']}</code>") . "\n"
             . "برای برداشتن پیشوند، عدد <b>0</b> را بفرستید.";
     } else {

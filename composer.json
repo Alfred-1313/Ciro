@@ -1,9 +1,9 @@
 {
-    "name": "mirzapro/mirzabot",
-    "description": "Mirza Bot - Telegram VPN sales and management bot",
+    "name": "ciro/ciro",
+    "description": "Ciro - Telegram VPN sales and management bot (a fork of Mirza Bot)",
     "type": "project",
     "license": "AGPL-3.0-or-later",
-    "homepage": "https://github.com/mahdiMGF2/mirzabot",
+    "homepage": "https://github.com/Alfred-1313/Mirza_Pro_Max",
     "require": {
         "php": ">=8.2",
         "endroid/qr-code": "^6.0",

@@ -612,4 +612,16 @@ return [
             . "• The extra time error went to the approving admin instead of the customer and said «extra volume»; fixed, with a text of its own.\n"
             . "• The refund messages (service not created / not renewed), the renewal error after approval and «account verified» got English texts and were added to 🎨.</blockquote>",
     ],
+    [
+        'n' => 46,
+        'date' => '2026-10-25',
+        'fa' => "<blockquote>✨ <b>اسم ربات حالا Ciro است</b>\n"
+            . "اسم پروژه از میرزا پرومکس به Ciro تغییر کرد: اسکریپت نصب، پنل وب، صفحه مستندات API و متن‌های ربات.\n"
+            . "• دستور مدیریت روی سرور حالا <code>ciro</code> است (<code>ciro update</code>، <code>ciro backup</code> و...). دستور قبلی <code>mirza</code> هم همچنان کار می‌کند و چیزی روی سرور جابه‌جا نشده.\n"
+            . "• صفحه گیت‌هاب کوتاه‌تر شد و پایینش آمده که Ciro نسخه فورک‌شده ربات میرزا است و رایگان در همان صفحه در دسترس است.</blockquote>",
+        'en' => "<blockquote>✨ <b>The bot is now called Ciro</b>\n"
+            . "The project was renamed from Mirza Pro Max to Ciro: the install script, the web panel, the API docs page and the bot's texts.\n"
+            . "• The management command on the server is now <code>ciro</code> (<code>ciro update</code>, <code>ciro backup</code>, ...). The old <code>mirza</code> command still works and nothing on the server was moved.\n"
+            . "• The GitHub page is shorter and now says at the bottom that Ciro is a fork of the Mirza bot, available free on that page.</blockquote>",
+    ],
 ];

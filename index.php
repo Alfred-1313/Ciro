@@ -6131,7 +6131,7 @@ if (preg_match('/^sendresidcart-(.*)/', $datain, $dataget)) {
         DirectPayment($tx_row['id_order'], "images.jpg");
     }
 // mixed case, because the memo may carry the shop's own prefix now and an
-// admin who typed "MirzaPro" should get "MirzaPro" back, not a button that
+// admin who typed "CiroVPN" should get "CiroVPN" back, not a button that
 // silently stops matching (topup_memo_clean_prefix keeps it to [A-Za-z0-9])
 } elseif (preg_match('/^toncheck:([a-zA-Z0-9]+)$/', $datain, $tc_m)) {
     // The customer asking "have you seen it yet?". It is the same check the
