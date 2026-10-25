@@ -560,4 +560,22 @@ return [
             . "📍 🎨 Customize → «⚠️ The «test account limit reached» message» (and Web panel → Bot texts and buttons, Button looks)\n"
             . "The message a user gets when their test-account allowance is used up and they tap «🎁 Test account» again was fixed until now. Its text (with sticker and reaction) and the «🛍 Buy subscription» button under it - name, emoji (even premium), colour, hiding - can now be changed separately for each language. The defaults are as before (the button has no colour).</blockquote>",
     ],
+    [
+        'n' => 43,
+        'date' => '2026-10-25',
+        'fa' => "<blockquote>💎 <b>ایموجی پریمیوم و استیکر توی همه‌ی 🎨 شخصی‌سازی درست شد</b>\n"
+            . "• 🔘 دکمه‌های اکانت تست (انصراف / پیش‌فرض) حالا همون ابزارهای کامل بقیه‌ی دکمه‌ها رو دارن: اسم، 🎭 ایموجی (معمولی یا پریمیوم)، رنگ، 📐 چیدمان و مخفی کردن - برای هر زبان جدا، توی ربات و وب‌پنل (دکمه‌ها).\n"
+            . "• جاهایی که ایموجی پریمیومِ اول اسم جدیدِ دکمه معمولی می‌شد درست شد؛ حالا ایموجی پریمیوم دکمه می‌شه: دکمه‌های منوی اصلی، دکمه‌های فاکتور کارت‌به‌کارت و درگاه‌ها، دسته‌های درگاه، بسته‌های شارژ و دکمه‌هاشون، دکمه‌های آموزش/دسته/پنل/محصول/زبان، و اسم آموزش و دسته‌ی آموزش.\n"
+            . "• دکمه‌ی «دریافت کانفیگ»، ستون‌ها و «دریافت همه کانفیگ‌ها» (اکانت تست، خرید و هدیه‌ی دعوت) و دکمه‌های صفحه‌ی مبلغ (مبلغ دلخواه و بازگشت‌ها) ابزار 🎭 ایموجی (معمولی یا پریمیوم) گرفتن.\n"
+            . "• پیام بعد از خرید و پیام اکانت تست حالا 🖼 استیکر می‌گیرن (قبل از عکس QR فرستاده می‌شه).\n"
+            . "• ایموجی پریمیوم توی متن صفحه‌ی انتخاب زبان درست نشون داده می‌شه.\n"
+            . "• ردیف‌های تکراری «📲 افزودن سرویس به برنامه» از داخل اکانت تست و بقیه‌ی ۵ مسیر برداشته شد؛ تنظیمش یه جا روی صفحه‌ی اول 🎨 هست.</blockquote>",
+        'en' => "<blockquote>💎 <b>Premium emoji and stickers fixed across 🎨 Customize</b>\n"
+            . "• 🔘 The test account buttons (Cancel / Default) now have the full button tools: name, 🎭 emoji (plain or premium), colour, 📐 layout and hiding - per language, in the bot and the web panel (Buttons).\n"
+            . "• A premium emoji at the start of a new button name no longer turns plain; it becomes the button's premium emoji: main menu buttons, card-to-card and gateway invoice buttons, gateway groups, top-up packages and their buttons, tutorial/category/panel/product/language buttons, and tutorial and tutorial-category names.\n"
+            . "• «Get config», the columns and «Get all configs» (test account, purchase and referral gift) and the amount screen's buttons (custom amount and the back buttons) got a 🎭 emoji tool (plain or premium).\n"
+            . "• The post-purchase and test account messages now take a 🖼 sticker (sent before the QR photo).\n"
+            . "• A premium emoji in the language picker's text now shows properly.\n"
+            . "• The repeated «📲 Add service to app» rows were removed from the test account and the other paths; it is set in one place on 🎨's first screen.</blockquote>",
+    ],
 ];

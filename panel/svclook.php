@@ -157,6 +157,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($style !== (string) ($ov['style'] ?? '')) {
                 $writes[] = fn() => configdisplay_element_set_style($lang, $idx, $style, $cdKind);
             }
+            $emoji = trim((string) ($p['emoji'] ?? ''));
+            if (!$emojiOk($emoji)) {
+                $err = $t['menuEmojiInvalid'];
+                break;
+            }
+            if (!empty($p['emoji_del'])) {
+                if (!empty($ov['emoji']) || !empty($ov['emojiIcon'])) {
+                    $writes[] = fn() => configdisplay_element_set_emoji($lang, $idx, '', '', $cdKind);
+                }
+            } elseif ($emoji !== (string) ($ov['emoji'] ?? '')) {
+                // a plain emoji replaces a premium one, as in the bot
+                $writes[] = fn() => configdisplay_element_set_emoji($lang, $idx, $emoji, '', $cdKind);
+            }
         }
         $nameFirst = ($_POST['order'] ?? '') === 'name_first';
         if ($nameFirst !== config_col_name_first($lang, $cdKind)) {
@@ -356,6 +369,7 @@ $saveBtn = '<div class="modal-foot" style="border-radius:0 0 10px 10px"><button 
       <?php foreach (configdisplay_element_defs($tx) as $idx => $def): $ov = configdisplay_element_override($lang, $idx, $cdKind); ?>
         <tr><td class="cs"><?= htmlspecialchars($def['name']) ?></td>
           <td><input type="text" class="input" name="el[<?= $idx ?>][text]" value="<?= htmlspecialchars((string) ($ov['text'] ?? '')) ?>" placeholder="<?= htmlspecialchars((string) $def['text']) ?>" maxlength="64"></td>
+          <td style="white-space:nowrap"><?= $emojiIn('el[' . $idx . ']', $ov) ?></td>
           <td><?= $colorSel('el[' . $idx . '][style]', (string) ($ov['style'] ?? ''), '') ?></td></tr>
       <?php endforeach; ?>
       </tbody></table></div></div>

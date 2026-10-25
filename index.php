@@ -691,7 +691,9 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     }
     if ($lsw_will_show_start) {
         list($lsw_caption_start, $lsw_kb_start) = language_picker_payload();
-        sendmessage($from_id, $lsw_caption_start, $lsw_kb_start, null);
+        // HTML, as the 🌏 تغییر زبان edit of the same screen: a premium emoji in
+        // its 🎨 caption is a <tg-emoji> tag
+        sendmessage($from_id, $lsw_caption_start, $lsw_kb_start, 'HTML');
         update("user", "lang_prompted", "1", "id", $from_id);
     } else {
         sendmessage($from_id, strtr($textbotlang['users']['text_start'], bottext_user_placeholders($user, $from_id)), $keyboard, "html");
@@ -699,7 +701,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     return;
 } elseif ($text == "/language" || in_array($text, language_button_labels(), true)) {
     list($lsw_caption_cmd, $lsw_kb_cmd) = language_picker_payload();
-    sendmessage($from_id, $lsw_caption_cmd, $lsw_kb_cmd, null);
+    sendmessage($from_id, $lsw_caption_cmd, $lsw_kb_cmd, 'HTML');
     return;
 } elseif ($text == "version") {
     sendmessage($from_id, $version, null, 'html');

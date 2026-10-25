@@ -1303,14 +1303,11 @@ if (!function_exists('bottext_item_menu_payload')) {
         // used by the "related item" rows (🗂/📦/⏰ etc.) to answer for a
         // DIFFERENT key's own customization state, the same way the main
         // bottext home list already does for its group-launcher rows
-        // a delivery message's service buttons, and the 🌐 / 📲 pair with its
-        // app list - one group of its own for every message and screen (and for
-        // 🛍 سرویس‌های من), so the rows here just open it
-        $bt_svc_rows = function ($sbKind) use (&$kb, $bt_lang, $bt_be, &$bt_live_row, &$bt_is_customized) {
+        // a delivery message's service buttons. The 🌐 / 📲 pair with its app
+        // list is one group for all five places, on the 🎨 home list
+        // (📲 افزودن سرویس به برنامه) - not repeated under each message
+        $bt_svc_rows = function ($sbKind) use (&$kb, $bt_lang, $bt_be) {
             $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های مدیریت سرویس (کانفیگ، تمدید، روشن/خاموش، ...)', 'callback_data' => statusbtn_prefix($sbKind) . "|list|{$bt_lang}", 'style' => !empty($bt_be[$bt_lang][statusbtn_bucket($sbKind)]) ? 'success' : 'primary']];
-            foreach (subapps_link_rows($bt_lang, (bool) array_filter(subapps_group_keys(), $bt_is_customized)) as $bt_sa_row) {
-                $kb['inline_keyboard'][] = $bt_sa_row;
-            }
         };
         $bt_is_customized = function ($key) use ($bt_lang, $bt_te, $bt_st, $bt_re, $bt_be) {
             $textCustom = is_array($bt_te) && isset($bt_te[$bt_lang]) && bottext_dotted_isset($bt_te[$bt_lang], $key);
@@ -1481,7 +1478,7 @@ if (!function_exists('bottext_item_menu_payload')) {
             $kb['inline_keyboard'][] = $bt_row;
         }
         if ($bt_key === 'users.usertest.selectUsernamePrompt') {
-            $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های انصراف/پیش‌فرض', 'callback_data' => "btact|btns|{$bt_lang}", 'style' => 'primary']];
+            $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های انصراف/پیش‌فرض', 'callback_data' => "gbs|hub|{$bt_lang}|uu", 'style' => $bt_btn_custom ? 'success' : 'primary']];
             // white, non-navigating divider (established session pattern) - makes
             // clear the next rows are OTHER messages in the test-account flow,
             // not more controls for the prompt this screen is already editing
@@ -1497,11 +1494,8 @@ if (!function_exists('bottext_item_menu_payload')) {
             $kb['inline_keyboard'][] = [['text' => '⛔️ پیام «اکانت تست غیرفعال است»', 'callback_data' => "bt_edit|{$bt_lang}|users.usertest.noPanel", 'style' => 'primary']];
             $kb['inline_keyboard'][] = [['text' => '📦 پیام بعد از دریافت اکانت تست', 'callback_data' => "bt_edit|{$bt_lang}|textbot.afterText", 'style' => 'primary']];
             $kb['inline_keyboard'][] = [['text' => '📌 نحوه‌ی نمایش کانفیگ', 'callback_data' => "cfgdeliv|list|{$bt_lang}|u", 'style' => 'primary']];
-            // 🌐 / 📲 and the app list 📲 opens: one for every place, so these
-            // rows open the very same two items as in 🛍 سرویس‌های من
-            foreach (subapps_link_rows($bt_lang, (bool) array_filter(subapps_group_keys(), $bt_is_customized)) as $bt_sa_row) {
-                $kb['inline_keyboard'][] = $bt_sa_row;
-            }
+            // 🌐 / 📲 and the app list are one group for all five places, on the
+            // 🎨 home list (📲 افزودن سرویس به برنامه) - not repeated here
         } elseif ($bt_key === 'users.Balance.insufficientBalanceSimple') {
             $kb['inline_keyboard'][] = [$bt_live_row($bt_balance_live(), '🔘 ویرایش دکمه افزایش موجودی', "btact|bbtn|{$bt_lang}", $bt_btn_custom)];
         } elseif ($bt_key === 'users.sell.selectUsernamePrompt') {
@@ -1721,10 +1715,8 @@ if (!function_exists('bt_inline_block_keys')) {
             'users.status.infoFull',
             'users.status.linksubCaption',
             'users.status.subscriptionFile',
-            // both config-delivery messages ride along with the config QR;
-            // only a panel with no QR-able link falls back to plain text
-            'textbot.afterPay',
-            'textbot.afterText',
+            // (the two config-delivery messages ride along with the config QR
+            // too, but sendMessageService() sends their sticker itself)
         ];
     }
 }
@@ -3717,7 +3709,8 @@ if (!function_exists('topup_slot_payload')) {
         $label = topup_slot_label($lang, $key, $slot, lang_tab_texts($lang));
         $color = topup_slot_color($lang, $key, $slot, $textbotlang);
         $style = topup_btnstyle_for($lang, $key, $slot);
-        $custom = (trim((string) ($style['label'] ?? '')) !== '' || trim((string) ($style['color'] ?? '')) !== '');
+        $custom = (trim((string) ($style['label'] ?? '')) !== '' || trim((string) ($style['color'] ?? '')) !== ''
+            || !empty($style['emoji']) || !empty($style['emojiIcon']) || !empty($style['noEmoji']));
         $t = $textbotlang['Admin']['TopupPkg'];
 
         $screenName = $def['screen'] === 'custom' ? $t['slotScreenCustom'] : $t['slotScreenAmount'];
@@ -3728,8 +3721,10 @@ if (!function_exists('topup_slot_payload')) {
         ]);
 
         // the pair, drawn in the order the customer will actually see it
+        // with its emoji too - the way topup_styled_button() gives it to the customer
         $mk = function ($s) use ($lang, $key, $textbotlang) {
-            $b = ['text' => topup_slot_label($lang, $key, $s, lang_tab_texts($lang)), 'callback_data' => 'none'];
+            $b = topup_styled_button(topup_slot_label($lang, $key, $s, lang_tab_texts($lang)), topup_btnstyle_for($lang, $key, $s), 'none');
+            unset($b['style']);
             $c = topup_slot_color($lang, $key, $s, $textbotlang);
             if ($c !== '') {
                 $b['style'] = $c;
@@ -3744,6 +3739,7 @@ if (!function_exists('topup_slot_payload')) {
         $kb['inline_keyboard'][] = $row;
         $kb['inline_keyboard'][] = [['text' => $t['slotPreviewNote'], 'callback_data' => "tpslnote:{$lang}:{$key}:{$slot}"]];
         $kb['inline_keyboard'][] = [['text' => $textbotlang['Admin']['BtnStyle']['renameBtn'], 'callback_data' => "tpsln:{$lang}:{$key}:{$slot}", 'style' => 'primary']];
+        $kb['inline_keyboard'][] = [['text' => '🎭 ایموجی (معمولی یا پریمیوم)', 'callback_data' => "tpsle:{$lang}:{$key}:{$slot}", 'style' => 'primary']];
         $kb['inline_keyboard'][] = [
             ['text' => ($color === 'primary' ? '✅ ' : '') . '🔵 آبی', 'callback_data' => "tpslc:{$lang}:{$key}:{$slot}:primary", 'style' => 'primary'],
             ['text' => ($color === 'success' ? '✅ ' : '') . '🟢 سبز', 'callback_data' => "tpslc:{$lang}:{$key}:{$slot}:success", 'style' => 'success'],
@@ -6915,6 +6911,56 @@ if (preg_match('/^btact\|cfgcol\|([a-z]{2})\|(.+)$/', $datain, $btm) && $adminru
     Editmessagetext($from_id, $message_id, $cc_info, $cc_kb, 'HTML');
     return;
 }
+// 🎭 the config list's buttons and headers: a plain or a premium emoji (0 = none)
+if (preg_match('/^cfgcolemo-([0123])-([a-z]{2})-(ut|buy|rw)$/', $datain, $cc_m) && $adminrulecheck['rule'] == "administrator") {
+    savedata("clear", "bt_msgid", $message_id);
+    step("cfgcolemoi-{$cc_m[2]}-{$cc_m[1]}-{$cc_m[3]}", $from_id);
+    $cc_back = ['ut' => 'cfgcolel-', 'buy' => 'cfgcolelbuy-', 'rw' => 'cfgcolelrw-'][$cc_m[3]] . "{$cc_m[1]}-{$cc_m[2]}";
+    Editmessagetext($from_id, $message_id, "🎭 ایموجی این دکمه رو بفرست\n🔹 ایموجی معمولی → کنار متن دکمه\n💎 ایموجی پریمیوم → آیکون کنار متن دکمه\n\n(برای برداشتن ایموجی، عدد 0 رو بفرست)", json_encode(['inline_keyboard' => [[['text' => '❌ انصراف', 'callback_data' => $cc_back]]]]), 'HTML');
+    return;
+}
+if (preg_match('/^cfgcolemoi-([a-z]{2})-([0123])-(ut|buy|rw)$/', (string) $user['step'], $cc_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
+    $cc_kind = ['ut' => 'usertest', 'buy' => 'buy', 'rw' => 'affrw'][$cc_m[3]];
+    $cc_icon = '';
+    foreach ((array) ($update['message']['entities'] ?? []) as $cc_ent) {
+        if (($cc_ent['type'] ?? '') === 'custom_emoji' && !empty($cc_ent['custom_emoji_id'])) {
+            $cc_icon = (string) $cc_ent['custom_emoji_id'];
+            break;
+        }
+    }
+    if (trim((string) $text) === '0') {
+        // the emoji the text itself starts with goes too
+        configdisplay_element_set_emoji($cc_m[1], (int) $cc_m[2], '', '', $cc_kind);
+        $cc_cur = configdisplay_element_current($cc_m[1], (int) $cc_m[2], $textbotlang, $cc_kind);
+        $cc_plain = strip_leading_emoji($cc_cur['text']);
+        if ($cc_plain !== '' && $cc_plain !== $cc_cur['text']) {
+            configdisplay_element_set_text($cc_m[1], (int) $cc_m[2], $cc_plain, $cc_kind);
+        }
+        $cc_msg = "✅ ایموجی برداشته شد.";
+    } elseif ($cc_icon !== '') {
+        configdisplay_element_set_emoji($cc_m[1], (int) $cc_m[2], '', $cc_icon, $cc_kind);
+        $cc_msg = "✅ ایموجی پریمیوم ذخیره شد! 💎";
+    } else {
+        preg_match('/^\X/u', trim((string) $text), $cc_em);
+        $cc_emoji = $cc_em[0] ?? '';
+        if ($cc_emoji === '' || preg_match('/^[0-9a-zA-Z]$/', $cc_emoji)) {
+            sendmessage($from_id, "⚠️ لطفاً یه ایموجی (معمولی یا پریمیوم) بفرست 😅", $btpromptcancel, 'HTML');
+            return;
+        }
+        configdisplay_element_set_emoji($cc_m[1], (int) $cc_m[2], $cc_emoji, '', $cc_kind);
+        $cc_msg = "✅ ایموجی {$cc_emoji} ذخیره شد!";
+    }
+    step('home', $from_id);
+    list($cc_info, $cc_kb) = configdisplay_element_payload($cc_m[1], (int) $cc_m[2], $textbotlang, $cc_kind);
+    $cc_msgid = intval(json_decode((string) ($user['Processing_value'] ?? ''), true)['bt_msgid'] ?? 0);
+    deletemessage($from_id, $message_id);
+    if ($cc_msgid > 0) {
+        Editmessagetext($from_id, $cc_msgid, $cc_msg . "\n\n" . $cc_info, $cc_kb, 'HTML');
+    } else {
+        sendmessage($from_id, $cc_msg . "\n\n" . $cc_info, $cc_kb, 'HTML');
+    }
+    return;
+}
 if (preg_match('/^cfgcoltext-([0123])-([a-z]{2})$/', $datain, $cc_m) && $adminrulecheck['rule'] == "administrator") {
     savedata("clear", "bt_msgid", $message_id);
     step("cfgcoltxt-{$cc_m[2]}-{$cc_m[1]}", $from_id);
@@ -7804,9 +7850,18 @@ if (preg_match('/^renamebtn-([a-z]{2})-(\d+)-(\d+)$/', $user['step'], $rn_m) && 
             mainmenu_layout_save($rn_lang, $rn_layout);
             $rn_msg = "✅ نام دکمه به پیش‌فرض برگشت.";
         } elseif (!empty($text)) {
-            $rn_layout['keyboard'][$rn_r][$rn_c]['custom_text'] = trim((string) $text);
+            // a premium emoji at the start of the new name becomes the button's
+            // premium emoji - a button's text cannot hold one
+            [$rn_name, $rn_icon] = button_name_from_update($text, $update);
+            if ($rn_name !== '') {
+                $rn_layout['keyboard'][$rn_r][$rn_c]['custom_text'] = $rn_name;
+            }
+            if ($rn_icon !== '') {
+                $rn_layout['keyboard'][$rn_r][$rn_c]['icon_emoji'] = $rn_icon;
+                unset($rn_layout['keyboard'][$rn_r][$rn_c]['emoji'], $rn_layout['keyboard'][$rn_r][$rn_c]['emoji_pos']);
+            }
             mainmenu_layout_save($rn_lang, $rn_layout);
-            $rn_msg = "✅ نام دکمه تغییر کرد!";
+            $rn_msg = "✅ نام دکمه تغییر کرد!" . ($rn_icon !== '' ? "\n💎 ایموجی پریمیوم اولش هم ایموجی دکمه شد." : '');
         } else {
             sendmessage($from_id, "⚠️ لطفاً نام جدید رو به صورت متن بفرست 😅", $btpromptcancel, 'HTML');
             return;
@@ -9403,90 +9458,11 @@ if (preg_match('/^volpct\|rstall\|([a-z]{2})\|(vol|volgb|time)$/', $datain, $vp_
     Editmessagetext($from_id, $message_id, "🔁 کپشن و دکمه‌ی همه‌ی آستانه‌های این بخش به پیش‌فرض برگشتن.\n\n" . $vp_text, $vp_kb, 'HTML');
     return;
 }
-if (preg_match('/^btact\|btns\|([a-z]{2})$/', $datain, $btm) && $adminrulecheck['rule'] == "administrator") {
-    list($ub_text, $ub_kb) = usertest_prompt_buttons_payload($btm[1], $textbotlang);
+// 🔘 دکمه‌های اکانت تست had an editor of their own (text and colour only); they
+// are genbtn 'uu' now. A button of the old screens still in a chat opens the hub.
+if (preg_match('/^btact\|(?:btns|btn|btntext|btnstyle|btnhide|btnrst|btnsrstall)\|([a-z]{2})(?:\|.*)?$/', $datain, $btm) && $adminrulecheck['rule'] == "administrator") {
+    list($ub_text, $ub_kb) = genbtn_hub_payload('uu', $btm[1], $textbotlang);
     Editmessagetext($from_id, $message_id, $ub_text, $ub_kb, 'HTML');
-    return;
-}
-if (preg_match('/^btact\|btn\|([a-z]{2})\|([01])$/', $datain, $btm) && $adminrulecheck['rule'] == "administrator") {
-    list($ub_text, $ub_kb) = usertest_prompt_button_detail_payload($btm[1], (int) $btm[2], $textbotlang);
-    Editmessagetext($from_id, $message_id, $ub_text, $ub_kb, 'HTML');
-    return;
-}
-if (preg_match('/^btact\|btntext\|([a-z]{2})\|([01])$/', $datain, $btm) && $adminrulecheck['rule'] == "administrator") {
-    savedata("clear", "bt_msgid", $message_id);
-    step("btbtntext-{$btm[1]}-{$btm[2]}", $from_id);
-    $ub_cancel_kb = json_encode(['inline_keyboard' => [
-        [['text' => '❌ انصراف', 'callback_data' => "btact|btn|{$btm[1]}|{$btm[2]}"]],
-    ]]);
-    Editmessagetext($from_id, $message_id, "✏️ متن جدید دکمه رو بفرست ✍️", $ub_cancel_kb, 'HTML');
-    return;
-}
-if (preg_match('/^btact\|btnstyle\|([a-z]{2})\|([01])\|(primary|success|danger)$/', $datain, $btm) && $adminrulecheck['rule'] == "administrator") {
-    $ub_lang = $btm[1];
-    $ub_idx = (int) $btm[2];
-    $ub_style = $btm[3];
-    $ub_setting = select("setting", "*", null, null, "select");
-    $ub_be = json_decode((string) ($ub_setting['button_edit'] ?? ''), true);
-    if (!is_array($ub_be)) {
-        $ub_be = [];
-    }
-    $ub_be[$ub_lang]['users.usertest.selectUsernamePrompt'][$ub_idx]['style'] = $ub_style;
-    update("setting", "button_edit", json_encode($ub_be, JSON_UNESCAPED_UNICODE), null, null);
-    list($ub_text, $ub_kb) = usertest_prompt_button_detail_payload($ub_lang, $ub_idx, $textbotlang);
-    Editmessagetext($from_id, $message_id, $ub_text, $ub_kb, 'HTML');
-    return;
-}
-if (preg_match('/^btact\|btnhide\|([a-z]{2})\|1$/', $datain, $btm) && $adminrulecheck['rule'] == "administrator") {
-    // only "use default name" - cancel (idx 0) stays, it is the prompt's way out
-    $ub_lang = $btm[1];
-    $ub_setting = select("setting", "*", null, null, "select");
-    $ub_be = json_decode((string) ($ub_setting['button_edit'] ?? ''), true);
-    if (!is_array($ub_be)) {
-        $ub_be = [];
-    }
-    if (!empty($ub_be[$ub_lang]['users.usertest.selectUsernamePrompt'][1]['hidden'])) {
-        unset($ub_be[$ub_lang]['users.usertest.selectUsernamePrompt'][1]['hidden']);
-    } else {
-        $ub_be[$ub_lang]['users.usertest.selectUsernamePrompt'][1]['hidden'] = true;
-    }
-    update("setting", "button_edit", json_encode($ub_be, JSON_UNESCAPED_UNICODE), null, null);
-    list($ub_text, $ub_kb) = usertest_prompt_button_detail_payload($ub_lang, 1, $textbotlang);
-    Editmessagetext($from_id, $message_id, $ub_text, $ub_kb, 'HTML');
-    return;
-}
-if (preg_match('/^btact\|btnrst\|([a-z]{2})\|([01])$/', $datain, $btm) && $adminrulecheck['rule'] == "administrator") {
-    $ub_lang = $btm[1];
-    $ub_idx = (int) $btm[2];
-    $ub_setting = select("setting", "*", null, null, "select");
-    $ub_be = json_decode((string) ($ub_setting['button_edit'] ?? ''), true);
-    if (is_array($ub_be) && isset($ub_be[$ub_lang]['users.usertest.selectUsernamePrompt'][$ub_idx])) {
-        unset($ub_be[$ub_lang]['users.usertest.selectUsernamePrompt'][$ub_idx]);
-        if (empty($ub_be[$ub_lang]['users.usertest.selectUsernamePrompt'])) {
-            unset($ub_be[$ub_lang]['users.usertest.selectUsernamePrompt']);
-        }
-        if (empty($ub_be[$ub_lang])) {
-            unset($ub_be[$ub_lang]);
-        }
-        update("setting", "button_edit", empty($ub_be) ? null : json_encode($ub_be, JSON_UNESCAPED_UNICODE), null, null);
-    }
-    list($ub_text, $ub_kb) = usertest_prompt_button_detail_payload($ub_lang, $ub_idx, $textbotlang);
-    Editmessagetext($from_id, $message_id, "🔁 این دکمه به پیش‌فرض برگشت.\n\n" . $ub_text, $ub_kb, 'HTML');
-    return;
-}
-if (preg_match('/^btact\|btnsrstall\|([a-z]{2})$/', $datain, $btm) && $adminrulecheck['rule'] == "administrator") {
-    $ub_lang = $btm[1];
-    $ub_setting = select("setting", "*", null, null, "select");
-    $ub_be = json_decode((string) ($ub_setting['button_edit'] ?? ''), true);
-    if (is_array($ub_be) && isset($ub_be[$ub_lang])) {
-        unset($ub_be[$ub_lang]['users.usertest.selectUsernamePrompt']);
-        if (empty($ub_be[$ub_lang])) {
-            unset($ub_be[$ub_lang]);
-        }
-        update("setting", "button_edit", empty($ub_be) ? null : json_encode($ub_be, JSON_UNESCAPED_UNICODE), null, null);
-    }
-    list($ub_text, $ub_kb) = usertest_prompt_buttons_payload($ub_lang, $textbotlang);
-    Editmessagetext($from_id, $message_id, "🔁 همه دکمه‌ها به پیش‌فرض برگشتن.\n\n" . $ub_text, $ub_kb, 'HTML');
     return;
 }
 if (preg_match('/^btsticker-([a-z]{2})-(.+)$/', (string) $user['step'], $btm) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
@@ -9572,30 +9548,17 @@ if (preg_match('/^btreaction-([a-z]{2})-(.+)$/', (string) $user['step'], $btm) &
 }
 
 if (preg_match('/^btbtntext-([a-z]{2})-([01])$/', (string) $user['step'], $btm) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
-    $ub_lang = $btm[1];
-    $ub_idx = (int) $btm[2];
-    $ub_newtext = trim((string) $text);
-    if ($ub_newtext === '') {
-        sendmessage($from_id, "⚠️ لطفاً یه متن بفرست 😅", $btpromptcancel, 'HTML');
-        return;
-    }
-    $ub_setting = select("setting", "*", null, null, "select");
-    $ub_be = json_decode((string) ($ub_setting['button_edit'] ?? ''), true);
-    if (!is_array($ub_be)) {
-        $ub_be = [];
-    }
-    $ub_be[$ub_lang]['users.usertest.selectUsernamePrompt'][$ub_idx]['text'] = $ub_newtext;
-    update("setting", "button_edit", json_encode($ub_be, JSON_UNESCAPED_UNICODE), null, null);
+    // a rename asked for on the old screen: kept the way genbtn keeps one
     step('home', $from_id);
-    list($ub_text, $ub_kb) = usertest_prompt_button_detail_payload($ub_lang, $ub_idx, $textbotlang);
-    $ub_msgid = intval(json_decode((string) ($user['Processing_value'] ?? ''), true)['bt_msgid'] ?? 0);
-    $ub_done_msg = "✅ متن دکمه ذخیره شد!\n\n" . $ub_text;
-    deletemessage($from_id, $message_id);
-    if ($ub_msgid > 0) {
-        Editmessagetext($from_id, $ub_msgid, $ub_done_msg, $ub_kb, 'HTML');
-    } else {
-        sendmessage($from_id, $ub_done_msg, $ub_kb, 'HTML');
+    [$ub_new, $ub_icon] = button_name_from_update($text, $update);
+    if ($ub_new !== '') {
+        genbtn_set_text($btm[1], 'users.usertest.selectUsernamePrompt', (int) $btm[2], $ub_new);
     }
+    if ($ub_icon !== '') {
+        genbtn_set_style($btm[1], 'users.usertest.selectUsernamePrompt', (int) $btm[2], null, null, $ub_icon);
+    }
+    list($ub_text, $ub_kb) = genbtn_hub_payload('uu', $btm[1], $textbotlang);
+    sendmessage($from_id, "✅ متن دکمه ذخیره شد!\n\n" . $ub_text, $ub_kb, 'HTML');
     return;
 }
 
@@ -9729,7 +9692,15 @@ if (preg_match('/^tpslname-([a-z]{2})-([a-z0-9]+)-([a-z]+)$/', (string) $user['s
     if ($sl_new === '0') {
         unset($sl_style['label']);
     } else {
-        $sl_style['label'] = $sl_new;
+        // a premium emoji at the start becomes the button's premium emoji
+        [$sl_name, $sl_icon] = button_name_from_update($text, $update);
+        if ($sl_name !== '') {
+            $sl_style['label'] = $sl_name;
+        }
+        if ($sl_icon !== '') {
+            $sl_style['emojiIcon'] = $sl_icon;
+            unset($sl_style['emoji'], $sl_style['noEmoji']);
+        }
     }
     topup_btnstyle_set($sl_m[1], $sl_m[2], $sl_m[3], $sl_style);
     step('home', $from_id);
@@ -9750,7 +9721,14 @@ if (preg_match('/^tpbpname-([a-z]{2})-([a-z0-9_]+)$/', (string) $user['step'], $
         return;
     }
     $bp_style = topup_btnstyle_for($bp_m[1], $bp_m[2], 'backpkg');
-    $bp_style['label'] = $bp_new;
+    [$bp_name, $bp_icon] = button_name_from_update($text, $update);
+    if ($bp_name !== '') {
+        $bp_style['label'] = $bp_name;
+    }
+    if ($bp_icon !== '') {
+        $bp_style['emojiIcon'] = $bp_icon;
+        unset($bp_style['emoji'], $bp_style['noEmoji']);
+    }
     topup_btnstyle_set($bp_m[1], $bp_m[2], 'backpkg', $bp_style);
     step('home', $from_id);
     list($bp_text, $bp_kb) = topup_backpkg_payload($bp_m[1], $bp_m[2], $textbotlang);
@@ -10128,12 +10106,18 @@ if (preg_match('/^volpctemo-([a-z]{2})-(\d+)$/', (string) $user['step'], $vp_m) 
 if (preg_match('/^cfgcoltxt-([a-z]{2})-([0123])$/', (string) $user['step'], $cc_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $cc_lang = $cc_m[1];
     $cc_idx = (int) $cc_m[2];
-    $cc_newtext = trim((string) $text);
-    if ($cc_newtext === '') {
+    // a premium emoji at the start becomes the button's premium emoji
+    [$cc_newtext, $cc_icon] = button_name_from_update($text, $update);
+    if ($cc_newtext === '' && $cc_icon === '') {
         sendmessage($from_id, "⚠️ لطفاً یه متن بفرست 😅", $btpromptcancel, 'HTML');
         return;
     }
-    configdisplay_element_set_text($cc_lang, $cc_idx, $cc_newtext);
+    if ($cc_newtext !== '') {
+        configdisplay_element_set_text($cc_lang, $cc_idx, $cc_newtext);
+    }
+    if ($cc_icon !== '') {
+        configdisplay_element_set_emoji($cc_lang, $cc_idx, '', $cc_icon);
+    }
     step('home', $from_id);
     list($cc_info, $cc_kb) = configdisplay_element_payload($cc_lang, $cc_idx, $textbotlang);
     $cc_msgid = intval(json_decode((string) ($user['Processing_value'] ?? ''), true)['bt_msgid'] ?? 0);
@@ -10149,12 +10133,18 @@ if (preg_match('/^cfgcoltxt-([a-z]{2})-([0123])$/', (string) $user['step'], $cc_
 if (preg_match('/^cfgcoltxtbuy-([a-z]{2})-([0123])$/', (string) $user['step'], $cc_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $cc_lang = $cc_m[1];
     $cc_idx = (int) $cc_m[2];
-    $cc_newtext = trim((string) $text);
-    if ($cc_newtext === '') {
+    // a premium emoji at the start becomes the button's premium emoji
+    [$cc_newtext, $cc_icon] = button_name_from_update($text, $update);
+    if ($cc_newtext === '' && $cc_icon === '') {
         sendmessage($from_id, "⚠️ لطفاً یه متن بفرست 😅", $btpromptcancel, 'HTML');
         return;
     }
-    configdisplay_element_set_text($cc_lang, $cc_idx, $cc_newtext, 'buy');
+    if ($cc_newtext !== '') {
+        configdisplay_element_set_text($cc_lang, $cc_idx, $cc_newtext, 'buy');
+    }
+    if ($cc_icon !== '') {
+        configdisplay_element_set_emoji($cc_lang, $cc_idx, '', $cc_icon, 'buy');
+    }
     step('home', $from_id);
     list($cc_info, $cc_kb) = configdisplay_element_payload($cc_lang, $cc_idx, $textbotlang, 'buy');
     $cc_msgid = intval(json_decode((string) ($user['Processing_value'] ?? ''), true)['bt_msgid'] ?? 0);
@@ -10171,12 +10161,18 @@ if (preg_match('/^cfgcoltxtbuy-([a-z]{2})-([0123])$/', (string) $user['step'], $
 if (preg_match('/^cfgcoltxtrw-([a-z]{2})-([0123])$/', (string) $user['step'], $cc_m) && $datain == '' && $adminrulecheck['rule'] == "administrator") {
     $cc_lang = $cc_m[1];
     $cc_idx = (int) $cc_m[2];
-    $cc_newtext = trim((string) $text);
-    if ($cc_newtext === '') {
+    // a premium emoji at the start becomes the button's premium emoji
+    [$cc_newtext, $cc_icon] = button_name_from_update($text, $update);
+    if ($cc_newtext === '' && $cc_icon === '') {
         sendmessage($from_id, "⚠️ لطفاً یه متن بفرست 😅", $btpromptcancel, 'HTML');
         return;
     }
-    configdisplay_element_set_text($cc_lang, $cc_idx, $cc_newtext, 'affrw');
+    if ($cc_newtext !== '') {
+        configdisplay_element_set_text($cc_lang, $cc_idx, $cc_newtext, 'affrw');
+    }
+    if ($cc_icon !== '') {
+        configdisplay_element_set_emoji($cc_lang, $cc_idx, '', $cc_icon, 'affrw');
+    }
     step('home', $from_id);
     list($cc_info, $cc_kb) = configdisplay_element_payload($cc_lang, $cc_idx, $textbotlang, 'affrw');
     $cc_msgid = intval(json_decode((string) ($user['Processing_value'] ?? ''), true)['bt_msgid'] ?? 0);
@@ -11249,6 +11245,12 @@ elseif ($datain == "systemsms") {
     sendmessage($from_id, $textbotlang['Admin']['Help']['getAddName'], $btpromptcancel, 'HTML');
     step('add_name_help', $from_id);
 } elseif ($user['step'] == "add_name_help") {
+    // a premium emoji at the start of the name becomes the tutorial button's
+    // premium emoji (a button's text cannot hold one)
+    [$help_nm, $help_nm_icon] = ($text === '' || $text === null) ? ['', ''] : button_name_from_update($text, $update);
+    if ($help_nm !== '') {
+        $text = $help_nm;
+    }
     if ($text === '' || $text === null) {
         sendmessage($from_id, $textbotlang['Admin']['Help']['invalidContent'], $btpromptcancel, 'HTML');
         return;
@@ -11287,6 +11289,9 @@ elseif ($datain == "systemsms") {
     // unique, "update ... where name_os = ?" would write to both rows
     $help_new_id = (int) $pdo->lastInsertId();
     clearSelectCache('help');
+    if ($help_nm_icon !== '') {
+        help_button_icon_set('fa', 'tutorials', (string) $help_new_id, $help_nm_icon);
+    }
     update("user", "Processing_value", (string) $help_new_id, "id", $from_id);
     update("user", "Processing_value_four", "0", "id", $from_id);
     sendmessage($from_id, $textbotlang['Admin']['Help']['getAddDesc'], $btpromptcancel, 'HTML');
@@ -12919,9 +12924,16 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     Editmessagetext($from_id, (int) $cb_m[3], $textbotlang['Admin']['BtnStyle']['renameCaption'], card_invoice_btnrename_payload($cb_m[1], $textbotlang), 'HTML');
 } elseif (preg_match('/^cardbtnreni:([a-z]{2}):(copyamt|copyCard\d*|paidReceipt|reissue|paid):([0-9]+):([0-9]+)$/', (string) $user['step'], $cb_m) && $datain == '') {
     deletemessage($from_id, $message_id);
-    $cb_newName = trim((string) $text) === '0' ? '' : trim((string) $text);
+    [$cb_newName, $cb_icon] = trim((string) $text) === '0' ? ['', ''] : button_name_from_update($text, $update);
     $cb_style = card_invoice_btnstyle_for($cb_m[1], $cb_m[2]);
-    $cb_style['label'] = $cb_newName;
+    // a premium emoji alone keeps the name and only becomes the button's emoji
+    if ($cb_newName !== '' || $cb_icon === '') {
+        $cb_style['label'] = $cb_newName;
+    }
+    if ($cb_icon !== '') {
+        $cb_style['emojiIcon'] = $cb_icon;
+        unset($cb_style['emoji'], $cb_style['noEmoji']);
+    }
     card_invoice_btnstyle_set($cb_m[1], $cb_m[2], $cb_style);
     step('home', $from_id);
     deletemessage($from_id, (int) $cb_m[4]);
@@ -13100,7 +13112,14 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
 } elseif (preg_match('/^gwinvbtnreni:([a-z]{2}):([a-z0-9]+):([A-Za-z0-9]+):([0-9]+):([0-9]+)$/', (string) $user['step'], $gb_m) && $datain == '') {
     deletemessage($from_id, $message_id);
     $gb_style = topup_invoice_btnstyle_for($gb_m[1], $gb_m[2], $gb_m[3]);
-    $gb_style['label'] = trim((string) $text) === '0' ? '' : trim((string) $text);
+    [$gb_newName, $gb_icon] = trim((string) $text) === '0' ? ['', ''] : button_name_from_update($text, $update);
+    if ($gb_newName !== '' || $gb_icon === '') {
+        $gb_style['label'] = $gb_newName;
+    }
+    if ($gb_icon !== '') {
+        $gb_style['emojiIcon'] = $gb_icon;
+        unset($gb_style['emoji'], $gb_style['noEmoji']);
+    }
     topup_invoice_btnstyle_set($gb_m[1], $gb_m[2], $gb_m[3], $gb_style);
     step('home', $from_id);
     deletemessage($from_id, (int) $gb_m[5]);
@@ -13477,6 +13496,48 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
         'cache_time' => 1,
     ]);
     return;
+} elseif (preg_match('/^tpsle:([a-z]{2}):([a-z0-9]+):([a-z]+)$/', $datain, $sl_m) && $adminrulecheck['rule'] == "administrator") {
+    if (!isset(topup_slot_defs($textbotlang)[$sl_m[3]])) {
+        return;
+    }
+    savedata("clear", "bt_msgid", $message_id);
+    step("tpslemo-{$sl_m[1]}-{$sl_m[2]}-{$sl_m[3]}", $from_id);
+    sendmessage($from_id, "🎭 ایموجی این دکمه رو بفرست\n🔹 ایموجی معمولی → کنار متن دکمه\n💎 ایموجی پریمیوم → آیکون کنار متن دکمه\n\n(برای برداشتن ایموجی، عدد 0 رو بفرست)", $btpromptcancel, 'HTML');
+} elseif (preg_match('/^tpslemo-([a-z]{2})-([a-z0-9]+)-([a-z]+)$/', (string) $user['step'], $sl_m) && $datain == '' && $adminrulecheck['rule'] == "administrator" && isset(topup_slot_defs($textbotlang)[$sl_m[3]])) {
+    $sl_style = topup_btnstyle_for($sl_m[1], $sl_m[2], $sl_m[3]);
+    $sl_icon = '';
+    foreach ((array) ($update['message']['entities'] ?? []) as $sl_ent) {
+        if (($sl_ent['type'] ?? '') === 'custom_emoji' && !empty($sl_ent['custom_emoji_id'])) {
+            $sl_icon = (string) $sl_ent['custom_emoji_id'];
+            break;
+        }
+    }
+    if (trim((string) $text) === '0') {
+        unset($sl_style['emoji'], $sl_style['emojiIcon']);
+        $sl_style['noEmoji'] = true;
+    } elseif ($sl_icon !== '') {
+        $sl_style['emojiIcon'] = $sl_icon;
+        unset($sl_style['emoji'], $sl_style['noEmoji']);
+    } else {
+        preg_match('/^\X/u', trim((string) $text), $sl_em);
+        $sl_emoji = $sl_em[0] ?? '';
+        if ($sl_emoji === '' || preg_match('/^[0-9a-zA-Z]$/', $sl_emoji)) {
+            sendmessage($from_id, $textbotlang['Admin']['TopupPkg']['invalidEmoji'], $btpromptcancel, 'HTML');
+            return;
+        }
+        $sl_style['emoji'] = $sl_emoji;
+        unset($sl_style['emojiIcon'], $sl_style['noEmoji']);
+    }
+    topup_btnstyle_set($sl_m[1], $sl_m[2], $sl_m[3], $sl_style);
+    step('home', $from_id);
+    $sl_p = topup_slot_payload($sl_m[1], $sl_m[2], $sl_m[3], $textbotlang);
+    $sl_mid = intval(json_decode((string) ($user['Processing_value'] ?? ''), true)['bt_msgid'] ?? 0);
+    deletemessage($from_id, $message_id);
+    if ($sl_mid > 0) {
+        Editmessagetext($from_id, $sl_mid, "✅ ذخیره شد!\n\n" . $sl_p[0], $sl_p[1], 'HTML');
+    } else {
+        sendmessage($from_id, "✅ ذخیره شد!\n\n" . $sl_p[0], $sl_p[1], 'HTML');
+    }
 } elseif (preg_match('/^tpsln:([a-z]{2}):([a-z0-9]+):([a-z]+)$/', $datain, $sl_m) && $adminrulecheck['rule'] == "administrator") {
     if (!isset(topup_slot_defs($textbotlang)[$sl_m[3]])) {
         return;
@@ -13683,15 +13744,28 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
 } elseif (preg_match('/^topuphelpreni:([a-z]{2}):([a-z0-9]+):([0-9]{1,2}|back|custom):([0-9]+):([0-9]+)$/', (string) $user['step'], $tp_m) && $datain == '') {
     $tp_tok = ctype_digit($tp_m[3]) ? (int) $tp_m[3] : $tp_m[3];
     deletemessage($from_id, $message_id);
-    $tp_newName = trim((string) $text) === '0' ? '' : trim((string) $text);
+    [$tp_newName, $tp_icon] = trim((string) $text) === '0' ? ['', ''] : button_name_from_update($text, $update);
+    // a premium emoji alone keeps the name and only becomes the button's emoji
+    $tp_keepName = $tp_newName === '' && $tp_icon !== '';
     if (is_int($tp_tok)) {
         $tp_pkgs = topup_packages_for($tp_m[1], $tp_m[2]);
         if (isset($tp_pkgs[$tp_tok])) {
-            topup_packages_update($tp_m[1], $tp_m[2], $tp_tok, $tp_pkgs[$tp_tok]['amount'], $tp_newName);
+            if (!$tp_keepName) {
+                topup_packages_update($tp_m[1], $tp_m[2], $tp_tok, $tp_pkgs[$tp_tok]['amount'], $tp_newName);
+            }
+            if ($tp_icon !== '') {
+                topup_packages_set_style($tp_m[1], $tp_m[2], $tp_tok, '', null, $tp_icon);
+            }
         }
     } else {
         $tp_style = topup_btnstyle_for($tp_m[1], $tp_m[2], $tp_tok);
-        $tp_style['label'] = $tp_newName;
+        if (!$tp_keepName) {
+            $tp_style['label'] = $tp_newName;
+        }
+        if ($tp_icon !== '') {
+            $tp_style['emojiIcon'] = $tp_icon;
+            unset($tp_style['emoji'], $tp_style['noEmoji']);
+        }
         topup_btnstyle_set($tp_m[1], $tp_m[2], $tp_tok, $tp_style);
     }
     step('home', $from_id);
@@ -22805,11 +22879,18 @@ if ($datain == "linkappsetting") {
     $help_np = explode('|', (string) $user['Processing_value'], 2);
     $help_lang = $help_np[0] ?: 'fa';
     $help_target = $help_np[1] ?? 'list';
+    [$help_nm, $help_nm_icon] = ($text === '' || $text === null) ? ['', ''] : button_name_from_update($text, $update);
+    if ($help_nm !== '') {
+        $text = $help_nm;
+    }
     if ($text === '' || $text === null || mb_strlen($text) >= 150) {
         sendmessage($from_id, $textbotlang['Admin']['Help']['nameTooLong'], $btpromptcancel, 'HTML');
         return;
     }
     help_category_store_add($text);
+    if ($help_nm_icon !== '') {
+        help_button_icon_set($help_lang, 'categories', trim($text), $help_nm_icon);
+    }
     step('home', $from_id);
     if ($help_target === 'list') {
         list($help_caption, $help_kb) = help_categories_payload($help_lang, $textbotlang);
@@ -23157,7 +23238,14 @@ if ($datain == "linkappsetting") {
 } elseif (preg_match('/^gwgrpreni:([a-z]{2}):([a-z]+):([0-9]+):([0-9]+)$/', (string) $user['step'], $gg_m) && $datain == '') {
     deletemessage($from_id, $message_id);
     $gg_style = topup_group_btnstyle_for($gg_m[1], $gg_m[2]);
-    $gg_style['label'] = trim((string) $text) === '0' ? '' : trim((string) $text);
+    [$gg_newName, $gg_icon] = trim((string) $text) === '0' ? ['', ''] : button_name_from_update($text, $update);
+    if ($gg_newName !== '' || $gg_icon === '') {
+        $gg_style['label'] = $gg_newName;
+    }
+    if ($gg_icon !== '') {
+        $gg_style['emojiIcon'] = $gg_icon;
+        unset($gg_style['emoji'], $gg_style['noEmoji']);
+    }
     topup_group_btnstyle_set($gg_m[1], $gg_m[2], $gg_style);
     step('home', $from_id);
     deletemessage($from_id, (int) $gg_m[4]);
@@ -23265,11 +23353,20 @@ if ($datain == "linkappsetting") {
         sendmessage($from_id, $textbotlang['Admin']['Help']['invalidContent'], $btpromptcancel, 'HTML');
         return;
     }
+    [$help_nm, $help_nm_icon] = button_name_from_update($text, $update);
+    if ($help_nm !== '') {
+        $text = $help_nm;
+    }
     if (mb_strlen($text) >= 150) {
         sendmessage($from_id, $textbotlang['Admin']['Help']['nameTooLong'], $btpromptcancel, 'HTML');
         return;
     }
-    help_set_lang_field($help_parts[0], $help_parts[1], ['name' => $text]);
+    if ($help_nm !== '') {
+        help_set_lang_field($help_parts[0], $help_parts[1], ['name' => $text]);
+    }
+    if ($help_nm_icon !== '') {
+        help_button_icon_set($help_parts[1], 'tutorials', (string) $help_parts[0], $help_nm_icon);
+    }
     list($help_info, $help_kb) = help_item_menu_payload($help_parts[0], $help_parts[1], $textbotlang);
     sendmessage($from_id, $textbotlang['Admin']['Help']['nameSaved'] . "\n\n" . $help_info, $help_kb, 'HTML');
     step('home', $from_id);
@@ -23415,8 +23512,9 @@ if ($datain == "linkappsetting") {
     if ($text == '0') {
         unset($help_section['rename'][$help_key]);
     } else {
-        $help_newname = trim((string) $text);
-        if ($help_newname === '') {
+        // a premium emoji at the start becomes this button's premium emoji
+        [$help_newname, $help_icon] = button_name_from_update($text, $update);
+        if ($help_newname === '' && $help_icon === '') {
             sendmessage($from_id, $textbotlang['Admin']['Help']['invalidContent'], $btpromptcancel, 'HTML');
             return;
         }
@@ -23424,7 +23522,13 @@ if ($datain == "linkappsetting") {
             sendmessage($from_id, $textbotlang['Admin']['Help']['nameTooLong'], $btpromptcancel, 'HTML');
             return;
         }
-        $help_section['rename'][$help_key] = $help_newname;
+        if ($help_newname !== '') {
+            $help_section['rename'][$help_key] = $help_newname;
+        }
+        if ($help_icon !== '') {
+            $help_section['emojiIcon'][$help_key] = $help_icon;
+            unset($help_section['emoji'][$help_key]);
+        }
     }
     help_layout_set_section($help_lang, $help_kind, $help_section);
     step('home', $from_id);

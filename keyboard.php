@@ -2215,14 +2215,8 @@ function keyboard_config($config_split, $id_invoice, $back_active = true, $kind 
     $cc_hConfig = configdisplay_element_current($cc_lang, 1, $textbotlang, $kind);
     $cc_hName = configdisplay_element_current($cc_lang, 2, $textbotlang, $kind);
     $keyboard_config = ['inline_keyboard' => []];
-    $cc_headerConfig = ['text' => $cc_hConfig['text'], 'callback_data' => "none"];
-    if ($cc_hConfig['style'] !== '') {
-        $cc_headerConfig['style'] = $cc_hConfig['style'];
-    }
-    $cc_headerName = ['text' => $cc_hName['text'], 'callback_data' => "none"];
-    if ($cc_hName['style'] !== '') {
-        $cc_headerName['style'] = $cc_hName['style'];
-    }
+    $cc_headerConfig = $cc_hConfig['btn'];
+    $cc_headerName = $cc_hName['btn'];
     $keyboard_config['inline_keyboard'][] = $cc_nameFirst ? [$cc_headerName, $cc_headerConfig] : [$cc_headerConfig, $cc_headerName];
     for ($i = 0; $i < count($config_split); $i++) {
         $config = $config_split[$i];
@@ -2239,19 +2233,13 @@ function keyboard_config($config_split, $id_invoice, $back_active = true, $kind 
         } else {
             $split_config = explode("#", $split_config)[1];
         }
-        $cc_getBtn = ['text' => $cc_get['text'], 'callback_data' => "configget_{$id_invoice}_$i"];
-        if ($cc_get['style'] !== '') {
-            $cc_getBtn['style'] = $cc_get['style'];
-        }
+        $cc_getBtn = array_merge($cc_get['btn'], ['callback_data' => "configget_{$id_invoice}_$i"]);
         $cc_nameBtn = ['text' => urldecode($split_config), 'callback_data' => "none"];
         $keyboard_config['inline_keyboard'][] = $cc_nameFirst ? [$cc_nameBtn, $cc_getBtn] : [$cc_getBtn, $cc_nameBtn];
 
     }
     $cc_getAll = configdisplay_element_current($cc_lang, 3, $textbotlang, $kind);
-    $cc_getAllBtn = ['text' => $cc_getAll['text'], 'callback_data' => "configget_$id_invoice" . "_1520"];
-    if ($cc_getAll['style'] !== '') {
-        $cc_getAllBtn['style'] = $cc_getAll['style'];
-    }
+    $cc_getAllBtn = array_merge($cc_getAll['btn'], ['callback_data' => "configget_$id_invoice" . "_1520"]);
     $keyboard_config['inline_keyboard'][] = [$cc_getAllBtn];
     if ($back_active) {
         // the buy path got its own red "بازگشت به منوی قبل" per admin request -
@@ -2561,19 +2549,8 @@ function keyboard_list_text($lang, $groupFilter = null)
                     list($bt_sf_label, $bt_sf_style) = $bt_decorate('users.status.infoFull', '📊 کپشن صفحه‌ی سرویس');
                     $keyboard_text['inline_keyboard'][] = [['text' => $bt_sf_label, 'callback_data' => "bt_edit|$lang|users.status.infoFull", 'style' => ($bt_sf_style !== '' ? $bt_sf_style : 'primary')]];
                     $keyboard_text['inline_keyboard'][] = [['text' => '🔘 دکمه‌های صفحه‌ی سرویس (💊 تمدید، 💡 روشن/خاموش، ...)', 'callback_data' => "statusbtn|list|{$lang}", 'style' => !empty($bt_list_be[$lang][statusbtn_bucket('mine')]) ? 'success' : 'primary']];
-                    // then the 🌐 / 📲 pair: a group of its own, the same one every
-                    // screen that shows it links to
-                    $bt_sa_custom = false;
-                    foreach (($bt_grouped['subapps'] ?? []) as $bt_g) {
-                        list(, $bt_g_style) = $bt_decorate($bt_g['key'], $bt_g['label']);
-                        if ($bt_g_style !== '') {
-                            $bt_sa_custom = true;
-                            break;
-                        }
-                    }
-                    foreach (subapps_link_rows($lang, $bt_sa_custom) as $bt_sa_row) {
-                        $keyboard_text['inline_keyboard'][] = $bt_sa_row;
-                    }
+                    // the 🌐 / 📲 pair is one group for all five places, on the
+                    // home list (📲 افزودن سرویس به برنامه) - not repeated here
                 }
             }
             if (!empty($data['stand_in'])) {
@@ -2622,21 +2599,6 @@ function keyboard_list_text($lang, $groupFilter = null)
                 $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['Admin']['LangScope']['panelStyleBtn'], 'callback_data' => "btnstyle_kindhub:panel:{$lang}", 'style' => 'primary']];
                 $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['Admin']['LangScope']['categoryStyleBtn'], 'callback_data' => "btnstyle_kindhub:category:{$lang}", 'style' => 'primary']];
                 $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['Admin']['LangScope']['productStyleBtn'], 'callback_data' => "btnstyle_kindhub:product:{$lang}", 'style' => 'primary']];
-            }
-        }
-        // 🌐 / 📲 and the app list are ONE group for every place that shows
-        // them; the screens that show them link to it
-        if ($groupFilter === 'referral' || $groupFilter === 'paygsvc') {
-            $bt_sa_custom = false;
-            foreach (($bt_grouped['subapps'] ?? []) as $bt_g) {
-                list(, $bt_g_style) = $bt_decorate($bt_g['key'], $bt_g['label']);
-                if ($bt_g_style !== '') {
-                    $bt_sa_custom = true;
-                    break;
-                }
-            }
-            foreach (subapps_link_rows($lang, $bt_sa_custom) as $bt_sa_row) {
-                $keyboard_text['inline_keyboard'][] = $bt_sa_row;
             }
         }
         if ($groupFilter === 'referral') {
