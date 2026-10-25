@@ -19,6 +19,7 @@ $wordGroups = [
     'opening' => ['pageService', 'pageOpening', 'pageButton', 'pageHint'],
     'missing' => ['pageMissingTitle', 'pageMissing', 'pageRetry'],
     'opened' => ['pageOpened'],
+    'downloading' => ['pageDownloadingTitle', 'pageDownloading', 'pageStep1', 'pageStep2', 'pageStep3', 'pageBack'],
     'stores' => ['pageDownload', 'pageStoreCaption', 'pageStoreGoogle', 'pageStoreGithub', 'pageStoreApple', 'pageStoreSite', 'pageNoPlatform'],
 ];
 $allWords = array_merge(...array_values($wordGroups));
@@ -102,7 +103,7 @@ foreach (array_keys(subapp_looks()) as $look) {
         $urls[$look][$app['id']] = '../subapp.php?' . parse_url($u, PHP_URL_QUERY);
     }
 }
-$groupTitles = ['opening' => $t['seStateOpening'], 'missing' => $t['seStateMissing'], 'opened' => $t['seStateOpened'], 'stores' => $t['seElStores']];
+$groupTitles = ['opening' => $t['seStateOpening'], 'missing' => $t['seStateMissing'], 'opened' => $t['seStateOpened'], 'downloading' => $t['seStateDownloading'], 'stores' => $t['seElStores']];
 
 $pageTitle = $t['seTitle'];
 $pageLede = $t['seLede'];
@@ -148,7 +149,7 @@ summary.se-sum::-webkit-details-marker{display:none}
         <select class="select" id="se-app" style="width:auto"><?php foreach (subapp_apps() as $app): ?><option value="<?= htmlspecialchars($app['id']) ?>"><?= htmlspecialchars($app['name']) ?></option><?php endforeach; ?></select></label>
       <div class="grp"><?= $t['seState'] ?>
         <div class="lang-chips" id="se-state">
-          <?php foreach (['opening' => 'seStateOpening', 'missing' => 'seStateMissing', 'opened' => 'seStateOpened'] as $k => $tk): ?>
+          <?php foreach (['opening' => 'seStateOpening', 'missing' => 'seStateMissing', 'opened' => 'seStateOpened', 'downloading' => 'seStateDownloading', 'back' => 'seStateBack'] as $k => $tk): ?>
             <label class="lang-chip"><input type="radio" name="se_state" value="<?= $k ?>"<?= $k === 'opening' ? ' checked' : '' ?>> <?= $t[$tk] ?></label>
           <?php endforeach; ?>
         </div></div>
@@ -263,8 +264,8 @@ window.SE = {
     ta.addEventListener('input', function () { tell({ t: 'text', key: k, val: ta.value }); dirty(); });
     ta.addEventListener('change', record);
     ta.addEventListener('focus', function () {
-      var g = w.getAttribute('data-group');
-      if (['opening', 'missing', 'opened'].indexOf(g) >= 0 && g !== ui.st) setState(g);
+      var g = k === 'pageBack' ? 'back' : w.getAttribute('data-group');
+      if (['opening', 'missing', 'opened', 'downloading', 'back'].indexOf(g) >= 0 && g !== ui.st) setState(g);
     });
   });
   document.addEventListener('keydown', function (e) {

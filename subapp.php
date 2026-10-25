@@ -121,17 +121,24 @@ $sa_mix = function ($a, $b, $t) {
 // the big button is the first place to get it; the small ones under it are the OTHERS - the same link is never shown twice
 $sa_dl = $sa_stores ? $sa_stores[0]['url'] : '';
 $sa_more = array_slice($sa_stores, 1);
-// what the page says in each of its three states (the first is what it opens in;
-// a preview can ask for another)
+// what the page says in each of its views (the first is what it opens in; a preview can ask
+// for another). 'downloading' is the wait while the person gets the app from a store, and
+// 'back' the moment they are back and the page tries the app again - a view of 'opening'
 $sa_words = [
     'opening' => ['status' => $sa_raw('pageOpening'), 'note' => $sa_raw('pageHint')],
     'missing' => ['status' => $sa_raw('pageMissingTitle'), 'note' => $sa_raw('pageMissing')],
     'opened' => ['status' => '', 'note' => $sa_raw('pageOpened')],
+    'downloading' => ['status' => $sa_raw('pageDownloadingTitle'), 'note' => $sa_raw('pageDownloading')],
+    'back' => ['status' => $sa_raw('pageBack'), 'note' => $sa_raw('pageHint')],
 ];
-$sa_state = ($sa_demo !== '' && isset($sa_words[(string) ($_GET['st'] ?? '')])) ? (string) $_GET['st'] : 'opening';
+$sa_view = ($sa_demo !== '' && isset($sa_words[(string) ($_GET['st'] ?? '')])) ? (string) $_GET['st'] : 'opening';
+$sa_state = $sa_view === 'back' ? 'opening' : $sa_view;
+// the three steps: which are done, which one is on
+$sa_stepsAt = ['downloading' => [0, 0], 'back' => [2, 2]][$sa_view] ?? [0, -1];
 $sa_min = $sa_look === 'minimal';
 // the blocks' own words, for the editor to know what a click on a word is
-$sa_tk = ['opening' => ['status' => 'pageOpening', 'note' => 'pageHint'], 'missing' => ['status' => 'pageMissingTitle', 'note' => 'pageMissing'], 'opened' => ['status' => '', 'note' => 'pageOpened']];
+$sa_tk = ['opening' => ['status' => 'pageOpening', 'note' => 'pageHint'], 'missing' => ['status' => 'pageMissingTitle', 'note' => 'pageMissing'], 'opened' => ['status' => '', 'note' => 'pageOpened'],
+    'downloading' => ['status' => 'pageDownloadingTitle', 'note' => 'pageDownloading'], 'back' => ['status' => 'pageBack', 'note' => 'pageHint']];
 // in the admin's editor a hidden part stays (faded) so that it can be brought back
 $sa_hid = fn($el) => in_array($el, $sa_lay['hide'], true) ? ($sa_edit ? ' data-off="1"' : ' data-hide="1"') : '';
 $sa_side = fn($b) => ['center' => 'align-self:center;text-align:center', 'start' => 'align-self:flex-start;text-align:start', 'end' => 'align-self:flex-end;text-align:end'][$sa_lay['balign'][$b] ?? $sa_lay['align']];
@@ -181,7 +188,7 @@ if ($sa_ok && $sa_app['icon'] !== '' && is_file(__DIR__ . '/' . $sa_tab . '-64.p
   --bg:#0a0e16;--glass:rgba(255,255,255,.065);--line:rgba(255,255,255,.12);--text:#eef2fb;--muted:#a3aec4;--chip:rgba(255,255,255,.07);
   --accent:<?= $sa_app['accent'] ?>;--accent2:<?= $sa_app['accent2'] ?>;--warn:#f5b544;--ok:#3ddc97;
   --glowA:<?= $sa_mix($sa_app['accent'], '#0a0e16', .38) ?>;--glowB:<?= $sa_mix($sa_app['accent2'], '#0a0e16', .26) ?>;--glowC:<?= $sa_mix($sa_app['accent'], '#0a0e16', .16) ?>;
-  --cardline:rgba(255,255,255,.12);--sat:1;
+  --cardline:rgba(255,255,255,.12);--sat:1;--tint:<?= $sa_mix($sa_app['accent2'], '#0a0e16', .2) ?>;
   --shadow:0 28px 60px -26px rgba(0,0,0,.65);
   --dx:<?= $sa_rtl ? '-1' : '1' ?>;
   --out:cubic-bezier(.23,1,.32,1);--inout:cubic-bezier(.77,0,.175,1);
@@ -189,7 +196,7 @@ if ($sa_ok && $sa_app['icon'] !== '' && is_file(__DIR__ . '/' . $sa_tab . '-64.p
 <?php ob_start(); ?>
   --bg:#f1f4fa;--glass:rgba(255,255,255,.74);--line:rgba(16,24,40,.1);--text:#101828;--muted:#566277;--chip:rgba(16,24,40,.05);--warn:#b86e00;--ok:#0f9d63;
   --glowA:<?= $sa_mix($sa_app['accent'], '#f1f4fa', .52) ?>;--glowB:<?= $sa_mix($sa_app['accent2'], '#f1f4fa', .46) ?>;--glowC:<?= $sa_mix($sa_app['accent'], '#f1f4fa', .3) ?>;
-  --glass:rgba(255,255,255,.5);--cardline:rgba(255,255,255,.85);--sat:1.6;
+  --glass:rgba(255,255,255,.5);--cardline:rgba(255,255,255,.85);--sat:1.6;--tint:<?= $sa_mix($sa_app['accent2'], '#f1f4fa', .28) ?>;
   --shadow:0 28px 60px -26px rgba(16,24,40,.38),inset 0 1px 0 rgba(255,255,255,.9);<?php $sa_light = ob_get_clean(); ?>
 @media (prefers-color-scheme:light){[data-theme=auto]{<?= $sa_light ?>}}
 [data-theme=light]{<?= $sa_light ?>;color-scheme:light}
@@ -250,7 +257,7 @@ body{margin:0;min-height:100vh;min-height:100dvh;display:flex;align-items:center
 .badge{position:absolute;right:-6px;bottom:-6px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;border:3px solid var(--bg);opacity:0;transform:scale(.6);transition:opacity .2s var(--out),transform .28s var(--out)}
 [dir=rtl] .badge{right:auto;left:-6px}
 .badge svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
-.badge .b-ok,.badge .b-warn{display:none}
+.badge .b-ok,.badge .b-warn,.badge .b-dl{display:none}
 [data-state=opened] .badge{background:var(--ok);opacity:1;transform:none}
 [data-state=opened] .badge .b-ok{display:block}
 [data-state=missing] .badge{background:var(--warn);opacity:1;transform:none}
@@ -263,6 +270,42 @@ body{margin:0;min-height:100vh;min-height:100dvh;display:flex;align-items:center
 @keyframes travel{0%{opacity:0;transform:translateX(0)}15%{opacity:1}85%{opacity:1}100%{opacity:0;transform:translateX(calc(var(--dx)*56px))}}
 @keyframes ping{0%{opacity:.5;transform:scale(1)}100%{opacity:0;transform:scale(1.5)}}
 @keyframes nudge{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* downloading: the person is getting the app from a store; this page stays and waits for them to come back */
+@property --a{syntax:'<angle>';inherits:false;initial-value:0deg}
+.ring{position:absolute;top:-8px;left:-8px;right:-8px;bottom:-8px;border-radius:calc(var(--rad,25px) + 8px);padding:3px;pointer-events:none;opacity:0;transition:opacity .3s var(--out);
+  background:conic-gradient(from var(--a),transparent 0deg,var(--accent2) 120deg,transparent 121deg 360deg);box-shadow:inset 0 0 0 3px var(--tint);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+[data-state=downloading] .ring,[data-back] .ring{opacity:1;animation:sweep 1.5s linear infinite}
+[data-back] .ring{animation-duration:.8s}
+@keyframes sweep{to{--a:360deg}}
+[data-state=downloading] .badge{background:var(--accent);opacity:1;transform:none}
+[data-state=downloading] .badge .b-dl{display:block;animation:bob 1.2s var(--inout) infinite}
+@keyframes bob{50%{transform:translateY(2.5px)}}
+[data-state=downloading] .track i{animation:none;opacity:.28;transform:translateX(calc(var(--dx)*calc(var(--n,0)*24px)))}
+[data-state=downloading] .track i:nth-child(1){--n:0}[data-state=downloading] .track i:nth-child(2){--n:1}[data-state=downloading] .track i:nth-child(3){--n:2}
+[data-state=downloading] .appwrap::before,[data-state=downloading] .appwrap::after{animation:none;opacity:0}
+/* the three steps: the one the person is on is lit, the ones behind it ticked */
+.steps{--o:0;display:none;list-style:none;margin:6px 0 0;padding:0;counter-reset:s;justify-content:space-between}
+[data-state=downloading] .steps,[data-back] .steps{display:flex}
+.steps li{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12.5px;line-height:1.5;color:var(--muted);counter-increment:s}
+.steps li i{position:relative;z-index:1;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--chip);border:1.5px solid var(--line);font-style:normal;font-size:12.5px;font-weight:700;color:var(--muted);transition:background-color .3s var(--out),border-color .3s var(--out),color .3s var(--out)}
+.steps li i::before{content:counter(s)}
+[dir=rtl] .steps li i::before{content:counter(s,persian)}
+.steps li:not(:last-child)::after{content:"";position:absolute;top:12px;left:calc(50% + 20px);right:calc(-50% + 20px);height:2px;border-radius:2px;background:var(--line);transition:background-color .3s var(--out)}
+[dir=rtl] .steps li:not(:last-child)::after{left:calc(-50% + 20px);right:calc(50% + 20px)}
+.steps li.on{color:var(--text);font-weight:600}
+.steps li.on i{background:var(--accent);border-color:var(--accent2);color:#fff;box-shadow:0 0 0 5px var(--tint)}
+.steps li.done{color:var(--text)}
+.steps li.done i{background:var(--ok);border-color:var(--ok);color:#fff}
+.steps li.done i::before{content:"\2713"}
+.steps li.done::after{background:var(--ok)}
+[data-state=downloading] .note,[data-back] .note{--o:1;margin-top:14px;font-size:14px}
+[data-state=downloading] #open,[data-back] #open{margin-top:16px}
+[data-state=downloading] #open{--o:2}
+[data-state=downloading] .dlbox{--o:3;margin-top:10px}
+[data-state=downloading] #retry{display:none}
+@media (prefers-reduced-motion:reduce){[data-state=downloading] .ring,[data-back] .ring{animation:none}[data-state=downloading] .badge .b-dl{animation:none}}
 
 h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacing:-.2px}
 .chip{margin-top:8px;display:inline-flex;align-items:center;gap:8px;max-width:100%;padding:5px 14px;border-radius:999px;background:var(--chip);font-size:13.5px;color:var(--muted)}
@@ -358,21 +401,26 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
 </head>
 <body data-look="<?= $sa_look ?>" data-theme="<?= $sa_theme ?>" data-align="<?= $sa_lay['align'] ?>"<?= $sa_bodyStyle !== '' ? ' style="' . $sa_bodyStyle . '"' : '' ?>>
 <?php if ($sa_ok): ?>
-<main class="card enter" id="card" data-state="<?= $sa_state ?>">
+<main class="card enter" id="card" data-state="<?= $sa_state ?>"<?= $sa_view === 'back' ? ' data-back="1"' : '' ?>>
   <div class="stage" data-el="stage" aria-hidden="true" style="order:<?= $sa_ord['stage'] ?>;justify-content:<?= $sa_justify ?>"<?= $sa_stageAttr ?>>
     <div class="node" data-el="flow"<?= $sa_hid('flow') ?>><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.1 7.5 9.5 4.4-1.4 7.5-4.9 7.5-9.5V6z"/><path d="m9 12 2.2 2.2L15.2 10"/></svg></div>
     <div class="track" data-el="flow"<?= $sa_hid('flow') ?>><i></i><i></i><i></i></div>
-    <div class="appwrap" data-el="logo"<?= $sa_hid('logo') ?>>
+    <div class="appwrap" data-el="logo"<?= $sa_hid('logo') ?>><i class="ring" aria-hidden="true"></i>
       <div class="app"><span><?= htmlspecialchars(strtoupper(substr($sa_app['name'], 0, 1))) ?></span><img src="subapp_assets/icons/<?= htmlspecialchars($sa_app['icon']) ?>.webp" alt="" width="96" height="96" onerror="this.remove()"></div>
-      <div class="badge"><svg class="b-ok" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg><svg class="b-warn" viewBox="0 0 24 24"><path d="M12 6.5v7M12 17.5h.01"/></svg></div>
+      <div class="badge"><svg class="b-ok" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg><svg class="b-dl" viewBox="0 0 24 24"><path d="M12 5v10M7.5 11 12 15.5 16.5 11"/></svg><svg class="b-warn" viewBox="0 0 24 24"><path d="M12 6.5v7M12 17.5h.01"/></svg></div>
     </div>
   </div>
   <h1 data-el="title" style="order:<?= $sa_ord['title'] ?>;<?= $sa_side('title') ?>"<?= $sa_hid('title') ?>><?= htmlspecialchars($sa_app['name']) ?></h1>
   <div class="chip" data-el="chip" style="order:<?= $sa_ord['chip'] ?>;<?= $sa_side('chip') ?>"<?= $sa_hid('chip') ?>><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span data-tk="pageService"><?= $sa_txt('pageService') ?></span><b><?= htmlspecialchars((string) $sa_inv['username']) ?></b></div>
-  <div class="status" data-el="status" style="order:<?= $sa_ord['status'] ?>;<?= $sa_side('status') ?>"<?= $sa_hid('status') ?> role="status" aria-live="polite"><i class="dot"></i><span id="status" data-tk="<?= $sa_tk[$sa_state]['status'] ?>"><?= htmlspecialchars($sa_words[$sa_state]['status'], ENT_QUOTES, 'UTF-8') ?></span></div>
+  <div class="status" data-el="status" style="order:<?= $sa_ord['status'] ?>;<?= $sa_side('status') ?>"<?= $sa_hid('status') ?> role="status" aria-live="polite"><i class="dot"></i><span id="status" data-tk="<?= $sa_tk[$sa_view]['status'] ?>"><?= htmlspecialchars($sa_words[$sa_view]['status'], ENT_QUOTES, 'UTF-8') ?></span></div>
   <div class="col" data-el="actions" style="order:<?= $sa_ord['actions'] ?>">
     <a class="btn primary" id="open" href="<?= htmlspecialchars($sa_deep, ENT_QUOTES) ?>"><span data-tk="pageButton"><?= $sa_txt('pageButton') ?></span><svg class="flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-    <p class="note" id="note" data-el="note" data-tk="<?= $sa_tk[$sa_state]['note'] ?>"<?= $sa_hid('note') ?>><?= htmlspecialchars($sa_words[$sa_state]['note'], ENT_QUOTES, 'UTF-8') ?></p>
+    <ol class="steps" data-el="steps"<?= $sa_hid('steps') ?>>
+<?php foreach ([1, 2, 3] as $i => $n): ?>
+      <li<?= $i < $sa_stepsAt[0] ? ' class="done"' : ($i === $sa_stepsAt[1] ? ' class="on"' : '') ?>><i></i><span data-tk="pageStep<?= $n ?>"><?= $sa_txt('pageStep' . $n) ?></span></li>
+<?php endforeach; ?>
+    </ol>
+    <p class="note" id="note" data-el="note" data-tk="<?= $sa_tk[$sa_view]['note'] ?>"<?= $sa_hid('note') ?>><?= htmlspecialchars($sa_words[$sa_view]['note'], ENT_QUOTES, 'UTF-8') ?></p>
 <?php if ($sa_dl !== ''): ?>
     <div class="dlbox">
       <a class="btn dl" data-el="download"<?= $sa_hid('download') ?> href="<?= htmlspecialchars($sa_dl, ENT_QUOTES) ?>" target="_blank" rel="noopener noreferrer"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></span><span class="tx"><b data-tk="pageDownload"><?= $sa_txt('pageDownload') ?></b><small data-tk="<?= $sa_names[$sa_stores[0]['k']] ?>"><?= $sa_stores[0]['label'] ?></small></span><svg class="chev flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
@@ -403,35 +451,59 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
   window.__words = words;
   var demo = <?= $sa_demo !== '' ? 'true' : 'false' ?>;
   var card = document.getElementById('card'), status = document.getElementById('status'), note = document.getElementById('note');
-  var timer = 0, left = false;
-  function show(state) {
-    if (card.getAttribute('data-state') === state) return;
-    card.setAttribute('data-state', state);
-    status.textContent = words[state].status;
-    note.textContent = words[state].note;
+  var timer = 0, left = false, hiddenAt = 0, view = <?= json_encode($sa_view) ?>, ed = <?= $sa_edit ? 'true' : 'false' ?>;
+  var steps = card.querySelectorAll('.steps li');
+  // the three steps while the person is away: the one they are on lit, the ones behind it ticked
+  function setSteps(done, on) {
+    steps.forEach(function (li, i) { li.className = i < done ? 'done' : (i === on ? 'on' : ''); });
+  }
+  // what the page shows. 'back' is 'opening' once the person is back from a store (the steps tell so)
+  function show(v) {
+    if (view === v) return;
+    view = v;
+    var back = v === 'back';
+    card.setAttribute('data-state', back ? 'opening' : v);
+    if (back) card.setAttribute('data-back', '1'); else card.removeAttribute('data-back');
+    setSteps(back ? 2 : 0, back ? 2 : (v === 'downloading' ? 0 : -1));
+    status.textContent = words[v].status;
+    note.textContent = words[v].note;
     [status.parentNode, note].forEach(function (el) {
       el.classList.remove('swap'); void el.offsetWidth; el.classList.add('swap');
     });
   }
   // sends the phone on to the app; if the page is still in front a few
   // seconds later, nothing took the address - the app is not installed
-  function go() {
+  function go(returning) {
     left = false;
+    hiddenAt = 0;
     clearTimeout(timer);
-    show('opening');
-    if (demo) return;
+    show(returning === true ? 'back' : 'opening');
+    if (demo) {
+      // a preview opens nothing: the end of the way is shown
+      if (returning === true && !ed) timer = setTimeout(function () { show('opened'); }, 1800);
+      return;
+    }
     window.location.href = deep;
     timer = setTimeout(function () { if (!left) show('missing'); }, 3000);
   }
+  // the person goes to a store to get the app (its link opens there): this page stays and waits, and
+  // when they are back it tries the app again by itself - no button to press
+  function away() { if (view === 'downloading') hiddenAt = Date.now(); }
+  function returned() { if (view === 'downloading' && hiddenAt && Date.now() - hiddenAt > 1200) go(true); }
+  document.querySelectorAll('.dl,.store').forEach(function (a) {
+    a.addEventListener('click', function () { if (ed) return; clearTimeout(timer); hiddenAt = 0; show('downloading'); });
+  });
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
-      if (card.getAttribute('data-state') === 'opening') { left = true; clearTimeout(timer); }
+      if (card.getAttribute('data-state') === 'opening') { left = true; clearTimeout(timer); } else away();
     } else if (left) {
       left = false;
       show('opened');
-    }
+    } else returned();
   });
-  window.addEventListener('pagehide', function () { if (card.getAttribute('data-state') === 'opening') left = true; });
+  window.addEventListener('pagehide', function () { if (card.getAttribute('data-state') === 'opening') left = true; else away(); });
+  window.addEventListener('pageshow', returned);
+  window.addEventListener('focus', returned);
   document.getElementById('open').addEventListener('click', function (e) { e.preventDefault(); go(); });
   document.getElementById('retry').addEventListener('click', go);
   if (!demo) setTimeout(go, 600);
@@ -447,7 +519,7 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
     var lay = <?= json_encode($sa_lay, $sa_json) ?>;
     var SIZES = { sm: 72, lg: 128, xl: 152 }, RAD = { squircle: .27, circle: .5, square: .1 };
     var BLOCK = { stage: '.stage', title: 'h1', chip: '.chip', status: '.status', actions: '.col' };
-    var OWNER = { logo: 'stage', flow: 'stage', title: 'title', chip: 'chip', status: 'status', actions: 'actions', note: 'actions', download: 'actions', stores: 'actions', retry: 'actions' };
+    var OWNER = { logo: 'stage', flow: 'stage', title: 'title', chip: 'chip', status: 'status', actions: 'actions', note: 'actions', steps: 'actions', download: 'actions', stores: 'actions', retry: 'actions' };
     var SIDED = { title: 1, chip: 1, status: 1 };
     var RTL = document.documentElement.dir === 'rtl', MIN = 56, MAX = 200;
     var EASE = 'cubic-bezier(.23,1,.32,1)';
@@ -749,7 +821,7 @@ h1{margin:18px 0 0;font-size:28px;font-weight:800;line-height:1.35;letter-spacin
       var m = e.data;
       if (m.t === 'layout') { lay = m.lay; glide(apply); }
       else if (m.t === 'text') words(m.key, m.val);
-      else if (m.t === 'state') { show(m.v); var k = KEYS[card.getAttribute('data-state')]; status.setAttribute('data-tk', k.status); note.setAttribute('data-tk', k.note); place(); }
+      else if (m.t === 'state') { show(m.v); var k = KEYS[m.v]; status.setAttribute('data-tk', k.status); note.setAttribute('data-tk', k.note); place(); }
       else if (m.t === 'i18n') { L = Object.assign(L, m.L); }
       else if (m.t === 'select') select(m.el || '');
     });

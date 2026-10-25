@@ -13268,6 +13268,10 @@ if (!function_exists('bt_section_meta')) {
                 'label' => '📥 وقتی برنامه روی گوشی نیست',
                 'alert' => 'چیزی که صفحه نشون می‌ده وقتی برنامه باز نشد: تیتر، توضیح و دکمه‌ی «دوباره امتحان کن».',
             ],
+            'subapps_downloading' => [
+                'label' => '⏳ وقتی مشتری داره برنامه رو دانلود می‌کنه',
+                'alert' => 'بعد از اینکه مشتری روی «دانلود» می‌زنه، صفحه همین‌جا می‌مونه و منتظر برگشتنش می‌مونه: تیتر «در حال دانلود»، توضیح، سه مرحله و جمله‌ی لحظه‌ی برگشتن. وقتی برگشت، صفحه خودش برنامه رو باز می‌کنه.',
+            ],
             'subapps_stores' => [
                 'label' => '⬇️ دانلود و فروشگاه‌ها',
                 'alert' => 'دکمه‌ی دانلود صفحه و لینک‌های زیرش: Google Play، آخرین نسخه‌ی GitHub، App Store و سایت رسمی برنامه.',
@@ -14229,7 +14233,7 @@ if (!function_exists('subapp_kind')) {
     // the blocks of the page an admin can hide, and the top-level ones he can move
     function subapp_layout_elements()
     {
-        return ['logo', 'flow', 'title', 'chip', 'status', 'note', 'download', 'stores', 'retry'];
+        return ['logo', 'flow', 'title', 'chip', 'status', 'steps', 'note', 'download', 'stores', 'retry'];
     }
     function subapp_layout_blocks()
     {
@@ -14361,7 +14365,7 @@ if (!function_exists('subapp_kind')) {
     {
         global $domainhosts;
         $q = ['demo' => $look, 'l' => $lang, 'a' => $appId, 's' => subapp_sig('demo' . $look . $lang, $appId)];
-        if (in_array($state, ['opening', 'missing', 'opened'], true)) {
+        if (in_array($state, ['opening', 'missing', 'opened', 'downloading', 'back'], true)) {
             $q['st'] = $state;
         }
         // th: a theme, os: whose stores, ed: the admin's editor talks to the page
@@ -14375,7 +14379,7 @@ if (!function_exists('subapp_kind')) {
         $tb = $textbotlang['bottext'];
         $p = $textbotlang['panel'];
         $lay = subapp_layout($lang);
-        $blockEls = ['stage' => ['logo', 'flow'], 'title' => ['title'], 'chip' => ['chip'], 'status' => ['status'], 'actions' => ['note', 'download', 'stores', 'retry']];
+        $blockEls = ['stage' => ['logo', 'flow'], 'title' => ['title'], 'chip' => ['chip'], 'status' => ['status'], 'actions' => ['steps', 'note', 'download', 'stores', 'retry']];
         $rows = [];
         $last = count($lay['order']) - 1;
         foreach ($lay['order'] as $i => $b) {
@@ -14455,7 +14459,8 @@ if (!function_exists('subapp_kind')) {
     {
         $keys = [];
         foreach (['Opening', 'Button', 'Hint', 'Download', 'Error', 'Service', 'MissingTitle', 'Missing', 'Retry', 'Opened',
-            'StoreCaption', 'StoreGoogle', 'StoreGithub', 'StoreApple', 'StoreSite', 'NoPlatform'] as $k) {
+            'StoreCaption', 'StoreGoogle', 'StoreGithub', 'StoreApple', 'StoreSite', 'NoPlatform',
+            'DownloadingTitle', 'Downloading', 'Step1', 'Step2', 'Step3', 'Back'] as $k) {
             $keys[] = 'users.subapps.page' . $k;
         }
         return $keys;

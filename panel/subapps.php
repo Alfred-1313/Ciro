@@ -123,7 +123,7 @@ foreach (['gb', 'kb'] as $alias) {
     $cards[$alias] = [genbtn_alias_to_key($alias), genbtn_defs($alias, $tx)];
 }
 $sectionTitle = fn($sec) => $bt['msSections'][$sec] ?? bt_section_meta($sec)['label'];
-$stateLinks = ['' => $t['saPreviewOpening'], 'missing' => $t['saPreviewMissing'], 'opened' => $t['saPreviewOpened']];
+$stateLinks = ['' => $t['saPreviewOpening'], 'missing' => $t['saPreviewMissing'], 'opened' => $t['saPreviewOpened'], 'downloading' => $t['saPreviewDownloading']];
 
 $pageTitle = $t['saPageTitle'];
 $pageLede = $t['saPageLede'];

@@ -496,4 +496,16 @@ return [
             . "📍 The page a customer opens with «📲 Add service to app»\n"
             . "The page of each app now shows that app's own icon in the browser tab (instead of the globe), and the same icon comes if the customer adds the page to the phone's home screen. Separate for each of the 6 apps.</blockquote>",
     ],
+    [
+        'n' => 35,
+        'date' => '2026-10-24',
+        'fa' => "<blockquote>⏳ <b>صفحه‌ی باز کردن برنامه: «در حال دانلود» و برگشت خودکار</b>\n"
+            . "📍 صفحه‌ای که مشتری با «📲 افزودن سرویس به برنامه» باز می‌کند؛ متن‌ها: 🎨 شخصی‌سازی ← «📲 تنظیمات افزودن سرویس به برنامه» ← «⏳ وقتی مشتری داره برنامه رو دانلود می‌کنه» و وب‌پنل ← ویرایش زنده‌ی صفحه ← حالت «در حال دانلود»\n"
+            . "مشتری که برنامه را ندارد و روی «دانلود» می‌زند، دیگر روی صفحه‌ی «برنامه پیدا نشد» نمی‌ماند: صفحه می‌شود «در حال دانلود …» با یک حلقه‌ی چرخان دور آیکن و سه مرحله (دانلود و نصب ← برگشت به اینجا ← باز شدن خودکار). وقتی مشتری از فروشگاه به همین صفحه برمی‌گردد، صفحه خودش باز کردن برنامه را امتحان می‌کند؛ اگر نصب بود برنامه با سرویس باز می‌شود و اگر نبود به «برنامه پیدا نشد» برمی‌گردد.\n"
+            . "ℹ️ صفحه نمی‌تواند درصد دانلود یا لحظه‌ی تمام شدن نصب را ببیند؛ فقط برگشتن مشتری را می‌فهمد. اگر مرورگری باز شدن خودکار را نگذارد، همان «دوباره امتحان کن» کار می‌کند. متن‌ها و سه مرحله برای هر زبان جدا قابل تغییرند و سه مرحله را می‌شود از چیدمان صفحه برداشت.</blockquote>",
+        'en' => "<blockquote>⏳ <b>App-opening page: «Downloading» and the automatic return</b>\n"
+            . "📍 The page a customer opens with «📲 Add service to app»; the texts: 🎨 Customize → «📲 Add service to app settings» → «⏳ While the customer downloads the app» and Web panel → Live page editor → the «Downloading» view\n"
+            . "A customer who does not have the app and taps «Download» no longer stays on the «App not found» page: it becomes «Downloading …», with a spinning ring around the icon and three steps (Download and install → Come back here → Opens by itself). When the customer returns to this page from the store, the page tries to open the app by itself; if it is installed the app opens with the service, if not the page goes back to «App not found».\n"
+            . "ℹ️ The page cannot see the download's progress or the moment the install ends; it only knows the customer is back. If a browser does not allow the automatic opening, «Try again» still works. The texts and the three steps can be changed separately for each language, and the three steps can be taken off in the page's layout.</blockquote>",
+    ],
 ];
