@@ -4,6 +4,8 @@
 
 **A Telegram bot that sells and manages VPN subscriptions, with a separate shop for Persian and English customers.**
 
+**English** | [فارسی](README.fa.md)
+
 <p>
   <img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP 8.2"/>
   <img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="AGPL-3.0"/>
