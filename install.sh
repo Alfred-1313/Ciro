@@ -1302,13 +1302,253 @@ _restore_file_note() {
     [ -n "$src" ] && echo "from $(_db_owner_label "$src")"
 }
 
+# ── Opening a backup zip ──────────────────────────────────────
+# Info-ZIP's unzip reads only the classic (ZipCrypto) password. A zip locked
+# with AES - 7-Zip, WinZip, PHP's ZipArchive - gets "unsupported compression
+# method 99" from it whatever the password is, and the prompt used to call
+# that "wrong password, or the zip is damaged". PHP's libzip reads both kinds,
+# so it takes over whenever unzip cannot, and the reason is told as it is.
+ZIP_PW=""      # the password of the zip being restored, asked once
+ZIP_WHY=""     # why the last attempt failed, in the tool's own words
+_ZIP_ONE_PHP='
+if (!class_exists("ZipArchive")) { fwrite(STDERR, "PHP has no zip extension"); exit(6); }
+$z = new ZipArchive();
+if ($z->open($argv[1], ZipArchive::RDONLY) !== true) { fwrite(STDERR, "cannot open the zip"); exit(4); }
+$pw = getenv("ZPW");
+if ($pw !== false && $pw !== "") { $z->setPassword($pw); }
+$s = $z->getStream($argv[2]);
+if (!$s) {
+    $m = $z->getStatusString();
+    fwrite(STDERR, $m);
+    exit(stripos($m, "password") !== false ? 3 : (stripos($m, "not supported") !== false ? 5 : 4));
+}
+$o = fopen($argv[3], "wb");
+$n = stream_copy_to_stream($s, $o);
+fclose($o); fclose($s);
+exit($n > 0 ? 0 : 4);
+'
+_ZIP_ALL_PHP='
+if (!class_exists("ZipArchive")) { fwrite(STDERR, "PHP has no zip extension"); exit(6); }
+$z = new ZipArchive();
+if ($z->open($argv[1], ZipArchive::RDONLY) !== true) { fwrite(STDERR, "cannot open the zip"); exit(4); }
+$pw = getenv("ZPW");
+if ($pw !== false && $pw !== "") { $z->setPassword($pw); }
+$want = [];
+if (count($argv) > 3) {
+    for ($i = 0; $i < $z->numFiles; $i++) {
+        $n = $z->getNameIndex($i);
+        foreach (array_slice($argv, 3) as $g) { if (fnmatch($g, $n)) { $want[] = $n; break; } }
+    }
+    if (!$want) { exit(0); }
+}
+$ok = $want ? $z->extractTo($argv[2], $want) : $z->extractTo($argv[2]);
+if (!$ok) {
+    $m = $z->getStatusString();
+    fwrite(STDERR, $m);
+    exit(stripos($m, "password") !== false ? 3 : (stripos($m, "not supported") !== false ? 5 : 4));
+}
+exit(0);
+'
+
+# _zip_extract ZIP ENTRY PASSWORD OUTFILE      (PASSWORD "" = none)
+# Returns 0 done, 3 wrong password, 4 damaged or unreadable, 5 a protection
+# this server cannot open. ZIP_WHY says why.
+_zip_extract() {
+    local zip="$1" entry="$2" pw="$3" out="$4" pat err rc uw
+    ZIP_WHY=""
+    err=$(mktemp)
+    # unzip reads the entry name as a pattern: [ ] * ? in a name must be escaped
+    pat=$(printf '%s' "$entry" | sed 's/[][*?\\]/\\&/g')
+    # a dummy password is ignored by an unprotected zip, and unzip never stops
+    # to ask on the terminal
+    unzip -p -P "${pw:-ciro-no-password}" "$zip" "$pat" > "$out" 2> "$err"; rc=$?
+    if [ "$rc" -le 1 ] && [ -s "$out" ]; then rm -f "$err"; return 0; fi
+    uw=$(head -n 3 "$err" | tr '\n' ' ' | sed -E 's/  +/ /g; s/^ //; s/ $//')
+    ZIP_WHY="$uw"
+    case "$uw" in *"incorrect password"*) rm -f "$err"; return 3 ;; esac
+    # unzip could not (AES, an unusual zip): libzip tries
+    ZPW="$pw" php -d display_errors=0 -r "$_ZIP_ONE_PHP" -- "$zip" "$entry" "$out" 2> "$err"; rc=$?
+    case "$rc" in
+        0) rm -f "$err"; return 0 ;;
+        3) rm -f "$err"; return 3 ;;
+    esac
+    ZIP_WHY="${uw:+$uw · }$(head -c 200 "$err" | tr '\n' ' ')"
+    rm -f "$err"
+    case "$ZIP_WHY" in
+        *"method 99"*|*"not supported"*|*"nsupported"*|*"no zip extension"*) return 5 ;;
+    esac
+    return 4
+}
+
+# _zip_extract_all ZIP PASSWORD DESTDIR [PATTERN ...]
+# The whole zip into DESTDIR, or only the entries matching the patterns.
+# Returns 0 done (nothing matching is fine), 3 wrong password, 4 failed.
+_zip_extract_all() {
+    local zip="$1" pw="$2" dest="$3" err rc
+    shift 3
+    mkdir -p "$dest"
+    err=$(mktemp)
+    unzip -q -o -P "${pw:-ciro-no-password}" -d "$dest" "$zip" "$@" >/dev/null 2> "$err"; rc=$?
+    # 11: a pattern matched nothing - an optional piece the zip does not have
+    if [ "$rc" -le 1 ] || [ "$rc" -eq 11 ]; then rm -f "$err"; return 0; fi
+    ZIP_WHY=$(head -n 3 "$err" | tr '\n' ' ' | sed -E 's/  +/ /g')
+    case "$ZIP_WHY" in *"incorrect password"*) rm -f "$err"; return 3 ;; esac
+    ZPW="$pw" php -d display_errors=0 -r "$_ZIP_ALL_PHP" -- "$zip" "$dest" "$@" 2> "$err"; rc=$?
+    ZIP_WHY="${ZIP_WHY:+$ZIP_WHY · }$(head -c 200 "$err" | tr '\n' ' ')"
+    rm -f "$err"
+    [ "$rc" -eq 0 ] && return 0
+    [ "$rc" -eq 3 ] && return 3
+    return 4
+}
+
+_zip_say_damaged() {
+    printf "    ${C_BAD}●${CR} ${C_BAD}The zip cannot be read${CR}${C_DIM}%s${CR}\n" "${ZIP_WHY:+ ($ZIP_WHY)}"
+    printf "    ${C_DIM}It is damaged or was cut short while it was copied - copy it to the server again${CR}\n"
+    printf "    ${C_DIM}(scp / SFTP in binary mode) and try again. The password is not the problem.${CR}\n"
+}
+
+_zip_say_unsupported() {
+    printf "    ${C_BAD}●${CR} ${C_BAD}This zip uses a protection this server cannot open${CR}${C_DIM}%s${CR}\n" "${ZIP_WHY:+ ($ZIP_WHY)}"
+    printf "    ${C_DIM}Save it again with a normal zip password, or without one, and try again.${CR}\n"
+}
+
+# Extract ENTRY of ZIP to OUT. A protected zip asks for its password, kept in
+# ZIP_PW so the same zip is never asked twice.
+# Returns 0 done, 1 unusable (reason printed), 2 backed out.
+_zip_open_entry() {
+    local zip="$1" entry="$2" out="$3" rc pw v
+    _zip_extract "$zip" "$entry" "$ZIP_PW" "$out"; rc=$?
+    case "$rc" in
+        0) return 0 ;;
+        4) _zip_say_damaged; return 1 ;;
+        5) _zip_say_unsupported; return 1 ;;
+    esac
+    [ -z "$ZIP_PW" ] && printf "    ${C_DIM}This zip is password-protected (the password from the bot's backup settings).${CR}\n"
+    while true; do
+        printf "  ${C_PROMPT}❯${CR} Zip password ${C_DIM}[0 = back]${CR}: "
+        read -rs pw; echo ""
+        if [ -z "$pw" ] || [ "$pw" = "0" ]; then return 2; fi
+        # as typed, then without a stray line end, then without outer spaces
+        for v in "$pw" "$(printf '%s' "$pw" | tr -d '\r\n')" "$(printf '%s' "$pw" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"; do
+            [ -n "$v" ] || continue
+            _zip_extract "$zip" "$entry" "$v" "$out"; rc=$?
+            if [ "$rc" -eq 0 ]; then ZIP_PW="$v"; return 0; fi
+            [ "$rc" -eq 3 ] || break
+        done
+        case "$rc" in
+            4) _zip_say_damaged; return 1 ;;
+            5) _zip_say_unsupported; return 1 ;;
+        esac
+        printf "    ${C_BAD}●${CR} ${C_BAD}That password does not open the zip. Try again.${CR}\n"
+    done
+}
+
+# What a zip holds, from its listing (which needs no password): the database
+# dumps (.sql) and the bot folders (index.php beside function.php).
+# Sets ZS_SQL and ZS_BOTS (a folder's prefix is "" when it sits at the top).
+# Fails when the zip cannot be listed.
+ZS_SQL=(); ZS_BOTS=(); ZS_BOT_DB=(); ZS_BOT_VER=()
+_zs_scan() {
+    local list p q fn keep
+    ZS_SQL=(); ZS_BOTS=(); ZS_BOT_DB=(); ZS_BOT_VER=()
+    list=$(unzip -Z1 "$1" 2>/dev/null) || return 1
+    [ -n "$list" ] || return 1
+    while IFS= read -r p; do
+        [ -n "$p" ] && ZS_SQL+=("$p")
+    done < <(printf '%s\n' "$list" | grep -iE '\.sql$' | grep -viE '(^|/)(vendor|node_modules)/')
+    while IFS= read -r fn; do
+        p="${fn%function.php}"
+        printf '%s\n' "$list" | grep -qxF "${p}index.php" || continue
+        case "/$p" in */vendor/*|*/vpnbot/*) continue ;; esac
+        keep=1
+        for q in "${ZS_BOTS[@]}"; do
+            # inside a folder already taken (or the zip's top, which holds everything)
+            if [ -z "$q" ] || [ "${p#"$q"}" != "$p" ]; then keep=0; break; fi
+        done
+        [ "$keep" -eq 1 ] && ZS_BOTS+=("$p")
+    done < <(printf '%s\n' "$list" | grep -E '(^|/)function\.php$' | awk -F/ '{ print NF "\t" $0 }' | sort -n | cut -f2-)
+    return 0
+}
+
+# The database and version each bot folder of the zip belongs to (needs the
+# password already known): ZS_BOT_DB, ZS_BOT_VER - empty when it says nothing.
+_zs_bot_info() {
+    local zip="$1" work="$2" i p
+    ZS_BOT_DB=(); ZS_BOT_VER=()
+    for i in "${!ZS_BOTS[@]}"; do
+        p="${ZS_BOTS[$i]}"
+        ZS_BOT_DB[$i]=""; ZS_BOT_VER[$i]=""
+        if _zip_extract "$zip" "${p}config.php" "$ZIP_PW" "$work/cfg.tmp"; then
+            ZS_BOT_DB[$i]=$(grep '^\$dbname' "$work/cfg.tmp" 2>/dev/null | head -1 | cut -d"'" -f2)
+        fi
+        if _zip_extract "$zip" "${p}version" "$ZIP_PW" "$work/ver.tmp"; then
+            ZS_BOT_VER[$i]=$(tr -cd '[:alnum:]._-' < "$work/ver.tmp" | head -c 40)
+        fi
+        rm -f "$work/cfg.tmp" "$work/ver.tmp"
+    done
+}
+
+# Is version A older than B? A bot folder without a version file is the
+# original project's, which is older than every version of this one.
+_ver_older() {
+    [ -z "$1" ] && return 0
+    [ "$1" = "$2" ] && return 1
+    [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ]
+}
+
+# What the old bot kept in its own FILES that is data, not code: the agents'
+# bots (vpnbot/<id><name>/ - their token and their data) and the API token
+# (api/hash.txt). Copied from the unpacked folder $1 into the bot $2 only
+# where the bot has nothing of that name - never over something there.
+# Sets CARRIED_AGENTS and CARRIED_TOKEN.
+_restore_carry_data() {
+    local from="$1" dir="$2" a base
+    CARRIED_AGENTS=0; CARRIED_TOKEN=0
+    for a in "${from}"vpnbot/*/; do
+        [ -d "$a" ] || continue
+        base=$(basename "$a")
+        case "$base" in Default|update) continue ;; esac
+        [ -e "$dir/vpnbot/$base" ] && continue
+        mkdir -p "$dir/vpnbot"
+        cp -a "$a" "$dir/vpnbot/$base" 2>/dev/null && CARRIED_AGENTS=$((CARRIED_AGENTS + 1))
+    done
+    if [ -f "${from}api/hash.txt" ] && [ ! -e "$dir/api/hash.txt" ]; then
+        mkdir -p "$dir/api"
+        cp -a "${from}api/hash.txt" "$dir/api/hash.txt" 2>/dev/null && CARRIED_TOKEN=1
+    fi
+    chown -R www-data:www-data "$dir/vpnbot" "$dir/api" 2>/dev/null
+    return 0
+}
+
+# Say what is being done with the old folder, then keep its data. $1 the
+# unpacked folder, $2 the bot, $3 its version in the zip, $4 the folder's name.
+_restore_old_folder() {
+    local from="$1" dir="$2" ver="$3" label="$4" cur kind
+    cur=$(get_installed_version "$dir")
+    if [ -z "$ver" ]; then kind="the original project (no version file)"
+    elif _ver_older "$ver" "$cur"; then kind="an older version (${ver})"
+    else kind="version ${ver}"; fi
+    echo ""
+    printf "    ${C_DIM}Bot folder in the zip: %s - %s${CR}\n" "${label:-/}" "$kind"
+    printf "    ${C_OK}✔${CR} ${C_OK}Its code is not restored - this bot already runs the newest files${CR}${C_DIM}%s${CR}\n" "${cur:+ ($cur)}"
+    _restore_carry_data "$from" "$dir"
+    if [ "$CARRIED_AGENTS" -gt 0 ] || [ "$CARRIED_TOKEN" -gt 0 ]; then
+        printf "    ${C_OK}✔${CR} ${C_OK}Its own data is kept:${CR}${C_DIM}%s%s${CR}\n" \
+            "$([ "$CARRIED_AGENTS" -gt 0 ] && echo " ${CARRIED_AGENTS} agent bot(s)")" \
+            "$([ "$CARRIED_TOKEN" -gt 0 ] && echo " · the API token")"
+    fi
+    printf "    ${C_DIM}Its settings come from the database; config.php stays this bot's own.${CR}\n"
+}
+
 # Turn the chosen file into an .sql to import: a plain dump is used as it
-# is, a zip has its .sql extracted into WORK (asking for the password the
-# bot's backup settings put on it, if any). Sets RESTORE_SQL and
+# is, a zip has its dump extracted into WORK (asking for the password the
+# bot's backup settings put on it, if any). A zip with several dumps says which
+# database and which bot folder each belongs to. Sets RESTORE_SQL and
 # RESTORE_ENTRY. Returns 0 ready, 1 unusable (reason printed), 2 back.
 _restore_prepare() {
-    local f="$1" work="$2" entries n pick pw rc
-    RESTORE_SQL=""; RESTORE_ENTRY=""
+    local f="$1" work="$2" n pick i m rc db fl
+    RESTORE_SQL=""; RESTORE_ENTRY=""; ZIP_PW=""
+    ZS_SQL=(); ZS_BOTS=(); ZS_BOT_DB=(); ZS_BOT_VER=()
     if ! _is_zip "$f"; then
         if ! _restore_is_sql "$f"; then
             printf "    ${C_BAD}●${CR} ${C_BAD}This file is not a database backup (.sql or .zip).${CR}\n"
@@ -1316,35 +1556,55 @@ _restore_prepare() {
         fi
         RESTORE_SQL="$f"; return 0
     fi
-    entries=$(unzip -Z1 "$f" 2>/dev/null | grep -iE '\.sql$')
-    if [ -z "$entries" ]; then
+    if ! _zs_scan "$f"; then
+        ZIP_WHY="its file list cannot be read"; _zip_say_damaged
+        return 1
+    fi
+    n=${#ZS_SQL[@]}
+    if [ "$n" -eq 0 ]; then
         printf "    ${C_BAD}●${CR} ${C_BAD}This zip holds neither a database dump (.sql) nor a bot folder - it is not a backup.${CR}\n"
         return 1
     fi
-    n=$(printf '%s\n' "$entries" | wc -l)
-    RESTORE_ENTRY=$(printf '%s\n' "$entries" | head -1)
-    if [ "$n" -gt 1 ]; then
-        printf "    ${C_DIM}This zip holds %d .sql files:${CR}\n" "$n"
-        printf '%s\n' "$entries" | awk -v k="$C_KEY" -v t="$C_TXT" -v r="$CR" '{printf "    %s[%d]%s %s%s%s\n", k, NR, r, t, $0, r}'
+    pick=1
+    if [ "$n" -eq 1 ]; then
+        RESTORE_ENTRY="${ZS_SQL[0]}"
+        _zip_open_entry "$f" "$RESTORE_ENTRY" "$work/restore.sql"; rc=$?
+        [ "$rc" -ne 0 ] && return "$rc"
+    else
+        # the password first (on the first dump), then every dump's header so the
+        # list can say which database it is and which bot folder it goes with
+        _zip_open_entry "$f" "${ZS_SQL[0]}" "$work/hdr_1.sql"; rc=$?
+        [ "$rc" -ne 0 ] && return "$rc"
+        m=$n; [ "$m" -gt 6 ] && m=6
+        for ((i = 2; i <= m; i++)); do
+            _zip_extract "$f" "${ZS_SQL[$((i - 1))]}" "$ZIP_PW" "$work/hdr_$i.sql" || rm -f "$work/hdr_$i.sql"
+        done
+        _zs_bot_info "$f" "$work"
+        printf "    ${C_DIM}This zip holds %d database dumps:${CR}\n" "$n"
+        for ((i = 1; i <= n; i++)); do
+            db=""; fl=""
+            [ -f "$work/hdr_$i.sql" ] && db=$(_sql_source_db < "$work/hdr_$i.sql")
+            if [ -n "$db" ]; then
+                for m in "${!ZS_BOTS[@]}"; do
+                    [ "${ZS_BOT_DB[$m]}" = "$db" ] && { fl="${ZS_BOTS[$m]:-/}"; break; }
+                done
+            fi
+            printf "    ${C_KEY}[%d]${CR} ${C_TXT}%s${CR}${C_DIM}%s%s${CR}\n" "$i" "${ZS_SQL[$((i - 1))]}" \
+                "${db:+  · database $db}" "${fl:+  · bot folder $fl}"
+        done
         printf "  ${C_PROMPT}❯${CR} Which one? ${C_DIM}[1-%d, 0 = back]${CR}: " "$n"
         read -r pick
         [[ "$pick" =~ ^[0-9]+$ ]] && [ "$pick" -ge 1 ] && [ "$pick" -le "$n" ] || return 2
-        RESTORE_ENTRY=$(printf '%s\n' "$entries" | sed -n "${pick}p")
+        RESTORE_ENTRY="${ZS_SQL[$((pick - 1))]}"
+        if [ -f "$work/hdr_$pick.sql" ]; then
+            mv -f "$work/hdr_$pick.sql" "$work/restore.sql"
+        else
+            _zip_open_entry "$f" "$RESTORE_ENTRY" "$work/restore.sql"; rc=$?
+            [ "$rc" -ne 0 ] && return "$rc"
+        fi
+        rm -f "$work"/hdr_*.sql
     fi
-    # A dummy password is ignored by an unprotected zip and simply fails on a
-    # protected one - unzip never stops to ask on the terminal this way.
-    unzip -p -P "ciro-no-password" "$f" "$RESTORE_ENTRY" > "$work/restore.sql" 2>/dev/null
-    rc=$?
-    if [ "$rc" -ne 0 ]; then
-        printf "    ${C_DIM}This zip is password-protected (the password from the bot's backup settings).${CR}\n"
-        while true; do
-            printf "  ${C_PROMPT}❯${CR} Zip password ${C_DIM}[0 = back]${CR}: "
-            read -rs pw; echo ""
-            if [ -z "$pw" ] || [ "$pw" = "0" ]; then return 2; fi
-            unzip -p -P "$pw" "$f" "$RESTORE_ENTRY" > "$work/restore.sql" 2>/dev/null && break
-            printf "    ${C_BAD}●${CR} ${C_BAD}Wrong password, or the zip is damaged. Try again.${CR}\n"
-        done
-    fi
+    [ "${#ZS_BOTS[@]}" -gt 0 ] && [ "${#ZS_BOT_DB[@]}" -eq 0 ] && _zs_bot_info "$f" "$work"
     if ! _restore_is_sql "$work/restore.sql"; then
         printf "    ${C_BAD}●${CR} ${C_BAD}%s inside the zip is not a database dump.${CR}\n" "$RESTORE_ENTRY"
         return 1
@@ -1485,11 +1745,16 @@ _restore_db() {
         else _kv "Made from" "${C_DIM}${owner} (${src})${CR}"; fi
     fi
     _kv "Into" "${C_KEY}${dbname}${CR} ${C_DIM}(${name})${CR}"
+    local zi
+    for zi in "${!ZS_BOTS[@]}"; do
+        _kv "Folder" "${C_DIM}${ZS_BOTS[$zi]:-/}${ZS_BOT_DB[$zi]:+  · database ${ZS_BOT_DB[$zi]}}  · $([ -n "${ZS_BOT_VER[$zi]}" ] && echo "version ${ZS_BOT_VER[$zi]}" || echo "original project")${CR}"
+    done
     echo ""
     if [ -n "$src" ] && [ "$src" != "$dbname" ]; then
         printf "    ${C_WARN}!${CR} ${C_WARN}This backup was made from another database (%s).${CR}\n" "$src"
     fi
     printf "    ${C_WARN}!${CR} ${C_WARN}Everything in %s is replaced. A copy of it is saved first.${CR}\n" "$dbname"
+    [ "${#ZS_BOTS[@]}" -gt 0 ] && printf "    ${C_DIM}Only the database is restored; the bot's files are not overwritten.${CR}\n"
     printf "  ${C_PROMPT}❯${CR} Continue? ${C_DIM}[y/N]${CR}: "
     local confirm; read -r confirm
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
@@ -1525,7 +1790,6 @@ _restore_db() {
         fi
         rm -rf "$work"; return 1
     fi
-    rm -rf "$work"
     # An older backup gets the columns and tables this version expects
     run_step "Updating tables for this version" "cd '$dir' && php table.php" || show_step_error
     chown -R www-data:www-data "$dir" 2>/dev/null
@@ -1533,7 +1797,34 @@ _restore_db() {
     echo ""
     printf "    ${C_OK}✔${CR} ${C_OK}Restored into %s (%s).${CR}\n" "$dbname" "$name"
     printf "    ${C_DIM}The data it had before is kept in %s${CR}\n" "$safe"
+    _restore_zip_folders "$file" "$dir" "$src" "$work"
+    rm -rf "$work"
     return 0
+}
+
+# The bot folder a backup zip carries along with its database. Only the
+# database is restored from it: a folder of an older version (or of the
+# original project, which has no version file) would put old code back, and
+# this bot already runs the newest. What the folder keeps that is data and not
+# code is kept - see _restore_carry_data.
+_restore_zip_folders() {
+    local file="$1" dir="$2" src="$3" work="$4" i k=-1 p
+    _is_zip "$file" || return 0
+    [ "${#ZS_BOTS[@]}" -gt 0 ] || return 0
+    for i in "${!ZS_BOTS[@]}"; do
+        if [ -n "$src" ] && [ "${ZS_BOT_DB[$i]}" = "$src" ]; then k=$i; break; fi
+    done
+    if [ "$k" -lt 0 ] && [ "${#ZS_BOTS[@]}" -eq 1 ]; then k=0; fi
+    if [ "$k" -lt 0 ]; then
+        printf "    ${C_DIM}The zip also holds bot folders, none made from this database - they were left alone.${CR}\n"
+        return 0
+    fi
+    p="${ZS_BOTS[$k]}"
+    if _zip_extract_all "$file" "$ZIP_PW" "$work/old" "${p}vpnbot/*" "${p}api/hash.txt"; then
+        _restore_old_folder "$work/old/${p}" "$dir" "${ZS_BOT_VER[$k]}" "$p"
+    else
+        printf "    ${C_WARN}!${CR} ${C_WARN}The bot folder in the zip could not be read, so its own files were not kept.${CR}\n"
+    fi
 }
 
 # The bot's folder zip (botfolder_*.zip) over DIR: unpacked outside /root
@@ -1545,28 +1836,33 @@ _restore_db() {
 # folder back. Returns 0 done or cancelled, 1 failed, 2 backed out.
 _restore_files() {
     local file="$1" dir="$2" name="$3" dbname="$4"
-    local prefix from work rc pw src owner confirm tag snap bad c
+    local prefix from work rc src owner confirm tag snap bad c ver cur
     prefix=$(_restore_bot_prefix "$file") || return 1
     work=$(mktemp -d /var/tmp/ciro_restore.XXXXXX)
     from="$work/new/${prefix}"
     echo ""
-    if unzip -Z -v "$file" "${prefix}index.php" 2>/dev/null | grep -q 'file security status:[[:space:]]*encrypted'; then
-        printf "    ${C_DIM}This zip is password-protected (the password from the bot's backup settings).${CR}\n"
-        while true; do
-            printf "  ${C_PROMPT}❯${CR} Zip password ${C_DIM}[0 = back]${CR}: "
-            read -rs pw; echo ""
-            if [ -z "$pw" ] || [ "$pw" = "0" ]; then rm -rf "$work"; return 2; fi
-            rm -rf "$work/new"
-            unzip -q -o -P "$pw" "$file" -d "$work/new" >/dev/null 2>&1; rc=$?
-            [ "$rc" -le 1 ] && [ -s "${from}index.php" ] && break
-            printf "    ${C_BAD}●${CR} ${C_BAD}Wrong password, or the zip is damaged. Try again.${CR}\n"
-        done
-    else
-        unzip -q -o "$file" -d "$work/new" >/dev/null 2>&1; rc=$?
-    fi
-    if [ "$rc" -gt 1 ] || [ ! -s "${from}index.php" ]; then
-        printf "    ${C_BAD}●${CR} ${C_BAD}The zip could not be unpacked - it may be damaged.${CR}\n"
+    ZIP_PW=""
+    # the password (if the zip has one) is asked here, once, on index.php
+    _zip_open_entry "$file" "${prefix}index.php" "$work/probe.tmp"; rc=$?
+    if [ "$rc" -ne 0 ]; then rm -rf "$work"; return "$rc"; fi
+    rm -f "$work/probe.tmp"
+    _zip_extract_all "$file" "$ZIP_PW" "$work/new"; rc=$?
+    if [ "$rc" -ne 0 ] || [ ! -s "${from}index.php" ]; then
+        _zip_say_damaged
         rm -rf "$work"; return 1
+    fi
+    # A folder of an older version - or of the original project, which has no
+    # version file - is not laid over this bot's newer files; only what is its
+    # own data is kept from it.
+    ver=""
+    [ -f "${from}version" ] && ver=$(tr -cd '[:alnum:]._-' < "${from}version" | head -c 40)
+    cur=$(get_installed_version "$dir")
+    if _ver_older "$ver" "$cur"; then
+        _sec "Restore into ${name}"
+        _kv "File" "${C_DIM}$(basename "$file")${CR} ${C_DIM}($(du -h "$file" 2>/dev/null | cut -f1), the bot's folder)${CR}"
+        _kv "Into" "${C_KEY}${dir}${CR} ${C_DIM}(${name})${CR}"
+        _restore_old_folder "$from" "$dir" "$ver" "$prefix"
+        rm -rf "$work"; return 0
     fi
 
     src=$(grep '^\$dbname' "${from}config.php" 2>/dev/null | cut -d"'" -f2)

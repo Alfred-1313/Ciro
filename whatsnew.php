@@ -652,4 +652,18 @@ return [
             . "• The command on the server is now <code>Ciro</code> (<code>Ciro update</code>, <code>Ciro backup</code>, ...) - the C has to be capital.\n"
             . "• On servers installed by an earlier copy of this script, the bot folder (<code>/var/www/html/Ciro</code>), the script's settings (<code>/root/Ciro</code>) and the backups (<code>/root/Ciro-backups</code>) move to this name automatically; the webhook, the database and the settings are not touched.</blockquote>",
     ],
+    [
+        'n' => 49,
+        'date' => '2026-10-26',
+        'fa' => "<blockquote>♻️ <b>بازیابی بکاپ در اسکریپت سرور درست و هوشمندتر شد</b>\n"
+            . "• زیپ بکاپی که با رمز ساخته شده بود گاهی با پیام «رمز اشتباه است یا زیپ خراب است» باز نمی‌شد، حتی با رمز درست: زیپ‌هایی که با رمز AES (مثل 7-Zip) قفل شده‌اند را ابزار معمولی unzip اصلاً نمی‌خواند. حالا این زیپ‌ها هم باز می‌شوند و اگر زیپ واقعاً خراب باشد دلیلش را می‌گوید.\n"
+            . "• اسکریپت داخل زیپ تشخیص می‌دهد کدام فایل دیتابیس است و کدام پوشه ربات، و پوشه را به دیتابیسش وصل می‌کند.\n"
+            . "• از زیپ فقط دیتابیس ریخته می‌شود و بعدش جدول‌ها به نسخه فعلی آپدیت می‌شوند؛ تنظیمات داخل دیتابیس سر جایش می‌ماند.\n"
+            . "• پوشه‌ای که برای نسخه قدیمی (ربات اصلی، بدون فایل نسخه) باشد روی ربات فعلی ریخته نمی‌شود؛ ربات همان آخرین نسخه می‌ماند. فقط داده‌های خود پوشه (ربات‌های نماینده و توکن API) نگه داشته می‌شود و فایل config.php دست نمی‌خورد.</blockquote>",
+        'en' => "<blockquote>♻️ <b>Restoring a backup with the server script is fixed and smarter</b>\n"
+            . "• A password-protected backup zip sometimes failed with «wrong password, or the zip is damaged» even with the right password: a zip locked with AES (7-Zip, for example) cannot be read by the usual unzip tool at all. These zips open now, and if a zip really is damaged the script says why.\n"
+            . "• The script tells which file in the zip is a database and which is a bot folder, and pairs each folder with its database.\n"
+            . "• Only the database is restored from a zip, and its tables are then brought up to this version; the settings in the database stay as they are.\n"
+            . "• A folder of an old version (the original project, no version file) is not laid over the current bot; the bot keeps the newest files. Only the folder's own data (agent bots and the API token) is kept, and config.php is never touched.</blockquote>",
+    ],
 ];
