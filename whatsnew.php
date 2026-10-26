@@ -682,4 +682,16 @@ return [
             . "• «Delete the bot's services from the panels»: only services customers bought from this bot are removed from the VPN panel; accounts you made in a panel yourself are left alone. You confirm by typing the word «DELETE». It runs one by one in the background, shows its progress, can be stopped, retries the failed ones and sends its final report to the bot.\n"
             . "• In the web panel (the 🧹 Clean-up and reset menu, and a link above the user list) and in the bot: 👤 User management ← 🧹 (admins only).</blockquote>",
     ],
+    [
+        'n' => 51,
+        'date' => '2026-10-26',
+        'fa' => "<blockquote>🔢 <b>نسخهٔ دستور Ciro و نسخهٔ ربات یکی شد</b>\n"
+            . "• دستور <code>Ciro</code> حالا نسخهٔ ربات را از همان فایلی نشان می‌دهد که صفحهٔ آپدیت ربات می‌خواند؛ کنارش هم نوشته که این جدیدترین نسخهٔ گیت‌هاب هست یا نسخهٔ تازه‌تری آمده.\n"
+            . "• هنگام آپدیت یا نصب، به‌جای «Latest» شمارهٔ نسخه‌ای که گرفته می‌شود نوشته می‌شود.\n"
+            . "• دستور تازهٔ <code>Ciro version</code>: نسخهٔ هر ربات روی سرور و جدیدترین نسخهٔ گیت‌هاب را می‌نویسد.</blockquote>",
+        'en' => "<blockquote>🔢 <b>The Ciro command and the bot now show the same version</b>\n"
+            . "• The <code>Ciro</code> command reads the bot's version from the very file the bot's update screen reads, and says next to it whether that is the newest on GitHub or a newer one is out.\n"
+            . "• While updating or installing, the number of the version being fetched is shown instead of «Latest».\n"
+            . "• New command <code>Ciro version</code>: prints each bot's version on the server and the newest one on GitHub.</blockquote>",
+    ],
 ];

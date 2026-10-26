@@ -235,7 +235,7 @@ function self_update_script() {
     # watcher gets its new copy the normal way, from the package update_bot
     # unpacks (step 9), not from here.
     for _a in "$@"; do
-        case "$_a" in -h|--help|--version|selfupdate-watch) return 0 ;; esac
+        case "$_a" in -h|--help|-v|--version|version|selfupdate-watch) return 0 ;; esac
     done
     local MASTER_PATH="/root/install.sh"
     local BIN_LINK="/usr/local/bin/Ciro"
@@ -318,7 +318,7 @@ self_update_script "$@"
 CIRO_PREREQS="zip"
 function ensure_prerequisites() {
     for _a in "$@"; do
-        case "$_a" in -h|--help|--version|selfupdate-watch) return 0 ;; esac
+        case "$_a" in -h|--help|-v|--version|version|selfupdate-watch) return 0 ;; esac
     done
     local missing="" t
     for t in $CIRO_PREREQS; do
@@ -809,6 +809,33 @@ get_installed_version() {
     fi
 }
 
+# The newest version on GitHub: the very `version` file on master that the
+# bot's own update screen compares with, so the command and the bot always
+# name the same number. Cached ten minutes in /root/Ciro ("fresh" skips the
+# cache); a failed ask keeps the last answer and is tried again a minute
+# later. Prints nothing when it is not known.
+github_latest_version() {
+    local cache="/root/Ciro/latest_version" now at="" v="" body
+    now=$(date +%s)
+    if [ -f "$cache" ]; then
+        read -r at v < "$cache" 2>/dev/null
+        case "$at" in ''|*[!0-9]*) at=0; v="" ;; esac
+        if [ "${1:-}" != "fresh" ] && [ $((now - at)) -lt 600 ]; then
+            echo "$v"
+            return 0
+        fi
+    fi
+    body=$(curl -fsSL --connect-timeout 3 --max-time 4 "https://raw.githubusercontent.com/${GIT_REPO}/master/version" 2>/dev/null | tr -d ' \t\r\n')
+    mkdir -p /root/Ciro 2>/dev/null
+    if [[ "$body" =~ ^[0-9][0-9A-Za-z._-]{0,20}$ ]]; then
+        echo "$now $body" > "$cache" 2>/dev/null
+        echo "$body"
+    else
+        echo "$((now - 540)) $v" > "$cache" 2>/dev/null
+        echo "$v"
+    fi
+}
+
 # Choose which source to download.
 # Sets globals: SRC_ZIP_URL, SRC_LABEL
 # There is one source: the current code on master. Release tags used to be an
@@ -816,8 +843,12 @@ get_installed_version() {
 # behind master, so "latest stable" quietly installed old code. No prompt now.
 # Returns: 0 = chosen (it cannot fail)
 choose_source() {
+    local latest
+    latest=$(github_latest_version fresh)
     SRC_ZIP_URL="https://github.com/${GIT_REPO}/archive/refs/heads/master.zip"
+    # named by its number, the way the bot names it
     SRC_LABEL="Latest"
+    [ -n "$latest" ] && SRC_LABEL="version ${latest}"
     return 0
 }
 
@@ -840,14 +871,60 @@ get_server_ip() {
 # The three bot sections take the bot's directory; version_section also
 # takes the block's title.
 version_section() {
-    local inst
+    local inst latest line
     inst=$(get_installed_version "$1")
     _sec "${2:-Bot}"
     if [ -n "$inst" ]; then
-        _kv "Version" "$(_dot ok) ${C_OK}${inst}${CR}"
+        line="$(_dot ok) ${C_OK}${inst}${CR}"
+        # next to what GitHub has, as the bot's update screen puts it
+        latest=$(github_latest_version)
+        if [ -n "$latest" ]; then
+            if _ver_older "$inst" "$latest"; then
+                line="${line}  ${C_WARN}→ ${latest} is out · choose Update${CR}"
+            else
+                line="${line}  ${C_DIM}· the newest on GitHub${CR}"
+            fi
+        fi
+        _kv "Version" "$line"
+    elif [ -f "$1/config.php" ]; then
+        _kv "Version" "$(_dot warn) ${C_WARN}original project (no version file)${CR}"
     else
         _kv "Version" "$(_dot none) ${C_DIM}not installed${CR}"
     fi
+}
+
+# `Ciro version`: each bot's version and the newest on GitHub, in the same
+# words the dashboard and the bot's update screen use.
+print_version() {
+    local rows="" dir name ver latest any=0 older=0
+    latest=$(github_latest_version)
+    if [ -f "$BOTS_REGISTRY" ] && command -v jq >/dev/null 2>&1; then
+        rows=$(jq -r '.[] | "\(.dir)\t\(.name)"' "$BOTS_REGISTRY" 2>/dev/null)
+    fi
+    [ -z "$rows" ] && rows="${BOT_DIR_DEFAULT}"$'\t'"Bot"
+    echo
+    while IFS=$'\t' read -r dir name; do
+        [ -d "$dir" ] || continue
+        ver=$(get_installed_version "$dir")
+        if [ -n "$ver" ]; then
+            _kv "${name:-Bot}" "${C_OK}${ver}${CR} ${C_DIM}${dir}${CR}"
+            [ -n "$latest" ] && _ver_older "$ver" "$latest" && older=1
+        elif [ -f "$dir/config.php" ]; then
+            _kv "${name:-Bot}" "${C_WARN}original project (no version file)${CR} ${C_DIM}${dir}${CR}"
+        else
+            continue
+        fi
+        any=1
+    done <<< "$rows"
+    [ "$any" = 0 ] && _kv "Bot" "${C_DIM}not installed${CR}"
+    if [ -z "$latest" ]; then
+        _kv "GitHub" "${C_DIM}could not be reached${CR}"
+    elif [ "$older" = 1 ]; then
+        _kv "GitHub" "${C_WARN}${latest}${CR} ${C_DIM}· newer than the bot · run${CR} ${C_KEY}Ciro update${CR}"
+    else
+        _kv "GitHub" "${C_OK}${latest}${CR} ${C_DIM}· the newest${CR}"
+    fi
+    echo
 }
 
 bot_section() {
@@ -3834,7 +3911,11 @@ function update_bot() {
     _sec "Ready to update"
     _kv "Bot" "${C_KEY}${BOT_LABEL}${CR}"
     _kv "Installed" "${C_OK}${flavour}${CR}"
-    _kv "Target" "${C_KEY}${TARGET_LABEL}${CR}"
+    if [ -n "$current" ] && [ "version $current" = "$TARGET_LABEL" ]; then
+        _kv "Target" "${C_KEY}${TARGET_LABEL}${CR} ${C_DIM}(the one installed - its files are put in again)${CR}"
+    else
+        _kv "Target" "${C_KEY}${TARGET_LABEL}${CR}"
+    fi
     echo ""
     local confirm
     if [ -n "$CIRO_NONINTERACTIVE" ]; then
@@ -5585,6 +5666,7 @@ print_usage() {
     import             Restore the database from a .sql or .zip backup, or the
                        bot's files from its botfolder zip (beta). What it
                        replaces is kept in /root/Ciro-backups/ first.
+    version            Show the bot's version and the newest one on GitHub
     menu               Open the interactive menu (default)
 
   Options:
@@ -5876,6 +5958,7 @@ process_arguments() {
     # First non-flag token is the command
     case "$1" in
         install|update|remove|migrate|renew|backup|import|addbot|menu|selfupdate-watch) cmd="$1"; shift ;;
+        version|-v|--version) print_version; exit 0 ;;
         -h|--help) print_usage; exit 0 ;;
         "") cmd="menu" ;;
         --*) cmd="menu" ;;            # only flags given -> menu, but still parse flags
@@ -5915,7 +5998,7 @@ process_arguments() {
 # A server set up under the old name has its files renamed before anything
 # reads a path (the watcher does it from its own tick, under its own lock).
 case "${1:-}" in
-    -h|--help|--version|selfupdate-watch) ;;
+    -h|--help|-v|--version|version|selfupdate-watch) ;;
     *)
         _legacy_migrate
         if [ $? -eq 2 ] && _legacy_state_left; then

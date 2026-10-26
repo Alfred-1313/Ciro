@@ -30,6 +30,7 @@ After installing, manage it with the `Ciro` command (capital C — Linux command
 | --- | --- |
 | `Ciro` | Open the menu |
 | `Ciro update` | Get the newest version; your data and `config.php` are kept |
+| `Ciro version` | Show the bot's version and the newest one on GitHub |
 | `Ciro backup` | Send a database backup to Telegram |
 | `Ciro renew` | Reissue the SSL certificate |
 | `Ciro --help` | Every command and option |

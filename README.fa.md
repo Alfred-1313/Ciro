@@ -36,6 +36,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/Alfred-1313/Ciro/master/instal
 | --- | --- |
 | `Ciro` | باز کردن منو |
 | `Ciro update` | دریافت آخرین نسخه؛ اطلاعات شما و فایل `config.php` حفظ می‌شود |
+| `Ciro version` | نمایش نسخهٔ ربات و جدیدترین نسخهٔ گیت‌هاب |
 | `Ciro backup` | ارسال نسخهٔ پشتیبان پایگاه‌داده به تلگرام |
 | `Ciro renew` | صدور مجدد گواهی SSL |
 | `Ciro --help` | فهرست همهٔ دستورها و گزینه‌ها |
