@@ -251,17 +251,7 @@ if (!function_exists('um_tab')) {
     // timeout left it deleted here and alive in the panel.
     function um_panel_remove(array $inv)
     {
-        global $ManagePanel;
-        $r = $ManagePanel->RemoveUser($inv['Service_location'], $inv['username']);
-        if (is_array($r) && ($r['status'] ?? '') === 'successful') {
-            return [true, ''];
-        }
-        $msg = is_array($r) ? ($r['msg'] ?? $r) : 'no answer';
-        $msg = is_string($msg) || is_numeric($msg) ? (string) $msg : json_encode($msg, JSON_UNESCAPED_UNICODE);
-        if (preg_match('/not\s*found|no such|does not exist|doesn.t exist|404/i', $msg)) {
-            return [true, ''];
-        }
-        return [false, mb_substr($msg, 0, 160)];
+        return clean_panel_remove($inv);
     }
     // a user's services that still exist: every invoice that is not unpaid and
     // not already removed (removebyadmin, removebyuser, removeTime, ...)
@@ -415,6 +405,8 @@ if (!function_exists('um_tab')) {
         }
         if ($canCustomize) {
             $rows[] = [['text' => $textbotlang['Admin']['UserMgmt']['assignBtn'], 'callback_data' => "svcgive|start", 'style' => 'primary']];
+            // 🧹 balances / referrals / the bot's services, to zero (cleanup.php)
+            $rows[] = [['text' => $textbotlang['Admin']['CleanTools']['btn'], 'callback_data' => "cln|menu|" . clean_scope_code($lang), 'style' => 'danger']];
         }
         if ($canCustomize) {
             $rows[] = [['text' => $textbotlang['Admin']['UserMgmt']['customizeBtn'], 'callback_data' => "bt_group|{$lang}|usermgmt"]];
@@ -7923,6 +7915,98 @@ if (preg_match('/^renamereset-([a-z]{2})$/', $datain, $rn_m) && $adminrulecheck[
     return;
 }
 
+//----------------[  👤 🧹 پاکسازی و ریست  ]----------------
+// balances to zero (with a way back), every زیرمجموعه to zero, and the services
+// the bot sold taken out of their panels (a run that goes on in the
+// background, then reports). Each change asks once more, and the removal asks
+// for a word. Only an administrator; the same tools are in the web panel.
+if (preg_match('/^cln\|(menu|bal|ref|svc|undo|job)\|(all|[a-z]{2})(?:\|(go|ask|stop|retry))?$/', $datain, $cln_m) && $adminrulecheck['rule'] == "administrator") {
+    $cln_t = $textbotlang['Admin']['CleanTools'];
+    $cln_scope = clean_scope_from_code($cln_m[2]);
+    $cln_code = clean_scope_code($cln_scope);
+    $cln_act = $cln_m[3] ?? '';
+    $cln_show = function ($screen) use ($from_id, $message_id) {
+        Editmessagetext($from_id, $message_id, $screen[0], $screen[1], 'HTML');
+    };
+    $cln_done = fn($text, $back = null) => Editmessagetext($from_id, $message_id, $text, clean_kb($back ?? clean_back_rows($cln_code, $cln_t)), 'HTML');
+    if ($user['step'] === 'cln_svc_word') {
+        step('home', $from_id);
+    }
+    if ($cln_m[1] === 'menu') {
+        $cln_show(clean_menu_screen($cln_scope, $textbotlang));
+    } elseif ($cln_m[1] === 'bal') {
+        if ($cln_act === 'go') {
+            [$cln_n] = clean_balance_zero($cln_scope, 'bot:' . $from_id);
+            $cln_done($cln_n > 0 ? strtr($cln_t['balDone'], ['{n}' => number_format($cln_n)]) : $cln_t['balNone']);
+        } else {
+            $cln_show(clean_balance_screen($cln_scope, $textbotlang));
+        }
+    } elseif ($cln_m[1] === 'undo') {
+        if ($cln_act === 'go') {
+            [$cln_n] = clean_balance_undo();
+            $cln_done($cln_n > 0 ? strtr($cln_t['undoDone'], ['{n}' => number_format($cln_n)]) : $cln_t['undoNone']);
+        } else {
+            $cln_show(clean_undo_screen($textbotlang));
+        }
+    } elseif ($cln_m[1] === 'ref') {
+        if ($cln_act === 'go') {
+            $cln_n = clean_ref_reset($cln_scope);
+            $cln_done(strtr($cln_t['refDone'], ['{n}' => number_format($cln_n)]));
+        } else {
+            $cln_show(clean_ref_screen($cln_scope, $textbotlang));
+        }
+    } elseif ($cln_m[1] === 'svc') {
+        if ($cln_act === 'ask') {
+            // the word comes next, as a message
+            $cln_p = clean_svc_preview($cln_scope);
+            if (clean_job_active() !== null || $cln_p['services'] === 0) {
+                $cln_show(clean_svc_screen($cln_scope, $textbotlang));
+            } else {
+                savedata("clear", "cln_scope", $cln_code);
+                step('cln_svc_word', $from_id);
+                $cln_done(strtr($cln_t['svcWord'], ['{n}' => number_format($cln_p['services'])]), [[['text' => $cln_t['cancelBtn'], 'callback_data' => "cln|menu|{$cln_code}", 'style' => 'primary']]]);
+            }
+        } else {
+            $cln_show(clean_svc_screen($cln_scope, $textbotlang));
+        }
+    } elseif ($cln_m[1] === 'job') {
+        if ($cln_act === 'stop') {
+            clean_svc_stop();
+            $cln_job = clean_job_current();
+            if ($cln_job !== null) {
+                clean_job_notify((int) $cln_job['id']);
+            }
+        } elseif ($cln_act === 'retry') {
+            if (clean_svc_retry() > 0) {
+                bulkgift_kick();
+            }
+        }
+        $cln_show(clean_job_screen($cln_scope, $textbotlang));
+    }
+    return;
+}
+// ...and the word that confirms the removal of the bot's services
+if ($user['step'] === 'cln_svc_word' && $datain === '' && $adminrulecheck['rule'] == "administrator"
+    && !in_array($text, [$textbotlang['Admin']['backAdminBtn'], $textbotlang['Admin']['backMenuBtn']], true)) {
+    $cln_t = $textbotlang['Admin']['CleanTools'];
+    $cln_d = json_decode((string) $user['Processing_value'], true) ?: [];
+    $cln_code = in_array(($cln_d['cln_scope'] ?? ''), array_merge(['all'], panel_langs()), true) ? $cln_d['cln_scope'] : 'all';
+    $cln_scope = clean_scope_from_code($cln_code);
+    if (!clean_word_ok($text)) {
+        sendmessage($from_id, $cln_t['svcWordBad'], clean_kb([[['text' => $cln_t['cancelBtn'], 'callback_data' => "cln|menu|{$cln_code}", 'style' => 'primary']]]), 'HTML');
+        return;
+    }
+    step('home', $from_id);
+    [$cln_job, $cln_why] = clean_svc_start($cln_scope, 'bot:' . $from_id, (string) $from_id);
+    if ($cln_job > 0) {
+        bulkgift_kick();
+        $cln_run = clean_job_current();
+        sendmessage($from_id, strtr($cln_t['svcStarted'], ['{n}' => number_format((int) ($cln_run['total'] ?? 0))]), clean_kb([[['text' => $cln_t['jobBtn'], 'callback_data' => "cln|job|{$cln_code}", 'style' => 'primary']], ...clean_back_rows($cln_code, $cln_t)]), 'HTML');
+    } else {
+        sendmessage($from_id, $cln_why === 'busy' ? $cln_t['svcBusy'] : $cln_t['svcNone'], clean_kb(clean_back_rows($cln_code, $cln_t)), 'HTML');
+    }
+    return;
+}
 //----------------[  👤 🔗 واگذاری سرویس پنل به کاربر  ]----------------
 // panel -> the account's username (checked on the panel) -> who gets it: one
 // customer, several, or every customer of this 👤 tab -> confirm. An account

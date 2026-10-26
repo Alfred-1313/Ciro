@@ -666,4 +666,20 @@ return [
             . "• Only the database is restored from a zip, and its tables are then brought up to this version; the settings in the database stay as they are.\n"
             . "• A folder of an old version (the original project, no version file) is not laid over the current bot; the bot keeps the newest files. Only the folder's own data (agent bots and the API token) is kept, and config.php is never touched.</blockquote>",
     ],
+    [
+        'n' => 50,
+        'date' => '2026-10-26',
+        'fa' => "<blockquote>🧹 <b>پاکسازی و ریست: شروع تازه برای فروشگاه</b>\n"
+            . "• داشبورد پنل وب: روی «درآمد کل»، «سرویس فعال» و «تراکنش امروز» دکمهٔ ↺ هست. عدد از همین الان دوباره شمرده می‌شود؛ هیچ پرداخت یا سفارشی پاک نمی‌شود و با «بازگرداندن عدد قبلی» همان عدد قبلی برمی‌گردد.\n"
+            . "• «صفر کردن موجودی کاربران»: موجودی همه (و کیف‌پول‌های ارز دیگرشان) صفر می‌شود، برای یک زبان یا همهٔ زبان‌ها. مقدارها اول ذخیره می‌شود و «برگرداندن موجودی‌ها» پسشان می‌دهد؛ پولی که بعد از صفر کردن آمده سر جایش می‌ماند.\n"
+            . "• «صفر کردن زیرمجموعه‌ها»: دعوت‌ها، شمارش‌ها، هدیهٔ عضویتِ دریافت‌نشده و پیشرفت اکانت رایگان 🎁 از نو شروع می‌شود. تنظیمات پورسانت دست نمی‌خورد.\n"
+            . "• «حذف سرویس‌های ربات از پنل»: فقط سرویس‌هایی که کاربرها از همین ربات خریده‌اند از پنل VPN پاک می‌شوند؛ اکانت‌هایی که خودت در پنل ساخته‌ای دست نمی‌خورند. برای تأیید باید کلمهٔ «حذف» را بنویسی. کار یکی‌یکی در پس‌زمینه انجام می‌شود، پیشرفتش دیده می‌شود، می‌شود متوقفش کرد، ناموفق‌ها را دوباره امتحان کرد و گزارش پایانی به ربات می‌آید.\n"
+            . "• هم در پنل وب (منوی 🧹 پاکسازی و ریست، و لینک بالای لیست کاربران) و هم در ربات: 👤 مدیریت کاربر ← 🧹 (فقط ادمین).</blockquote>",
+        'en' => "<blockquote>🧹 <b>Clean-up and reset: a fresh start for the shop</b>\n"
+            . "• Web panel dashboard: «total income», «active services» and «today's transactions» each have a ↺ button. The figure counts again from now; no payment or order is deleted, and «restore the old figure» brings the old count back.\n"
+            . "• «Zero all balances»: every balance (and the wallets in other currencies) goes to zero, for one language or all of them. The amounts are saved first and «give balances back» returns them; money that came in after the reset stays.\n"
+            . "• «Zero all referrals»: invites, counts, join gifts not yet taken and the free-config 🎁 progress start over. Commission settings are not touched.\n"
+            . "• «Delete the bot's services from the panels»: only services customers bought from this bot are removed from the VPN panel; accounts you made in a panel yourself are left alone. You confirm by typing the word «DELETE». It runs one by one in the background, shows its progress, can be stopped, retries the failed ones and sends its final report to the bot.\n"
+            . "• In the web panel (the 🧹 Clean-up and reset menu, and a link above the user list) and in the bot: 👤 User management ← 🧹 (admins only).</blockquote>",
+    ],
 ];

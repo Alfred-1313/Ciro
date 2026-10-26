@@ -18,6 +18,15 @@ $drU = dr_cond($dr, dr_secs('register'), $dpU);
 $drI = dr_cond($dr, dr_secs('i.time_sell'), $dpI);
 $drP = dr_cond($dr, dr_pay_secs('p.time'), $dpP);
 
+// 🧹 a figure the owner started over (cleanup.php): counted from that moment on,
+// nothing deleted. One moment for every language tab.
+$baseRev = clean_stat_base('rev');
+$baseAct = clean_stat_base('act');
+$baseTx = clean_stat_base('tx');
+$revFrom = $baseRev > 0 ? ' AND ' . dr_secs('i.time_sell') . ' > ' . $baseRev : '';
+$actFrom = $baseAct > 0 ? ' AND ' . dr_secs('i.time_sell') . ' > ' . $baseAct : '';
+$txFrom = $baseTx > 0 ? ' AND ' . dr_pay_secs('p.time') . ' > ' . $baseTx : '';
+
 $totalUsers = 0;
 $newToday = 0;
 $newInRange = 0;
@@ -40,16 +49,16 @@ try {
 }
 
 try {
-    $totalRevenue = web_sum_by_currency("SELECT COALESCE(SUM(i.price_product),0) FROM invoice i WHERE i.Status IN ('active','end_of_time','end_of_volume','sendedwarn','send_on_hold')" . ($drI !== '' ? " AND $drI" : '') . " AND {lang}", $dpI, 'i', $lang);
-    $activeNow = db_count($pdo, "SELECT COUNT(*) FROM invoice i WHERE i.Status='active' AND $iw", $ip);
+    $totalRevenue = web_sum_by_currency("SELECT COALESCE(SUM(i.price_product),0) FROM invoice i WHERE i.Status IN ('active','end_of_time','end_of_volume','sendedwarn','send_on_hold')" . $revFrom . ($drI !== '' ? " AND $drI" : '') . " AND {lang}", $dpI, 'i', $lang);
+    $activeNow = db_count($pdo, "SELECT COUNT(*) FROM invoice i WHERE i.Status='active'" . $actFrom . " AND $iw", $ip);
 } catch (Exception $e) {
 }
 
 try {
     $pendingPay = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p WHERE p.payment_Status='waiting' AND $pw", $pp);
-    $txToday = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p WHERE p.time > ? AND $pw", array_merge([strtotime('today')], $pp));
+    $txToday = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p WHERE p.time > ? AND $pw" . $txFrom, array_merge([strtotime('today')], $pp));
     if ($dr['active']) {
-        $txInRange = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p WHERE $drP AND $pw", array_merge($dpP, $pp));
+        $txInRange = db_count($pdo, "SELECT COUNT(*) FROM Payment_report p WHERE $drP AND $pw" . $txFrom, array_merge($dpP, $pp));
     }
 } catch (Exception $e) {
 }
@@ -64,7 +73,7 @@ try {
     [$pgW, $pgP] = $lang !== '' ? ['lang = ?', [$lang]] : ['1 = 1', []];
     $paygEver = db_count($pdo, "SELECT COUNT(*) FROM payg_service WHERE $pgW", $pgP);
     $paygOpen = db_count($pdo, "SELECT COUNT(*) FROM payg_service WHERE status IN ('waiting', 'active', 'stopped', 'paused') AND $pgW", $pgP);
-    foreach (db_fetchAll($pdo, "SELECT currency, SUM(amount) s FROM payg_charge WHERE $pgW GROUP BY currency", $pgP) as $pgRow) {
+    foreach (db_fetchAll($pdo, "SELECT currency, SUM(amount) s FROM payg_charge WHERE $pgW" . ($baseRev > 0 ? ' AND hour_at > ' . $baseRev : '') . " GROUP BY currency", $pgP) as $pgRow) {
         $paygIncome[$pgRow['currency']] = (float) $pgRow['s'];
     }
 } catch (Exception $e) {
@@ -99,6 +108,30 @@ echo web_lang_assets();
     <?= dr_control($dr) ?>
 </form>
 
+<?php
+// ↺ on a figure: it starts over from now (cleanup.php), and comes back the same way
+$statBtn = function (string $key, int $base) use ($textbotlang, $lang) {
+    $t = $textbotlang['panel'];
+    $form = fn($act, $label, $title, $confirm) => '<form method="POST" action="cleanup.php" class="stat-reset" data-ajax="off"'
+        . ($confirm ? ' onsubmit="return confirm(' . htmlspecialchars(json_encode($confirm, JSON_UNESCAPED_UNICODE)) . ')"' : '') . '>'
+        . '<input type="hidden" name="_csrf" value="' . csrf_token() . '"><input type="hidden" name="card" value="stat">'
+        . '<input type="hidden" name="back" value="dash"><input type="hidden" name="key" value="' . $key . '"><input type="hidden" name="act" value="' . $act . '">'
+        . ($lang !== '' ? '<input type="hidden" name="lang" value="' . htmlspecialchars($lang) . '">' : '')
+        . '<button type="submit" title="' . htmlspecialchars($title) . '" aria-label="' . htmlspecialchars($title) . '">' . $label . '</button></form>';
+    return ($base > 0 ? $form('clear', '↩︎', $t['clnStatBack'], '') : '') . $form('reset', '↺', $t['clnStatReset'], $t['clnStatConfirm']);
+};
+$statSince = fn(int $base, bool $lead = true) => $base > 0 ? ' <span class="stat-since">' . ($lead ? '· ' : '') . htmlspecialchars(sprintf($textbotlang['panel']['clnStatSince'], safe_date($base, 'Y/m/d H:i'))) . '</span>' : '';
+?>
+<style>
+  .stat-reset { position: absolute; inset-block-start: 8px; inset-inline-end: 8px; margin: 0; display: inline-flex; }
+  .stat-reset + .stat-reset { inset-inline-end: 38px; }
+  .stat-reset button { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--bd); background: transparent; color: var(--mute); font-size: .85rem; line-height: 1; cursor: pointer; opacity: .55; transition: opacity .15s, background-color .15s, color .15s; }
+  .stat-reset button:focus-visible { opacity: 1; outline: 2px solid var(--ac); outline-offset: 1px; }
+  @media (hover: hover) and (pointer: fine) { .stat:hover .stat-reset button { opacity: 1; } .stat-reset button:hover { background: var(--hl); color: var(--text); } }
+  .stat-since { color: var(--mute); }
+  @media (prefers-reduced-motion: reduce) { .stat-reset button { transition: none; } }
+</style>
+
 <div class="stats fade-up">
     <div class="stat">
         <div class="stat-label"><?= $textbotlang['panel']['dashTotalUsers'] ?></div>
@@ -109,21 +142,25 @@ echo web_lang_assets();
         </div>
     </div>
     <div class="stat ok">
+        <?= $statBtn('rev', $baseRev) ?>
         <div class="stat-label"><?= $textbotlang['panel']['dashTotalRevenue'] ?></div>
         <div class="stat-num"<?= count($totalRevenue) > 1 ? ' style="font-size:1.15rem;line-height:1.6"' : '' ?>><?= web_money_lines($totalRevenue) ?></div>
-        <div class="stat-meta"><?= $dr['active'] ? htmlspecialchars(dr_text($dr)) . ' · ' : '' ?><?= $textbotlang['panel']['dashTotalSales'] ?></div>
+        <div class="stat-meta"><?= $dr['active'] ? htmlspecialchars(dr_text($dr)) . ' · ' : '' ?><?= $textbotlang['panel']['dashTotalSales'] ?><?= $statSince($baseRev) ?></div>
     </div>
     <div class="stat warn">
+        <?= $statBtn('act', $baseAct) ?>
         <div class="stat-label"><?= $textbotlang['panel']['dashActiveService'] ?></div>
         <div class="stat-num"><?= number_format($activeNow) ?></div>
+        <?php if ($baseAct > 0): ?><div class="stat-meta"><?= $statSince($baseAct, false) ?></div><?php endif; ?>
     </div>
     <div class="stat <?= $pendingPay > 0 ? 'no' : '' ?>">
+        <?= $pendingPay > 0 ? '' : $statBtn('tx', $baseTx) ?>
         <div class="stat-label"><?= $pendingPay > 0 ? $textbotlang['panel']['dashPendingPayment'] : $textbotlang['panel']['dashTodayTransaction'] ?></div>
         <div class="stat-num" style="<?= $pendingPay > 0 ? 'color:var(--no)' : '' ?>">
             <?= number_format($pendingPay > 0 ? $pendingPay : ($dr['active'] ? $txInRange : $txToday)) ?>
         </div>
         <div class="stat-meta">
-            <?= $pendingPay > 0 ? $textbotlang['panel']['dashReviewLink'] : (($dr['active'] ? htmlspecialchars(dr_text($dr)) . ' · ' : '') . $textbotlang['panel']['dashStatusRegistered']) ?>
+            <?= $pendingPay > 0 ? $textbotlang['panel']['dashReviewLink'] : (($dr['active'] ? htmlspecialchars(dr_text($dr)) . ' · ' : '') . $textbotlang['panel']['dashStatusRegistered'] . $statSince($baseTx)) ?>
         </div>
     </div>
     <?php if ($paygEver > 0): ?>

@@ -149,6 +149,7 @@ echo web_lang_assets();
     <div class="toolbar">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <div class="toolbar-title"><?= $textbotlang['panel']['usersHeading'] ?> <small>(<?= number_format($total) ?>)</small></div>
+            <a href="cleanup.php<?= $lang !== '' ? '?lang=' . htmlspecialchars($lang) : '' ?>" class="btn-link" style="font-size:.78rem">🧹 <?= htmlspecialchars($textbotlang['panel']['clnUsersLink']) ?></a>
 
             <?php if ($blockedCount > 0): ?>
                 <a href="<?= htmlspecialchars($here(['status' => 'block'])) ?>" class="tag tag-no" style="cursor:pointer"><?= $blockedCount ?> <?= $textbotlang['panel']['usersColId'] ?></a>

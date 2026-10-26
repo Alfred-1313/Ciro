@@ -39,7 +39,8 @@ array_push(
   $navItem('svclook.php', 'svclook', $navT['svcPageTitle'], 'package', $navT['svcPageTitle']),
   $navItem('subapps.php', 'subapps', $navT['saPageTitle'], 'package', $navT['saPageTitle']),
   $navItem('bottext.php', 'bottext', $navT['bottextPageTitle'], 'edit', $navT['bottextPageTitle']),
-  $navItem('tools.php', 'tools', $navT['toolsPageTitle'], 'settings', $navT['toolsPageTitle'])
+  $navItem('tools.php', 'tools', $navT['toolsPageTitle'], 'settings', $navT['toolsPageTitle']),
+  $navItem('cleanup.php', 'cleanup', $navT['clnPageTitle'], 'trash', $navT['clnPageTitle'])
 );
 $navSections = [
   ['heading' => $navT['layoutNavKeyboard'], 'items' => [

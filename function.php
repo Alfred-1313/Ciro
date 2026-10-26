@@ -23075,3 +23075,5 @@ require_once __DIR__ . '/payg.php';
 require_once __DIR__ . '/bulkgift.php';
 // 🚀 سرعت گروهی (Rebecca panels) - the same, on 🎁's helpers
 require_once __DIR__ . '/bulkspeed.php';
+// 🧹 پاکسازی و ریست (موجودی، زیرمجموعه، سرویس‌های ربات) - the same
+require_once __DIR__ . '/cleanup.php';
