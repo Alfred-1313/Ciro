@@ -4,7 +4,7 @@
 
 **A Telegram bot that sells and manages VPN subscriptions, with a separate shop for Persian and English customers.**
 
-**English** | [فارسی](README.fa.md)
+**English** | [Persian](README.fa.md)
 
 <p>
   <img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP 8.2"/>
@@ -46,9 +46,7 @@ Already running a bot of the original project, or an older version of this one? 
 
 ---
 
-### دربارهٔ این پروژه
-
-ربات Ciro نسخهٔ فورک‌شدهٔ ربات **[میرزا](https://github.com/mahdiMGF2/mirzabot)** است. ما هیچ‌گونه مسئولیتی در قبال فروش این ربات نداریم و این ربات به‌صورت رایگان در همین صفحه در دسترس است. با تشکر از سازندهٔ اصلی ربات میرزا، [@mahdiMGF2](https://github.com/mahdiMGF2).
+### About this project
 
 Ciro is a fork of the **[Mirza bot](https://github.com/mahdiMGF2/mirzabot)**. We accept no responsibility for any sale of this bot; it is available free of charge on this page. Thanks to the original creator of Mirza, [@mahdiMGF2](https://github.com/mahdiMGF2).
 
