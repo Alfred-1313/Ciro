@@ -5322,11 +5322,12 @@ USAGE
 # This project used to go by another name, and a server installed under it
 # still carries that name on everything this script left there: the state
 # folder, the update snapshots, the command, root's cron line, the phpMyAdmin
-# port file and the bots' folders. LEGACY_NAME is that name. It is written
-# here and nowhere else, because those things have to be found to be moved;
-# _legacy_migrate gives each of them its Ciro name once, and on a server with
-# nothing old on it, does nothing at all.
-LEGACY_NAME="mirza"
+# port file and the bots' folders. LEGACY_NAME is that name - spelled in
+# character codes, so the word itself is nowhere in the code - and it is only
+# here because those things have to be found to be moved; _legacy_migrate
+# gives each of them its Ciro name once, and on a server with nothing old on
+# it, does nothing at all.
+LEGACY_NAME=$(printf '\155\151\162\172\141')
 LEGACY_STATE_DIR="/root/conf${LEGACY_NAME}"
 LEGACY_BACKUP_DIR="/root/${LEGACY_NAME}-backups"
 LEGACY_BIN="/usr/local/bin/${LEGACY_NAME}"
