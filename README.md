@@ -24,15 +24,15 @@ bash <(curl -Ls https://raw.githubusercontent.com/Alfred-1313/Ciro/master/instal
 
 Have ready: a domain already pointed at the server, a bot token from [@BotFather](https://t.me/BotFather) and your numeric id from [@userinfobot](https://t.me/userinfobot).
 
-After installing, manage it with the `ciro` command:
+After installing, manage it with the `Ciro` command (capital C — Linux commands are case-sensitive):
 
 | Command | What it does |
 | --- | --- |
-| `ciro` | Open the menu |
-| `ciro update` | Get the newest version; your data and `config.php` are kept |
-| `ciro backup` | Send a database backup to Telegram |
-| `ciro renew` | Reissue the SSL certificate |
-| `ciro --help` | Every command and option |
+| `Ciro` | Open the menu |
+| `Ciro update` | Get the newest version; your data and `config.php` are kept |
+| `Ciro backup` | Send a database backup to Telegram |
+| `Ciro renew` | Reissue the SSL certificate |
+| `Ciro --help` | Every command and option |
 
 Already running a bot of the original project, or an older version of this one? Run the same install command and choose **Update** or **Migrate** — nothing is reinstalled and no data is lost.
 

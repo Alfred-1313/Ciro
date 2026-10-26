@@ -4213,9 +4213,9 @@ if (!function_exists('sms_forward_regenerate_secret')) {
 if (!function_exists('bot_update_request_path')) {
     // The bot is served as www-data; every step of an update needs root, so it
     // can never run the updater itself. Instead it leaves a note in its own
-    // directory and root's own watcher (`ciro selfupdate-watch`, a crontab
+    // directory and root's own watcher (`Ciro selfupdate-watch`, a crontab
     // line install.sh adds) picks it up within the minute and runs the very
-    // same `ciro update` an admin would have typed - pre-update snapshot,
+    // same `Ciro update` an admin would have typed - pre-update snapshot,
     // config.php kept, additive database migration and automatic rollback on a
     // failed syntax check all included, because it IS that same code path.
     function bot_update_request_path()
@@ -4414,7 +4414,7 @@ if (!function_exists('bot_update_request_path')) {
             return bot_update_text(
                 $textbotlang,
                 'writeFailed',
-                "❌ نتوانستم درخواست را ثبت کنم.\n\nاحتمالاً پوشه ربات برای وب‌سرور قابل نوشتن نیست. یک بار <code>ciro update</code> را از ترمینال اجرا کن تا درست شود."
+                "❌ نتوانستم درخواست را ثبت کنم.\n\nاحتمالاً پوشه ربات برای وب‌سرور قابل نوشتن نیست. یک بار <code>Ciro update</code> را از ترمینال اجرا کن تا درست شود."
             );
         }
         return bot_update_progress_now($textbotlang, 'rollback', 0);
@@ -4609,7 +4609,7 @@ if (!function_exists('bot_update_request_path')) {
             return bot_update_text(
                 $textbotlang,
                 'writeFailed',
-                "❌ نتوانستم درخواست را ثبت کنم.\n\nاحتمالاً پوشه ربات برای وب‌سرور قابل نوشتن نیست. یک بار <code>ciro update</code> را از ترمینال اجرا کن تا درست شود."
+                "❌ نتوانستم درخواست را ثبت کنم.\n\nاحتمالاً پوشه ربات برای وب‌سرور قابل نوشتن نیست. یک بار <code>Ciro update</code> را از ترمینال اجرا کن تا درست شود."
             );
         }
         return bot_update_progress_now($textbotlang, 'update', 0);
@@ -4656,7 +4656,7 @@ if (!function_exists('bot_update_request_path')) {
 // every entry newer than the last one told (storage/whatsnew_seen holds its
 // number): an admin who skipped updates gets each one he missed, oldest first.
 //
-// Two ways it reaches them. `ciro update` (and the bot's own button, which runs
+// Two ways it reaches them. `Ciro update` (and the bot's own button, which runs
 // the same script) ends with bot_update_notify_admins(): ONE message - the
 // «ربات آپدیت شد» notice with the notes under it - and sets CIRO_WHATSNEW_MERGE
 // so that table.php, which runs earlier in the same update, stays quiet. Where

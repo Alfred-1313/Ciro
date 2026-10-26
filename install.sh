@@ -215,7 +215,7 @@ ensure_dns() {
     return 1
 }
 
-# Ensure /usr/local/bin/ciro points at the master script
+# Ensure /usr/local/bin/Ciro points at the master script
 _link_ciro() {
     local master="$1" link="$2"
     chmod +x "$master" 2>/dev/null
@@ -238,7 +238,7 @@ function self_update_script() {
         case "$_a" in -h|--help|--version|selfupdate-watch) return 0 ;; esac
     done
     local MASTER_PATH="/root/install.sh"
-    local BIN_LINK="/usr/local/bin/ciro"
+    local BIN_LINK="/usr/local/bin/Ciro"
     local URL="https://raw.githubusercontent.com/Alfred-1313/Ciro/master/install.sh"
     local TEMP_FILE="/tmp/ciro_update.sh"
 
@@ -332,7 +332,7 @@ function ensure_prerequisites() {
 ensure_prerequisites "$@"
 
 # ── Repo / paths ─────────────────────────────────────────────
-BOT_DIR_DEFAULT="/var/www/html/ciro"
+BOT_DIR_DEFAULT="/var/www/html/Ciro"
 CONFIG_FILE_DEFAULT="$BOT_DIR_DEFAULT/config.php"
 GIT_REPO="Alfred-1313/Ciro"
 IP_CACHE="/tmp/.ciro_server_ip"
@@ -340,7 +340,7 @@ IP_CACHE="/tmp/.ciro_server_ip"
 # ── Resumable-install state engine ───────────────────────────
 # Survives reboots / network drops. Lets a failed install resume
 # from the last completed phase instead of starting from scratch.
-STATE_DIR="/root/ciro"
+STATE_DIR="/root/Ciro"
 STATE_FILE="$STATE_DIR/.install_state"
 
 state_init() {
@@ -500,17 +500,17 @@ export -f resolve_php_ver
 
 # Configure MySQL root login (all output captured by run_step's log).
 setup_mysql_root() {
-    sudo mkdir -p /root/ciro || return 1
-    touch /root/ciro/dbroot.txt || return 1
-    sudo chmod -R 777 /root/ciro/dbroot.txt || return 1
+    sudo mkdir -p /root/Ciro || return 1
+    touch /root/Ciro/dbroot.txt || return 1
+    sudo chmod -R 777 /root/Ciro/dbroot.txt || return 1
     local randomdbpasstxt passs userrr RANDOM_NUMBER
     randomdbpasstxt=$(openssl rand -base64 10 | tr -dc 'a-zA-Z0-9' | cut -c1-8)
     RANDOM_NUMBER=$(openssl rand -base64 12 | tr -dc 'a-zA-Z0-9' | cut -c1-12)
-    echo "\$user = 'root';"               >> /root/ciro/dbroot.txt
-    echo "\$pass = '${randomdbpasstxt}';" >> /root/ciro/dbroot.txt
-    echo "\$path = '${RANDOM_NUMBER}';"   >> /root/ciro/dbroot.txt
-    passs=$(grep '$pass' /root/ciro/dbroot.txt | cut -d"'" -f2)
-    userrr=$(grep '$user' /root/ciro/dbroot.txt | cut -d"'" -f2)
+    echo "\$user = 'root';"               >> /root/Ciro/dbroot.txt
+    echo "\$pass = '${randomdbpasstxt}';" >> /root/Ciro/dbroot.txt
+    echo "\$path = '${RANDOM_NUMBER}';"   >> /root/Ciro/dbroot.txt
+    passs=$(grep '$pass' /root/Ciro/dbroot.txt | cut -d"'" -f2)
+    userrr=$(grep '$user' /root/Ciro/dbroot.txt | cut -d"'" -f2)
     local alter_ok=0
     if sudo mysql -u "$userrr" -p"$passs" -e "alter user '$userrr'@'localhost' identified with mysql_native_password by '$passs';FLUSH PRIVILEGES;"; then
         alter_ok=1
@@ -779,7 +779,7 @@ install_pause() {
     echo -e "  ${C_DIM}This is usually caused by the server losing internet or a network error.${CR}"
     echo ""
     echo -e "  ${C_TXT}Completed steps are saved. Just run it again:${CR}"
-    echo -e "      ${C_KEY}ciro install${CR}"
+    echo -e "      ${C_KEY}Ciro install${CR}"
     echo -e "  ${C_DIM}It resumes from this step; values you already entered (domain/token/...) will not be asked again.${CR}"
     echo -e "  ${C_WARN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${CR}"
     echo ""
@@ -1072,7 +1072,7 @@ function renew_ssl() {
         show_menu; return 0
     fi
     if [ -z "$domain" ]; then
-        local cfg="/var/www/html/ciro/config.php"
+        local cfg="/var/www/html/Ciro/config.php"
         [ -f "$cfg" ] && domain=$(hosts_domain "$(grep -E "\\\$domainhosts" "$cfg" 2>/dev/null | head -1 | cut -d"'" -f2)")
     fi
     [ -z "$domain" ] && domain="$(state_get DOMAIN)"
@@ -1707,13 +1707,13 @@ function show_help_screen() {
     _kv "-h, --help" "${C_DIM}Show CLI help and exit${CR}"
 
     _sec "Examples"
-    printf "    ${C_KEY}ciro install${CR}\n"
-    printf "    ${C_KEY}ciro install --name myvpnbot --token 123:ABC \\\\${CR}\n"
+    printf "    ${C_KEY}Ciro install${CR}\n"
+    printf "    ${C_KEY}Ciro install --name myvpnbot --token 123:ABC \\\\${CR}\n"
     printf "    ${C_DIM}            --admin 111 --domain bot.example.com${CR}\n"
-    printf "    ${C_KEY}ciro update${CR}\n"
-    printf "    ${C_KEY}ciro remove${CR}\n"
-    printf "    ${C_KEY}ciro backup${CR}\n"
-    printf "    ${C_KEY}ciro import${CR}\n"
+    printf "    ${C_KEY}Ciro update${CR}\n"
+    printf "    ${C_KEY}Ciro remove${CR}\n"
+    printf "    ${C_KEY}Ciro backup${CR}\n"
+    printf "    ${C_KEY}Ciro import${CR}\n"
 
     echo ""
     _rule
@@ -1873,7 +1873,7 @@ hosts_of()     { if [ "${2:-443}" = "443" ]; then echo "$1"; else echo "$1:$2"; 
 # server that only ever had the one bot never sees any of this - the
 # registry silently carries a single entry and every picker below returns
 # it without a prompt, exactly like before this existed.
-BOTS_REGISTRY="/root/ciro/bots.json"
+BOTS_REGISTRY="/root/Ciro/bots.json"
 
 _ensure_jq() {
     command -v jq >/dev/null 2>&1 || apt-get install -y jq >/dev/null 2>&1
@@ -1883,7 +1883,7 @@ _ensure_jq() {
 # seed it from whatever is already installed at the default path.
 bots_registry_ensure() {
     _ensure_jq
-    mkdir -p /root/ciro
+    mkdir -p /root/Ciro
     [ -f "$BOTS_REGISTRY" ] || echo '[]' > "$BOTS_REGISTRY"
     local seed
     for seed in "$BOT_DIR_DEFAULT" "$LEGACY_BOT_DIR"; do
@@ -1906,7 +1906,7 @@ bots_registry_ensure() {
 bots_registry_add() {
     local name="$1" dir="$2" domain="$3"
     _ensure_jq
-    mkdir -p /root/ciro
+    mkdir -p /root/Ciro
     [ -f "$BOTS_REGISTRY" ] || echo '[]' > "$BOTS_REGISTRY"
     local tmp; tmp=$(mktemp)
     jq --arg name "$name" --arg dir "$dir" --arg domain "$domain" '
@@ -2340,7 +2340,7 @@ db_set_password() {
     dbname=$(grep '^\$dbname' "$cfg" | cut -d"'" -f2)
     dbhost=$(grep '^\$dbhost' "$cfg" | cut -d"'" -f2)
     old=$(grep '^\$passworddb' "$cfg" | cut -d"'" -f2)
-    rootpass=$(grep '$pass' /root/ciro/dbroot.txt 2>/dev/null | cut -d"'" -f2)
+    rootpass=$(grep '$pass' /root/Ciro/dbroot.txt 2>/dev/null | cut -d"'" -f2)
     [ -z "$dbhost" ] && dbhost="localhost"
     if ! valid_db_ident "$dbuser"; then echo "config.php has no usable database username."; return 1; fi
     if [ -z "$rootpass" ]; then echo "Could not read the MySQL root password."; return 1; fi
@@ -2561,7 +2561,7 @@ preflight() {
 }
 
 function install_bot() {
-    BOT_DIR="/var/www/html/ciro"
+    BOT_DIR="/var/www/html/Ciro"
     PHP_VER="$(state_get PHP_VER)"
     [ -z "$PHP_VER" ] && PHP_VER="8.2"
 
@@ -2804,7 +2804,7 @@ function install_bot() {
 
     # ╭──────────────────────── PHASE: DBROOT ──────────────────────╮
     if ! phase_done DBROOT; then
-        if [ ! -f "/root/ciro/dbroot.txt" ] || ! grep -q '\$pass' /root/ciro/dbroot.txt 2>/dev/null; then
+        if [ ! -f "/root/Ciro/dbroot.txt" ] || ! grep -q '\$pass' /root/Ciro/dbroot.txt 2>/dev/null; then
             run_step "Configuring MySQL root access" "setup_mysql_root" \
                 || { show_step_error; install_pause "MySQL root setup"; }
         fi
@@ -2846,7 +2846,7 @@ function install_bot() {
         state_set DOMAIN "$domainname"
     fi
     DOMAIN_NAME="$domainname"
-    PATHS=$(cat /root/ciro/dbroot.txt | grep '$path' | cut -d"'" -f2)
+    PATHS=$(cat /root/Ciro/dbroot.txt | grep '$path' | cut -d"'" -f2)
 
     # ── The bot's port: 443, or 8443/88 when something (Xray) holds 443 ──
     BOT_PORT="$(state_get BOT_PORT)"
@@ -3029,7 +3029,7 @@ EOF
         state_set PMA_PORT "$PMA_PORT"
     fi
 
-    ROOT_PASSWORD=$(cat /root/ciro/dbroot.txt | grep '$pass' | cut -d"'" -f2)
+    ROOT_PASSWORD=$(cat /root/Ciro/dbroot.txt | grep '$pass' | cut -d"'" -f2)
     ROOT_USER="root"
     echo "SELECT 1" | mysql -u$ROOT_USER -p$ROOT_PASSWORD 2>/dev/null || {
         echo -e "\e[91mError: MySQL connection failed.\033[0m"
@@ -3038,7 +3038,7 @@ EOF
 
     randomdbpass=$(openssl rand -base64 10 | tr -dc 'a-zA-Z0-9' | cut -c1-8)
     randomdbdb=$(openssl rand -base64 10 | tr -dc 'a-zA-Z' | cut -c1-8)
-    dbname="ciro"
+    dbname="Ciro"
 
     # ╭──────────────────────── PHASE: DB ──────────────────────────╮
     if ! phase_done DB; then
@@ -3097,7 +3097,7 @@ EOF
     if ! phase_done CONFIG; then
         wait
         sleep 1
-        file_path="/var/www/html/ciro/config.php"
+        file_path="/var/www/html/Ciro/config.php"
         if [ -f "$file_path" ]; then
             rm "$file_path" || {
                 echo -e "\e[91mError: Failed to delete old config.php.\033[0m"
@@ -3110,7 +3110,7 @@ EOF
             secrettoken=$(openssl rand -base64 10 | tr -dc 'a-zA-Z0-9' | cut -c1-8)
             state_set SECRET "$secrettoken"
         fi
-        cat <<EOF > /var/www/html/ciro/config.php
+        cat <<EOF > /var/www/html/Ciro/config.php
 <?php
 // This variable added for high load panels which their response time is long and bot can't communicate with online panel!
 // null for default settings
@@ -3131,7 +3131,7 @@ try { \$pdo = new PDO(\$dsn, \$usernamedb, \$passworddb, \$options); } catch (\P
 \$usernamebot = '${YOUR_BOTNAME}';
 ?>
 EOF
-        sudo chown www-data:www-data /var/www/html/ciro/config.php 2>/dev/null
+        sudo chown www-data:www-data /var/www/html/Ciro/config.php 2>/dev/null
         mark_phase CONFIG
     else
         secrettoken="$(state_get SECRET)"
@@ -3204,13 +3204,13 @@ EOF
     printf "    ${C_WARN}!${CR} ${C_DIM}Save these credentials somewhere safe.${CR}\n"
 
     _sec "Manage"
-    _kv "Command" "${C_DIM}run ${CR}${C_KEY}ciro${CR}${C_DIM} anytime to open this panel${CR}"
+    _kv "Command" "${C_DIM}run ${CR}${C_KEY}Ciro${CR}${C_DIM} anytime to open this panel${CR}"
     echo ""
     _rule
     echo ""
 
     chmod +x /root/install.sh
-    ln -sf /root/install.sh /usr/local/bin/ciro
+    ln -sf /root/install.sh /usr/local/bin/Ciro
     _ensure_selfupdate_cron
     self_update_script
 }
@@ -3223,7 +3223,7 @@ function install_second_bot() {
     printf "    ${C_DIM}installed here are not touched.${CR}\n"
     echo ""
 
-    if [ ! -f "/root/ciro/dbroot.txt" ]; then
+    if [ ! -f "/root/Ciro/dbroot.txt" ]; then
         printf "    ${C_BAD}●${CR} ${C_BAD}No Ciro install found on this server yet. Use option 1 (Install) first.${CR}\n"
         sleep 2; show_menu; return 1
     fi
@@ -3234,13 +3234,13 @@ function install_second_bot() {
 
     # ── Pick a free directory + database name ────────────────
     local n=2 NEW_BOT_DIR NEW_DB ROOT_PASSWORD
-    ROOT_PASSWORD=$(cat /root/ciro/dbroot.txt 2>/dev/null | grep '$pass' | cut -d"'" -f2)
-    while [ -d "/var/www/html/ciro${n}" ] \
-        || mysql -u root -p"$ROOT_PASSWORD" -N -e "SHOW DATABASES LIKE 'ciro${n}';" 2>/dev/null | grep -q "ciro${n}"; do
+    ROOT_PASSWORD=$(cat /root/Ciro/dbroot.txt 2>/dev/null | grep '$pass' | cut -d"'" -f2)
+    while [ -d "/var/www/html/Ciro${n}" ] \
+        || mysql -u root -p"$ROOT_PASSWORD" -N -e "SHOW DATABASES LIKE 'Ciro${n}';" 2>/dev/null | grep -q "Ciro${n}"; do
         n=$((n+1))
     done
-    NEW_BOT_DIR="/var/www/html/ciro${n}"
-    NEW_DB="ciro${n}"
+    NEW_BOT_DIR="/var/www/html/Ciro${n}"
+    NEW_DB="Ciro${n}"
     _kv "Directory" "${C_KEY}${NEW_BOT_DIR}${CR}"
     _kv "Database"  "${C_KEY}${NEW_DB}${CR}"
     echo ""
@@ -3561,7 +3561,7 @@ function update_bot() {
     print_header "Updating Ciro"
 
     # ── 1. Safety net: a restorable snapshot BEFORE anything moves ──
-    local BK_DIR="/root/ciro-backups"
+    local BK_DIR="/root/Ciro-backups"
     local STAMP; STAMP=$(date +%Y%m%d_%H%M%S)
     # Named after the bot it belongs to - its @username, or its directory when
     # config.php has none - so two bots' snapshots are told apart at a glance
@@ -3673,7 +3673,7 @@ function update_bot() {
         if bash -n "$BOT_DIR/install.sh" 2>/dev/null; then
             install -m 0755 "$BOT_DIR/install.sh" /root/install.sh 2>/dev/null || \
                 { cp "$BOT_DIR/install.sh" /root/install.sh; chmod +x /root/install.sh; }
-            ln -sf /root/install.sh /usr/local/bin/ciro
+            ln -sf /root/install.sh /usr/local/bin/Ciro
         fi
     fi
     # an install that predates the button gets its watcher here, so the very
@@ -3767,7 +3767,7 @@ CIRO_UPDATE_STATUS="update_status.json"
 CIRO_ROLLBACK_REQUEST="rollback_request"
 CIRO_BACKUPS_LIST="update_backups.json"
 # the same folder update_bot() drops its pre-update snapshot into
-CIRO_BACKUP_DIR="/root/ciro-backups"
+CIRO_BACKUP_DIR="/root/Ciro-backups"
 # how many of those each bot keeps - on the server and so in its own
 # "بازگشت به نسخه قبلی" list (bot_update_backups() shows no more either)
 CIRO_SNAPSHOTS_KEEP=2
@@ -4079,9 +4079,9 @@ _bot_webhook_secret() {
 # whole line so a hand-edited schedule is never duplicated.
 _ensure_selfupdate_cron() {
     command -v crontab >/dev/null 2>&1 || return 0
-    crontab -l 2>/dev/null | grep -Fq "ciro selfupdate-watch" && return 0
+    crontab -l 2>/dev/null | grep -Fq "Ciro selfupdate-watch" && return 0
     ( crontab -l 2>/dev/null; \
-      echo "* * * * * flock -n /tmp/ciro_selfupdate.lock /usr/local/bin/ciro selfupdate-watch >/dev/null 2>&1" \
+      echo "* * * * * flock -n /tmp/ciro_selfupdate.lock /usr/local/bin/Ciro selfupdate-watch >/dev/null 2>&1" \
     ) | crontab - 2>/dev/null
 }
 
@@ -4150,7 +4150,7 @@ EOF
 # returns 0, or returns 1 when it could not be saved.
 _db_dump_before_remove() {
     local dbname="$1" rootpass dump
-    rootpass=$(grep '$pass' /root/ciro/dbroot.txt 2>/dev/null | cut -d"'" -f2)
+    rootpass=$(grep '$pass' /root/Ciro/dbroot.txt 2>/dev/null | cut -d"'" -f2)
     [ -n "$dbname" ] && [ -n "$rootpass" ] || return 1
     dump="/root/ciro_before_remove_${dbname}_$(date +%Y-%m-%d_%H-%M-%S).sql"
     if mysqldump -u root -p"$rootpass" --no-tablespaces "$dbname" > "$dump" 2>/dev/null && [ -s "$dump" ]; then
@@ -4237,7 +4237,7 @@ remove_bot_scoped() {
     fi
     if [ -n "$dbname" ]; then
         local ROOT_PASS
-        ROOT_PASS=$(grep '$pass' /root/ciro/dbroot.txt 2>/dev/null | cut -d"'" -f2)
+        ROOT_PASS=$(grep '$pass' /root/Ciro/dbroot.txt 2>/dev/null | cut -d"'" -f2)
         if [ -n "$ROOT_PASS" ]; then
             if mysql -u root -p"$ROOT_PASS" -e "DROP DATABASE IF EXISTS \`$dbname\`;" 2>/dev/null; then
                 printf "    ${C_OK}✔${CR} ${C_DIM}Database %s removed${CR}\n" "$dbname"
@@ -4296,10 +4296,10 @@ function remove_bot() {
     echo "Log file: $LOG_FILE" > "$LOG_FILE"
     # The last bot left is not always in the default directory: remove the
     # first of two bots and the second one is all that remains.
-    BOT_DIR="/var/www/html/ciro"
+    BOT_DIR="/var/www/html/Ciro"
     [ "$_bot_count" = "1" ] && BOT_DIR=$(jq -r '.[0].dir' "$BOTS_REGISTRY" 2>/dev/null)
     if [ -z "$BOT_DIR" ] || [ ! -d "$BOT_DIR" ]; then
-        echo -e "\e[31m[ERROR]\033[0m Ciro is not installed (${BOT_DIR:-/var/www/html/ciro} not found)." | tee -a "$LOG_FILE"
+        echo -e "\e[31m[ERROR]\033[0m Ciro is not installed (${BOT_DIR:-/var/www/html/Ciro} not found)." | tee -a "$LOG_FILE"
         echo -e "\e[33mNothing to remove.\033[0m" | tee -a "$LOG_FILE"
         sleep 2
         show_menu
@@ -4338,7 +4338,7 @@ function remove_bot() {
     _bot_crons_remove "$_hosts" && echo -e "\e[92mScheduled jobs removed.\033[0m" | tee -a "$LOG_FILE"
     CIRO_SNAPSHOTS_KEEP=0 _snapshots_prune "$BOT_DIR"
     rmdir "$CIRO_BACKUP_DIR" 2>/dev/null
-    ( crontab -l 2>/dev/null | grep -vF "ciro selfupdate-watch" ) | crontab - 2>/dev/null
+    ( crontab -l 2>/dev/null | grep -vF "Ciro selfupdate-watch" ) | crontab - 2>/dev/null
     if [ -f "$CONFIG_PATH" ]; then
         sudo shred -u -n 5 "$CONFIG_PATH" && echo -e "\e[92mConfig file securely removed: $CONFIG_PATH\033[0m" | tee -a "$LOG_FILE" || {
             echo -e "\e[91mFailed to securely remove config file: $CONFIG_PATH\033[0m" | tee -a "$LOG_FILE"
@@ -4397,7 +4397,7 @@ function remove_bot() {
     sudo ufw delete allow 'Apache' 2>/dev/null
     sudo ufw reload 2>/dev/null
     # Clear the install state so a fresh install is allowed afterwards
-    sudo rm -rf /root/ciro
+    sudo rm -rf /root/Ciro
     echo -e "\e[92mCiro, MySQL, and their dependencies have been completely removed.\033[0m" | tee -a "$LOG_FILE"
     [ -n "$_dump" ] && echo -e "\e[92mThe bot's database is kept in $_dump\033[0m" | tee -a "$LOG_FILE"
 }
@@ -4499,7 +4499,7 @@ function migrate_to_ciro() {
     #    bot - so a Ciro bot already on this server is never written over
     local TARGET n=""
     while :; do
-        TARGET="/var/www/html/ciro${n}"
+        TARGET="/var/www/html/Ciro${n}"
         { [ "$TARGET" = "$OLD_BOT_DIR" ] || [ ! -e "$TARGET" ]; } && break
         n=$(( ${n:-1} + 1 ))
     done
@@ -4722,7 +4722,7 @@ EOF
     elif [ "$TARGET" != "$OLD_BOT_DIR" ]; then
         rm -rf "$OLD_BOT_DIR"
     fi
-    ln -sf /root/install.sh /usr/local/bin/ciro 2>/dev/null
+    ln -sf /root/install.sh /usr/local/bin/Ciro 2>/dev/null
 
     _sec "Migrated to Ciro"
     _kv "Bot" "${C_KEY}${botname:+@}${botname:-?}${CR}"
@@ -4740,7 +4740,7 @@ EOF
     echo ""
     printf "    ${C_WARN}!${CR} ${C_WARN}Open the admin panel in the bot once: that is when it sets up its${CR}\n"
     printf "    ${C_WARN}  scheduled jobs (payment checks, notices).${CR}\n"
-    printf "    ${C_DIM}Manage it with ${CR}${C_KEY}ciro${CR}${C_DIM} from now on.${CR}\n"
+    printf "    ${C_DIM}Manage it with ${CR}${C_KEY}Ciro${CR}${C_DIM} from now on.${CR}\n"
     echo ""
     printf "  ${C_PROMPT}❯${CR} Press Enter to return to the menu... "
     read -r _
@@ -4793,8 +4793,8 @@ _tr_back() {
 _tr_import_script() {
     cat <<'EOF'
 cd /root/ciro_transfer || exit 9
-BOT=/var/www/html/ciro
-ROOTPASS=$(grep '$pass' /root/ciro/dbroot.txt 2>/dev/null | cut -d"'" -f2)
+BOT=/var/www/html/Ciro
+ROOTPASS=$(grep '$pass' /root/Ciro/dbroot.txt 2>/dev/null | cut -d"'" -f2)
 DB=$(grep '^\$dbname' "$BOT/config.php" | cut -d"'" -f2)
 [ -n "$ROOTPASS" ] && [ -n "$DB" ] || { echo "RESULT=NO_DB_ACCESS"; exit 2; }
 drop=$(mysql -u root -p"$ROOTPASS" -N -B "$DB" -e 'SHOW FULL TABLES' 2>/dev/null \
@@ -4910,11 +4910,11 @@ function transfer_bot() {
     info=$(_tr_ssh "bash -s -- $LEGACY_NAME" <<'EOF'
 . /etc/os-release 2>/dev/null; echo "OS=$ID"
 L="$1"
-if grep -qx "PHASE:COMPLETE" /root/ciro/.install_state "/root/conf$L/.${L}_install_state" 2>/dev/null \
-    || grep -q '"dir"' /root/ciro/bots.json "/root/conf$L/bots.json" 2>/dev/null; then
+if grep -qx "PHASE:COMPLETE" /root/Ciro/.install_state /root/ciro/.install_state "/root/conf$L/.${L}_install_state" 2>/dev/null \
+    || grep -q '"dir"' /root/Ciro/bots.json /root/ciro/bots.json "/root/conf$L/bots.json" 2>/dev/null; then
     echo "CIRO=yes"
-    echo "DOMAIN=$(grep -h '^\$domainhosts' /var/www/html/ciro/config.php "/var/www/html/${L}probotconfig/config.php" 2>/dev/null | head -1 | cut -d"'" -f2)"
-    echo "BOTS=$(cat /root/ciro/bots.json "/root/conf$L/bots.json" 2>/dev/null | grep -o '"dir"' | wc -l)"
+    echo "DOMAIN=$(grep -h '^\$domainhosts' /var/www/html/Ciro/config.php /var/www/html/ciro/config.php "/var/www/html/${L}probotconfig/config.php" 2>/dev/null | head -1 | cut -d"'" -f2)"
+    echo "BOTS=$(cat /root/Ciro/bots.json /root/ciro/bots.json "/root/conf$L/bots.json" 2>/dev/null | grep -o '"dir"' | wc -l)"
 else
     echo "CIRO=no"
 fi
@@ -5035,7 +5035,7 @@ EOF
     fi
     # an install left there by an earlier try may still carry the old names
     [ "$skip_install" -eq 1 ] && _tr_ssh 'bash /root/ciro_transfer/install.sh rename-legacy' >/dev/null 2>&1
-    if ! _tr_ssh 'grep -qx "PHASE:COMPLETE" /root/ciro/.install_state 2>/dev/null && [ -f /var/www/html/ciro/config.php ]'; then
+    if ! _tr_ssh 'grep -qx "PHASE:COMPLETE" /root/Ciro/.install_state 2>/dev/null && [ -f /var/www/html/Ciro/config.php ]'; then
         rm -rf "$work"
         _tr_back "The install on $TR_HOST did not finish." \
             "Nothing here was changed. Fix what it reported, then run Transfer again (it resumes)."
@@ -5270,15 +5270,15 @@ print_usage() {
   Ciro - install and management script
 
   Usage:
-    ciro                       open the interactive menu
-    ciro <command> [options]
+    Ciro                       open the interactive menu
+    Ciro <command> [options]
 
   Commands:
     install            Set up the bot on a clean server (Ubuntu/Debian)
     update             Fetch the newest code and migrate the database.
                        Your config.php, your database rows and any file the
                        project does not ship are kept. A rollback archive is
-                       written to /root/ciro-backups/ before anything moves.
+                       written to /root/Ciro-backups/ before anything moves.
                        Works on a bot of the original project too - it upgrades
                        in place, it does not reinstall.
     remove             Delete the bot directory and the packages it installed
@@ -5288,7 +5288,7 @@ print_usage() {
     backup             Dump the database and send it to Telegram
     import             Restore the database from a .sql or .zip backup, or the
                        bot's files from its botfolder zip (beta). What it
-                       replaces is kept in /root/ciro-backups/ first.
+                       replaces is kept in /root/Ciro-backups/ first.
     menu               Open the interactive menu (default)
 
   Options:
@@ -5303,10 +5303,10 @@ print_usage() {
     -h, --help         Show this help
 
   Examples:
-    ciro install
-    ciro install --name myvpnbot --token 123456:ABC --admin 111222333 \\
-                 --domain bot.example.com --db-user ciro --db-pass s3cret_1
-    ciro update
+    Ciro install
+    Ciro install --name myvpnbot --token 123456:ABC --admin 111222333 \\
+                 --domain bot.example.com --db-user botuser --db-pass s3cret_1
+    Ciro update
 
   Notes:
     - Run as root.
@@ -5327,6 +5327,14 @@ USAGE
 # here because those things have to be found to be moved; _legacy_migrate
 # gives each of them its Ciro name once, and on a server with nothing old on
 # it, does nothing at all.
+#
+# A second old layout is moved the same way: for a short while the folders and
+# the command were written with a small c (/root/ciro, /var/www/html/ciro, the
+# ciro command). They are written Ciro now, and Linux tells the two apart, so a
+# server still on the small-c names would otherwise lose track of its bot.
+SMALLC_STATE_DIR="/root/ciro"
+SMALLC_BACKUP_DIR="/root/ciro-backups"
+SMALLC_BIN="/usr/local/bin/ciro"
 LEGACY_NAME=$(printf '\155\151\162\172\141')
 LEGACY_STATE_DIR="/root/conf${LEGACY_NAME}"
 LEGACY_BACKUP_DIR="/root/${LEGACY_NAME}-backups"
@@ -5339,11 +5347,39 @@ LEGACY_ORIGINAL_DIR="/var/www/html/${LEGACY_NAME}botconfig"
 
 _legacy_present() {
     [ -d "$LEGACY_STATE_DIR" ] || [ -d "$LEGACY_BACKUP_DIR" ] || [ -L "$LEGACY_BIN" ] \
+        || [ -d "$SMALLC_STATE_DIR" ] || [ -d "$SMALLC_BACKUP_DIR" ] || [ -L "$SMALLC_BIN" ] \
         || [ -f "$LEGACY_PMA_CONF" ] \
         || grep -qs "#${LEGACY_NAME}# " /etc/apache2/ports.conf \
         || grep -qs "/${LEGACY_NAME}[a-z]*[0-9]*\"" "$BOTS_REGISTRY" \
+        || grep -qs "/var/www/html/ciro[0-9]*\"" "$BOTS_REGISTRY" \
         || { command -v crontab >/dev/null 2>&1 \
-             && crontab -l 2>/dev/null | grep -Fq "${LEGACY_NAME} selfupdate-watch"; }
+             && crontab -l 2>/dev/null | grep -Fq -e "${LEGACY_NAME} selfupdate-watch" -e "ciro selfupdate-watch"; }
+}
+
+# an old state folder is still on the server
+_legacy_state_left() {
+    [ -d "$LEGACY_STATE_DIR" ] || [ -d "$SMALLC_STATE_DIR" ]
+}
+
+# Move what is in folder $1 into folder $2, never over something that is
+# already there (a bots list this script just created empty is not one to
+# keep). The first folder is left for the caller to remove.
+_legacy_merge_into() {
+    local src="$1" dst="$2" f b
+    mkdir -p "$dst"
+    for f in "$src"/* "$src"/.[!.]*; do
+        [ -e "$f" ] || continue
+        b=$(basename "$f")
+        case "$b" in
+            "dbroot${LEGACY_NAME}.txt") b="dbroot.txt" ;;
+            ".${LEGACY_NAME}_install_state") b=".install_state" ;;
+        esac
+        if [ ! -e "$dst/$b" ] \
+            || { [ "$b" = "bots.json" ] && [ "$(jq 'length' "$dst/bots.json" 2>/dev/null)" = "0" ]; }; then
+            rm -rf "${dst:?}/$b"
+            mv "$f" "$dst/$b"
+        fi
+    done
 }
 
 # A bot's folder is renamed only when it is served the way this script serves
@@ -5412,35 +5448,19 @@ _legacy_migrate() {
     local f b did="" moved="" abak="" d base suffix target n
 
     # the state folder: MySQL's root login, the bots list, the install progress
-    if [ -d "$LEGACY_STATE_DIR" ]; then
-        mkdir -p /root/ciro
-        for f in "$LEGACY_STATE_DIR"/* "$LEGACY_STATE_DIR"/.[!.]*; do
-            [ -e "$f" ] || continue
-            b=$(basename "$f")
-            case "$b" in
-                "dbroot${LEGACY_NAME}.txt") b="dbroot.txt" ;;
-                ".${LEGACY_NAME}_install_state") b=".install_state" ;;
-            esac
-            # a bots list this script just created empty is not one to keep
-            if [ ! -e "/root/ciro/$b" ] \
-                || { [ "$b" = "bots.json" ] && [ "$(jq 'length' /root/ciro/bots.json 2>/dev/null)" = "0" ]; }; then
-                rm -rf "/root/ciro/$b"
-                mv "$f" "/root/ciro/$b"
-            fi
-        done
-        rm -rf "$LEGACY_STATE_DIR"
+    for f in "$LEGACY_STATE_DIR" "$SMALLC_STATE_DIR"; do
+        [ -d "$f" ] || continue
+        _legacy_merge_into "$f" "$STATE_DIR"
+        rm -rf "$f"
         did=1
-    fi
+    done
     # the update snapshots
-    if [ -d "$LEGACY_BACKUP_DIR" ]; then
-        mkdir -p "$CIRO_BACKUP_DIR"
-        for f in "$LEGACY_BACKUP_DIR"/* "$LEGACY_BACKUP_DIR"/.[!.]*; do
-            [ -e "$f" ] || continue
-            [ -e "$CIRO_BACKUP_DIR/$(basename "$f")" ] || mv "$f" "$CIRO_BACKUP_DIR"/
-        done
-        rmdir "$LEGACY_BACKUP_DIR" 2>/dev/null
+    for f in "$LEGACY_BACKUP_DIR" "$SMALLC_BACKUP_DIR"; do
+        [ -d "$f" ] || continue
+        _legacy_merge_into "$f" "$CIRO_BACKUP_DIR"
+        rmdir "$f" 2>/dev/null
         did=1
-    fi
+    done
 
     # the bots' folders, and Apache's files that carry the old name
     bots_registry_ensure
@@ -5452,6 +5472,7 @@ _legacy_migrate() {
             case "$base" in
                 "${LEGACY_NAME}probotconfig"*) suffix="${base#"${LEGACY_NAME}probotconfig"}" ;;
                 "${LEGACY_NAME}botconfig") suffix="" ;;
+                ciro|ciro[0-9]*) suffix="${base#ciro}" ;;
                 *) continue ;;
             esac
             [[ "$suffix" =~ ^[0-9]*$ ]] || continue
@@ -5462,7 +5483,7 @@ _legacy_migrate() {
     # could not be told apart from one that was already there; and a rename
     # Apache once refused is not tried again every minute
     if { [ -n "$todo" ] || [ -f "$LEGACY_PMA_CONF" ]; } \
-        && [ ! -f /root/ciro/.legacy_folders_kept ] && apache2ctl configtest >/dev/null 2>&1; then
+        && [ ! -f /root/Ciro/.legacy_folders_kept ] && apache2ctl configtest >/dev/null 2>&1; then
         abak=$(mktemp -d)
         cp -a /etc/apache2/sites-available /etc/apache2/sites-enabled \
               /etc/apache2/conf-available /etc/apache2/conf-enabled "$abak"/ 2>/dev/null
@@ -5470,9 +5491,9 @@ _legacy_migrate() {
         cp -a "$BOTS_REGISTRY" "$abak/bots.json" 2>/dev/null
         while IFS=$'\t' read -r d suffix; do
             [ -n "$d" ] || continue
-            target="/var/www/html/ciro${suffix}"
+            target="/var/www/html/Ciro${suffix}"
             n=2
-            while [ -e "$target" ]; do target="/var/www/html/ciro${n}"; n=$((n + 1)); done
+            while [ -e "$target" ]; do target="/var/www/html/Ciro${n}"; n=$((n + 1)); done
             mv "$d" "$target" || continue
             _legacy_repoint "$d" "$target"
             moved="${moved}${d}"$'\t'"${target}"$'\n'
@@ -5506,7 +5527,7 @@ _legacy_migrate() {
                 _pma_restore "$abak"
                 cp -a "$abak/bots.json" "$BOTS_REGISTRY" 2>/dev/null
                 systemctl restart apache2 >/dev/null 2>&1
-                touch /root/ciro/.legacy_folders_kept
+                touch /root/Ciro/.legacy_folders_kept
                 echo -e "  \e[93m!\033[0m Apache did not accept the renamed folders - they were left as they were."
                 moved=""
             else
@@ -5527,16 +5548,19 @@ _legacy_migrate() {
 
     # root's watcher line and the command; the line first, so nothing is left
     # calling a command that is gone
-    if command -v crontab >/dev/null 2>&1 && crontab -l 2>/dev/null | grep -Fq "${LEGACY_NAME} selfupdate-watch"; then
-        ( crontab -l 2>/dev/null | grep -vF "${LEGACY_NAME} selfupdate-watch" ) | crontab - 2>/dev/null
+    if command -v crontab >/dev/null 2>&1 \
+        && crontab -l 2>/dev/null | grep -Fq -e "${LEGACY_NAME} selfupdate-watch" -e "ciro selfupdate-watch"; then
+        ( crontab -l 2>/dev/null | grep -vF -e "${LEGACY_NAME} selfupdate-watch" -e "ciro selfupdate-watch" ) | crontab - 2>/dev/null
         _ensure_selfupdate_cron
         did=1
     fi
-    [ -f /root/install.sh ] && _link_ciro /root/install.sh /usr/local/bin/ciro
-    if [ -L "$LEGACY_BIN" ]; then
-        rm -f "$LEGACY_BIN"
-        did=1
-    fi
+    [ -f /root/install.sh ] && _link_ciro /root/install.sh /usr/local/bin/Ciro
+    for f in "$LEGACY_BIN" "$SMALLC_BIN"; do
+        if [ -L "$f" ]; then
+            rm -f "$f"
+            did=1
+        fi
+    done
     # what the script left behind under the old name elsewhere
     if [ -f "${RESOLV}.${LEGACY_NAME}.bak" ]; then
         [ -f "${RESOLV}.ciro.bak" ] || mv "${RESOLV}.${LEGACY_NAME}.bak" "${RESOLV}.ciro.bak"
@@ -5546,7 +5570,7 @@ _legacy_migrate() {
         [ -f "$f" ] && mv -f "$f" "${f%".disabled-by-${LEGACY_NAME}"}.disabled-by-ciro"
     done
 
-    [ -n "$did" ] && echo -e "  \e[92m●\033[0m This server's files now carry the Ciro name; the command is \e[1mciro\033[0m."
+    [ -n "$did" ] && echo -e "  \e[92m●\033[0m This server's files now carry the Ciro name; the command is \e[1mCiro\033[0m."
     [ "${1:-}" != "locked" ] && exec 8>&- 9>&-
     return 0
 }
@@ -5598,7 +5622,7 @@ case "${1:-}" in
     -h|--help|--version|selfupdate-watch) ;;
     *)
         _legacy_migrate
-        if [ $? -eq 2 ] && [ -d "$LEGACY_STATE_DIR" ]; then
+        if [ $? -eq 2 ] && _legacy_state_left; then
             echo -e "\e[93mAn update is running on this server right now - run the command again in a minute.\033[0m"
             exit 1
         fi

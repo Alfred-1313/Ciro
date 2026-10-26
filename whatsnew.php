@@ -640,4 +640,16 @@ return [
             . "• The «agent» panel type is now «Ciro agent», and panels you already added move over by themselves.\n"
             . "• The project's GitHub address: <code>github.com/Alfred-1313/Ciro</code></blockquote>",
     ],
+    [
+        'n' => 48,
+        'date' => '2026-10-26',
+        'fa' => "<blockquote>🔠 <b>اسم و دستور، همه‌جا با C بزرگ: Ciro</b>\n"
+            . "جایی که اسم با حروف کوچک نوشته شده بود - دستور مدیریت و پوشه‌های ربات روی سرور - حالا Ciro نوشته می‌شود؛ لینوکس حروف کوچک و بزرگ را فرق می‌گذارد.\n"
+            . "• دستور روی سرور حالا <code>Ciro</code> است (<code>Ciro update</code>، <code>Ciro backup</code> و...)؛ حرف C آن باید بزرگ باشد.\n"
+            . "• روی سرورهایی که با نسخه قبلی این اسکریپت نصب شده بودند، پوشه ربات (<code>/var/www/html/Ciro</code>)، تنظیمات اسکریپت (<code>/root/Ciro</code>) و نسخه‌های پشتیبان (<code>/root/Ciro-backups</code>) خودکار به همین اسم منتقل می‌شوند؛ وبهوک، دیتابیس و تنظیمات دست نمی‌خورند.</blockquote>",
+        'en' => "<blockquote>🔠 <b>The name and the command, everywhere with a capital C: Ciro</b>\n"
+            . "Wherever the name was written lowercase - the management command and the bot's folders on the server - it is now written Ciro; Linux tells upper and lower case apart.\n"
+            . "• The command on the server is now <code>Ciro</code> (<code>Ciro update</code>, <code>Ciro backup</code>, ...) - the C has to be capital.\n"
+            . "• On servers installed by an earlier copy of this script, the bot folder (<code>/var/www/html/Ciro</code>), the script's settings (<code>/root/Ciro</code>) and the backups (<code>/root/Ciro-backups</code>) move to this name automatically; the webhook, the database and the settings are not touched.</blockquote>",
+    ],
 ];
