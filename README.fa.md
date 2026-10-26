@@ -4,12 +4,12 @@
 
 **ربات تلگرامی برای فروش و مدیریت اشتراک VPN، با فروشگاه جداگانه برای مشتریان فارسی‌زبان و انگلیسی‌زبان.**
 
-[English](README.md) | **فارسی**
+[انگلیسی](README.md) | **فارسی**
 
 <p>
-  <img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP 8.2"/>
-  <img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="AGPL-3.0"/>
-  <img src="https://img.shields.io/badge/Ubuntu%20%7C%20Debian-supported-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt="Ubuntu / Debian"/>
+  <img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=flat-square&logo=php&logoColor=white" alt="نسخهٔ پی‌اچ‌پی ۸٫۲"/>
+  <img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="مجوز AGPL-3.0"/>
+  <img src="https://img.shields.io/badge/Ubuntu%20%7C%20Debian-supported-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt="پشتیبانی از اوبونتو و دبیان"/>
 </p>
 
 </div>
@@ -28,7 +28,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/Alfred-1313/Ciro/master/instal
 
 <div dir="rtl">
 
-پیش از شروع این‌ها را آماده داشته باشید: دامنه‌ای که از قبل به آی‌پی سرور وصل شده باشد، توکن ربات از [‎@BotFather](https://t.me/BotFather) و شناسهٔ عددی (Numeric ID) حساب تلگرام خودتان از [‎@userinfobot](https://t.me/userinfobot).
+پیش از شروع این‌ها را آماده داشته باشید: دامنه‌ای که از قبل به آی‌پی سرور وصل شده باشد، توکن ربات از [‎@BotFather](https://t.me/BotFather) و شناسهٔ عددی حساب تلگرام خودتان از [‎@userinfobot](https://t.me/userinfobot).
 
 بعد از نصب، ربات را با دستور `ciro` مدیریت می‌کنید:
 
@@ -44,11 +44,11 @@ bash <(curl -Ls https://raw.githubusercontent.com/Alfred-1313/Ciro/master/instal
 
 ## امکانات
 
-- تنظیمات، متن‌ها، قیمت‌ها و واحد پول جداگانه برای هر زبان (fa / en)
+- تنظیمات، متن‌ها، قیمت‌ها و واحد پول جداگانه برای هر زبان (فارسی / انگلیسی)
 - همهٔ پیام‌ها و دکمه‌ها از منوی 🎨 ربات یا از پنل وب قابل ویرایش‌اند، با پشتیبانی از ایموجی پریمیوم و استیکر
 - پنل مدیریت تحت وب
 - **پنل‌های پشتیبانی‌شده:** Marzban، Marzneshin، X-UI، Hiddify، S-UI، WGDashboard، Mikrotik، IBSng، Alireza، Rebecca، Remnawave
-- **روش‌های پرداخت:** کارت‌به‌کارت، زرین‌پال، آقای پرداخت، IranPay، Plisio، NOWPayments، TRX، TON، USDT (BEP20)، ستارهٔ تلگرام (Telegram Stars)
+- **روش‌های پرداخت:** کارت‌به‌کارت، زرین‌پال، آقای پرداخت، IranPay، Plisio، NOWPayments، TRX، TON، USDT (BEP20)، ستارهٔ تلگرام
 
 ---
 
