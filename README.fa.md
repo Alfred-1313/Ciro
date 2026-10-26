@@ -1,0 +1,63 @@
+<div align="center" dir="rtl">
+
+# Ciro
+
+**ربات تلگرامی برای فروش و مدیریت اشتراک VPN، با فروشگاه جداگانه برای مشتریان فارسی‌زبان و انگلیسی‌زبان.**
+
+[English](README.md) | **فارسی**
+
+<p>
+  <img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP 8.2"/>
+  <img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="AGPL-3.0"/>
+  <img src="https://img.shields.io/badge/Ubuntu%20%7C%20Debian-supported-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt="Ubuntu / Debian"/>
+</p>
+
+</div>
+
+<div dir="rtl">
+
+## نصب
+
+روی یک سرور تمیز با Ubuntu 20.04 به بالا یا Debian 11 به بالا، و با کاربر root، این دستور را اجرا کنید:
+
+</div>
+
+```bash
+bash <(curl -Ls https://raw.githubusercontent.com/Alfred-1313/Ciro/master/install.sh)
+```
+
+<div dir="rtl">
+
+پیش از شروع این‌ها را آماده داشته باشید: دامنه‌ای که از قبل به آی‌پی سرور وصل شده باشد، توکن ربات از [‎@BotFather](https://t.me/BotFather) و شناسهٔ عددی (Numeric ID) حساب تلگرام خودتان از [‎@userinfobot](https://t.me/userinfobot).
+
+بعد از نصب، ربات را با دستور `ciro` مدیریت می‌کنید:
+
+| دستور | کاری که انجام می‌دهد |
+| --- | --- |
+| `ciro` | باز کردن منو |
+| `ciro update` | دریافت آخرین نسخه؛ اطلاعات شما و فایل `config.php` حفظ می‌شود |
+| `ciro backup` | ارسال نسخهٔ پشتیبان پایگاه‌داده به تلگرام |
+| `ciro renew` | صدور مجدد گواهی SSL |
+| `ciro --help` | فهرست همهٔ دستورها و گزینه‌ها |
+
+اگر از قبل ربات پروژهٔ اصلی یا نسخهٔ قدیمی‌تر همین پروژه را اجرا می‌کنید، همان دستور نصب را اجرا کنید و گزینهٔ **Update** یا **Migrate** را انتخاب کنید؛ چیزی از نو نصب نمی‌شود و هیچ اطلاعاتی از بین نمی‌رود.
+
+## امکانات
+
+- تنظیمات، متن‌ها، قیمت‌ها و واحد پول جداگانه برای هر زبان (fa / en)
+- همهٔ پیام‌ها و دکمه‌ها از منوی 🎨 ربات یا از پنل وب قابل ویرایش‌اند، با پشتیبانی از ایموجی پریمیوم و استیکر
+- پنل مدیریت تحت وب
+- **پنل‌های پشتیبانی‌شده:** Marzban، Marzneshin، X-UI، Hiddify، S-UI، WGDashboard، Mikrotik، IBSng، Alireza، Rebecca، Remnawave
+- **روش‌های پرداخت:** کارت‌به‌کارت، زرین‌پال، آقای پرداخت، IranPay، Plisio، NOWPayments، TRX، TON، USDT (BEP20)، ستارهٔ تلگرام (Telegram Stars)
+
+---
+
+### دربارهٔ این پروژه
+
+ربات Ciro نسخهٔ فورک‌شدهٔ ربات **[میرزا](https://github.com/mahdiMGF2/mirzabot)** است. ما هیچ‌گونه مسئولیتی در قبال فروش این ربات نداریم و این ربات به‌صورت رایگان در همین صفحه در دسترس است. با تشکر از سازندهٔ اصلی ربات میرزا، [‎@mahdiMGF2](https://github.com/mahdiMGF2).
+
+این پروژه مانند پروژهٔ اصلی تحت مجوز **GNU AGPL-3.0** منتشر شده است.
+
+---
+
+</div>
