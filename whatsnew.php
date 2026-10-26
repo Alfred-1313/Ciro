@@ -694,4 +694,20 @@ return [
             . "• While updating or installing, the number of the version being fetched is shown instead of «Latest».\n"
             . "• New command <code>Ciro version</code>: prints each bot's version on the server and the newest one on GitHub.</blockquote>",
     ],
+    [
+        'n' => 52,
+        'date' => '2026-10-26',
+        'fa' => "<blockquote>🗑 <b>گزارش «حذف سرویس‌های ربات از پنل» حالا راستش را می‌گوید</b>\n"
+            . "• قبلاً سرویسی که پنلش دیگر در ربات نبود (یا پنل جواب «پیدا نشد» می‌داد) هم «حذف‌شده» شمرده می‌شد، در حالی که هیچ اکانتی از روی پنل پاک نشده بود؛ فقط از لیست ربات پاک می‌شد.\n"
+            . "• حالا گزارش جدا می‌گوید: چندتا واقعاً از روی پنل حذف شد، چندتا پنل «پیدا نشد» گفت، چندتا پنلشان دیگر در ربات نیست (فقط از ربات پاک شد) و چندتا ناموفق بود. اگر هیچ اکانتی از پنل حذف نشود، با یک هشدار صریح می‌گوید.\n"
+            . "• پیش از شروع، تعداد سرویس‌هایی که پنلشان در ربات نیست نشان داده می‌شود.\n"
+            . "• پنل هیدیفای: دیگر بدون خواندن جواب پنل «موفق» نمی‌شمارد؛ اگر جواب ندهد ناموفق ثبت می‌شود.\n"
+            . "• خطای یک پنل دیگر کل کار را متوقف نمی‌کند؛ فقط همان سرویس ناموفق می‌شود.</blockquote>",
+        'en' => "<blockquote>🗑 <b>The «delete the bot's services from the panels» report now tells the truth</b>\n"
+            . "• A service whose panel was no longer in the bot (or whose panel answered «not found») used to be counted as removed although no account was deleted from any panel; it was only cleared from the bot's list.\n"
+            . "• The report now says separately how many were really deleted from a panel, how many the panel said it could not find, how many belong to a panel the bot no longer has (cleared from the bot only), and how many failed. If no account was deleted from a panel it says so outright.\n"
+            . "• Before starting, it shows how many of the services belong to a panel the bot no longer has.\n"
+            . "• Hiddify panels: it no longer counts a removal as done without reading the panel's answer; no answer is a failure.\n"
+            . "• An error from one panel no longer stops the whole run; only that service fails.</blockquote>",
+    ],
 ];

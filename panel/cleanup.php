@@ -107,7 +107,7 @@ $svc = clean_svc_preview($lang);
 $lastBal = clean_balance_last();
 $job = clean_job_current();
 $running = $job !== null && $job['state'] === 'running';
-$jc = $job ? clean_job_counts($job['id']) : ['wait' => 0, 'ok' => 0, 'fail' => 0];
+$jc = $job ? clean_job_counts($job['id']) : ['wait' => 0, 'ok' => 0, 'fail' => 0, 'removed' => 0, 'absent' => 0, 'nopanel' => 0, 'unk' => 0];
 
 $cardHead = fn($title, $sub) => '<div class="card-head"><div><div class="card-title">' . $title . '</div><div class="card-subtitle">' . $sub . '</div></div></div>';
 $formOpen = fn($card, $extra = '') => '<form method="POST" data-ajax="off" action="cleanup.php?' . http_build_query(array_filter(['lang' => $lang])) . '"' . $extra . '><input type="hidden" name="_csrf" value="' . csrf_token() . '"><input type="hidden" name="card" value="' . $card . '">';
@@ -124,7 +124,7 @@ $cnt = um_lang_counts();
 
 <?= web_lang_tabs($lang, fn($c) => 'cleanup.php?' . http_build_query(array_filter(['lang' => $c])), true, ['' => $cnt['total']] + array_intersect_key($cnt, array_flip(panel_langs()))) ?>
 
-<?php if ($job !== null && ($running || $jc['fail'] > 0 || $job['state'] === 'stopped')):
+<?php if ($job !== null && ($running || $jc['fail'] > 0 || $job['state'] === 'stopped' || ($jc['removed'] === 0 && time() - (int) ($job['finished_at'] ?: $job['created_at']) < 3 * 86400))):
     $done = $jc['ok'] + $jc['fail'];
     $total = max(1, (int) $job['total']);
     $pct = (int) floor($done * 100 / $total);
@@ -134,10 +134,14 @@ $cnt = um_lang_counts();
   <div class="card-body">
     <div class="stats">
       <div class="stat"><div class="stat-label"><?= htmlspecialchars($t['bgProgress']) ?></div><div class="stat-num"><?= $pct ?>٪</div><div class="stat-meta"><?= number_format($done) ?> / <?= number_format((int) $job['total']) ?></div></div>
-      <div class="stat ok"><div class="stat-label"><?= htmlspecialchars($t['clnJobOk']) ?></div><div class="stat-num"><?= number_format($jc['ok']) ?></div></div>
+      <div class="stat ok"><div class="stat-label"><?= htmlspecialchars($t['clnJobOk']) ?></div><div class="stat-num"><?= number_format($jc['removed']) ?></div></div>
+      <div class="stat"><div class="stat-label"><?= htmlspecialchars($t['clnJobOnlyBot']) ?></div><div class="stat-num"><?= number_format($jc['absent'] + $jc['nopanel'] + $jc['unk']) ?></div></div>
       <div class="stat warn"><div class="stat-label"><?= htmlspecialchars($t['clnJobWait']) ?></div><div class="stat-num"><?= number_format($jc['wait']) ?></div></div>
       <div class="stat <?= $jc['fail'] > 0 ? 'no' : '' ?>"><div class="stat-label"><?= htmlspecialchars($t['clnJobFail']) ?></div><div class="stat-num"><?= number_format($jc['fail']) ?></div></div>
     </div>
+    <?php if (!$running && $jc['removed'] === 0 && $jc['unk'] === 0 && $jc['ok'] > 0): ?>
+    <div class="notice notice-warn" style="margin-top:12px"><?= htmlspecialchars($t['clnJobNoneRemoved']) ?></div>
+    <?php endif; ?>
     <?php if ($jc['fail'] > 0):
         $failed = db_fetchAll($pdo, "SELECT username, location, why FROM clean_item WHERE job_id = ? AND state = 'fail' ORDER BY id LIMIT 20", [$job['id']]); ?>
     <div class="tbl-wrap" style="margin-top:12px"><table class="tbl-sm"><thead><tr><th><?= htmlspecialchars($t['clnJobColService']) ?></th><th><?= htmlspecialchars($t['clnJobColPanel']) ?></th><th><?= htmlspecialchars($t['clnJobColWhy']) ?></th></tr></thead><tbody>
@@ -227,6 +231,7 @@ $cnt = um_lang_counts();
     <div class="field-hint"><?= $svc['services'] > 0
         ? htmlspecialchars(sprintf($t['clnSvcCount'], number_format($svc['services']), number_format($svc['users']), number_format($svc['panels'])))
         : '✨ ' . htmlspecialchars($t['clnSvcNone']) ?></div>
+    <?php if ($svc['nopanel'] > 0): ?><div class="notice notice-warn" style="margin-top:10px"><?= htmlspecialchars(sprintf($t['clnSvcNoPanel'], number_format($svc['nopanel']))) ?></div><?php endif; ?>
     <div class="set-row"><div><div class="set-label">⚠️ <?= htmlspecialchars(sprintf($t['clnSvcType'], $t['clnSvcWord'])) ?></div><div class="set-hint"><?= htmlspecialchars($t['clnSvcKeeps']) ?></div></div>
       <div class="set-ctl"><input type="text" class="input" name="word" value="" autocomplete="off" <?= $running ? 'disabled' : '' ?>></div></div>
   </div>

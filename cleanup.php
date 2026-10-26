@@ -62,11 +62,14 @@ if (!function_exists('clean_ensure_schema')) {
             username VARCHAR(190) NULL,
             location VARCHAR(190) NULL,
             state VARCHAR(8) NOT NULL DEFAULT 'wait',
+            kind VARCHAR(8) NULL,
             why VARCHAR(255) NULL,
             tries INT NOT NULL DEFAULT 0,
             retry_after INT NOT NULL DEFAULT 0,
             KEY job_state (job_id, state)
         ) DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci");
+        // a table made before: how each removal ended (see clean_panel_remove)
+        addFieldToTable('clean_item', 'kind', null, 'VARCHAR(8) NULL');
     }
 
     // a scope as it is kept: '' (all languages) or a language the bot has
@@ -286,6 +289,8 @@ if (!function_exists('clean_ensure_schema')) {
             'services' => clean_count("SELECT COUNT(*) FROM invoice i WHERE {$c}", $p),
             'panels' => clean_count("SELECT COUNT(DISTINCT i.Service_location) FROM invoice i WHERE {$c}", $p),
             'users' => clean_count("SELECT COUNT(DISTINCT i.id_user) FROM invoice i WHERE {$c}", $p),
+            // belonging to a panel the bot no longer has: nothing to delete on any panel
+            'nopanel' => clean_count("SELECT COUNT(*) FROM invoice i WHERE {$c} AND i.Service_location COLLATE utf8mb4_unicode_ci NOT IN (SELECT name_panel COLLATE utf8mb4_unicode_ci FROM marzban_panel)", $p),
         ];
     }
 
@@ -310,15 +315,22 @@ if (!function_exists('clean_ensure_schema')) {
         return is_array($r) ? $r : null;
     }
 
-    // how a run stands: ['wait' => n, 'ok' => n, 'fail' => n]
+    // how a run stands: wait / ok / fail, and of the ok ones how each ended -
+    // removed (the panel deleted it), absent (the panel answered that there is
+    // no such account), nopanel (its panel is not in the bot any more, so no
+    // panel was asked), unk (a run from before this was told apart)
     function clean_job_counts($jobId)
     {
         global $pdo;
-        $out = ['wait' => 0, 'ok' => 0, 'fail' => 0];
-        $st = $pdo->prepare("SELECT state, COUNT(*) c FROM clean_item WHERE job_id = ? GROUP BY state");
+        $out = ['wait' => 0, 'ok' => 0, 'fail' => 0, 'removed' => 0, 'absent' => 0, 'nopanel' => 0, 'unk' => 0];
+        $st = $pdo->prepare("SELECT state, kind, COUNT(*) c FROM clean_item WHERE job_id = ? GROUP BY state, kind");
         $st->execute([(int) $jobId]);
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
-            $out[$r['state']] = (int) $r['c'];
+            $out[$r['state']] += (int) $r['c'];
+            if ($r['state'] === 'ok') {
+                $k = in_array($r['kind'], ['removed', 'absent', 'nopanel'], true) ? $r['kind'] : 'unk';
+                $out[$k] += (int) $r['c'];
+            }
         }
         return $out;
     }
@@ -388,23 +400,58 @@ if (!function_exists('clean_ensure_schema')) {
         return $n;
     }
 
-    // Took a service out of its panel? [true, ''] when it is gone - or was
-    // never there, or its panel is no longer in the bot, so there is nothing
-    // left to delete - and [false, reason] when the panel refused or did not
-    // answer.
+    // Took a service out of its panel? [ok, reason, kind]:
+    //   [true, '', 'removed']  the panel deleted the account
+    //   [true, '', 'absent']   the panel answered that there is no such account
+    //                          (a 404 included: it cannot tell a missing
+    //                          account from a panel address that no longer
+    //                          answers properly) - nothing to delete there
+    //   [true, '', 'nopanel']  the service's panel is not in the bot any more, so
+    //                          no panel was asked and none was changed
+    //   [false, reason, '']    the panel refused or did not answer
     function clean_panel_remove(array $inv)
     {
         global $ManagePanel;
+        $panel = select("marzban_panel", "*", "name_panel", $inv['Service_location'], "select");
+        if (!is_array($panel)) {
+            return [true, '', 'nopanel'];
+        }
+        if (($panel['type'] ?? '') === 'hiddify') {
+            return clean_hiddify_remove($inv);
+        }
         $r = $ManagePanel->RemoveUser($inv['Service_location'], $inv['username']);
         if (is_array($r) && ($r['status'] ?? '') === 'successful') {
-            return [true, ''];
+            return [true, '', 'removed'];
         }
         $msg = is_array($r) ? ($r['msg'] ?? $r) : 'no answer';
         $msg = is_string($msg) || is_numeric($msg) ? (string) $msg : json_encode($msg, JSON_UNESCAPED_UNICODE);
         if (preg_match('/not\s*found|no such|does not exist|doesn.t exist|404/i', $msg)) {
-            return [true, ''];
+            return [true, '', 'absent'];
         }
-        return [false, mb_substr($msg, 0, 160)];
+        return [false, mb_substr($msg, 0, 160), ''];
+    }
+
+    // Hiddify: ManagePanel->RemoveUser says «successful» whatever the panel
+    // answered (it never reads the answer), so a removal there would always
+    // look done. Asked here instead: the account is looked up, and deleted only
+    // when it is there, and the delete's own answer is read.
+    function clean_hiddify_remove(array $inv)
+    {
+        $d = getdatauser($inv['username'], $inv['Service_location']);
+        if (is_array($d) && !empty($d['uuid'])) {
+            $r = removeuserhi($inv['Service_location'], $d['uuid']);
+            $code = is_array($r) ? (int) ($r['status'] ?? 0) : 0;
+            if ($code >= 200 && $code < 300) {
+                return [true, '', 'removed'];
+            }
+            return [false, is_array($r) && !empty($r['error']) ? mb_substr((string) $r['error'], 0, 160) : 'HTTP ' . $code, ''];
+        }
+        // a list that came back without this account: it is not there. No list,
+        // an empty one or an error message: the panel did not really answer.
+        if ($d === null) {
+            return [true, '', 'absent'];
+        }
+        return [false, is_array($d) && !empty($d['message']) ? mb_substr((string) $d['message'], 0, 160) : 'no answer', ''];
     }
 
     // cronbot/gift.php: works on the run going on for up to $budget seconds -
@@ -428,7 +475,7 @@ if (!function_exists('clean_ensure_schema')) {
             $deadline = time() + max(5, (int) $budget);
             $pick = $pdo->prepare("SELECT * FROM clean_item WHERE job_id = ? AND state = 'wait' AND retry_after <= ? ORDER BY id LIMIT 20");
             $inv = $pdo->prepare("SELECT * FROM invoice WHERE id_invoice = ? LIMIT 1");
-            $okItem = $pdo->prepare("UPDATE clean_item SET state = 'ok', why = ? WHERE id = ?");
+            $okItem = $pdo->prepare("UPDATE clean_item SET state = 'ok', kind = ?, why = NULL WHERE id = ?");
             $badItem = $pdo->prepare("UPDATE clean_item SET state = ?, why = ?, tries = tries + 1, retry_after = ? WHERE id = ?");
             $out = false;
             while (!$out) {
@@ -451,13 +498,18 @@ if (!function_exists('clean_ensure_schema')) {
                     $inv->execute([$it['invoice_id']]);
                     $row = $inv->fetch(PDO::FETCH_ASSOC);
                     if (!is_array($row) || stripos((string) $row['Status'], 'remove') === 0) {
-                        $okItem->execute(['already gone', $it['id']]);
+                        $okItem->execute(['absent', $it['id']]);
                         continue;
                     }
-                    [$ok, $why] = clean_panel_remove($row);
+                    // one odd panel must not stop the whole run: an error is that service's failure
+                    try {
+                        [$ok, $why, $kind] = clean_panel_remove($row);
+                    } catch (Throwable $e) {
+                        [$ok, $why, $kind] = [false, mb_substr($e->getMessage(), 0, 160), ''];
+                    }
                     if ($ok) {
                         $pdo->prepare("UPDATE invoice SET Status = 'removebyadmin' WHERE id_invoice = ?")->execute([$it['invoice_id']]);
-                        $okItem->execute([null, $it['id']]);
+                        $okItem->execute([$kind, $it['id']]);
                     } else {
                         $tries = (int) $it['tries'] + 1;
                         $badItem->execute([$tries >= 3 ? 'fail' : 'wait', $why, time() + 120 * $tries, $it['id']]);
@@ -491,35 +543,49 @@ if (!function_exists('clean_ensure_schema')) {
     }
 
     // what a run did (or is doing), in the words of $texts (a language's
-    // texts): the line for the admin, with the services that failed listed
-    // below it
+    // texts): the line for the admin - how many accounts the panels really
+    // deleted, apart from the ones only the bot's list lost - with the
+    // services that failed listed below it
     function clean_job_report(array $job, array $texts)
     {
         global $pdo;
         $t = $texts['Admin']['CleanTools'];
         $c = clean_job_counts($job['id']);
         $total = max(1, (int) $job['total']);
-        $line = ['running' => $t['svcRunning'], 'stopped' => $t['svcStopped']][$job['state']] ?? $t['svcDone'];
-        $head = strtr($line, [
-            '{ok}' => number_format($c['ok']),
-            '{fail}' => number_format($c['fail']),
-            '{left}' => number_format($c['wait']),
+        $fmt = fn($key, $n) => strtr($t[$key], ['{n}' => number_format($n)]);
+        $head = strtr(['running' => $t['svcRunning'], 'stopped' => $t['svcStopped']][$job['state']] ?? $t['svcDone'], [
             '{total}' => number_format((int) $job['total']),
             '{pct}' => (int) floor(($c['ok'] + $c['fail']) * 100 / $total),
         ]);
-        $lines = '';
+        $lines = [$fmt('svcLineRemoved', $c['removed'])];
+        if ($c['absent'] > 0) {
+            $lines[] = $fmt('svcLineAbsent', $c['absent']);
+        }
+        if ($c['nopanel'] > 0) {
+            $lines[] = $fmt('svcLineNopanel', $c['nopanel']);
+        }
+        if ($c['unk'] > 0) {
+            $lines[] = $fmt('svcLineUnknown', $c['unk']);
+        }
+        if ($job['state'] !== 'done' || $c['wait'] > 0) {
+            $lines[] = $fmt('svcLineLeft', $c['wait']);
+        }
+        $lines[] = $fmt('svcLineFail', $c['fail']);
+        $out = $head . "\n\n" . implode("\n", $lines);
+        // nothing at all taken out of a panel: said outright, not left to be worked out
+        if ($job['state'] !== 'running' && $c['removed'] === 0 && $c['unk'] === 0 && $c['ok'] > 0) {
+            $out .= "\n\n" . $t['svcNoneRemoved'];
+        }
         if ($c['fail'] > 0) {
             $st = $pdo->prepare("SELECT username, location, why FROM clean_item WHERE job_id = ? AND state = 'fail' ORDER BY id LIMIT 10");
             $st->execute([$job['id']]);
+            $list = '';
             foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
-                $lines .= "\n• <code>" . htmlspecialchars((string) $r['username']) . '</code> (' . htmlspecialchars((string) $r['location']) . '): ' . htmlspecialchars((string) $r['why']);
+                $list .= "\n• <code>" . htmlspecialchars((string) $r['username']) . '</code> (' . htmlspecialchars((string) $r['location']) . '): ' . htmlspecialchars((string) $r['why']);
             }
-            $lines = "\n\n" . $t['svcFailedHead'] . $lines;
-            if ($c['fail'] > 10) {
-                $lines .= "\n…";
-            }
+            $out .= "\n\n" . $t['svcFailedHead'] . $list . ($c['fail'] > 10 ? "\n…" : '');
         }
-        return $head . $lines;
+        return $out;
     }
 
     // told once, to who started the run (a Telegram id) - when it began on the
@@ -677,6 +743,9 @@ if (!function_exists('clean_ensure_schema')) {
             return [strtr($t['svcAsk'], ['{scope}' => clean_scope_name($scope, $tx), '{count}' => $t['svcNone']]), clean_kb(clean_back_rows($code, $t))];
         }
         $count = strtr($t['svcCount'], ['{n}' => number_format($p['services']), '{users}' => number_format($p['users']), '{panels}' => number_format($p['panels'])]);
+        if ($p['nopanel'] > 0) {
+            $count .= "\n\n" . strtr($t['svcNoPanel'], ['{n}' => number_format($p['nopanel'])]);
+        }
         return [strtr($t['svcAsk'], ['{scope}' => clean_scope_name($scope, $tx), '{count}' => $count]), clean_kb(clean_confirm_rows($t['svcGo'], "cln|svc|{$code}|ask", $code, $t))];
     }
 
