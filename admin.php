@@ -4751,6 +4751,30 @@ if (!function_exists('panel_feature_keyboard')) {
         return $rows;
     }
 }
+if (!function_exists('panel_features_keyboard')) {
+    // 🛠 قابلیت های پنل: what one panel offers there - «ساخت کانفیگ دستی» on every
+    // panel type ManagePanel->createUser makes accounts on, and «مدیریت نود ها»
+    // on Marzban (the node calls log in the Marzban way). null: nothing.
+    function panel_features_keyboard($panel, $textbotlang)
+    {
+        $type = is_array($panel) ? (string) ($panel['type'] ?? '') : '';
+        $creatable = ['marzban', 'rebecca', 'marzneshin', 'remnawave', 'x-ui_single', 'alireza_single', 'hiddify', 's_ui', 'WGDashboard', 'ibsng', 'mikrotik', 'ciro_agent', 'Manualsale'];
+        $row = [];
+        if (in_array($type, $creatable, true)) {
+            $row[] = ['text' => $textbotlang['keyboard']['manualCreateConfig']];
+        }
+        if ($type === 'marzban') {
+            $row[] = ['text' => $textbotlang['keyboard']['manageNodes']];
+        }
+        if (!$row) {
+            return null;
+        }
+        return json_encode([
+            'keyboard' => [$row, [['text' => $textbotlang['Admin']['backAdminBtn']], ['text' => $textbotlang['Admin']['backMenuBtn']]]],
+            'resize_keyboard' => true,
+        ]);
+    }
+}
 if (!function_exists('panel_onhold_submenu_keyboard')) {
     // Sub-menu for ONE of the two "when does the timer start" settings
     // (kind: 'buy' -> marzban_panel.conecton, 'test' -> marzban_panel.on_hold_test).
@@ -18103,7 +18127,7 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
         $randomString = bin2hex(random_bytes(5));
         $output_config_link = $panel['sublink'] == "onsublink" ? $dataoutput['subscription_url'] : "";
         $config = "";
-        if ($marzban_list_get['config'] == "onconfig" && is_array($dataoutput['configs'])) {
+        if ($panel['config'] == "onconfig" && is_array($dataoutput['configs'])) {
             foreach ($dataoutput['configs'] as $link) {
                 $config .= "\n" . $link;
             }
@@ -18129,7 +18153,7 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
         }
         sendMessageService($panel, $dataoutput['configs'], $output_config_link, $dataoutput['username'], null, $textcreatuser, $randomString);
     }
-    sendmessage($from_id, $textbotlang['users']['selectoption'], $optionathmarzban, 'HTML');
+    sendmessage($from_id, $textbotlang['users']['selectoption'], panel_features_keyboard($panel, $textbotlang) ?? $keyboardadmin, 'HTML');
     $text_report = "";
     if (strlen($setting['Channel_Report']) > 0) {
         $text_report = sprintf($textbotlang['Admin']['reportgroup']['configCreatedByAdmin'], $user['Processing_value_one'], $user['Processing_value_tow'], $text, $from_id, $username, $userdata['count']);
@@ -18151,22 +18175,20 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     sendmessage($from_id, $textbotlang['Admin']['managepanel']['selectPanel'], $json_list_marzban_panel, 'HTML');
     step('getlocoption', $from_id);
 } elseif ($user['step'] == "getlocoption") {
+    // 🛠 قابلیت های پنل ← a panel: its options. Every panel the bot makes
+    // accounts on gets «ساخت کانفیگ دستی»; one with none says so - this used to
+    // answer nothing at all for Rebecca, Remnawave and the rest.
+    $pf_panel = select("marzban_panel", "*", "name_panel", $text, "select");
+    if (!is_array($pf_panel)) {
+        sendmessage($from_id, $textbotlang['Admin']['managepanel']['featuresNoPanel'], $json_list_marzban_panel, 'HTML');
+        return;
+    }
     update("user", "Processing_value", $text, "id", $from_id);
-    $typepanel = select("marzban_panel", "*", "name_panel", $text, "select")['type'];
-    if ($typepanel == "marzban") {
-        sendmessage($from_id, $textbotlang['users']['selectoption'], $optionathmarzban, 'HTML');
-    } elseif ($typepanel == "x-ui_single") {
-        sendmessage($from_id, $textbotlang['users']['selectoption'], $optionathx_ui, 'HTML');
-    } elseif ($typepanel == "hiddify") {
-        sendmessage($from_id, $textbotlang['users']['selectoption'], $optionathx_ui, 'HTML');
-    } elseif ($typepanel == "alireza") {
-        sendmessage($from_id, $textbotlang['users']['selectoption'], $optionathx_ui, 'HTML');
-    } elseif ($typepanel == "alireza_single") {
-        sendmessage($from_id, $textbotlang['users']['selectoption'], $optionathx_ui, 'HTML');
-    } elseif ($typepanel == "marzneshin") {
-        sendmessage($from_id, $textbotlang['users']['selectoption'], $optionathx_ui, 'HTML');
-    } elseif ($typepanel == "WGDashboard") {
-        sendmessage($from_id, $textbotlang['users']['selectoption'], $optionathx_ui, 'HTML');
+    $pf_kb = panel_features_keyboard($pf_panel, $textbotlang);
+    if ($pf_kb === null) {
+        sendmessage($from_id, sprintf($textbotlang['Admin']['managepanel']['featuresNone'], htmlspecialchars((string) $pf_panel['name_panel']), htmlspecialchars((string) $pf_panel['type'])), $keyboardadmin, 'HTML');
+    } else {
+        sendmessage($from_id, $textbotlang['users']['selectoption'], $pf_kb, 'HTML');
     }
     step("home", $from_id);
 } elseif ($text == $textbotlang['keyboard']['manageNodes'] || $datain == "bakcnode") {

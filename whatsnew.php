@@ -710,4 +710,16 @@ return [
             . "• Hiddify panels: it no longer counts a removal as done without reading the panel's answer; no answer is a failure.\n"
             . "• An error from one panel no longer stops the whole run; only that service fails.</blockquote>",
     ],
+    [
+        'n' => 53,
+        'date' => '2026-10-31',
+        'fa' => "<blockquote>🛠 <b>«قابلیت های پنل» روی همهٔ پنل‌ها کار می‌کند</b>\n"
+            . "• قبلاً با انتخاب پنل ربکا، رمناویو، Ciro agent، S-UI، IBSng، میکروتیک یا فروش دستی هیچ جوابی نمی‌آمد. حالا «🔧 ساخت کانفیگ دستی» برای همهٔ این پنل‌ها هست و «🖥 مدیریت نود ها» برای مرزبان.\n"
+            . "• اگر پنلی گزینه‌ای در این بخش نداشته باشد یا نام پنل اشتباه باشد، ربات پیام روشن می‌دهد، نه سکوت.\n"
+            . "• بعد از ساخت کانفیگ دستی، گزینه‌های همان پنل دوباره می‌آید (قبلاً همیشه دکمه‌های مرزبان می‌آمد) و اگر «نمایش کانفیگ» پنل روشن باشد، لینک کانفیگ‌ها هم در پیام می‌آید.</blockquote>",
+        'en' => "<blockquote>🛠 <b>«Panel features» works on every panel</b>\n"
+            . "• Picking a Rebecca, Remnawave, Ciro agent, S-UI, IBSng, MikroTik or manual-sale panel used to answer nothing at all. «🔧 Create a config by hand» is now there for all of them, and «🖥 Manage nodes» for Marzban.\n"
+            . "• A panel with nothing to offer here, or a wrong panel name, now gets a clear message instead of silence.\n"
+            . "• After a config is made by hand, that panel's own options come back (it always showed Marzban's before), and the config links are in the message when the panel's «show config» is on.</blockquote>",
+    ],
 ];
