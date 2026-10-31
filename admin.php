@@ -4754,7 +4754,7 @@ if (!function_exists('panel_feature_keyboard')) {
 if (!function_exists('panel_features_keyboard')) {
     // 🛠 قابلیت های پنل: what one panel offers there - «ساخت کانفیگ دستی» on every
     // panel type ManagePanel->createUser makes accounts on, and «مدیریت نود ها»
-    // on Marzban (the node calls log in the Marzban way). null: nothing.
+    // on Marzban (Marzban.php's node calls) and Rebecca (rbnodes.php). null: nothing.
     function panel_features_keyboard($panel, $textbotlang)
     {
         $type = is_array($panel) ? (string) ($panel['type'] ?? '') : '';
@@ -4763,7 +4763,8 @@ if (!function_exists('panel_features_keyboard')) {
         if (in_array($type, $creatable, true)) {
             $row[] = ['text' => $textbotlang['keyboard']['manualCreateConfig']];
         }
-        if ($type === 'marzban') {
+        // Rebecca's open its own node screens (rbnodes.php)
+        if ($type === 'marzban' || $type === 'rebecca') {
             $row[] = ['text' => $textbotlang['keyboard']['manageNodes']];
         }
         if (!$row) {
@@ -7939,6 +7940,214 @@ if (preg_match('/^renamereset-([a-z]{2})$/', $datain, $rn_m) && $adminrulecheck[
     return;
 }
 
+//----------------[  🖥 نودهای ربکا  ]----------------
+// rbnodes.php: a Rebecca panel's nodes - their state, actions, the core and
+// service updates, a new node, editing one, the report picture, a node's
+// traffic chart and the history of their ups and downs. Administrators only.
+if (preg_match('/^rbn\|(close|hub|nd|ask|do|core|cv|cvgo|ch|rep|ev|wt|sua|suago|add|addgo|ed|ef)(?:\|(\d+))?(?:\|(\d+))?(?:\|([A-Za-z0-9_.\-]{1,40}))?$/', $datain, $rbn_m) && $adminrulecheck['rule'] == "administrator") {
+    $rbn_t = $textbotlang['Admin']['RbNodes'];
+    $rbn_show = function ($screen) use ($from_id, $message_id) {
+        Editmessagetext($from_id, $message_id, $screen[0], $screen[1], 'HTML');
+    };
+    $rbn_alert = function ($text, $alert = false) use ($callback_query_id) {
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $text, 'show_alert' => $alert]);
+    };
+    if (in_array($user['step'], ['rbn_add', 'rbn_edit'], true)) {
+        step('home', $from_id);
+    }
+    if ($rbn_m[1] === 'close') {
+        Editmessagetext($from_id, $message_id, $rbn_t['closed'], json_encode(['inline_keyboard' => []]), 'HTML');
+        return;
+    }
+    $rbn_panel = rbn_panel($rbn_m[2] ?? 0);
+    if ($rbn_panel === null) {
+        $rbn_alert($rbn_t['stale'], true);
+        return;
+    }
+    $rbn_p = (int) $rbn_panel['id'];
+    $rbn_id = (int) ($rbn_m[3] ?? 0);
+    $rbn_arg = (string) ($rbn_m[4] ?? '');
+    switch ($rbn_m[1]) {
+        case 'hub':
+            $rbn_show(rbn_hub_screen($rbn_panel));
+            break;
+        case 'nd':
+            $rbn_show(rbn_node_screen($rbn_panel, $rbn_id));
+            break;
+        case 'ask':
+            [$rbn_node] = rbn_node($rbn_panel, $rbn_id);
+            if (!isset($rbn_t['ask'][$rbn_arg]) || $rbn_node === null) {
+                $rbn_show(rbn_node_screen($rbn_panel, $rbn_id));
+                break;
+            }
+            $rbn_show(rbn_confirm_screen($rbn_panel, $rbn_id, $rbn_arg, $rbn_node['name']));
+            break;
+        case 'do':
+            [$rbn_node] = rbn_node($rbn_panel, $rbn_id);
+            $rbn_name = is_array($rbn_node) ? (string) $rbn_node['name'] : (string) $rbn_id;
+            $rbn_label = $rbn_t['act'][$rbn_arg] ?? $rbn_arg;
+            [$rbn_ok, $rbn_why] = rbn_do($rbn_panel, $rbn_id, $rbn_arg);
+            if ($rbn_ok && $rbn_arg === 'dl') {
+                $rbn_show(rbn_hub_screen($rbn_panel, strtr($rbn_t['deleted'], ['{name}' => htmlspecialchars($rbn_name)])));
+                break;
+            }
+            $rbn_show(rbn_node_screen($rbn_panel, $rbn_id, $rbn_ok ? strtr($rbn_t['done'], ['{action}' => $rbn_label]) : strtr($rbn_t['failed'], ['{action}' => $rbn_label, '{why}' => $rbn_why])));
+            break;
+        case 'core':
+            [$rbn_node, $rbn_why] = rbn_node($rbn_panel, $rbn_id);
+            $rbn_show($rbn_node === null ? rbn_node_screen($rbn_panel, $rbn_id) : rbn_core_screen($rbn_panel, $rbn_node));
+            break;
+        case 'cv':
+            [$rbn_node] = rbn_node($rbn_panel, $rbn_id);
+            $rbn_show([strtr($rbn_t['coreAsk'], ['{ver}' => htmlspecialchars($rbn_arg), '{name}' => htmlspecialchars(is_array($rbn_node) ? (string) $rbn_node['name'] : '')]), rbn_kb([
+                [rbn_btn($rbn_t['btnYes'], "rbn|cvgo|{$rbn_p}|{$rbn_id}|{$rbn_arg}", 'danger')],
+                [rbn_btn($rbn_t['btnCancel'], "rbn|core|{$rbn_p}|{$rbn_id}", 'primary')],
+            ])]);
+            break;
+        case 'cvgo':
+            [$rbn_node] = rbn_node($rbn_panel, $rbn_id);
+            [$rbn_ok, $rbn_why] = rbn_do($rbn_panel, $rbn_id, 'cv', $rbn_arg);
+            $rbn_show(rbn_node_screen($rbn_panel, $rbn_id, $rbn_ok
+                ? strtr($rbn_t['coreStarted'], ['{ver}' => htmlspecialchars($rbn_arg), '{name}' => htmlspecialchars(is_array($rbn_node) ? (string) $rbn_node['name'] : '')])
+                : strtr($rbn_t['failed'], ['{action}' => $rbn_t['act']['core'], '{why}' => $rbn_why])));
+            break;
+        case 'ch':
+            $rbn_alert($rbn_t['chartWait']);
+            [$rbn_node, $rbn_why] = rbn_node($rbn_panel, $rbn_id);
+            $rbn_rows = $rbn_node === null ? null : rbn_daily($rbn_panel, $rbn_id, 30);
+            $rbn_png = $rbn_rows === null ? null : rbn_daily_png($rbn_panel, $rbn_node, $rbn_rows, 30);
+            if ($rbn_png === null) {
+                sendmessage($from_id, strtr($rbn_t['chartFail'], ['{why}' => $rbn_rows !== null && $rbn_node !== null ? $rbn_t['noGd'] : ($rbn_why !== '' ? $rbn_why : $rbn_t['errOld'])]), null, 'HTML');
+                break;
+            }
+            $rbn_total = array_sum(array_column($rbn_rows, 'bytes'));
+            rbn_send_png($from_id, $rbn_png, strtr($rbn_t['chartCaption'], ['{name}' => htmlspecialchars((string) $rbn_node['name']), '{total}' => rbn_bytes($rbn_total), '{avg}' => rbn_bytes($rbn_total / 30)]));
+            break;
+        case 'rep':
+            $rbn_alert($rbn_t['chartWait']);
+            [$rbn_png, $rbn_nodes, $rbn_why] = rbn_build_report($rbn_panel);
+            if ($rbn_nodes === null) {
+                sendmessage($from_id, strtr($rbn_t['chartFail'], ['{why}' => $rbn_why]), null, 'HTML');
+            } elseif ($rbn_png === null) {
+                sendmessage($from_id, rbn_report_caption($rbn_panel, $rbn_nodes) . "\n\n⚠️ " . $rbn_t['noGd'], null, 'HTML');
+            } else {
+                rbn_send_png($from_id, $rbn_png, rbn_report_caption($rbn_panel, $rbn_nodes));
+            }
+            break;
+        case 'ev':
+            $rbn_show(rbn_history_screen($rbn_panel, max(1, $rbn_id)));
+            break;
+        case 'wt':
+            rbn_watch_set(!rbn_watch_on());
+            $rbn_show(rbn_hub_screen($rbn_panel));
+            break;
+        case 'sua':
+            [$rbn_nodes] = rbn_nodes($rbn_panel);
+            $rbn_show([
+                '⚠️ ' . strtr($rbn_t['ask']['sua'], ['{n}' => count($rbn_nodes ?? [])]),
+                rbn_kb([[rbn_btn($rbn_t['btnYes'], "rbn|suago|{$rbn_p}", 'danger')], [rbn_btn($rbn_t['btnCancel'], "rbn|hub|{$rbn_p}", 'primary')]]),
+            ]);
+            break;
+        case 'suago':
+            [$rbn_nodes, $rbn_why] = rbn_nodes($rbn_panel);
+            $rbn_ids = array_map(fn($n) => (int) $n['id'], array_filter($rbn_nodes ?? [], fn($n) => ($n['status'] ?? '') !== 'disabled'));
+            [$rbn_ok, $rbn_why] = $rbn_nodes === null ? [false, $rbn_why] : rbn_update_all_services($rbn_panel, $rbn_ids);
+            $rbn_show(rbn_hub_screen($rbn_panel, $rbn_ok ? strtr($rbn_t['updateAllStarted'], ['{n}' => count($rbn_ids)]) : strtr($rbn_t['failed'], ['{action}' => $rbn_t['btnUpdateAll'], '{why}' => $rbn_why])));
+            break;
+        case 'add':
+            savedata("clear", "rbn", ['p' => $rbn_p, 'f' => 'name', 'd' => []]);
+            step('rbn_add', $from_id);
+            $rbn_show([$rbn_t['addAsk']['name'], rbn_kb([[rbn_btn($rbn_t['btnCancel'], "rbn|hub|{$rbn_p}", 'danger')]])]);
+            break;
+        case 'addgo':
+            $rbn_d = (json_decode((string) $user['Processing_value'], true) ?: [])['rbn'] ?? null;
+            if (!is_array($rbn_d) || (int) ($rbn_d['p'] ?? 0) !== $rbn_p || ($rbn_d['f'] ?? '') !== 'ready') {
+                $rbn_alert($rbn_t['stale'], true);
+                break;
+            }
+            savedata("clear", "rbn", null);
+            [$rbn_node, $rbn_why] = rbn_add($rbn_panel, $rbn_d['d']);
+            if ($rbn_node === null) {
+                $rbn_show(rbn_hub_screen($rbn_panel, strtr($rbn_t['failed'], ['{action}' => $rbn_t['btnAdd'], '{why}' => $rbn_why])));
+                break;
+            }
+            $rbn_bundle = rbn_send_bundle($from_id, $rbn_node);
+            $rbn_note = strtr($rbn_bundle ? $rbn_t['addDone'] : $rbn_t['addNoBundle'], ['{name}' => htmlspecialchars((string) $rbn_node['name']), '{port}' => (int) $rbn_d['d']['port'], '{api}' => (int) $rbn_d['d']['api_port']]);
+            // a fresh message under the bundle, so the steps read in order
+            [$rbn_text, $rbn_kb] = rbn_node_screen($rbn_panel, (int) ($rbn_node['id'] ?? 0), $rbn_note);
+            sendmessage($from_id, $rbn_text, $rbn_kb, 'HTML');
+            break;
+        case 'ed':
+            [$rbn_node] = rbn_node($rbn_panel, $rbn_id);
+            $rbn_show($rbn_node === null ? rbn_node_screen($rbn_panel, $rbn_id) : rbn_edit_screen($rbn_panel, $rbn_node));
+            break;
+        case 'ef':
+            [$rbn_node] = rbn_node($rbn_panel, $rbn_id);
+            if ($rbn_node === null || !isset($rbn_t['field'][$rbn_arg])) {
+                $rbn_show(rbn_node_screen($rbn_panel, $rbn_id));
+                break;
+            }
+            savedata("clear", "rbn", ['p' => $rbn_p, 'n' => $rbn_id, 'f' => $rbn_arg]);
+            step('rbn_edit', $from_id);
+            $rbn_show([strtr($rbn_t['editAsk'], ['{field}' => $rbn_t['field'][$rbn_arg], '{now}' => htmlspecialchars(rbn_field_now($rbn_node, $rbn_arg))]), rbn_kb([[rbn_btn($rbn_t['btnCancel'], "rbn|ed|{$rbn_p}|{$rbn_id}", 'danger')]])]);
+            break;
+    }
+    return;
+}
+// ...and the values typed for a new node, or for a field of one
+if (in_array($user['step'], ['rbn_add', 'rbn_edit'], true) && $datain === '' && $adminrulecheck['rule'] == "administrator"
+    && !in_array($text, [$textbotlang['Admin']['backAdminBtn'], $textbotlang['Admin']['backMenuBtn']], true)) {
+    $rbn_t = $textbotlang['Admin']['RbNodes'];
+    $rbn_d = (json_decode((string) $user['Processing_value'], true) ?: [])['rbn'] ?? null;
+    $rbn_panel = is_array($rbn_d) ? rbn_panel($rbn_d['p'] ?? 0) : null;
+    if ($rbn_panel === null) {
+        step('home', $from_id);
+        sendmessage($from_id, $rbn_t['stale'], null, 'HTML');
+        return;
+    }
+    $rbn_p = (int) $rbn_panel['id'];
+    $rbn_f = (string) ($rbn_d['f'] ?? '');
+    if ($user['step'] === 'rbn_edit') {
+        $rbn_id = (int) ($rbn_d['n'] ?? 0);
+        $rbn_v = rbn_field_value($rbn_f, $text);
+        if ($rbn_v === null) {
+            sendmessage($from_id, $rbn_t['addBad'], rbn_kb([[rbn_btn($rbn_t['btnCancel'], "rbn|ed|{$rbn_p}|{$rbn_id}", 'danger')]]), 'HTML');
+            return;
+        }
+        step('home', $from_id);
+        [$rbn_ok, $rbn_why] = rbn_edit($rbn_panel, $rbn_id, $rbn_f, $rbn_v);
+        $rbn_label = $rbn_t['act']['ed'] . ' — ' . ($rbn_t['field'][$rbn_f] ?? $rbn_f);
+        [$rbn_text, $rbn_kb] = rbn_node_screen($rbn_panel, $rbn_id, $rbn_ok ? strtr($rbn_t['done'], ['{action}' => $rbn_label]) : strtr($rbn_t['failed'], ['{action}' => $rbn_label, '{why}' => $rbn_why]));
+        sendmessage($from_id, $rbn_text, $rbn_kb, 'HTML');
+        return;
+    }
+    // ➕ name → address → port → API port → coefficient, «-» keeping a default
+    $rbn_cancel = rbn_kb([[rbn_btn($rbn_t['btnCancel'], "rbn|hub|{$rbn_p}", 'danger')]]);
+    $rbn_defaults = ['port' => 62050, 'api_port' => 62051, 'coef' => 1];
+    $rbn_raw = trim((string) $text);
+    $rbn_v = ($rbn_raw === '-' && isset($rbn_defaults[$rbn_f])) ? $rbn_defaults[$rbn_f] : rbn_field_value($rbn_f, $rbn_raw);
+    if ($rbn_v === null) {
+        sendmessage($from_id, $rbn_t['addBad'], $rbn_cancel, 'HTML');
+        return;
+    }
+    if ($rbn_f === 'api_port' && (int) $rbn_v === (int) ($rbn_d['d']['port'] ?? 0)) {
+        sendmessage($from_id, $rbn_t['addSamePorts'], $rbn_cancel, 'HTML');
+        return;
+    }
+    $rbn_d['d'][$rbn_f] = $rbn_v;
+    $rbn_order = ['name', 'address', 'port', 'api_port', 'coef'];
+    $rbn_next = $rbn_order[array_search($rbn_f, $rbn_order, true) + 1] ?? 'ready';
+    $rbn_d['f'] = $rbn_next;
+    savedata("clear", "rbn", $rbn_d);
+    if ($rbn_next === 'ready') {
+        step('home', $from_id);
+        [$rbn_text, $rbn_kb] = rbn_add_summary($rbn_panel, $rbn_d['d']);
+        sendmessage($from_id, $rbn_text, $rbn_kb, 'HTML');
+        return;
+    }
+    sendmessage($from_id, $rbn_t['addAsk'][$rbn_next], $rbn_cancel, 'HTML');
+    return;
+}
 //----------------[  👤 🧹 پاکسازی و ریست  ]----------------
 // balances to zero (with a way back), every زیرمجموعه to zero, and the services
 // the bot sold taken out of their panels (a run that goes on in the
@@ -18191,6 +18400,11 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
         sendmessage($from_id, $textbotlang['users']['selectoption'], $pf_kb, 'HTML');
     }
     step("home", $from_id);
+} elseif ($text == $textbotlang['keyboard']['manageNodes'] && $adminrulecheck['rule'] == "administrator"
+    && is_array($rbn_entry = select("marzban_panel", "*", "name_panel", (string) $user['Processing_value'], "select")) && ($rbn_entry['type'] ?? '') === 'rebecca') {
+    // 🖥 a Rebecca panel's nodes (rbnodes.php)
+    [$rbn_text, $rbn_kb] = rbn_hub_screen($rbn_entry);
+    sendmessage($from_id, $rbn_text, $rbn_kb, 'HTML');
 } elseif ($text == $textbotlang['keyboard']['manageNodes'] || $datain == "bakcnode") {
     if ($adminnumber != $from_id) {
         sendmessage($from_id, $textbotlang['Admin']['mainAdminOnly'], null, 'HTML');

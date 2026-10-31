@@ -16,6 +16,7 @@ $manageItems = [
   $navItem('service.php', 'service', $navT['layoutPageTitleService'], 'server', $navT['layoutMenuSectionFinancial']),
   $navItem('product.php', 'product', $navT['layoutPageTitleProduct'], 'package', $navT['layoutMenuSectionSystem']),
   $navItem('servers.php', 'servers', $navT['srvPageTitle'], 'server', $navT['srvPageTitle']),
+  $navItem('nodes.php', 'nodes', $navT['rbnPageTitle'], 'server', $navT['rbnPageTitle']),
   $navItem('category.php', 'category', $navT['categoryPageTitle'], 'folder', $navT['categoryPageTitle']),
   $navItem('payg.php', 'payg', $navT['pgPageTitle'], 'chart', $navT['pgPageTitle']),
   $navItem('bulkgift.php', 'bulkgift', $navT['bgPageTitle'], 'gift', $navT['bgPageTitle']),

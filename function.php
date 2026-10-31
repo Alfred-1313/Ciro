@@ -10052,6 +10052,8 @@ function bot_cron_commands()
         "3,18,33,48 * * * * flock -n /tmp/mz_statusday.lock curl -s --max-time 600 https://$domainhosts/cronbot/statusday.php > /dev/null 2>&1",
         "7,22,37,52 * * * * flock -n /tmp/mz_on_hold.lock curl -s --max-time 600 https://$domainhosts/cronbot/on_hold.php > /dev/null 2>&1",
         "11,26,41,56 * * * * flock -n /tmp/mz_uptime_node.lock curl -s --max-time 600 https://$domainhosts/cronbot/uptime_node.php > /dev/null 2>&1",
+        // 🖥 Rebecca nodes: a node that goes down is told within minutes
+        "*/2 * * * * flock -n /tmp/mz_rbnodes.lock curl -s --max-time 110 https://$domainhosts/cronbot/rbnodes.php > /dev/null 2>&1",
         "14,29,44,59 * * * * flock -n /tmp/mz_uptime_panel.lock curl -s --max-time 600 https://$domainhosts/cronbot/uptime_panel.php > /dev/null 2>&1",
         "9,39 * * * * flock -n /tmp/mz_expireagent.lock curl -s --max-time 1700 https://$domainhosts/cronbot/expireagent.php > /dev/null 2>&1",
     ];
@@ -23077,3 +23079,5 @@ require_once __DIR__ . '/bulkgift.php';
 require_once __DIR__ . '/bulkspeed.php';
 // 🧹 پاکسازی و ریست (موجودی، زیرمجموعه، سرویس‌های ربات) - the same
 require_once __DIR__ . '/cleanup.php';
+// 🖥 نودهای ربکا (پایش، گزارش، مدیریت) - the same
+require_once __DIR__ . '/rbnodes.php';

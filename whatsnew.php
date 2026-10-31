@@ -722,4 +722,26 @@ return [
             . "• A panel with nothing to offer here, or a wrong panel name, now gets a clear message instead of silence.\n"
             . "• After a config is made by hand, that panel's own options come back (it always showed Marzban's before), and the config links are in the message when the panel's «show config» is on.</blockquote>",
     ],
+    [
+        'n' => 54,
+        'date' => '2026-10-31',
+        'fa' => "<blockquote>🖥 <b>مدیریت کامل نودهای پنل ربکا</b>\n"
+            . "• از «🛠 قابلیت های پنل» ← پنل ربکا ← «🖥 مدیریت نود ها»، و در پنل وب «🖥 نودهای ربکا».\n"
+            . "• لیست نودها با وضعیت، CPU، رم، سرعت الان، ترافیک کل، نسخهٔ Xray و سرویس نود، آدرس و پورت‌ها.\n"
+            . "• کارهای هر نود: اتصال دوباره، همگام‌سازی، ری‌استارت هسته یا سرویس نود، آپدیت هستهٔ Xray (انتخاب نسخه)، آپدیت سرویس نود، خاموش و روشن، صفر کردن مصرف، ریبوت سرور نود، ویرایش (اسم، آدرس، پورت‌ها، ضریب) و حذف؛ کارهایی که کاربرها را قطع می‌کنند تأیید می‌خواهند.\n"
+            . "• ➕ افزودن نود قدم‌به‌قدم؛ بستهٔ نصب نود (گواهی + کلید) به‌صورت فایل می‌آید، با دستور نصب.\n"
+            . "• ⬆️ آپدیت سرویس همهٔ نودها با یک دکمه.\n"
+            . "• 🔔 پایش هر ۲ دقیقه: قطع شدن هر نود (یا خود پنل) با اسم، وضعیت، پیام خطا و ساعت گزارش می‌شود و وصل شدن دوباره با مدت قطعی؛ «در حال اتصال» فقط اگر بیشتر از ۵ دقیقه طول بکشد. 📜 تاریخچهٔ همهٔ قطع و وصل‌ها با تاریخ.\n"
+            . "• 📊 گزارش تصویری: یک عکس از همهٔ نودها (CPU، رم، سرعت، ترافیک، نسخه‌ها، آدرس) با نمودار ترافیک ۱۴ روز؛ و برای هر نود نمودار مصرف روزانهٔ ۳۰ روز.\n"
+            . "• فقط برای پنل‌های ربکا؛ توکن پنل باید مال ادمین sudo باشد.</blockquote>",
+        'en' => "<blockquote>🖥 <b>Full node management for Rebecca panels</b>\n"
+            . "• From «🛠 Panel features» ← a Rebecca panel ← «🖥 Manage nodes», and «🖥 Rebecca nodes» in the web panel.\n"
+            . "• The node list with status, CPU, RAM, current speed, total traffic, Xray and node service versions, address and ports.\n"
+            . "• Per node: reconnect, sync, restart the core or the node service, update the Xray core (pick a version), update the node service, disable and enable, reset usage, reboot the node server, edit (name, address, ports, coefficient) and delete; the ones that drop users ask first.\n"
+            . "• ➕ Add a node step by step; the node install bundle (certificate + key) comes as a file, with the install command.\n"
+            . "• ⬆️ Update every node's service with one button.\n"
+            . "• 🔔 A watch every 2 minutes: a node (or the panel itself) going down is reported with its name, status, error and time, and coming back with how long it was down; «connecting» only after 5 minutes. 📜 The full history of ups and downs, with dates.\n"
+            . "• 📊 A report picture: every node (CPU, RAM, speed, traffic, versions, address) with a 14-day traffic chart; and a 30-day daily traffic chart per node.\n"
+            . "• Rebecca panels only; the panel token must be a sudo admin's.</blockquote>",
+    ],
 ];
