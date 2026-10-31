@@ -7944,7 +7944,7 @@ if (preg_match('/^renamereset-([a-z]{2})$/', $datain, $rn_m) && $adminrulecheck[
 // rbnodes.php: a Rebecca panel's nodes - their state, actions, the core and
 // service updates, a new node, editing one, the report picture, a node's
 // traffic chart and the history of their ups and downs. Administrators only.
-if (preg_match('/^rbn\|(close|hub|nd|ask|do|core|cv|cvgo|ch|rep|ev|wt|sua|suago|add|addgo|ed|ef)(?:\|(\d+))?(?:\|(\d+))?(?:\|([A-Za-z0-9_.\-]{1,40}))?$/', $datain, $rbn_m) && $adminrulecheck['rule'] == "administrator") {
+if (preg_match('/^rbn\|(close|hub|nd|ask|do|core|cv|cvgo|ch|rep|ev|wt|sua|suago|add|addgo|ed|ef|dst|dset|dtest)(?:\|(\d+))?(?:\|(\d+))?(?:\|([A-Za-z0-9_.\-]{1,40}))?$/', $datain, $rbn_m) && $adminrulecheck['rule'] == "administrator") {
     $rbn_t = $textbotlang['Admin']['RbNodes'];
     $rbn_show = function ($screen) use ($from_id, $message_id) {
         Editmessagetext($from_id, $message_id, $screen[0], $screen[1], 'HTML');
@@ -7952,7 +7952,7 @@ if (preg_match('/^rbn\|(close|hub|nd|ask|do|core|cv|cvgo|ch|rep|ev|wt|sua|suago|
     $rbn_alert = function ($text, $alert = false) use ($callback_query_id) {
         telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $text, 'show_alert' => $alert]);
     };
-    if (in_array($user['step'], ['rbn_add', 'rbn_edit'], true)) {
+    if (in_array($user['step'], ['rbn_add', 'rbn_edit', 'rbn_dest'], true)) {
         step('home', $from_id);
     }
     if ($rbn_m[1] === 'close') {
@@ -7969,7 +7969,35 @@ if (preg_match('/^rbn\|(close|hub|nd|ask|do|core|cv|cvgo|ch|rep|ev|wt|sua|suago|
     $rbn_arg = (string) ($rbn_m[4] ?? '');
     switch ($rbn_m[1]) {
         case 'hub':
-            $rbn_show(rbn_hub_screen($rbn_panel));
+            $rbn_show(rbn_open_screen($rbn_panel));
+            break;
+        case 'dst':
+            $rbn_show(rbn_dest_screen($rbn_panel, rbn_dest($rbn_panel) === ''));
+            break;
+        case 'dset':
+            if ($rbn_arg === 'chat') {
+                savedata("clear", "rbn", ['p' => $rbn_p]);
+                step('rbn_dest', $from_id);
+                $rbn_show([$rbn_t['destAskChat'], rbn_kb([[rbn_btn($rbn_t['btnCancel'], "rbn|dst|{$rbn_p}", 'danger')]])]);
+                break;
+            }
+            if (!in_array($rbn_arg, ['group', 'bot', 'off', 'auto'], true)) {
+                break;
+            }
+            if ($rbn_arg === 'group' && rbn_report_group() === '') {
+                $rbn_alert($rbn_t['destNoGroup'], true);
+                break;
+            }
+            rbn_dest_set($rbn_panel, $rbn_arg);
+            $rbn_show(rbn_hub_screen($rbn_panel, strtr($rbn_t['destSaved'], ['{dest}' => htmlspecialchars(rbn_dest_label($rbn_arg))])));
+            break;
+        case 'dtest':
+            if (rbn_dest($rbn_panel) === 'off') {
+                $rbn_alert($rbn_t['destTestNone'], true);
+                break;
+            }
+            [$rbn_sent, $rbn_err] = rbn_alert($rbn_panel, strtr($rbn_t['destTestText'], ['{panel}' => htmlspecialchars(rbn_names($rbn_panel)), '{host}' => htmlspecialchars(rbn_host($rbn_panel))]));
+            $rbn_alert($rbn_sent > 0 ? strtr($rbn_t['destTestSent'], ['{n}' => $rbn_sent]) : strtr($rbn_t['destTestFail'], ['{why}' => $rbn_err]), true);
             break;
         case 'nd':
             $rbn_show(rbn_node_screen($rbn_panel, $rbn_id));
@@ -8092,6 +8120,35 @@ if (preg_match('/^rbn\|(close|hub|nd|ask|do|core|cv|cvgo|ch|rep|ev|wt|sua|suago|
             $rbn_show([strtr($rbn_t['editAsk'], ['{field}' => $rbn_t['field'][$rbn_arg], '{now}' => htmlspecialchars(rbn_field_now($rbn_node, $rbn_arg))]), rbn_kb([[rbn_btn($rbn_t['btnCancel'], "rbn|ed|{$rbn_p}|{$rbn_id}", 'danger')]])]);
             break;
     }
+    return;
+}
+// ...the channel or group a panel's reports go to, typed in
+if ($user['step'] === 'rbn_dest' && $datain === '' && $adminrulecheck['rule'] == "administrator"
+    && !in_array($text, [$textbotlang['Admin']['backAdminBtn'], $textbotlang['Admin']['backMenuBtn']], true)) {
+    $rbn_t = $textbotlang['Admin']['RbNodes'];
+    $rbn_d = (json_decode((string) $user['Processing_value'], true) ?: [])['rbn'] ?? null;
+    $rbn_panel = is_array($rbn_d) ? rbn_panel($rbn_d['p'] ?? 0) : null;
+    if ($rbn_panel === null) {
+        step('home', $from_id);
+        sendmessage($from_id, $rbn_t['stale'], null, 'HTML');
+        return;
+    }
+    $rbn_p = (int) $rbn_panel['id'];
+    $rbn_cancel = rbn_kb([[rbn_btn($rbn_t['btnCancel'], "rbn|dst|{$rbn_p}", 'danger')]]);
+    $rbn_chat = rbn_chat_value($text);
+    if ($rbn_chat === null) {
+        sendmessage($from_id, $rbn_t['destChatBad'], $rbn_cancel, 'HTML');
+        return;
+    }
+    [$rbn_id, $rbn_why] = rbn_chat_try($rbn_panel, $rbn_chat);
+    if ($rbn_id === null) {
+        sendmessage($from_id, strtr($rbn_t['destChatFail'], ['{why}' => htmlspecialchars($rbn_why)]), $rbn_cancel, 'HTML');
+        return;
+    }
+    step('home', $from_id);
+    rbn_dest_set($rbn_panel, 'chat:' . $rbn_id);
+    [$rbn_text, $rbn_kb] = rbn_hub_screen($rbn_panel, strtr($rbn_t['destSaved'], ['{dest}' => htmlspecialchars(rbn_dest_label('chat:' . $rbn_id))]));
+    sendmessage($from_id, $rbn_text, $rbn_kb, 'HTML');
     return;
 }
 // ...and the values typed for a new node, or for a field of one
@@ -18402,8 +18459,8 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     step("home", $from_id);
 } elseif ($text == $textbotlang['keyboard']['manageNodes'] && $adminrulecheck['rule'] == "administrator"
     && is_array($rbn_entry = select("marzban_panel", "*", "name_panel", (string) $user['Processing_value'], "select")) && ($rbn_entry['type'] ?? '') === 'rebecca') {
-    // 🖥 a Rebecca panel's nodes (rbnodes.php)
-    [$rbn_text, $rbn_kb] = rbn_hub_screen($rbn_entry);
+    // 🖥 a Rebecca panel's nodes (rbnodes.php) - where its reports go, asked first
+    [$rbn_text, $rbn_kb] = rbn_open_screen($rbn_entry);
     sendmessage($from_id, $rbn_text, $rbn_kb, 'HTML');
 } elseif ($text == $textbotlang['keyboard']['manageNodes'] || $datain == "bakcnode") {
     if ($adminnumber != $from_id) {

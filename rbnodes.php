@@ -346,10 +346,205 @@ if (!function_exists('rbn_ensure_schema')) {
         feature_setting_set('rbn_watch', 'all', $on ? '1' : '0');
     }
 
-    // cronbot/rbnodes.php: every Rebecca panel's nodes against what they were.
-    // Each change is kept. Going down is told at once - but «connecting» only
-    // once it has lasted 5 minutes, so a reconnect does not ring twice - and
-    // coming back is told only after a going-down was.
+    // ---------------------------------------------------------------- 🔗
+    // One Rebecca panel can be in the bot more than once (two rows on the same
+    // address, for other inbounds or other buyers). Such twins are watched
+    // once and report once: everything about them is kept under one id, the
+    // canonical one - the lowest id of rows on the same address, or of rows
+    // whose nodes turned out to be the very same (the watch notices that and
+    // remembers it in rbn_twins).
+
+    // a panel's address as one string: scheme://host:port
+    function rbn_base(array $panel)
+    {
+        $u = parse_url(trim((string) $panel['url_panel']));
+        $scheme = strtolower((string) ($u['scheme'] ?? 'https'));
+        $host = strtolower(rtrim((string) ($u['host'] ?? ''), '.'));
+        $port = (int) ($u['port'] ?? ($scheme === 'http' ? 80 : 443));
+        return $scheme . '://' . $host . ':' . $port;
+    }
+
+    // host[:port], to tell two panels apart at a glance
+    function rbn_host(array $panel)
+    {
+        $u = parse_url(trim((string) $panel['url_panel']));
+        return (string) ($u['host'] ?? '') . (isset($u['port']) ? ':' . $u['port'] : '');
+    }
+
+    // [panel id => canonical id] for every Rebecca panel
+    function rbn_canon_map($fresh = false)
+    {
+        static $map = null;
+        if ($map !== null && !$fresh) {
+            return $map;
+        }
+        $map = [];
+        $byBase = [];
+        foreach (rbn_panels() as $p) {
+            $base = rbn_base($p);
+            $byBase[$base] = $byBase[$base] ?? (int) $p['id'];
+            $map[(int) $p['id']] = $byBase[$base];
+        }
+        // twins found by their nodes: {address group's id: the id it is one with}
+        $twins = json_decode((string) feature_setting_value('rbn_twins', 'all', ''), true);
+        foreach (is_array($twins) ? $twins : [] as $from => $to) {
+            if (isset($map[(int) $to])) {
+                foreach ($map as $pid => $c) {
+                    if ($c === (int) $from) {
+                        $map[$pid] = $map[(int) $to];
+                    }
+                }
+            }
+        }
+        return $map;
+    }
+
+    function rbn_canon(array $panel)
+    {
+        return rbn_canon_map()[(int) $panel['id']] ?? (int) $panel['id'];
+    }
+
+    // every bot panel that is this one Rebecca panel, the canonical one first
+    function rbn_twins(array $panel)
+    {
+        $c = rbn_canon($panel);
+        $out = [];
+        foreach (rbn_panels() as $p) {
+            if (rbn_canon($p) === $c) {
+                $out[] = $p;
+            }
+        }
+        // the canonical one is the lowest id of them, so the order is by id
+        usort($out, fn($x, $y) => (int) $x['id'] - (int) $y['id']);
+        return $out ?: [$panel];
+    }
+
+    // «A» or «A / B» when the panel is in the bot twice
+    function rbn_names(array $panel)
+    {
+        return implode(' / ', array_map(fn($p) => (string) $p['name_panel'], rbn_twins($panel)));
+    }
+
+    // ---------------------------------------------------------------- 📮
+    // Where a panel's watch reports go - one setting per real panel (twins
+    // share it): 'group' the report group's error topic, 'bot' the
+    // administrators' own chats, 'chat:<id>' a channel or group of its own,
+    // 'off' nowhere (the history is kept all the same), 'auto' the report
+    // group when there is one, else the main admin. '' not chosen yet: the
+    // node screen asks first.
+    function rbn_dest(array $panel)
+    {
+        return (string) feature_setting_value('rbn_dest_' . rbn_canon($panel), 'all', '');
+    }
+
+    function rbn_dest_set(array $panel, $dest)
+    {
+        feature_setting_set('rbn_dest_' . rbn_canon($panel), 'all', (string) $dest);
+    }
+
+    function rbn_report_group()
+    {
+        global $setting;
+        $s = is_array($setting ?? null) && isset($setting['Channel_Report']) ? $setting : select("setting", "*", null, null, "select");
+        $g = trim((string) ($s['Channel_Report'] ?? ''));
+        return $g === '' || $g === '0' ? '' : $g;
+    }
+
+    function rbn_dest_label($dest)
+    {
+        $t = panel_texts()['Admin']['RbNodes'];
+        if (strpos((string) $dest, 'chat:') === 0) {
+            return strtr($t['destChatLabel'], ['{chat}' => substr($dest, 5)]);
+        }
+        return ['group' => $t['destGroupLabel'], 'bot' => $t['destBotLabel'], 'off' => $t['destOffLabel'], 'auto' => $t['destAutoLabel']][(string) $dest] ?? $t['destUnset'];
+    }
+
+    // [[chat, topic], ...] a report of this panel is sent to
+    function rbn_dest_targets(array $panel)
+    {
+        global $pdo, $adminnumber;
+        $dest = rbn_dest($panel);
+        if ($dest === 'off') {
+            return [];
+        }
+        if (strpos($dest, 'chat:') === 0) {
+            return [[substr($dest, 5), 0]];
+        }
+        $group = rbn_report_group();
+        if (($dest === 'group' || $dest === 'auto' || $dest === '') && $group !== '') {
+            $topic = select("topicid", "idreport", "report", "errorreport", "select");
+            return [[$group, is_array($topic) ? (int) $topic['idreport'] : 0]];
+        }
+        if ($dest === 'bot') {
+            $ids = [];
+            foreach ($pdo->query("SELECT id_admin FROM admin WHERE rule = 'administrator'")->fetchAll(PDO::FETCH_COLUMN) as $id) {
+                if (ctype_digit((string) $id)) {
+                    $ids[(string) $id] = true;
+                }
+            }
+            if (!empty($adminnumber)) {
+                $ids[(string) $adminnumber] = true;
+            }
+            return array_map(fn($id) => [$id, 0], array_keys($ids));
+        }
+        // 'auto' (or not chosen) and no report group: the main admin
+        return !empty($adminnumber) ? [[(string) $adminnumber, 0]] : [];
+    }
+
+    // a text to every place this panel's reports go: [sent, last error]
+    function rbn_alert(array $panel, $text)
+    {
+        if (!function_exists('telegram')) {
+            return [0, 'no telegram'];
+        }
+        $sent = 0;
+        $err = '';
+        foreach (rbn_dest_targets($panel) as [$chat, $topic]) {
+            $data = ['chat_id' => $chat, 'text' => $text, 'parse_mode' => 'HTML'];
+            if ($topic > 0) {
+                $data['message_thread_id'] = $topic;
+            }
+            $r = telegram('sendmessage', $data);
+            if (is_array($r) && !empty($r['ok'])) {
+                $sent++;
+            } else {
+                $err = is_array($r) ? (string) ($r['description'] ?? '') : '';
+            }
+        }
+        return [$sent, $err];
+    }
+
+    // a chat typed in for 'chat:': '-100…', '-…' or '@name' - null otherwise
+    function rbn_chat_value($text)
+    {
+        $s = trim((string) $text);
+        if (preg_match('~^(?:https?://)?t\.me/([A-Za-z][A-Za-z0-9_]{3,31})$~', $s, $m)) {
+            $s = '@' . $m[1];
+        }
+        return preg_match('/^(-?\d{5,20}|@[A-Za-z][A-Za-z0-9_]{3,31})$/', $s) ? $s : null;
+    }
+
+    // tried first: the bot must be able to post there. [chat id to keep, ''] or [null, why]
+    function rbn_chat_try(array $panel, $chat)
+    {
+        $t = panel_texts()['Admin']['RbNodes'];
+        $r = telegram('sendmessage', ['chat_id' => $chat, 'parse_mode' => 'HTML', 'text' => strtr($t['destTestMsg'], [
+            '{panel}' => htmlspecialchars(rbn_names($panel)),
+            '{host}' => htmlspecialchars(rbn_host($panel)),
+        ])]);
+        if (!is_array($r) || empty($r['ok'])) {
+            return [null, is_array($r) ? (string) ($r['description'] ?? '') : ''];
+        }
+        // kept by its number, which a renamed channel keeps
+        $id = $r['result']['chat']['id'] ?? $chat;
+        return [(string) $id, ''];
+    }
+
+    // ---------------------------------------------------------------- 🔔
+    // cronbot/rbnodes.php: every Rebecca panel's nodes against what they were -
+    // once per real panel. Each change is kept. Going down is told at once -
+    // but «connecting» only once it has lasted 5 minutes, so a reconnect does
+    // not ring twice - and coming back is told only after a going-down was.
     function rbn_watch_tick()
     {
         global $pdo;
@@ -358,27 +553,74 @@ if (!function_exists('rbn_ensure_schema')) {
             return;
         }
         $now = time();
+        // one look per address (rows on one address are one panel already)
+        $groups = [];
+        $byBase = [];
+        foreach (rbn_panels() as $p) {
+            $base = rbn_base($p);
+            if (!isset($byBase[$base])) {
+                $byBase[$base] = (int) $p['id'];
+                $groups[(int) $p['id']] = $p;
+            }
+        }
+        $looked = [];
+        foreach ($groups as $gid => $panel) {
+            $looked[$gid] = rbn_nodes($panel);
+        }
+        // two addresses whose nodes are the very same: one panel, reached two ways
+        $twins = [];
+        $byPrint = [];
+        foreach ($looked as $gid => [$nodes]) {
+            if (!$nodes) {
+                continue;
+            }
+            $print = array_map(fn($n) => (int) $n['id'] . '|' . strtolower((string) $n['name']) . '|' . strtolower((string) ($n['address'] ?? '')), $nodes);
+            sort($print);
+            $key = sha1(implode("\n", $print));
+            if (isset($byPrint[$key])) {
+                $twins[$gid] = $byPrint[$key];
+            } else {
+                $byPrint[$key] = $gid;
+            }
+        }
+        $old = json_decode((string) feature_setting_value('rbn_twins', 'all', ''), true);
+        // a twin that cannot be looked at now stays a twin
+        foreach (is_array($old) ? $old : [] as $from => $to) {
+            if (!isset($twins[(int) $from]) && isset($groups[(int) $from], $groups[(int) $to]) && ($looked[(int) $from][0] === null || $looked[(int) $to][0] === null)) {
+                $twins[(int) $from] = (int) $to;
+            }
+        }
+        ksort($twins);
+        if (json_encode($twins) !== json_encode(is_array($old) ? $old : [])) {
+            feature_setting_set('rbn_twins', 'all', $twins ? json_encode($twins) : '');
+        }
+        rbn_canon_map(true);
         $get = $pdo->prepare("SELECT * FROM rbn_state WHERE panel_id = ?");
         $put = $pdo->prepare("REPLACE INTO rbn_state (panel_id, node_id, name, status, message, since, alerted) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $drop = $pdo->prepare("DELETE FROM rbn_state WHERE panel_id = ? AND node_id = ?");
-        foreach (rbn_panels() as $panel) {
-            $pid = (int) $panel['id'];
+        foreach ($groups as $gid => $panel) {
+            if (isset($twins[$gid])) {
+                // its twin speaks for it
+                $pdo->prepare("DELETE FROM rbn_state WHERE panel_id = ?")->execute([$gid]);
+                continue;
+            }
+            [$nodes, $why] = $looked[$gid];
+            $pid = rbn_canon($panel);
             $get->execute([$pid]);
             $known = [];
             foreach ($get->fetchAll(PDO::FETCH_ASSOC) as $row) {
                 $known[(int) $row['node_id']] = $row;
             }
-            [$nodes, $why] = rbn_nodes($panel);
-            // the panel itself, as node 0: unreachable, or back
-            // the reason as plain text: it is kept, and escaped once more when shown
+            // the panel itself, as node 0: unreachable, or back. The reason as
+            // plain text: it is kept, and escaped once more when shown.
             $reason = $nodes === null ? html_entity_decode(strip_tags($why), ENT_QUOTES, 'UTF-8') : '';
-            $seen = [0 => ['name' => (string) $panel['name_panel'], 'status' => $nodes === null ? 'unreachable' : 'connected', 'message' => $reason]];
+            $seen = [0 => ['name' => rbn_names($panel), 'status' => $nodes === null ? 'unreachable' : 'connected', 'message' => $reason]];
             foreach ($nodes ?? [] as $n) {
                 $seen[(int) $n['id']] = ['name' => (string) $n['name'], 'status' => (string) ($n['status'] ?? ''), 'message' => trim((string) ($n['message'] ?? ''))];
             }
             foreach ($seen as $nid => $cur) {
-                $old = $known[$nid] ?? null;
-                if ($old === null) {
+                $prev = $known[$nid] ?? null;
+                if ($prev === null) {
                     // first sight: what it is now, no news (a panel already unreachable is news)
                     $alerted = 0;
                     if ($nid === 0 && $cur['status'] === 'unreachable') {
@@ -388,34 +630,34 @@ if (!function_exists('rbn_ensure_schema')) {
                     $put->execute([$pid, $nid, $cur['name'], $cur['status'], $cur['message'], $now, $alerted]);
                     continue;
                 }
-                $alerted = (int) $old['alerted'];
-                if ($old['status'] !== $cur['status']) {
+                $alerted = (int) $prev['alerted'];
+                if ($prev['status'] !== $cur['status']) {
                     $tell = '';
                     if (rbn_is_down($cur['status']) && $cur['status'] !== 'connecting' && !$alerted) {
                         $tell = 'down';
                     } elseif (!rbn_is_down($cur['status']) && $cur['status'] !== 'disabled' && $alerted) {
                         $tell = 'up';
                     }
-                    rbn_event($panel, $nid, $cur['name'], $old['status'], $cur['status'], $cur['message'], $now, (int) $old['since'], $tell);
+                    rbn_event($panel, $nid, $cur['name'], $prev['status'], $cur['status'], $cur['message'], $now, (int) $prev['since'], $tell);
                     if ($tell === 'down') {
                         $alerted = 1;
                     } elseif (!rbn_is_down($cur['status'])) {
                         $alerted = 0;
                     }
                     // still down in another way: the time it went down still counts
-                    $since = rbn_is_down($cur['status']) && rbn_is_down($old['status']) ? (int) $old['since'] : $now;
+                    $since = rbn_is_down($cur['status']) && rbn_is_down($prev['status']) ? (int) $prev['since'] : $now;
                     $put->execute([$pid, $nid, $cur['name'], $cur['status'], $cur['message'], $since, $alerted]);
                     continue;
                 }
-                if ($cur['status'] === 'connecting' && !$alerted && $now - (int) $old['since'] >= 300) {
-                    rbn_alert(rbn_alert_text($panel, $nid, $cur['name'], $old['status'], 'connecting', $cur['message'], $now, (int) $old['since'], false));
+                if ($cur['status'] === 'connecting' && !$alerted && $now - (int) $prev['since'] >= 300) {
+                    rbn_alert($panel, rbn_alert_text($panel, $nid, $cur['name'], $prev['status'], 'connecting', $cur['message'], $now, (int) $prev['since'], false));
                     $alerted = 1;
                 }
-                $put->execute([$pid, $nid, $cur['name'], $cur['status'], $cur['message'], (int) $old['since'], $alerted]);
+                $put->execute([$pid, $nid, $cur['name'], $cur['status'], $cur['message'], (int) $prev['since'], $alerted]);
             }
-            foreach ($known as $nid => $old) {
-                if (!isset($seen[$nid]) && ($nodes !== null || $nid === 0)) {
-                    rbn_event($panel, $nid, (string) $old['name'], $old['status'], 'deleted', '', $now, (int) $old['since'], '');
+            foreach ($known as $nid => $prev) {
+                if (!isset($seen[$nid]) && $nodes !== null) {
+                    rbn_event($panel, $nid, (string) $prev['name'], $prev['status'], 'deleted', '', $now, (int) $prev['since'], '');
                     $drop->execute([$pid, $nid]);
                 }
             }
@@ -426,23 +668,25 @@ if (!function_exists('rbn_ensure_schema')) {
         $pdo->query("DELETE FROM rbn_state WHERE panel_id NOT IN (SELECT id FROM marzban_panel WHERE type = 'rebecca')");
     }
 
-    // one change, kept; $tell 'down' | 'up' reports it as well
+    // one change, kept under the real panel; $tell 'down' | 'up' reports it as well
     function rbn_event(array $panel, $nodeId, $name, $from, $to, $msg, $at, $since, $tell)
     {
         global $pdo;
         $pdo->prepare("INSERT INTO rbn_event (panel_id, node_id, name, status_from, status_to, message, at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-            ->execute([(int) $panel['id'], (int) $nodeId, (string) $name, (string) $from, (string) $to, $msg === '' ? null : (string) $msg, (int) $at]);
+            ->execute([rbn_canon($panel), (int) $nodeId, (string) $name, (string) $from, (string) $to, $msg === '' ? null : (string) $msg, (int) $at]);
         if ($tell !== '') {
-            rbn_alert(rbn_alert_text($panel, $nodeId, $name, $from, $to, $msg, $at, $since, $tell === 'up'));
+            rbn_alert($panel, rbn_alert_text($panel, $nodeId, $name, $from, $to, $msg, $at, $since, $tell === 'up'));
         }
     }
 
+    // every report names the panel - each of its names in the bot - and its address
     function rbn_alert_text(array $panel, $nodeId, $name, $from, $to, $msg, $at, $since, $cameBack)
     {
         $t = panel_texts()['Admin']['RbNodes'];
         $key = (int) $nodeId === 0 ? ($cameBack ? 'alertPanelUp' : 'alertPanelDown') : ($cameBack ? 'alertUp' : 'alertDown');
         return strtr($t[$key], [
-            '{panel}' => htmlspecialchars((string) $panel['name_panel']),
+            '{panel}' => htmlspecialchars(rbn_names($panel)),
+            '{host}' => htmlspecialchars(rbn_host($panel)),
             '{node}' => htmlspecialchars((string) $name),
             '{status}' => rbn_status_icon($to) . ' ' . rbn_status_name($to),
             '{message}' => $msg !== '' ? "\n💬 <code>" . htmlspecialchars(mb_substr((string) $msg, 0, 300)) . '</code>' : '',
@@ -451,32 +695,13 @@ if (!function_exists('rbn_ensure_schema')) {
         ]);
     }
 
-    // to the report group's error topic, as the other node reports go; the main admin when there is none
-    function rbn_alert($text)
-    {
-        global $setting, $adminnumber;
-        if (!function_exists('telegram')) {
-            return;
-        }
-        $s = is_array($setting ?? null) ? $setting : select("setting", "*", null, null, "select");
-        $group = trim((string) ($s['Channel_Report'] ?? ''));
-        if ($group !== '' && $group !== '0') {
-            $topic = select("topicid", "idreport", "report", "errorreport", "select");
-            telegram('sendmessage', ['chat_id' => $group, 'message_thread_id' => is_array($topic) ? $topic['idreport'] : 0, 'text' => $text, 'parse_mode' => 'HTML']);
-            return;
-        }
-        if (!empty($adminnumber)) {
-            telegram('sendmessage', ['chat_id' => $adminnumber, 'text' => $text, 'parse_mode' => 'HTML']);
-        }
-    }
-
-    // the newest changes of a panel, newest first
+    // the newest changes of a panel (twins share them), newest first
     function rbn_events(array $panel, $limit = 15, $offset = 0)
     {
         global $pdo;
         rbn_ensure_schema();
         $st = $pdo->prepare("SELECT * FROM rbn_event WHERE panel_id = ? ORDER BY at DESC, id DESC LIMIT " . (int) $limit . " OFFSET " . (int) $offset);
-        $st->execute([(int) $panel['id']]);
+        $st->execute([rbn_canon($panel)]);
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -485,7 +710,7 @@ if (!function_exists('rbn_ensure_schema')) {
         global $pdo;
         rbn_ensure_schema();
         $st = $pdo->prepare("SELECT COUNT(*) FROM rbn_event WHERE panel_id = ?");
-        $st->execute([(int) $panel['id']]);
+        $st->execute([rbn_canon($panel)]);
         return (int) $st->fetchColumn();
     }
 
@@ -495,7 +720,7 @@ if (!function_exists('rbn_ensure_schema')) {
         global $pdo;
         rbn_ensure_schema();
         $st = $pdo->prepare("SELECT since FROM rbn_state WHERE panel_id = ? AND node_id = ?");
-        $st->execute([(int) $panel['id'], (int) $nodeId]);
+        $st->execute([rbn_canon($panel), (int) $nodeId]);
         $v = $st->fetchColumn();
         return $v === false ? null : (int) $v;
     }
@@ -903,9 +1128,15 @@ if (!function_exists('rbn_ensure_schema')) {
         $t = panel_texts()['Admin']['RbNodes'];
         $p = (int) $panel['id'];
         [$nodes, $why] = rbn_nodes($panel);
-        $head = strtr($t['hubTitle'], ['{panel}' => htmlspecialchars((string) $panel['name_panel'])]);
+        $head = strtr($t['hubTitle'], ['{panel}' => htmlspecialchars((string) $panel['name_panel']), '{host}' => htmlspecialchars(rbn_host($panel))]);
+        $others = array_filter(rbn_twins($panel), fn($x) => (int) $x['id'] !== $p);
+        if ($others) {
+            $head .= "\n" . strtr($t['hubTwin'], ['{twins}' => htmlspecialchars(implode('، ', array_map(fn($x) => (string) $x['name_panel'], $others)))]);
+        }
+        $head .= "\n" . strtr($t['hubDest'], ['{dest}' => htmlspecialchars(rbn_dest_label(rbn_dest($panel)))]);
         $tail = [
             [rbn_btn($t['btnHistory'], "rbn|ev|{$p}|1"), rbn_btn(rbn_watch_on() ? $t['btnWatchOn'] : $t['btnWatchOff'], "rbn|wt|{$p}", rbn_watch_on() ? 'success' : 'danger')],
+            [rbn_btn($t['btnDest'], "rbn|dst|{$p}")],
             [rbn_btn($t['btnRefresh'], "rbn|hub|{$p}", 'primary'), rbn_btn($t['btnClose'], 'rbn|close', 'danger')],
         ];
         if ($nodes === null) {
@@ -943,6 +1174,43 @@ if (!function_exists('rbn_ensure_schema')) {
             $rows[] = [rbn_btn($t['btnUpdateAll'], "rbn|sua|{$p}")];
         }
         return [$text, rbn_kb(array_merge($rows, $tail))];
+    }
+
+    // 📮 where this panel's reports go. $first: asked before the nodes are
+    // shown, the first time - with «later» instead of «back».
+    function rbn_dest_screen(array $panel, $first = false, $note = '')
+    {
+        $t = panel_texts()['Admin']['RbNodes'];
+        $p = (int) $panel['id'];
+        $dest = rbn_dest($panel);
+        $others = array_filter(rbn_twins($panel), fn($x) => (int) $x['id'] !== $p);
+        $text = ($note !== '' ? $note . "\n\n" : '') . ($first ? $t['destFirst'] . "\n\n" : '') . strtr($t['destTitle'], [
+            '{panel}' => htmlspecialchars((string) $panel['name_panel']),
+            '{host}' => htmlspecialchars(rbn_host($panel)),
+            '{twin}' => $others ? strtr($t['destTwinNote'], ['{twins}' => htmlspecialchars(implode('، ', array_map(fn($x) => (string) $x['name_panel'], $others)))]) : '',
+            '{dest}' => htmlspecialchars(rbn_dest_label($dest)),
+        ]);
+        $mark = fn($label, $on) => ($on ? '✅ ' : '') . $label;
+        $rows = [];
+        if (rbn_report_group() !== '') {
+            $rows[] = [rbn_btn($mark($t['destGroup'], $dest === 'group'), "rbn|dset|{$p}|group", $dest === 'group' ? 'success' : null)];
+        }
+        $rows[] = [rbn_btn($mark($t['destChat'], strpos($dest, 'chat:') === 0), "rbn|dset|{$p}|chat", strpos($dest, 'chat:') === 0 ? 'success' : null)];
+        $rows[] = [rbn_btn($mark($t['destBot'], $dest === 'bot'), "rbn|dset|{$p}|bot", $dest === 'bot' ? 'success' : null)];
+        $rows[] = [rbn_btn($mark($t['destOff'], $dest === 'off'), "rbn|dset|{$p}|off", $dest === 'off' ? 'success' : null)];
+        if ($dest !== '' && $dest !== 'off') {
+            $rows[] = [rbn_btn($t['destTestBtn'], "rbn|dtest|{$p}")];
+        }
+        $rows[] = $first
+            ? [rbn_btn($t['destLater'], "rbn|dset|{$p}|auto", 'primary')]
+            : [rbn_btn($t['btnBackHub'], "rbn|hub|{$p}", 'danger')];
+        return [$text, rbn_kb($rows)];
+    }
+
+    // the node screens open with the question, until it has been answered once
+    function rbn_open_screen(array $panel, $note = '')
+    {
+        return rbn_dest($panel) === '' ? rbn_dest_screen($panel, true, $note) : rbn_hub_screen($panel, $note);
     }
 
     // the text about one node

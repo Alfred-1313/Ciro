@@ -744,4 +744,16 @@ return [
             . "• 📊 A report picture: every node (CPU, RAM, speed, traffic, versions, address) with a 14-day traffic chart; and a 30-day daily traffic chart per node.\n"
             . "• Rebecca panels only; the panel token must be a sudo admin's.</blockquote>",
     ],
+    [
+        'n' => 55,
+        'date' => '2026-10-31',
+        'fa' => "<blockquote>🖥 <b>نودهای ربکا با چند پنل: قاطی نمی‌شوند و گزارش تکراری نمی‌آید</b>\n"
+            . "• هر گزارش قطع و وصل، اسم پنل و آدرسش را دارد؛ صفحهٔ نودها هم آدرس پنل را نشان می‌دهد.\n"
+            . "• 📮 مقصد گزارش‌ها برای هر پنل جدا: گروه گزارش‌ها (تاپیک «❌ گزارش خطا ها»)، یک کانال یا گروه جدا (با پیام آزمایشی)، داخل خود ربات (پیوی ادمین‌ها)، یا هیچ‌جا (فقط تاریخچه). بار اولی که نودهای یک پنل را باز می‌کنی همین را می‌پرسد؛ بعداً از دکمهٔ «📮 مقصد گزارش‌ها» و در پنل وب عوض می‌شود.\n"
+            . "• پنل‌های مشترک: اگر یک پنل ربکا دو بار (یا بیشتر) در ربات اضافه شده باشد - با همان آدرس، یا با آدرس دیگری ولی همان نودها - یک پنل حساب می‌شود: پایش یک بار، گزارش یک بار با اسم همهٔ آن‌ها، تاریخچه و مقصد گزارش مشترک.</blockquote>",
+        'en' => "<blockquote>🖥 <b>Rebecca nodes with several panels: never mixed up, never reported twice</b>\n"
+            . "• Every up/down report names the panel and its address; the node screen shows the panel's address too.\n"
+            . "• 📮 Where reports go, per panel: the report group (the «❌ errors» topic), a channel or group of its own (with a test message), inside the bot (the admins' chats), or nowhere (history only). Asked the first time a panel's nodes are opened; changed later with «📮 Report destination» and in the web panel.\n"
+            . "• Shared panels: one Rebecca panel added to the bot twice or more - on the same address, or another address with the very same nodes - counts as one: watched once, reported once with all its names, one history and one destination.</blockquote>",
+    ],
 ];

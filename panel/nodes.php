@@ -42,7 +42,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $panel !== null) {
     $label = $rt['act'][$do] ?? $do;
     $ok = false;
     $why = '';
-    if ($do === 'watch') {
+    if ($do === 'dest') {
+        // 📮 where this panel's watch reports go; a test message shows it works
+        $label = $t['rbnDest'];
+        $v = (string) ($_POST['dest'] ?? '');
+        ob_start();
+        require_once __DIR__ . '/../botapi.php';
+        if ($v === 'chat') {
+            $chat = rbn_chat_value($_POST['chat'] ?? '');
+            if ($chat === null) {
+                $why = $t['rbnDestChatNeeded'];
+            } else {
+                [$chatId, $w] = rbn_chat_try($panel, $chat);
+                if ($chatId === null) {
+                    $why = sprintf($t['rbnDestFail'], $w);
+                } else {
+                    rbn_dest_set($panel, 'chat:' . $chatId);
+                    $ok = true;
+                }
+            }
+        } elseif (in_array($v, ['group', 'bot', 'off', 'auto'], true)) {
+            rbn_dest_set($panel, $v);
+            $ok = true;
+            if ($v !== 'off') {
+                rbn_alert($panel, strtr($rt['destTestText'], ['{panel}' => htmlspecialchars(rbn_names($panel)), '{host}' => htmlspecialchars(rbn_host($panel))]));
+            }
+        }
+        ob_end_clean();
+    } elseif ($do === 'watch') {
         rbn_watch_set(!rbn_watch_on());
         $ok = true;
         $label = $t['rbnWatch'];
@@ -192,6 +219,27 @@ include __DIR__ . '/inc/layout_head.php';
     <div class="stat"><div class="stat-label"><?= htmlspecialchars($t['rbnOff']) ?></div><div class="stat-num"><?= $off ?></div></div>
     <div class="stat"><div class="stat-label"><?= htmlspecialchars($t['rbnWatch']) ?></div><div class="stat-num" style="font-size:1rem"><?= rbn_watch_on() ? '🔔 ' . htmlspecialchars($t['rbnOn']) : '🔕 ' . htmlspecialchars($t['rbnOffWord']) ?></div>
       <div class="stat-meta"><?= $form('watch', 0, rbn_watch_on() ? $t['rbnWatchStop'] : $t['rbnWatchStart']) ?></div></div>
+  </div>
+
+  <?php $dest = rbn_dest($panel); $others = array_filter(rbn_twins($panel), fn($x) => (int) $x['id'] !== $pid); ?>
+  <div class="card fade-up" id="dest" style="margin-bottom:14px">
+    <div class="card-head"><div><div class="card-title">📮 <?= htmlspecialchars($t['rbnDest']) ?> — <?= htmlspecialchars((string) $panel['name_panel']) ?> <span class="rbn-v rbn-mute" style="font-size:.78rem"><?= htmlspecialchars(rbn_host($panel)) ?></span></div>
+      <div class="card-subtitle"><?= htmlspecialchars($t['rbnDestSub']) ?></div></div></div>
+    <?php if ($others): ?><div class="notice notice-warn" style="margin:12px 16px 0"><?= htmlspecialchars($plain(strtr($rt['hubTwin'], ['{twins}' => implode('، ', array_map(fn($x) => (string) $x['name_panel'], $others))]))) ?></div><?php endif; ?>
+    <form method="POST" action="<?= htmlspecialchars($here()) ?>" data-ajax="off" class="rbn-form" style="padding-top:12px">
+      <?= $csrf ?><input type="hidden" name="do" value="dest">
+      <label><?= htmlspecialchars($t['rbnDest']) ?>
+        <select class="select" name="dest">
+          <?php if ($dest === ''): ?><option value="" selected><?= htmlspecialchars($plain($rt['destUnset'])) ?></option><?php endif; ?>
+          <?php if (rbn_report_group() !== ''): ?><option value="group"<?= $dest === 'group' ? ' selected' : '' ?>><?= htmlspecialchars($plain($rt['destGroup'])) ?></option><?php endif; ?>
+          <option value="chat"<?= strpos($dest, 'chat:') === 0 ? ' selected' : '' ?>><?= htmlspecialchars($plain($rt['destChat'])) ?></option>
+          <option value="bot"<?= $dest === 'bot' ? ' selected' : '' ?>><?= htmlspecialchars($plain($rt['destBot'])) ?></option>
+          <option value="off"<?= $dest === 'off' ? ' selected' : '' ?>><?= htmlspecialchars($plain($rt['destOff'])) ?></option>
+          <option value="auto"<?= $dest === 'auto' ? ' selected' : '' ?>><?= htmlspecialchars($plain($rt['destAutoLabel'])) ?></option>
+        </select></label>
+      <label><?= htmlspecialchars($t['rbnDestChat']) ?><input class="input" name="chat" dir="ltr" placeholder="-1001234567890" value="<?= strpos($dest, 'chat:') === 0 ? htmlspecialchars(substr($dest, 5)) : '' ?>"></label>
+      <label>&nbsp;<button type="submit" class="btn btn-sm btn-primary"><?= icon('check', 13) ?> <?= htmlspecialchars($t['rbnDestSave']) ?></button></label>
+    </form>
   </div>
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
