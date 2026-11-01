@@ -928,4 +928,48 @@ return [
             . "• The bot fetches them from Telegram and keeps them for 6 hours; a new name or photo reaches the panel within 6 hours. The fetch happens after the page has opened, so pages are not slowed down.\n"
             . "• When Telegram's privacy settings hide the photo, the first letter of the Telegram name shows instead. The photo opens only for the admin signed in to the panel.</blockquote>",
     ],
+    [
+        'n' => 68,
+        'date' => '2026-11-01',
+        'fa' => "<blockquote>🧩 <b>حجم دلخواه (به‌جای «⚙️ سرویس دلخواه» قدیمی)</b>\n"
+            . "• مشتری حجم و تعداد روز را خودش با ➖/➕، دکمه‌های عدد آماده یا تایپ عدد انتخاب می‌کند و قیمت همان لحظه در کپشن عوض می‌شود؛ با «✅ ادامه» خرید مثل یک بستهٔ معمولی جلو می‌رود (فاکتور، کد تخفیف، پرداخت). در خرید، خرید عمده و تمدید سرویس‌هایی که این‌طور خریده شده‌اند کار می‌کند.\n"
+            . "• <b>پیش‌فرض برای همهٔ پنل‌ها خاموش است.</b>\n"
+            . "• «⚙️ سرویس دلخواه» قدیمی کامل حذف شد (دکمه‌ها، قیمت‌ها و حداقل/حداکثرهایش). قیمت‌ها و محدوده‌هایش به‌عنوان تنظیمات اولیه منتقل شدند، ولی باید دوباره روشنش کنی. ربات نماینده‌ها هم از همین کلید پیروی می‌کنند.</blockquote>\n"
+            . "<blockquote>📍 <b>کجاست؟</b>\n"
+            . "• ✏️ مدیریت پنل ← انتخاب پنل ← 💰 قیمت‌گذاری ← 🧩 تنظیمات حجم دلخواه (منوی قیمت‌گذاری حالا دکمهٔ شیشه‌ای دارد)\n"
+            . "• ✏️ مدیریت پنل ← انتخاب پنل ← ⚙️ وضعیت قابلیت ها پنل ← 🧩 حجم دلخواه (روشن/خاموش) و 🧩 تنظیمات حجم دلخواه\n"
+            . "• 🏬 تنظیمات فروشگاه ← 🧩 حجم دلخواه (همهٔ پنل‌ها یک‌جا)\n"
+            . "• 🎨 شخصی‌سازی ← 🛒 پیام‌ها و ظاهر مراحل خرید ← 🧩 حجم دلخواه (کپشن، دکمه‌ها و استیکر، برای هر زبان جدا)\n"
+            . "• پنل وب: منوی «حجم دلخواه»</blockquote>\n"
+            . "<blockquote>📖 <b>راه‌اندازی در ۵ قدم</b>\n"
+            . "1️⃣ 💰 قیمت‌ها: برای هر زبان قیمت یک گیگ و یک روز را بگذار (هر زبان با واحد پول خودش). قیمت نماینده‌ها اگر خالی بماند، همان قیمت کاربر عادی است.\n"
+            . "2️⃣ 🎛 حالت انتخاب: هر دو، فقط حجم (با مدت ثابت) یا فقط مدت (با حجم ثابت).\n"
+            . "3️⃣ 📦 تنظیم حجم و 📅 تنظیم مدت: حداقل، حداکثر، گام ➖/➕، عدد شروع و دکمه‌های آماده؛ مدت می‌تواند چند گزینهٔ ثابت باشد (مثل ۳۰/۶۰/۹۰).\n"
+            . "4️⃣ 👤 🤝 ⭐️ گروه‌ها: کاربر عادی، نماینده و نماینده سطح ۲ جدا.\n"
+            . "5️⃣ دکمهٔ بالای صفحهٔ تنظیمات را بزن تا روشن شود.\n"
+            . "قیمت = حجم × قیمت هر گیگ + روز × قیمت هر روز؛ تخفیف حساب مشتری و کد تخفیف مثل همیشه در فاکتور کم می‌شوند.</blockquote>\n"
+            . "<blockquote>🧰 <b>فیلترها و امکانات</b>\n"
+            . "👛 حداقل موجودی برای هر زبان (کمتر از آن، به‌جای صفحه پیام و دکمهٔ افزایش موجودی می‌آید) · 🔢 گرد کردن قیمت · 🎁 تخفیف پلکانی (مثلاً از ۵۰ گیگ به بالا ۱۰٪، تا ۵ پله) · 🔥 تخفیف ویژهٔ زمان‌دار · 💡 پیشنهاد بستهٔ آمادهٔ ارزان‌تر به مشتری · 🌐 انتخاب زبان‌ها · 📊 آمار فروش و پرفروش‌ترین انتخاب‌ها · ⚠️ هشدار وقتی زبانی قیمت ندارد یا حجم دلخواه از یک بستهٔ آماده ارزان‌تر درمی‌آید.\n"
+            . "صفحه با آخرین انتخاب خود مشتری روی همان پنل باز می‌شود؛ در پنل وب یک ماشین‌حساب هم هست که قیمت هر گروه را قبل از ذخیره نشان می‌دهد.</blockquote>",
+        'en' => "<blockquote>🧩 <b>Custom plans (in place of the old «⚙️ Custom service»)</b>\n"
+            . "• The customer picks the volume and the number of days with ➖/➕, ready-number buttons or by typing, and the price changes in the caption as they go; «✅ Continue» carries on like any plan (invoice, discount code, payment). It works when buying, in a bulk purchase and when renewing services bought this way.\n"
+            . "• <b>Off by default on every panel.</b>\n"
+            . "• The old «⚙️ Custom service» is gone (its buttons, prices and minimums/maximums). Its prices and ranges were carried over as the starting settings, but it has to be turned on again. The resellers' bots follow the same switch.</blockquote>\n"
+            . "<blockquote>📍 <b>Where is it?</b>\n"
+            . "• ✏️ Panel management → the panel → 💰 Pricing → 🧩 Custom plan settings (the pricing menu now has glass buttons)\n"
+            . "• ✏️ Panel management → the panel → ⚙️ Panel features → 🧩 Custom plan (on/off) and 🧩 Custom plan settings\n"
+            . "• 🏬 Store settings → 🧩 Custom plan (every panel in one list)\n"
+            . "• 🎨 Customization → 🛒 Purchase steps messages and look → 🧩 Custom plan (caption, buttons and sticker, per language)\n"
+            . "• Web panel: the «Custom plan» menu</blockquote>\n"
+            . "<blockquote>📖 <b>Set up in 5 steps</b>\n"
+            . "1️⃣ 💰 Prices: per language, the price of one GB and one day (each language in its own currency). A reseller price left empty is the regular users' one.\n"
+            . "2️⃣ 🎛 Mode: both, volume only (fixed days) or days only (fixed volume).\n"
+            . "3️⃣ 📦 Volume and 📅 Days: minimum, maximum, ➖/➕ step, starting number and ready buttons; the days can be a few fixed options (like 30/60/90).\n"
+            . "4️⃣ 👤 🤝 ⭐️ Groups: regular users, resellers and level-2 resellers, each on its own.\n"
+            . "5️⃣ Tap the button at the top of the settings screen to turn it on.\n"
+            . "Price = volume × price per GB + days × price per day; the customer's account discount and discount codes come off on the invoice as always.</blockquote>\n"
+            . "<blockquote>🧰 <b>Filters and extras</b>\n"
+            . "👛 Minimum balance per language (below it, a message and a top-up button instead of the screen) · 🔢 Price rounding · 🎁 Volume discounts (e.g. 10% from 50 GB up, up to 5 steps) · 🔥 A special sale with an end date · 💡 Suggesting a cheaper ready plan to the customer · 🌐 Languages · 📊 Sales and the most picked choices · ⚠️ Warnings when a language has no price or a custom plan undercuts a ready one.\n"
+            . "The screen opens with the customer's own last choice on that panel; the web panel also has a calculator that shows each group's price before you save.</blockquote>",
+    ],
 ];

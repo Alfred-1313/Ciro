@@ -1522,6 +1522,10 @@ addFieldToTable("user", "aff_pending", null, "VARCHAR(50) NULL");
 addFieldToTable("user", "aff_block", null, "VARCHAR(4) NULL");
 addFieldToTable("Payment_report", "currency", null, "VARCHAR(10) NULL");
 addFieldToTable("invoice", "currency", null, "VARCHAR(10) NULL");
+// 🧩 حجم دلخواه (cvol.php): a panel's settings, the mark on a plan bought that way, the screen a user has open
+addFieldToTable("marzban_panel", "cvol", null, "TEXT NULL");
+addFieldToTable("invoice", "cvol", null, "VARCHAR(4) NULL");
+addFieldToTable("user", "cvol_state", null, "TEXT NULL");
 addFieldToTable("setting", "wallet_migrated", "0", "VARCHAR(5)");
 // 💱 converting a balance on a language switch - off until an admin turns it on
 addFieldToTable("setting", "wallet_convert", '{}', "TEXT");
@@ -1703,6 +1707,19 @@ try {
     report_topics_dedupe();
 } catch (\Throwable $e) {
     error_log('report topics: ' . $e->getMessage());
+}
+// 🧩 حجم دلخواه takes the old «⚙️ سرویس دلخواه»'s place: each panel's settings
+// are made from its old columns now, switched off (cvol_cfg). Done here rather
+// than the first time a customer buys, because the resellers' bots read those
+// columns and would keep offering the old one until then.
+try {
+    if (function_exists('cvol_cfg')) {
+        foreach ($pdo->query("SELECT code_panel FROM marzban_panel WHERE cvol IS NULL OR cvol = ''")->fetchAll(PDO::FETCH_COLUMN) as $cv_code) {
+            cvol_cfg((string) $cv_code);
+        }
+    }
+} catch (\Throwable $e) {
+    error_log('cvol migrate: ' . $e->getMessage());
 }
 // with its secret, and asking for chat_member too
 webhook_register();

@@ -1332,7 +1332,7 @@ if (!function_exists('bottext_item_menu_payload')) {
         // separate configDisplayBuy/configColOrderBuy pair, so it gets its own
         // forward link straight from the myservices list (keyboard.php) instead
         // of the generic $bt_btn_label/$bt_btn_custom status line below.
-        $bt_has_buttons = in_array($bt_key, ['users.usertest.selectUsernamePrompt', 'users.Balance.insufficientBalanceSimple', 'users.sell.selectUsernamePrompt', 'users.sell.preInvoice', 'users.sell.preInvoice2', 'textbot.preInvoice', 'users.sell.service_not_available', 'textbot.testExpired', 'users.usertest.limitwarning', 'users.sell.service_sell', 'users.status.infoFull', 'users.Balance.chargeSuccess', 'textbot.channel', 'users.channel.left_channel', 'users.extend.invoiceCreated', 'users.changeLink.warnchange', 'textbot.afterPay', 'textbot.afterText', 'users.affiliates.rewardAfterPay', 'users.subapps.listBuy'], true);
+        $bt_has_buttons = in_array($bt_key, ['users.usertest.selectUsernamePrompt', 'users.Balance.insufficientBalanceSimple', 'users.sell.selectUsernamePrompt', 'users.sell.preInvoice', 'users.sell.preInvoice2', 'textbot.preInvoice', 'users.sell.service_not_available', 'textbot.testExpired', 'users.usertest.limitwarning', 'users.sell.service_sell', 'users.status.infoFull', 'users.Balance.chargeSuccess', 'textbot.channel', 'users.channel.left_channel', 'users.extend.invoiceCreated', 'users.changeLink.warnchange', 'textbot.afterPay', 'textbot.afterText', 'users.affiliates.rewardAfterPay', 'users.subapps.listBuy', 'users.cvol.caption'], true);
         $info = "📝 <b>{$bt_label}</b>\n➖➖➖➖➖➖➖➖➖➖\n{$bt_extra_note}";
         $info .= "✏️ متن: " . ($bt_custom ? "سفارشی ✅" : "پیش‌فرض") . "\n";
         if (!$bt_nosticker) {
@@ -1375,6 +1375,8 @@ if (!function_exists('bottext_item_menu_payload')) {
                 $bt_btn_label = '📚 دکمه مشاهده آموزش';
             } elseif ($bt_key === 'users.subapps.listBuy') {
                 $bt_btn_label = '🔘 دکمه‌های لیست برنامه‌ها';
+            } elseif ($bt_key === 'users.cvol.caption') {
+                $bt_btn_label = '🔘 دکمه‌های صفحه‌ی حجم دلخواه';
             }
             // 'cf' is shared across three caption screens - checked here so its
             // own status line is accurate no matter which of the three is open
@@ -1557,6 +1559,9 @@ if (!function_exists('bottext_item_menu_payload')) {
         } elseif ($bt_key === 'users.subapps.listBuy') {
             // the apps and ↪️ under the list - one list for every place (genbtn kb)
             $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های لیست برنامه‌ها', 'callback_data' => "gbs|hub|{$bt_lang}|kb", 'style' => $bt_btn_custom ? 'success' : 'primary']];
+        } elseif ($bt_key === 'users.cvol.caption') {
+            // 🧩 the plan screen's own buttons (genbtn cv)
+            $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های صفحه‌ی حجم دلخواه', 'callback_data' => "gbs|hub|{$bt_lang}|cv", 'style' => $bt_btn_custom ? 'success' : 'primary']];
         }
         // Named for what it actually clears - text, sticker, reaction AND button
         // overrides. Next to the new "📋 کپشن پیش‌فرض" a second plain "ریست به
@@ -1682,6 +1687,10 @@ if (!function_exists('bt_inline_block_keys')) {
             'hardcoded.topupDiscScopeOneNote',
             // a line inside the service-status caption
             'users.status.svcLocationMore',
+            // 🧩 حجم دلخواه: the pieces its caption is built from, its popups,
+            // and the button under a plan list
+            'users.cvol.entryBtn',
+            ...array_map(fn($k) => 'users.cvol.' . $k, cvol_fragment_keys()),
             // button labels: there is no message to attach a sticker to, and
             // their own colour row takes the place of one
             'users.sell.backToPreviousBtn',
@@ -4698,10 +4707,6 @@ if (!function_exists('panel_feature_keyboard')) {
     // this, so the two copies can no longer drift apart.
     function panel_feature_keyboard($panel, $textbotlang)
     {
-        $cv = json_decode($panel['customvolume'], true);
-        if (!is_array($cv)) {
-            $cv = [];
-        }
         $type = $panel['type'];
         $code = $panel['code_panel'];
         $btn = function ($isOn, $label, $cb) {
@@ -4739,16 +4744,12 @@ if (!function_exists('panel_feature_keyboard')) {
         if (in_array($type, ["marzban"])) {
             $rows[] = [$btn($panel['inboundstatus'] == 'oninbounddisable', $textbotlang['keyboard']['inactiveAccount'], "editpanel-inbocunddisable-{$panel['inboundstatus']}-{$code}")];
         }
-        // the three custom-service tiers belong together, so they share one
-        // row; the caption explains what f / n / n2 mean
-        $cvf = $cv['f'] ?? '0';
-        $cvn = $cv['n'] ?? '0';
-        $cvn2 = $cv['n2'] ?? '0';
-        $rows[] = [
-            $btn($cvf == '1', '♻️ f', "editpanel-customstatusf-{$cvf}-{$code}"),
-            $btn($cvn == '1', '♻️ n', "editpanel-customstatusn-{$cvn}-{$code}"),
-            $btn($cvn2 == '1', '♻️ n2', "editpanel-customstatusn2-{$cvn2}-{$code}"),
-        ];
+        // 🧩 حجم دلخواه (cvol.php): the switch, and the way to who, prices and filters
+        if ($type !== 'Manualsale') {
+            $cv_on = cvol_cfg($panel)['on'];
+            $rows[] = [$btn($cv_on, $textbotlang['Admin']['Cvol']['btn'], "editpanel-cvol-" . ($cv_on ? '1' : '0') . "-{$code}")];
+            $rows[] = [['text' => $textbotlang['Admin']['Cvol']['featureSettingsBtn'], 'callback_data' => "cvh|{$code}|m|f", 'style' => 'primary']];
+        }
         return $rows;
     }
 }
@@ -7945,6 +7946,12 @@ if (preg_match('/^renamereset-([a-z]{2})$/', $datain, $rn_m) && $adminrulecheck[
 }
 
 //----------------[  🖥 نودهای ربکا  ]----------------
+// cvol.php: 🧩 حجم دلخواه's hub - a panel's custom plans (💰 قیمت‌گذاری,
+// ⚙️ وضعیت قابلیت‌ها, 🏬 تنظیمات فروشگاه). Its ➕/⏳/🌐 in the glass 💰 menu
+// hand the panel's own questions on as if typed, so those run as before.
+if (function_exists('cvol_admin_dispatch') && cvol_admin_dispatch()) {
+    return;
+}
 // backup_import.php: 📥 a backup handed to the bot (🗄 تنظیمات بکاپ) - one
 // message carries the whole import: the prompt, the files as they come in,
 // a password when one is asked, the last yes, then the watcher's progress.
@@ -9790,7 +9797,7 @@ if (preg_match('/^gbs\|(hub|lay|layp|layc|lays|layw|layr|col|colp|emo|emop|emos|
             if ($gs_nowHidden) {
                 // hiding a close/back button takes away the only way OFF that
                 // screen - say so once, on the tap that does it
-                $gs_isExit = in_array($gs_alias, ['rc', 'rp', 'rs', 'bu', 'tp', 'ac', 'ts', 'he', 'hb', 'hv', 'sc'], true) || ($gs_alias === 'td' && $gs_i === 1) || (preg_match('/^k[btrh]$/', $gs_alias) && $gs_i === subapp_back_idx());
+                $gs_isExit = in_array($gs_alias, ['rc', 'rp', 'rs', 'bu', 'tp', 'ac', 'ts', 'he', 'hb', 'hv', 'sc'], true) || ($gs_alias === 'td' && $gs_i === 1) || ($gs_alias === 'cv' && $gs_i === 2) || (preg_match('/^k[btrh]$/', $gs_alias) && $gs_i === subapp_back_idx());
                 telegram('answerCallbackQuery', [
                     'callback_query_id' => $callback_query_id,
                     'text' => '🚫 این دکمه دیگه به کاربر نشون داده نمی‌شه.' . ($gs_isExit ? ' اگه تنها راه بستن/برگشت اون صفحه بوده، کاربر باید از منوی اصلی یا /start بیرون بیاد.' : ''),
@@ -10956,7 +10963,7 @@ if (in_array($text, $textadmin) || $datain == "admin") {    if ($datain == "admi
     if (in_array($user['step'], ["updatetime", "val_usertest", "del_usertest", "getlimitnew", "GetusernameNew", "GeturlNew", "protocolset", "updatemethodusername", "GetNameNew", "getprotocol", "getprotocolremove", "GetpaawordNew", "updateextendmethod", "setpricechangelocation"])) {
         $typepanel = select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select");
         outtypepanel($typepanel['type'], $textbotlang['Admin']['backMenu']);
-    } elseif (in_array($user['step'], ["get_limit", "selectlocedite", "GetPriceExtra", "GetPriceexstratime", "GetPricecustomtime", "GetPricecustomvolume", "get_code", "get_codesell", "minbalancebulk", "bulkadd_lines", "bulkadd_agent", "bulkadd_location", "bulkadd_category", "bulkadd_reset", "bulkadd_note", "addprod_changecur"])) {
+    } elseif (in_array($user['step'], ["get_limit", "selectlocedite", "GetPriceExtra", "GetPriceexstratime", "get_code", "get_codesell", "minbalancebulk", "bulkadd_lines", "bulkadd_agent", "bulkadd_location", "bulkadd_category", "bulkadd_reset", "bulkadd_note", "addprod_changecur"])) {
         sendmessage($from_id, $textbotlang['Admin']['backMenu'], $shopkeyboard, 'HTML');
     } elseif (in_array($user['step'], ["addchannel", "removechannel"])) {
         sendmessage($from_id, $textbotlang['Admin']['backMenu'], $channelkeyboard, 'HTML');
@@ -19349,39 +19356,6 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     update("marzban_panel", "priceextravolume", $eextraprice, "name_panel", $userdata['namepanel']);
     update("user", "Processing_value", $userdata['namepanel'], "id", $from_id);
     step('home', $from_id);
-} elseif ($text == $textbotlang['keyboard']['customVolumePrice'] && $adminrulecheck['rule'] == "administrator") {
-    sendmessage($from_id, $textbotlang['Admin']['price']['askCustomVolume'], $backadmin, 'HTML');
-    step('GetPricecustomvo', $from_id);
-} elseif ($user['step'] == "GetPricecustomvo") {
-    if (!ctype_digit($text)) {
-        sendmessage($from_id, $textbotlang['Admin']['Balance']['invalidPrice'], $backadmin, 'HTML');
-        return;
-    }
-    savedata("clear", "namepanel", $user['Processing_value']);
-    savedata("save", "price", $text);
-    sendmessage($from_id, $textbotlang['Admin']['price']['selectUserGroup'] . "\n" . $textbotlang['Admin']['price']['allGroupsHint'], $backuser, 'HTML');
-    step('gettypeextracustom', $from_id);
-} elseif ($user['step'] == "gettypeextracustom") {
-    $agentst = ["n", "n2", "f", "all"];
-    if (!in_array($text, $agentst)) {
-        sendmessage($from_id, $textbotlang['Admin']['agent']['invalidTypeAgent'], $backadmin, 'HTML');
-        return;
-    }
-    $userdata = json_decode($user['Processing_value'], true);
-    $typepanel = select("marzban_panel", "*", "name_panel", $userdata['namepanel'], "select");
-    outtypepanel($typepanel['type'], $textbotlang['Admin']['price']['priceSaved']);
-    $eextraprice = json_decode($typepanel['pricecustomvolume'], true);
-    if ($text == 'all') {
-        $eextraprice["f"] = $userdata['price'];
-        $eextraprice["n"] = $userdata['price'];
-        $eextraprice["n2"] = $userdata['price'];
-    } else {
-        $eextraprice[$text] = $userdata['price'];
-    }
-    $eextraprice = json_encode($eextraprice);
-    update("marzban_panel", "pricecustomvolume", $eextraprice, "name_panel", $userdata['namepanel']);
-    update("user", "Processing_value", $userdata['namepanel'], "id", $from_id);
-    step('home', $from_id);
 } elseif ($text == $textbotlang['keyboard']['extraTimePrice'] && $adminrulecheck['rule'] == "administrator") {
     sendmessage($from_id, $textbotlang['Admin']['price']['askExtraTime'], $backadmin, 'HTML');
     step('GetPricetimeextra', $from_id);
@@ -19413,39 +19387,6 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     }
     $eextraprice = json_encode($eextraprice);
     update("marzban_panel", "priceextratime", $eextraprice, "name_panel", $userdata['namepanel']);
-    update("user", "Processing_value", $userdata['namepanel'], "id", $from_id);
-    step('home', $from_id);
-} elseif ($text == $textbotlang['keyboard']['customTimePrice'] && $adminrulecheck['rule'] == "administrator") {
-    sendmessage($from_id, $textbotlang['Admin']['price']['askCustomTime'], $backadmin, 'HTML');
-    step('GetPriceExtratime', $from_id);
-} elseif ($user['step'] == "GetPriceExtratime") {
-    if (!ctype_digit($text)) {
-        sendmessage($from_id, $textbotlang['Admin']['Balance']['invalidPrice'], $backadmin, 'HTML');
-        return;
-    }
-    savedata("clear", "namepanel", $user['Processing_value']);
-    savedata("save", "price", $text);
-    sendmessage($from_id, $textbotlang['Admin']['price']['selectUserGroup'] . "\n" . $textbotlang['Admin']['price']['allGroupsHint'], $backuser, 'HTML');
-    step('gettypeextratimecustom', $from_id);
-} elseif ($user['step'] == "gettypeextratimecustom") {
-    $agentst = ["n", "n2", "f", "all"];
-    if (!in_array($text, $agentst)) {
-        sendmessage($from_id, $textbotlang['Admin']['agent']['invalidTypeAgent'], $backadmin, 'HTML');
-        return;
-    }
-    $userdata = json_decode($user['Processing_value'], true);
-    $typepanel = select("marzban_panel", "*", "name_panel", $userdata['namepanel'], "select");
-    outtypepanel($typepanel['type'], $textbotlang['Admin']['price']['priceSaved']);
-    $eextraprice = json_decode($typepanel['pricecustomtime'], true);
-    if ($text == 'all') {
-        $eextraprice["f"] = $userdata['price'];
-        $eextraprice["n"] = $userdata['price'];
-        $eextraprice["n2"] = $userdata['price'];
-    } else {
-        $eextraprice[$text] = $userdata['price'];
-    }
-    $eextraprice = json_encode($eextraprice);
-    update("marzban_panel", "pricecustomtime", $eextraprice, "name_panel", $userdata['namepanel']);
     update("user", "Processing_value", $userdata['namepanel'], "id", $from_id);
     step('home', $from_id);
 } elseif ($text == $textbotlang['keyboard']['showCartAfterFirstPay'] && $adminrulecheck['rule'] == "administrator") {
@@ -19907,116 +19848,6 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     sendmessage($from_id, $textbotlang['Admin']['Balance']['maxDepositSaved'], $iranpaykeyboard, 'HTML');
     step("home", $from_id);
     update("PaySetting", "ValuePay", $text, "NamePay", "maxbalanceiranpay");
-} elseif ($text == $textbotlang['keyboard']['minCustomVolume'] && $adminrulecheck['rule'] == "administrator") {
-    sendmessage($from_id, $textbotlang['Admin']['price']['askMinVolume'] . $textbotlang['Admin']['volumeHint'], $backadmin, 'HTML');
-    step('GetmaineExtra', $from_id);
-} elseif ($user['step'] == "GetmaineExtra") {
-    $mm_gb = volume_parse($text, 'gb', true);
-    if ($mm_gb === null) {
-        sendmessage($from_id, $textbotlang['common']['invalidVolume'], $backuser, 'HTML');
-        return;
-    }
-    savedata("clear", "namepanel", $user['Processing_value']);
-    savedata("save", "mainvalume", volume_store($mm_gb));
-    sendmessage($from_id, $textbotlang['Admin']['price']['selectUserGroup'], $backuser, 'HTML');
-    step('gettypeextramain', $from_id);
-} elseif ($user['step'] == "gettypeextramain") {
-    $agentst = ["n", "n2", "f"];
-    if (!in_array($text, $agentst)) {
-        sendmessage($from_id, $textbotlang['Admin']['agent']['invalidTypeAgent'], $backadmin, 'HTML');
-        return;
-    }
-    $userdata = json_decode($user['Processing_value'], true);
-    $typepanel = select("marzban_panel", "*", "name_panel", $userdata['namepanel'], "select");
-    outtypepanel($typepanel['type'], $textbotlang['Admin']['managepanel']['savedData']);
-    $eextraprice = json_decode($typepanel['mainvolume'], true);
-    $eextraprice[$text] = $userdata['mainvalume'];
-    $eextraprice = json_encode($eextraprice);
-    update("marzban_panel", "mainvolume", $eextraprice, "name_panel", $userdata['namepanel']);
-    update("user", "Processing_value", $userdata['namepanel'], "id", $from_id);
-    step('home', $from_id);
-} elseif ($text == $textbotlang['keyboard']['maxCustomVolume'] && $adminrulecheck['rule'] == "administrator") {
-    sendmessage($from_id, $textbotlang['Admin']['price']['askMaxVolume'] . $textbotlang['Admin']['volumeHint'], $backadmin, 'HTML');
-    step('GetmaxeExtra', $from_id);
-} elseif ($user['step'] == "GetmaxeExtra") {
-    $mm_gb = volume_parse($text, 'gb', true);
-    if ($mm_gb === null) {
-        sendmessage($from_id, $textbotlang['common']['invalidVolume'], $backuser, 'HTML');
-        return;
-    }
-    savedata("clear", "namepanel", $user['Processing_value']);
-    savedata("save", "maxvolume", volume_store($mm_gb));
-    sendmessage($from_id, $textbotlang['Admin']['price']['selectUserGroup'], $backuser, 'HTML');
-    step('gettypeextramax', $from_id);
-} elseif ($user['step'] == "gettypeextramax") {
-    $agentst = ["n", "n2", "f"];
-    if (!in_array($text, $agentst)) {
-        sendmessage($from_id, $textbotlang['Admin']['agent']['invalidTypeAgent'], $backadmin, 'HTML');
-        return;
-    }
-    $userdata = json_decode($user['Processing_value'], true);
-    $typepanel = select("marzban_panel", "*", "name_panel", $userdata['namepanel'], "select");
-    outtypepanel($typepanel['type'], $textbotlang['Admin']['managepanel']['savedData']);
-    $eextraprice = json_decode($typepanel['maxvolume'], true);
-    $eextraprice[$text] = $userdata['maxvolume'];
-    $eextraprice = json_encode($eextraprice);
-    update("marzban_panel", "maxvolume", $eextraprice, "name_panel", $userdata['namepanel']);
-    update("user", "Processing_value", $userdata['namepanel'], "id", $from_id);
-    step('home', $from_id);
-} elseif ($text == $textbotlang['keyboard']['minCustomTime'] && $adminrulecheck['rule'] == "administrator") {
-    sendmessage($from_id, $textbotlang['Admin']['price']['askMinTime'], $backadmin, 'HTML');
-    step('Getmaintime', $from_id);
-} elseif ($user['step'] == "Getmaintime") {
-    if (!ctype_digit($text)) {
-        sendmessage($from_id, $textbotlang['common']['invalidVolume'], $backuser, 'HTML');
-        return;
-    }
-    savedata("clear", "namepanel", $user['Processing_value']);
-    savedata("save", "maintime", $text);
-    sendmessage($from_id, $textbotlang['Admin']['price']['selectUserGroup'], $backuser, 'HTML');
-    step('gettypeextramaintime', $from_id);
-} elseif ($user['step'] == "gettypeextramaintime") {
-    $agentst = ["n", "n2", "f"];
-    if (!in_array($text, $agentst)) {
-        sendmessage($from_id, $textbotlang['Admin']['agent']['invalidTypeAgent'], $backadmin, 'HTML');
-        return;
-    }
-    $userdata = json_decode($user['Processing_value'], true);
-    $typepanel = select("marzban_panel", "*", "name_panel", $userdata['namepanel'], "select");
-    outtypepanel($typepanel['type'], $textbotlang['Admin']['managepanel']['savedData']);
-    $eextraprice = json_decode($typepanel['maintime'], true);
-    $eextraprice[$text] = $userdata['maintime'];
-    $eextraprice = json_encode($eextraprice);
-    update("marzban_panel", "maintime", $eextraprice, "name_panel", $userdata['namepanel']);
-    update("user", "Processing_value", $userdata['namepanel'], "id", $from_id);
-    step('home', $from_id);
-} elseif ($text == $textbotlang['keyboard']['maxCustomTime'] && $adminrulecheck['rule'] == "administrator") {
-    sendmessage($from_id, $textbotlang['Admin']['price']['askMaxTime'], $backadmin, 'HTML');
-    step('Getmaxtime', $from_id);
-} elseif ($user['step'] == "Getmaxtime") {
-    if (!ctype_digit($text)) {
-        sendmessage($from_id, $textbotlang['common']['invalidVolume'], $backuser, 'HTML');
-        return;
-    }
-    savedata("clear", "namepanel", $user['Processing_value']);
-    savedata("save", "maxtime", $text);
-    sendmessage($from_id, $textbotlang['Admin']['price']['selectUserGroup'], $backuser, 'HTML');
-    step('gettypeextramaxtime', $from_id);
-} elseif ($user['step'] == "gettypeextramaxtime") {
-    $agentst = ["n", "n2", "f"];
-    if (!in_array($text, $agentst)) {
-        sendmessage($from_id, $textbotlang['Admin']['agent']['invalidTypeAgent'], $backadmin, 'HTML');
-        return;
-    }
-    $userdata = json_decode($user['Processing_value'], true);
-    $typepanel = select("marzban_panel", "*", "name_panel", $userdata['namepanel'], "select");
-    outtypepanel($typepanel['type'], $textbotlang['Admin']['managepanel']['savedData']);
-    $eextraprice = json_decode($typepanel['maxtime'], true);
-    $eextraprice[$text] = $userdata['maxtime'];
-    $eextraprice = json_encode($eextraprice);
-    update("marzban_panel", "maxtime", $eextraprice, "name_panel", $userdata['namepanel']);
-    update("user", "Processing_value", $userdata['namepanel'], "id", $from_id);
-    step('home', $from_id);
 } elseif ($text == $textbotlang['keyboard']['addDepartment']) {
     sendmessage($from_id, $textbotlang['Admin']['manageadmin']['askMessageAdminId'], $backadmin, 'HTML');
     step("getidadmindep", $from_id);
@@ -21431,6 +21262,19 @@ if ($datain == "linkappsetting") {
     $stmt->execute();
 } elseif (in_array($text, panel_menu_group_labels($textbotlang), true) && $adminrulecheck['rule'] == "administrator") {
     $pm_panel = select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select");
+    // 💰 قیمت‌گذاری: glass buttons too, 🧩 حجم دلخواه first (cvol.php)
+    if ($text === $textbotlang['Admin']['PanelMenu']['pricingBtn'] && is_array($pm_panel)) {
+        $pm_flat = $panel_menu_flat[$pm_panel['type'] ?? ''] ?? $panel_menu_flat['marzban'];
+        $pm_items = [];
+        foreach (panel_menu_split($pm_flat, $textbotlang) as $pm_id => $pm_grp) {
+            if ($pm_id === 'pricing') {
+                $pm_items = $pm_grp['items'];
+            }
+        }
+        [$pp_cap, $pp_kb] = cvol_pricing_menu($pm_panel, $pm_items);
+        sendmessage($from_id, $pp_cap, $pp_kb, 'HTML');
+        return;
+    }
     // 🎁 اکانت تست: glass buttons of its own instead of a keyboard
     if ($text === $textbotlang['Admin']['PanelMenu']['testBtn'] && is_array($pm_panel)) {
         [$pt_cap, $pt_kb] = panel_test_menu_payload($pm_panel, $textbotlang);
@@ -22094,36 +21938,25 @@ if ($datain == "linkappsetting") {
             $valuenew = "onsubvip";
         }
         update("marzban_panel", "subvip", $valuenew, "code_panel", $code_panel);
-    } elseif ($type == "customstatusf") {
-        $panel = select("marzban_panel", "*", "code_panel", $code_panel, "select");
-        $customvlume = json_decode($panel['customvolume'], true);
-        if ($value == "1") {
-            $valuenew = "0";
-        } else {
-            $valuenew = "1";
+    } elseif ($type == "cvol") {
+        // 🧩 حجم دلخواه on or off - the hub says what is missing when it cannot be on
+        $cv_panel = select("marzban_panel", "*", "code_panel", $code_panel, "select");
+        $cv_c = cvol_cfg($cv_panel);
+        $cv_priced = false;
+        foreach (panel_langs() as $cv_l) {
+            if ($cv_c['langs'][$cv_l]['show'] && cvol_lang_priced($cv_c, $cv_l)) {
+                $cv_priced = true;
+            }
         }
-        $customvlume['f'] = $valuenew;
-        update("marzban_panel", "customvolume", json_encode($customvlume), "code_panel", $code_panel);
-    } elseif ($type == "customstatusn") {
-        $panel = select("marzban_panel", "*", "code_panel", $code_panel, "select");
-        $customvlume = json_decode($panel['customvolume'], true);
-        if ($value == "1") {
-            $valuenew = "0";
-        } else {
-            $valuenew = "1";
+        if (!$cv_c['on'] && !$cv_priced) {
+            telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $textbotlang['Admin']['Cvol']['cantOn'], 'show_alert' => true]);
+            return;
         }
-        $customvlume['n'] = $valuenew;
-        update("marzban_panel", "customvolume", json_encode($customvlume), "code_panel", $code_panel);
-    } elseif ($type == "customstatusn2") {
-        $panel = select("marzban_panel", "*", "code_panel", $code_panel, "select");
-        $customvlume = json_decode($panel['customvolume'], true);
-        if ($value == "1") {
-            $valuenew = "0";
-        } else {
-            $valuenew = "1";
+        if (!$cv_c['on'] && !array_filter($cv_c['levels'])) {
+            $cv_c['levels']['f'] = true;
         }
-        $customvlume['n2'] = $valuenew;
-        update("marzban_panel", "customvolume", json_encode($customvlume), "code_panel", $code_panel);
+        $cv_c['on'] = !$cv_c['on'];
+        cvol_save($cv_panel, $cv_c);
     } elseif ($type == "onholdmenu") {
         $panel = select("marzban_panel", "*", "code_panel", $code_panel, "select");
         $kb = json_encode(panel_onhold_submenu_keyboard($panel, $value, $textbotlang));

@@ -674,6 +674,17 @@ if (preg_match('/^changestatus_(\w+)$/', (string) $datain, $cs_m)) {
     $datain = 'updateproduct_' . $id_invoice;
     $cs_answered = true;
 }
+// 🧩 حجم دلخواه (cvol.php): the plan screen's taps and typing. Its 🔙 hands
+// the tap on to the screen it goes back to, which is then drawn as usual.
+if (function_exists('cvol_customer_dispatch')) {
+    $cv_res = cvol_customer_dispatch();
+    if ($cv_res === true) {
+        return;
+    }
+    if (is_string($cv_res) && $cv_res !== '') {
+        $datain = $cv_res;
+    }
+}
 if ($text == "/start" || $datain == "start" || $text == "start") {
     update("user", "Processing_value", "0", "id", $from_id);
     update("user", "Processing_value_one", "0", "id", $from_id);
@@ -1863,12 +1874,6 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         sendmessage($from_id, $textbotlang['users']['extend']['connectFirst'], null, 'html');
         return;
     }
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $mainvolume = json_decode($marzban_list_get['mainvolume'], true);
-    $mainvolume = $mainvolume[$user['agent']];
-    $maxvolume = json_decode($marzban_list_get['maxvolume'], true);
-    $maxvolume = $maxvolume[$user['agent']];
     $stmt = $pdo->prepare("SELECT * FROM product WHERE (Location = :service_location OR Location = '/all') AND agent = :agent AND one_buy_status = '0' AND (FIND_IN_SET(:userlang, lang) OR lang = 'all' OR lang IS NULL OR lang = '')");
     $stmt->execute([
         ':service_location' => $marzban_list_get['name_panel'],
@@ -1877,25 +1882,17 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     ]);
     $product = $stmt->rowCount();
     savedata("clear", "id_invoice", $nameloc['id_invoice']);
-    if ($product == 0) {
-        $statuscustomvolume = json_decode($marzban_list_get['customvolume'], true)[$user['agent']] ?? "0";
-        if ($statuscustomvolume != "1" || $marzban_list_get['type'] == "Manualsale") {
+    // 🧩 a service bought as a custom plan renews as one, and so does any
+    // service on a panel with no ready plans - when the panel offers them
+    if ($product == 0 || cvol_invoice_is_custom($nameloc)) {
+        if (cvol_open($user, $marzban_list_get, 'r', 'product_' . $nameloc['id_invoice'], $message_id, $nameloc['id_invoice'])) {
+            return;
+        }
+        if ($product == 0) {
             sendmessage($from_id, $textbotlang['users']['sell']['nullProduct'], null, 'HTML');
             step('home', $from_id);
             return;
         }
-        $textcustom = sprintf($textbotlang['users']['sell']['customVolumePrompt'], $custompricevalue, $mainvolume, $maxvolume);
-        sendmessage($from_id, $textcustom, $backuser, 'html');
-        deletemessage($from_id, $message_id);
-        step('gettimecustomvolomforextend', $from_id);
-        return;
-    }
-    if ($nameloc['name_product'] == $textbotlang['users']['customSellVolume']['btnVolume'] || $nameloc['name_product'] == $textbotlang['users']['customSellVolume']['btnService']) {
-        $textcustom = sprintf($textbotlang['users']['sell']['customVolumePrompt2'], $custompricevalue, $mainvolume, $maxvolume);
-        sendmessage($from_id, $textcustom, $backuser, 'html');
-        deletemessage($from_id, $message_id);
-        step('gettimecustomvolomforextend', $from_id);
-        return;
     }
     if (shop_feature_value('categorytime', $user['lang'] ?? 'fa', $setting['statuscategory']) == "offcategory") {
         $stmt = $pdo->prepare("SELECT * FROM product WHERE (Location = :service_location OR Location = '/all') AND agent = :agent AND one_buy_status = '0' AND (FIND_IN_SET(:userlang, lang) OR lang = 'all' OR lang IS NULL OR lang = '')");
@@ -1924,6 +1921,10 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
                 ['text' => $namekeyboard, 'callback_data' => "serviceextendselect_" . $result['code_product'], 'style' => 'primary']
             ];
         }
+        // 🧩 renewing with a custom plan, when this service's panel offers them
+        if (cvol_available($marzban_list_get, $user) && ($pe_cv = cvol_entry_button($user['lang'] ?? 'fa', 'cvs|r|' . $nameloc['id_invoice']))) {
+            $productextend['inline_keyboard'][] = [$pe_cv];
+        }
         $productextend['inline_keyboard'][] = [
             ['text' => $textbotlang['keyboard']['renewCurrentPlan'], 'callback_data' => "exntedagei", 'style' => 'primary']
         ];
@@ -1937,34 +1938,6 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         $monthkeyboard = keyboardTimeCategory($nameloc['Service_location'], $user['agent'], "productextendmonths_", "product_$id_invoice", false, true);
         Editmessagetext($from_id, $message_id, $textbotlang['users']['sell']['selectDuration'], $monthkeyboard);
     }
-} elseif ($user['step'] == "gettimecustomvolomforextend") {
-    $userdate = json_decode($user['Processing_value'], true);
-    $nameloc = select("invoice", "*", "id_invoice", $userdate['id_invoice'], "select");
-    $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
-    $mainvolume = json_decode($marzban_list_get['mainvolume'], true);
-    $mainvolume = $mainvolume[$user['agent']];
-    $maxvolume = json_decode($marzban_list_get['maxvolume'], true);
-    $maxvolume = $maxvolume[$user['agent']];
-    $maintime = json_decode($marzban_list_get['maintime'], true);
-    $maintime = $maintime[$user['agent']];
-    $maxtime = json_decode($marzban_list_get['maxtime'], true);
-    $maxtime = $maxtime[$user['agent']];
-    $cv_gb = volume_parse($text, 'gb');
-    if ($cv_gb === null) {
-        sendmessage($from_id, $textbotlang['common']['invalidVolume'], $backuser, 'HTML');
-        return;
-    }
-    if ($cv_gb > (float) $maxvolume || $cv_gb < (float) $mainvolume) {
-        $texttime = strtr($textbotlang['users']['customSellVolume']['invalidVolume'], ['{mainvolume}' => $mainvolume, '{maxvolume}' => $maxvolume]);
-        sendmessage($from_id, $texttime, $backuser, 'HTML');
-        return;
-    }
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
-    savedata("save", "volume", volume_store($cv_gb));
-    $textcustom = sprintf($textbotlang['users']['sell']['customTimePrompt'], $customtimevalueprice, $maintime, $maxtime);
-    sendmessage($from_id, $textcustom, $backuser, 'html');
-    step('getvolumecustomuserforextend', $from_id);
 } elseif (preg_match('/productextendmonths_(\w+)/', $datain, $dataget)) {
     $monthenumber = $dataget[1];
     $userdate = json_decode($user['Processing_value'], true);
@@ -1994,10 +1967,9 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             ['text' => $namekeyboard, 'callback_data' => "serviceextendselect_" . $result['code_product'], 'style' => 'primary']
         ];
     }
-    if ($nameloc['name_product'] == $textbotlang['users']['customSellVolume']['btnVolume'] || $nameloc['name_product'] == $textbotlang['users']['customSellVolume']['btnService']) {
-        $productextend['inline_keyboard'][] = [
-            ['text' => $textbotlang['keyboard']['selectCurrentService'], 'callback_data' => "serviceextendselect_pre", 'style' => 'primary']
-        ];
+    // 🧩 renewing with a custom plan, when this service's panel offers them
+    if (cvol_available($marzban_list_get, $user) && ($pe_cv = cvol_entry_button($user['lang'] ?? 'fa', 'cvs|r|' . $nameloc['id_invoice']))) {
+        $productextend['inline_keyboard'][] = [$pe_cv];
     }
     $productextend['inline_keyboard'][] = [
         ['text' => $textbotlang['keyboard']['backToServiceInfo'], 'callback_data' => "product_" . $nameloc['id_invoice'], 'style' => 'danger']
@@ -2005,25 +1977,11 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
 
     $json_list_product_lists = json_encode($productextend);
     Editmessagetext($from_id, $message_id, $textbotlang['users']['extend']['selectservice'], $json_list_product_lists);
-} elseif (preg_match('/^serviceextendselect_(.*)/', $datain, $dataget) || $user['step'] == "getvolumecustomuserforextend" || $datain == "exntedagei") {
+} elseif (preg_match('/^serviceextendselect_(.*)/', $datain, $dataget) || $datain == "exntedagei") {
     $userdate = json_decode($user['Processing_value'], true);
     $nameloc = select("invoice", "*", "id_invoice", $userdate['id_invoice'], "select");
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
-    if ($user['step'] == "getvolumecustomuserforextend") {
-        if (!ctype_digit($text)) {
-            sendmessage($from_id, $textbotlang['common']['invalidTime'], $backuser, 'HTML');
-            return;
-        }
-        $maintime = json_decode($marzban_list_get['maintime'], true);
-        $maintime = $maintime[$user['agent']];
-        $maxtime = json_decode($marzban_list_get['maxtime'], true);
-        $maxtime = $maxtime[$user['agent']];
-        if (intval($text) > intval($maxtime) || intval($text) < intval($maintime)) {
-            $texttime = strtr($textbotlang['users']['customSellVolume']['invalidTimeRange'], ['{maintime}' => $maintime, '{maxtime}' => $maxtime]);
-            sendmessage($from_id, $texttime, $backuser, 'HTML');
-            return;
-        }
-    } elseif ($datain == "exntedagei") {
+    if ($datain == "exntedagei") {
         $stmt = $pdo->prepare("SELECT value FROM service_other WHERE username = :username AND type = 'extend_user' AND status = 'paid' ORDER BY time DESC");
         $stmt->execute([
             ':username' => $nameloc['username'],
@@ -2048,28 +2006,14 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     } else {
         $codeproduct = $dataget[1];
     }
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
-    if ($user['step'] == "getvolumecustomuserforextend") {
-        $product['name_product'] = $nameloc['name_product'];
-        $product['code_product'] = "customvolume";
-        $product['note'] = "";
-        $product['price_product'] = ((float) $userdate['volume'] * $custompricevalue) + ($text * $customtimevalueprice);
-        $product['Service_time'] = $text;
-        $product['Volume_constraint'] = $userdate['volume'];
-        step("home", $from_id);
-    } else {
-        $stmt = $pdo->prepare("SELECT * FROM product WHERE (Location = :service_location OR Location = '/all') AND agent = :agent AND code_product = :code_product AND (FIND_IN_SET(:userlang, lang) OR lang = 'all' OR lang IS NULL OR lang = '')");
-        $stmt->execute([
-            ':service_location' => $nameloc['Service_location'],
-            ':agent' => $user['agent'],
-            ':code_product' => $codeproduct,
-            ':userlang' => $user['lang'] ?? 'fa',
-        ]);
-        $product = $stmt->fetch(PDO::FETCH_ASSOC);
-    }
+    $stmt = $pdo->prepare("SELECT * FROM product WHERE (Location = :service_location OR Location = '/all') AND agent = :agent AND code_product = :code_product AND (FIND_IN_SET(:userlang, lang) OR lang = 'all' OR lang IS NULL OR lang = '')");
+    $stmt->execute([
+        ':service_location' => $nameloc['Service_location'],
+        ':agent' => $user['agent'],
+        ':code_product' => $codeproduct,
+        ':userlang' => $user['lang'] ?? 'fa',
+    ]);
+    $product = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($product == false) {
         sendmessage($from_id, $textbotlang['users']['extend']['restartError'], $keyboard, 'HTML');
         return;
@@ -2079,11 +2023,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     savedata("save", "price_product", $product['price_product']);
     savedata("save", "code_product", $product['code_product']);
     list($textextend, $keyboardextend) = render_extend_invoice_from_product($user, $textbotlang, $nameloc, $product);
-    if ($user['step'] == "getvolumecustomuserforextend") {
-        sendmessage($from_id, $textextend, $keyboardextend, 'HTML');
-    } else {
-        Editmessagetext($from_id, $message_id, $textextend, $keyboardextend);
-    }
+    Editmessagetext($from_id, $message_id, $textextend, $keyboardextend);
 } elseif ($datain == "confirmserivce") {
     $partsdic = explode("_", $user['Processing_value_four']);
     $userdata = json_decode($user['Processing_value'], true);
@@ -2098,17 +2038,13 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         sendmessage($from_id, $textbotlang['users']['extend']['notSupportedPanel'], null, 'html');
         return;
     }
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
-    if ($nameloc['name_product'] == $textbotlang['users']['customSellVolume']['btnVolume'] || $nameloc['name_product'] == $textbotlang['users']['customSellVolume']['btnService']) {
-        $prodcut['code_product'] = "custom_volume";
-        $prodcut['name_product'] = $nameloc['name_product'];
-        $prodcut['price_product'] = ($userdata['data_limit'] * $custompricevalue) + ($userdata['time'] * $customtimevalueprice);
-        $prodcut['Service_time'] = $userdata['time'];
-        $prodcut['Volume_constraint'] = $userdata['data_limit'];
-        $prodcut['inbounds'] = $marzban_list_get['inboundid'];
+    // 🧩 renewed with a custom plan: priced by the panel's settings as they are now
+    if (cvol_is_renew_code($userdata['code_product'] ?? '')) {
+        $prodcut = cvol_renew_product($marzban_list_get, $user, $nameloc, $userdata['data_limit'] ?? 0, $userdata['time'] ?? 0);
+        if ($prodcut === null) {
+            sendmessage($from_id, cvol_tx($user['lang'] ?? 'fa')['unavailable'], null, 'HTML');
+            return;
+        }
     } else {
         $stmt = $pdo->prepare("SELECT * FROM product WHERE (Location = :service_location OR Location = '/all') AND agent = :agent AND code_product = :code_product AND (FIND_IN_SET(:userlang, lang) OR lang = 'all' OR lang IS NULL OR lang = '')");
         $stmt->execute([
@@ -2279,18 +2215,14 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         sendmessage($from_id, $textbotlang['users']['extend']['notSupportedPanel'], null, 'html');
         return;
     }
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
     $randomString = bin2hex(random_bytes(2));
-    if ($nameloc['name_product'] == $textbotlang['users']['customSellVolume']['btnVolume'] || $nameloc['name_product'] == $textbotlang['users']['customSellVolume']['btnService']) {
-        $prodcut['code_product'] = "custom_volume";
-        $prodcut['name_product'] = $nameloc['name_product'];
-        $prodcut['price_product'] = ($userdata['data_limit'] * $custompricevalue) + ($userdata['time'] * $customtimevalueprice);
-        $prodcut['Service_time'] = $userdata['time'];
-        $prodcut['Volume_constraint'] = $userdata['data_limit'];
-        $prodcut['inbounds'] = $marzban_list_get['inboundid'];
+    // 🧩 renewed with a custom plan: priced by the panel's settings as they are now
+    if (cvol_is_renew_code($userdata['code_product'] ?? '')) {
+        $prodcut = cvol_renew_product($marzban_list_get, $user, $nameloc, $userdata['data_limit'] ?? 0, $userdata['time'] ?? 0);
+        if ($prodcut === null) {
+            sendmessage($from_id, cvol_tx($user['lang'] ?? 'fa')['unavailable'], null, 'HTML');
+            return;
+        }
     } else {
         $stmt = $pdo->prepare("SELECT * FROM product WHERE (Location = :service_location OR Location = '/all') AND agent = :agent AND code_product = :code_product AND (FIND_IN_SET(:userlang, lang) OR lang = 'all' OR lang IS NULL OR lang = '')");
         $stmt->execute([
@@ -2384,18 +2316,12 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         sendmessage($from_id, $textbotlang['users']['extend']['error'], null, 'HTML');
         return;
     }
-    if ($nameloc['name_product'] == $textbotlang['users']['customSellVolume']['btnVolume'] || $nameloc['name_product'] == $textbotlang['users']['customSellVolume']['btnService']) {
-        $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
-        $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-        $custompricevalue = $eextraprice[$user['agent']];
-        $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-        $customtimevalueprice = $eextraprice[$user['agent']];
-        $product['name_product'] = $nameloc['name_product'];
-        $product['code_product'] = "customvolume";
-        $product['note'] = "";
-        $product['price_product'] = (intval($renewCtx['data_limit']) * $custompricevalue) + (intval($renewCtx['time']) * $customtimevalueprice);
-        $product['Service_time'] = $renewCtx['time'];
-        $product['Volume_constraint'] = $renewCtx['data_limit'];
+    if (cvol_is_renew_code($renewCtx['code_product'])) {
+        $product = cvol_renew_product($nameloc['Service_location'], $user, $nameloc, $renewCtx['data_limit'] ?? 0, $renewCtx['time'] ?? 0, 'customvolume');
+        if ($product === null) {
+            sendmessage($from_id, cvol_tx($user['lang'] ?? 'fa')['unavailable'], null, 'HTML');
+            return;
+        }
     } else {
         $stmt = $pdo->prepare("SELECT * FROM product WHERE (Location = :service_location OR Location = '/all') AND agent = :agent AND code_product = :code_product AND (FIND_IN_SET(:userlang, lang) OR lang = 'all' OR lang IS NULL OR lang = '')");
         $stmt->execute([
@@ -2736,8 +2662,9 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         return;
     }
     $Pricechange = $marzban_list_get_new['priceChangeloc'];
-    if ($nameloc['name_product'] == $textbotlang['users']['customSellVolume']['btnVolume'] || $nameloc['name_product'] == $textbotlang['users']['customSellVolume']['btnService']) {
-        $prodcut['code_product'] = $textbotlang['users']['customSellVolume']['btnVolume'];
+    // 🧩 a custom plan moves as one: its own volume and days, no product behind it
+    if (cvol_invoice_is_custom($nameloc)) {
+        $prodcut = ['code_product' => 'customvolume'];
         $product['inbounds'] = null;
     } else {
         $stmt = $pdo->prepare("SELECT * FROM product WHERE (Location = :service_location OR Location = '/all') AND agent= :agent AND name_product = :name_product AND (FIND_IN_SET(:userlang, lang) OR lang = 'all' OR lang IS NULL OR lang = '')");
@@ -4444,23 +4371,13 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         }
         if (shop_feature_value('categorytime', $user['lang'] ?? 'fa', $setting['statuscategory']) == "offcategory") {
             $marzban_list_get = $locationproduct;
-            $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-            $custompricevalue = $eextraprice[$user['agent']];
-            $mainvolume = json_decode($marzban_list_get['mainvolume'], true);
-            $mainvolume = $mainvolume[$user['agent']];
-            $maxvolume = json_decode($marzban_list_get['maxvolume'], true);
-            $maxvolume = $maxvolume[$user['agent']];
             $nullproduct = products_available_count($user['lang'] ?? 'fa', $user['agent']);
             if ($nullproduct == 0) {
-                $statuscustomvolume = json_decode($marzban_list_get['customvolume'], true)[$user['agent']] ?? "0";
-                if ($statuscustomvolume != "1" || $marzban_list_get['type'] == "Manualsale") {
+                // 🧩 no ready plans: the custom plan screen, when this panel offers it
+                if (!cvol_open($user, $marzban_list_get, 'b', 'backuser', $datain == "buy" ? $message_id : 0)) {
                     sendmessage($from_id, $textbotlang['users']['sell']['nullProduct'], null, 'HTML');
                     step('home', $from_id);
-                    return;
                 }
-                $textcustom = sprintf($textbotlang['users']['sell']['customVolumePrompt3'], $custompricevalue, $mainvolume, $maxvolume);
-                sendmessage($from_id, $textcustom, $backuser, 'html');
-                step('gettimecustomvol', $from_id);
                 return;
             }
             if (shop_feature_value('categroygenral', $user['lang'] ?? 'fa', $setting['statuscategorygenral']) == "oncategorys") {
@@ -4474,36 +4391,31 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
             } else {
                 $query = "SELECT * FROM product WHERE (Location = '$location' OR Location = '/all')AND agent= '{$user['agent']}' AND (FIND_IN_SET('{$user['lang']}', lang) OR lang = 'all' OR lang IS NULL OR lang = '')";
                 $marzban_list_get = select("marzban_panel", "*", "name_panel", $location, "select");
-                $statuscustomvolume = json_decode($marzban_list_get['customvolume'], true)[$user['agent']];
                 if (username_method_is($marzban_list_get['MethodUsername'], 'users.customusername') || username_method_is($marzban_list_get['MethodUsername'], 'keyboard.customUsernameRandom')) {
                     $datakeyboard = "prodcutservices_";
                 } else {
                     $datakeyboard = "prodcutservice_";
                 }
-                if ($statuscustomvolume == "1" && $marzban_list_get['type'] != "Manualsale") {
-                    $statuscustom = true;
-                } else {
-                    $statuscustom = false;
-                }
+                $statuscustom = cvol_available($marzban_list_get, $user);
                 $textproduct = $textbotlang['users']['sell']['serviceSelectFirst'];
                 if (feature_value('statusnamecustom', $user['lang'] ?? 'fa', $setting['statusnamecustom']) == 'onnamecustom') {
                     $backuser = "buyback";
                 } else {
                     $backuser = "backuser";
                 }
-                sell_screen($from_id, $datain == "buy" ? $message_id : 0, $textproduct, KeyboardProduct($marzban_list_get['name_panel'], $query, $user['pricediscount'], $datakeyboard, $statuscustom, $backuser), 3);
+                sell_screen($from_id, $datain == "buy" ? $message_id : 0, $textproduct, KeyboardProduct($marzban_list_get['name_panel'], $query, $user['pricediscount'], $datakeyboard, $statuscustom, $backuser, null, cvol_entry_cb('b', $marzban_list_get['code_panel'], 'cvpl')), 3);
             }
         } else {
             $nullproduct = products_available_count($user['lang'] ?? 'fa', $user['agent']);
+            $marzban_list_get = select("marzban_panel", "*", "name_panel", $location, "select");
             if ($nullproduct == 0) {
-                sendmessage($from_id, $textbotlang['users']['sell']['nullProduct'], null, 'HTML');
+                // 🧩 no ready plans: the custom plan screen, when this panel offers it
+                if (!cvol_open($user, $marzban_list_get, 'b', 'backuser', ($datain == "buy" || $datain == "buybacktow") ? $message_id : 0)) {
+                    sendmessage($from_id, $textbotlang['users']['sell']['nullProduct'], null, 'HTML');
+                }
                 return;
             }
-            $marzban_list_get = select("marzban_panel", "*", "name_panel", $location, "select");
-            $statuscustom = false;
-            $statuscustomvolume = json_decode($marzban_list_get['customvolume'], true)[$user['agent']];
-            if ($statuscustomvolume == "1" && $marzban_list_get['type'] != "Manualsale")
-                $statuscustom = true;
+            $statuscustom = cvol_available($marzban_list_get, $user) ? cvol_entry_cb('b', $marzban_list_get['code_panel'], 'buy') : false;
             if ($statusnote) {
                 $back = "buyback";
             } else {
@@ -4531,7 +4443,7 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     // are edited into this message in place, and on a fresh entry the message
     // is sent on its own - neither touches the reply keyboard, so the customer
     // keeps the menu they already had rather than being handed a back button.
-    if (products_available_count($user['lang'] ?? 'fa', $user['agent']) === 0) {
+    if (products_available_count($user['lang'] ?? 'fa', $user['agent']) === 0 && !cvol_any_available($user)) {
         $np_text = $textbotlang['users']['sell']['nullProduct'];
         if ($message_id && ($datain == "buy" || $datain == "buybacktow" || $datain == "buyback")) {
             Editmessagetext($from_id, $message_id, $np_text, null, 'HTML');
@@ -4579,21 +4491,11 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     }
     $nullproduct = products_available_count($user['lang'] ?? 'fa', $user['agent']);
     if ($nullproduct == 0) {
-        $statuscustomvolume = json_decode($marzban_list_get['customvolume'], true)[$user['agent']] ?? "0";
-        if ($statuscustomvolume != "1" || $marzban_list_get['type'] == "Manualsale") {
+        // 🧩 no ready plans: the custom plan screen, when this panel offers it
+        if (!cvol_open($user, $marzban_list_get, 'b', 'buybacktow', $message_id)) {
             sendmessage($from_id, $textbotlang['users']['sell']['nullProduct'], null, 'HTML');
             step('home', $from_id);
-            return;
         }
-        $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-        $custompricevalue = $eextraprice[$user['agent']];
-        $mainvolume = json_decode($marzban_list_get['mainvolume'], true);
-        $mainvolume = $mainvolume[$user['agent']];
-        $maxvolume = json_decode($marzban_list_get['maxvolume'], true);
-        $maxvolume = $maxvolume[$user['agent']];
-        $textcustom = sprintf($textbotlang['users']['sell']['customVolumePrompt4'], $custompricevalue, $mainvolume, $maxvolume);
-        sendmessage($from_id, $textcustom, $backuser, 'html');
-        step('gettimecustomvol', $from_id);
         return;
     }
     if (shop_feature_value('categorytime', $user['lang'] ?? 'fa', $setting['statuscategory']) == "offcategory") {
@@ -4602,35 +4504,22 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
             sell_screen($from_id, $message_id, $textbotlang['users']['sell']['selectCategory'], KeyboardCategory($location, $user['agent'], "buybacktow"), 2);
         } else {
             $query = "SELECT * FROM product WHERE (Location = '$location' OR Location = '/all')AND agent= '{$user['agent']}' AND (FIND_IN_SET('{$user['lang']}', lang) OR lang = 'all' OR lang IS NULL OR lang = '')";
-            $statuscustomvolume = json_decode($marzban_list_get['customvolume'], true)[$user['agent']];
             if (username_method_is($marzban_list_get['MethodUsername'], 'users.customusername') || username_method_is($marzban_list_get['MethodUsername'], 'keyboard.customUsernameRandom')) {
                 $datakeyboard = "prodcutservices_";
             } else {
                 $datakeyboard = "prodcutservice_";
             }
-            if ($statuscustomvolume == "1" && $marzban_list_get['type'] != "Manualsale") {
-                $statuscustom = true;
-            } else {
-                $statuscustom = false;
-            }
+            $statuscustom = cvol_available($marzban_list_get, $user);
             // back to the panels: buybacktow, like the category list's back. The
             // panel screen decides how it arrives (sell_screen) - edited in place
             // when it has no sticker, replaced together with its sticker when it
             // has one. This used to be buyfresh, which always deleted the message
             // and sent a new one, sticker or not.
             $back = "buybacktow";
-            sell_screen($from_id, $message_id, $textbotlang['users']['sell']['serviceSelect'], KeyboardProduct($marzban_list_get['name_panel'], $query, $user['pricediscount'], $datakeyboard, $statuscustom, $back), 3);
+            sell_screen($from_id, $message_id, $textbotlang['users']['sell']['serviceSelect'], KeyboardProduct($marzban_list_get['name_panel'], $query, $user['pricediscount'], $datakeyboard, $statuscustom, $back, null, cvol_entry_cb('b', $marzban_list_get['code_panel'], 'location_' . $marzban_list_get['code_panel'])), 3);
         }
     } else {
-        $nullproduct = products_available_count($user['lang'] ?? 'fa', $user['agent']);
-        if ($nullproduct == 0) {
-            sendmessage($from_id, $textbotlang['users']['sell']['nullProduct'], null, 'HTML');
-            return;
-        }
-        $statuscustom = false;
-        $statuscustomvolume = json_decode($marzban_list_get['customvolume'], true)[$user['agent']];
-        if ($statuscustomvolume == "1" && $marzban_list_get['type'] != "Manualsale")
-            $statuscustom = true;
+        $statuscustom = cvol_available($marzban_list_get, $user) ? cvol_entry_cb('b', $marzban_list_get['code_panel'], 'location_' . $marzban_list_get['code_panel']) : false;
         $monthkeyboard = keyboardTimeCategory($marzban_list_get['name_panel'], $user['agent'], "productmonth_", "buybacktow", $statuscustom, false);
         Editmessagetext($from_id, $message_id, $textbotlang['users']['sell']['selectDuration'], $monthkeyboard);
     }
@@ -4644,20 +4533,15 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         $query = "SELECT * FROM product WHERE (Location = '{$userdate['name_panel']}' OR Location = '/all') AND agent= '{$user['agent']}' AND category = '$categorynames' AND (FIND_IN_SET('{$user['lang']}', lang) OR lang = 'all' OR lang IS NULL OR lang = '')";
     }
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
-    $statuscustomvolume = json_decode($marzban_list_get['customvolume'], true)[$user['agent']];
     if (username_method_is($marzban_list_get['MethodUsername'], 'users.customusername') || username_method_is($marzban_list_get['MethodUsername'], 'keyboard.customUsernameRandom')) {
         $datakeyboard = "prodcutservices_";
     } else {
         $datakeyboard = "prodcutservice_";
     }
-    if ($statuscustomvolume == "1" && $marzban_list_get['type'] != "Manualsale") {
-        $statuscustom = true;
-    } else {
-        $statuscustom = false;
-    }
+    $statuscustom = cvol_available($marzban_list_get, $user);
     // picking a category used to delete this screen and post a brand new one,
     // which broke the "one screen changing" feel of the two steps before it
-    sell_screen($from_id, $message_id, $textbotlang['users']['sell']['serviceSelectFirst'], KeyboardProduct($marzban_list_get['name_panel'], $query, $user['pricediscount'], $datakeyboard, $statuscustom, "location_{$marzban_list_get['code_panel']}"), 3);
+    sell_screen($from_id, $message_id, $textbotlang['users']['sell']['serviceSelectFirst'], KeyboardProduct($marzban_list_get['name_panel'], $query, $user['pricediscount'], $datakeyboard, $statuscustom, "location_{$marzban_list_get['code_panel']}", null, cvol_entry_cb('b', $marzban_list_get['code_panel'], 'categorynames_' . $dataget[1])), 3);
 } elseif (preg_match('/^productmonth_(\w+)/', $datain, $dataget)) {
     $monthenumber = $dataget[1];
     $userdate = json_decode($user['Processing_value'], true);
@@ -4677,97 +4561,26 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     } else {
         $query = "SELECT * FROM product WHERE (Location = '{$userdate['name_panel']}' OR Location = '/all') AND agent= '{$user['agent']}' AND Service_time = '$monthenumber' AND (FIND_IN_SET('{$user['lang']}', lang) OR lang = 'all' OR lang IS NULL OR lang = '')";
         $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
-        $statuscustomvolume = json_decode($marzban_list_get['customvolume'], true)[$user['agent']];
         if (username_method_is($marzban_list_get['MethodUsername'], 'users.customusername') || username_method_is($marzban_list_get['MethodUsername'], 'keyboard.customUsernameRandom')) {
             $datakeyboard = "prodcutservices_";
         } else {
             $datakeyboard = "prodcutservice_";
         }
-        if ($statuscustomvolume == "1" && $marzban_list_get['type'] != "Manualsale") {
-            $statuscustom = true;
-        } else {
-            $statuscustom = false;
-        }
-        sell_screen($from_id, $message_id, $textbotlang['users']['sell']['serviceSelectFirst'], KeyboardProduct($marzban_list_get['name_panel'], $query, $user['pricediscount'], $datakeyboard, $statuscustom, "location_{$marzban_list_get['code_panel']}"), 3);
+        $statuscustom = cvol_available($marzban_list_get, $user);
+        sell_screen($from_id, $message_id, $textbotlang['users']['sell']['serviceSelectFirst'], KeyboardProduct($marzban_list_get['name_panel'], $query, $user['pricediscount'], $datakeyboard, $statuscustom, "location_{$marzban_list_get['code_panel']}", null, cvol_entry_cb('b', $marzban_list_get['code_panel'], 'productmonth_' . $monthenumber)), 3);
     }
-} elseif ($datain == "customsellvolume") {
-    $userdate = json_decode($user['Processing_value'], true);
-    $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $mainvolume = json_decode($marzban_list_get['mainvolume'], true);
-    $mainvolume = $mainvolume[$user['agent']];
-    $maxvolume = json_decode($marzban_list_get['maxvolume'], true);
-    $maxvolume = $maxvolume[$user['agent']];
-    $textcustom = sprintf($textbotlang['users']['sell']['customVolumePrompt5'], $custompricevalue, $mainvolume, $maxvolume);
-    sendmessage($from_id, $textcustom, $backuser, 'html');
-    deletemessage($from_id, $message_id);
-    step('gettimecustomvol', $from_id);
-} elseif ($user['step'] == "gettimecustomvol") {
-    $userdate = json_decode($user['Processing_value'], true);
-    $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
-    $mainvolume = json_decode($marzban_list_get['mainvolume'], true);
-    $mainvolume = $mainvolume[$user['agent']];
-    $maxvolume = json_decode($marzban_list_get['maxvolume'], true);
-    $maxvolume = $maxvolume[$user['agent']];
-    $maintime = json_decode($marzban_list_get['maintime'], true);
-    $maintime = $maintime[$user['agent']];
-    $maxtime = json_decode($marzban_list_get['maxtime'], true);
-    $maxtime = $maxtime[$user['agent']];
-    $cv_gb = volume_parse($text, 'gb');
-    if ($cv_gb === null) {
-        sendmessage($from_id, $textbotlang['common']['invalidVolume'], $backuser, 'HTML');
-        return;
-    }
-    if ($cv_gb > (float) $maxvolume || $cv_gb < (float) $mainvolume) {
-        $texttime = strtr($textbotlang['users']['customSellVolume']['invalidVolume'], ['{mainvolume}' => $mainvolume, '{maxvolume}' => $maxvolume]);
-        sendmessage($from_id, $texttime, $backuser, 'HTML');
-        return;
-    }
-    $text = volume_store($cv_gb);
-    $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
-    update("user", "Processing_value_one", $text, "id", $from_id);
-    $textcustom = sprintf($textbotlang['users']['sell']['customTimePrompt2'], $customtimevalueprice, $maintime, $maxtime);
-    sendmessage($from_id, $textcustom, $backuser, 'html');
-    if (username_method_is($marzban_list_get['MethodUsername'], 'users.customusername') || username_method_is($marzban_list_get['MethodUsername'], 'keyboard.customUsernameRandom')) {
-        step('getvolumecustomusername', $from_id);
-    } else {
-        step('getvolumecustomuser', $from_id);
-    }
-} elseif ($user['step'] == "getvolumecustomusername" || preg_match('/^prodcutservices_(.*)/', $datain, $dataget)) {
+} elseif (preg_match('/^prodcutservices_(.*)/', $datain, $dataget)) {
     $prodcut = $dataget[1];
     $userdate = json_decode($user['Processing_value'], true);
-    if ($user['step'] == "getvolumecustomusername") {
-        if (!ctype_digit($text)) {
-            sendmessage($from_id, $textbotlang['common']['invalidTime'], $backuser, 'HTML');
-            return;
-        }
-        $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
-        $maintime = json_decode($marzban_list_get['maintime'], true);
-        $maintime = $maintime[$user['agent']];
-        $maxtime = json_decode($marzban_list_get['maxtime'], true);
-        $maxtime = $maxtime[$user['agent']];
-        if (intval($text) > intval($maxtime) || intval($text) < intval($maintime)) {
-            $texttime = strtr($textbotlang['users']['customSellVolume']['invalidTimeRange'], ['{maintime}' => $maintime, '{maxtime}' => $maxtime]);
-            sendmessage($from_id, $texttime, $backuser, 'HTML');
-            return;
-        }
-        $customvalue = "customvolume_" . $text . "_" . $user['Processing_value_one'];
-        update("user", "Processing_value_one", $customvalue, "id", $from_id);
-        step('endstepusers', $from_id);
-    } else {
-        update("user", "Processing_value_one", $prodcut, "id", $from_id);
-        step('endstepuser', $from_id);
-        deletemessage($from_id, $message_id);
-    }
+    update("user", "Processing_value_one", $prodcut, "id", $from_id);
+    step('endstepuser', $from_id);
+    deletemessage($from_id, $message_id);
     // the product screen is being left for the username prompt - take its
     // sticker with it
     sell_sticker_retire($from_id);
     $usernamePromptMsg = sendmessage($from_id, $textbotlang['users']['sell']['selectUsernamePrompt'], $selectUsernameKb, 'html');
     update("user", "Processing_value_tow", (string) ($usernamePromptMsg['result']['message_id'] ?? 0), "id", $from_id);
-} elseif ($user['step'] == "endstepuser" || $user['step'] == "endstepusers" || preg_match('/prodcutservice_(.*)/', $datain, $dataget) || $user['step'] == "getvolumecustomuser") {
+} elseif ($user['step'] == "endstepuser" || $user['step'] == "endstepusers" || preg_match('/prodcutservice_(.*)/', $datain, $dataget)) {
     if ($datain == "ucancel") {
         // ucancel used to be (mis-)handled inside the earlier statusnamecustom
         // branch, which no longer matches the REAL step active when this
@@ -4788,23 +4601,7 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         $text = 'user' . substr(bin2hex(random_bytes(4)), 0, 8);
     }
     $userdate = json_decode($user['Processing_value'], true);
-    if ($user['step'] == "getvolumecustomuser") {
-        if (!ctype_digit($text)) {
-            sendmessage($from_id, $textbotlang['users']['customSellVolume']['invalidTime'], $backuser, 'HTML');
-            return;
-        }
-        $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
-        $maintime = json_decode($marzban_list_get['maintime'], true);
-        $maintime = $maintime[$user['agent']];
-        $maxtime = json_decode($marzban_list_get['maxtime'], true);
-        $maxtime = $maxtime[$user['agent']];
-        if (intval($text) > intval($maxtime) || intval($text) < intval($maintime)) {
-            $texttime = strtr($textbotlang['users']['customSellVolume']['invalidTimeRange'], ['{maintime}' => $maintime, '{maxtime}' => $maxtime]);
-            sendmessage($from_id, $texttime, $backuser, 'HTML');
-            return;
-        }
-        $prodcut = "customvolume_" . $text . "_" . $user['Processing_value_one'];
-    } elseif ($user['step'] == "endstepusers" || $user['step'] == "endstepuser") {
+    if ($user['step'] == "endstepusers" || $user['step'] == "endstepuser") {
         $prodcut = $user['Processing_value_one'];
     } else {
         $prodcut = $dataget[1];
@@ -4835,17 +4632,16 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         $loc = $prodcut;
     }
     update("user", "Processing_value_one", $loc, "id", $from_id);
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
     $parts = explode("_", $loc);
     if ($parts[0] == "customvolume") {
-        $info_product['Volume_constraint'] = $parts[2];
-        $info_product['name_product'] = $textbotlang['users']['customSellVolume']['title'];
-        $info_product['code_product'] = $textbotlang['users']['customSellVolume']['title'];
-        $info_product['Service_time'] = $parts[1];
-        $info_product['price_product'] = ($parts[2] * $custompricevalue) + ($parts[1] * $customtimevalueprice);
+        // 🧩 a custom plan: priced by the panel's settings, as long as they still offer it
+        $cv_p = cvol_parse_code($loc);
+        $cv_q = $cv_p ? cvol_quote_for($marzban_list_get, $user, $cv_p['gb'], $cv_p['days']) : null;
+        if ($cv_q === null || !cvol_minbal_ok($marzban_list_get, $user)) {
+            sendmessage($from_id, cvol_tx($user['lang'] ?? 'fa')['unavailable'], null, 'HTML');
+            return;
+        }
+        $info_product = ['Volume_constraint' => $cv_q['gb'], 'name_product' => cvol_title($user['lang'] ?? 'fa'), 'code_product' => 'customvolume', 'Service_time' => $cv_q['days'], 'price_product' => $cv_q['price'], 'currency' => $cv_q['cur'], 'note' => ''];
     } else {
         $info_product = $pdo->prepare("SELECT * FROM product WHERE code_product = :code_product AND (Location = :location OR Location = '/all') AND (FIND_IN_SET(:userlang, lang) OR lang = 'all' OR lang IS NULL OR lang = '') LIMIT 1");
         $info_product->bindValue(':code_product', $loc, PDO::PARAM_STR);
@@ -4896,7 +4692,7 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     if ((float) $info_product['Volume_constraint'] <= 0) {
         $textin = str_replace($textbotlang['common']['units']['gb'], "", $textin);
     }
-    if ($user['step'] != "getvolumecustomuser" && !username_method_is($marzban_list_get['MethodUsername'], 'common.labels.customUsername') && !username_method_is($marzban_list_get['MethodUsername'], 'common.labels.customUsernameRandom')) {
+    if (!username_method_is($marzban_list_get['MethodUsername'], 'common.labels.customUsername') && !username_method_is($marzban_list_get['MethodUsername'], 'common.labels.customUsernameRandom')) {
         Editmessagetext($from_id, $message_id, $textin, $payment);
     } else {
         sendmessage($from_id, $textin, $payment, 'HTML');
@@ -4915,17 +4711,15 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         step("home", $from_id);
         return;
     }
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
     if ($parts[0] == "customvolume") {
-        $info_product['Volume_constraint'] = $parts[2];
-        $info_product['name_product'] = $textbotlang['users']['customSellVolume']['title'];
-        $info_product['code_product'] = "customvolume";
-        $info_product['Service_time'] = $parts[1];
-        $info_product['price_product'] = ($parts[2] * $custompricevalue) + ($parts[1] * $customtimevalueprice);
-        $info_product['data_limit_reset'] = "no_reset";
+        // 🧩 priced again by the panel's settings - the same as on the invoice, unless they changed
+        $cv_p = cvol_parse_code($user['Processing_value_one']);
+        $cv_q = $cv_p ? cvol_quote_for($marzban_list_get, $user, $cv_p['gb'], $cv_p['days']) : null;
+        if ($cv_q === null || !cvol_minbal_ok($marzban_list_get, $user)) {
+            sendmessage($from_id, cvol_tx($user['lang'] ?? 'fa')['unavailable'], null, 'HTML');
+            return;
+        }
+        $info_product = ['Volume_constraint' => $cv_q['gb'], 'name_product' => cvol_title($user['lang'] ?? 'fa'), 'code_product' => 'customvolume', 'Service_time' => $cv_q['days'], 'price_product' => $cv_q['price'], 'data_limit_reset' => 'no_reset'];
     } else {
         $stmt = $pdo->prepare("SELECT * FROM product WHERE code_product = :code_product AND (Location = :location OR Location = '/all') AND (FIND_IN_SET(:userlang, lang) OR lang = 'all' OR lang IS NULL OR lang = '') LIMIT 1");
         $stmt->execute([
@@ -4977,6 +4771,10 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     $stmt = $pdo->prepare("INSERT IGNORE INTO invoice (id_user, id_invoice, username,time_sell, Service_location, name_product, price_product, Volume, Service_time,Status,note,refral,notifctions) VALUES (?,  ?, ?, ?, ?, ?, ?,?,?,?,?,?,?)");
     $Status = "unpaid";
     $stmt->execute([$from_id, $randomString, $username_ac, $date, $marzban_list_get['name_panel'], $info_product['name_product'], $priceproduct, $info_product['Volume_constraint'], $info_product['Service_time'], $Status, $userdate['nameconfig'], $user['affiliates'], $notifctions]);
+    // 🧩 marked, so its renewal and its count in 📊 know what it was
+    if ($parts[0] == "customvolume") {
+        cvol_mark_invoice($randomString);
+    }
     if ($priceproduct > $user['Balance'] && $user['agent'] != "n2" && intval($priceproduct) != 0) {
         $Balance_prim = $priceproduct - $user['Balance'];
         if ($Balance_prim <= 1)
@@ -5214,92 +5012,31 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
 } elseif (preg_match('/^locationom_(.*)/', $datain, $dataget)) {
     $location = select("marzban_panel", "*", "code_panel", $dataget[1], "select")['name_panel'];
     $marzban_list_get = select("marzban_panel", "*", "code_panel", $dataget[1], "select");
+    update("user", "Processing_value", $location, "id", $from_id);
     $nullproduct = products_available_count($user['lang'] ?? 'fa', $user['agent']);
     if ($nullproduct == 0) {
-        sendmessage($from_id, $textbotlang['users']['sell']['nullProduct'], null, 'HTML');
+        // 🧩 no ready plans: several custom plans at once, when this panel offers them
+        $user['Processing_value'] = $location;
+        if (!cvol_open($user, $marzban_list_get, 'o', 'backuser', $message_id)) {
+            sendmessage($from_id, $textbotlang['users']['sell']['nullProduct'], null, 'HTML');
+        }
         return;
     }
-    update("user", "Processing_value", $location, "id", $from_id);
-    $statuscustomvolume = json_decode($marzban_list_get['customvolume'], true)[$user['agent']];
     if (username_method_is($marzban_list_get['MethodUsername'], 'users.customusername') || username_method_is($marzban_list_get['MethodUsername'], 'keyboard.customUsernameRandom')) {
         $datakeyboard = "prodcutservicesom_";
     } else {
         $datakeyboard = "prodcutserviceom_";
     }
-    if ($statuscustomvolume == "1" && $marzban_list_get['type'] != "Manualsale") {
-        $statuscustom = true;
-    } else {
-        $statuscustom = false;
-    }
+    $statuscustom = cvol_available($marzban_list_get, $user);
     $query = "SELECT * FROM product WHERE (Location = '$location' OR Location = '/all')AND agent= '{$user['agent']}' AND (FIND_IN_SET('{$user['lang']}', lang) OR lang = 'all' OR lang IS NULL OR lang = '')";
-    Editmessagetext($from_id, $message_id, $textbotlang['users']['sell']['serviceSelect'], KeyboardProduct($marzban_list_get['name_panel'], $query, $user['pricediscount'], $datakeyboard, $statuscustom, "backuser", null, "customsellvolumeom"));
-} elseif ($datain == "customsellvolumeom") {
-    $marzban_list_get = select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select");
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $textcustom = sprintf($textbotlang['users']['sell']['volumePrompt'], $custompricevalue);
-    sendmessage($from_id, $textcustom, $backuser, 'html');
-    deletemessage($from_id, $message_id);
-    step('gettimecustomvolom', $from_id);
-} elseif ($user['step'] == "gettimecustomvolom") {
-    $marzban_list_get = select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select");
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
-    $mainvolume = json_decode($marzban_list_get['mainvolume'], true);
-    $mainvolume = $mainvolume[$user['agent']];
-    $maxvolume = json_decode($marzban_list_get['maxvolume'], true);
-    $maxvolume = $maxvolume[$user['agent']];
-    $maintime = json_decode($marzban_list_get['maintime'], true);
-    $maintime = $maintime[$user['agent']];
-    $maxtime = json_decode($marzban_list_get['maxtime'], true);
-    $maxtime = $maxtime[$user['agent']];
-    $cv_gb = volume_parse($text, 'gb');
-    if ($cv_gb === null) {
-        sendmessage($from_id, $textbotlang['common']['invalidVolume'], $backuser, 'HTML');
-        return;
-    }
-    if ($cv_gb > (float) $maxvolume || $cv_gb < (float) $mainvolume) {
-        $texttime = strtr($textbotlang['users']['customSellVolume']['invalidVolume'], ['{mainvolume}' => $mainvolume, '{maxvolume}' => $maxvolume]);
-        sendmessage($from_id, $texttime, $backuser, 'HTML');
-        return;
-    }
-    $text = volume_store($cv_gb);
-    update("user", "Processing_value_one", $text, "id", $from_id);
-    $textcustom = sprintf($textbotlang['users']['sell']['timePrompt'], $customtimevalueprice, $maintime, $maxtime);
-    sendmessage($from_id, $textcustom, $backuser, 'html');
-    $marzban_list_get = select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select");
-    if (username_method_is($marzban_list_get['MethodUsername'], 'users.customusername') || username_method_is($marzban_list_get['MethodUsername'], 'keyboard.customUsernameRandom')) {
-        step('getvolumecustomusernameom', $from_id);
-    } else {
-        step('getvolumecustomuserom', $from_id);
-    }
-} elseif ($user['step'] == "getvolumecustomusernameom" || preg_match('/^prodcutservicesom_(.*)/', $datain, $dataget)) {
+    Editmessagetext($from_id, $message_id, $textbotlang['users']['sell']['serviceSelect'], KeyboardProduct($marzban_list_get['name_panel'], $query, $user['pricediscount'], $datakeyboard, $statuscustom, "backuser", null, cvol_entry_cb('o', $marzban_list_get['code_panel'], 'locationom_' . $marzban_list_get['code_panel'])));
+} elseif (preg_match('/^prodcutservicesom_(.*)/', $datain, $dataget)) {
     $prodcut = $dataget[1];
-    if ($user['step'] == "getvolumecustomusernameom") {
-        if (!ctype_digit($text)) {
-            sendmessage($from_id, $textbotlang['users']['customSellVolume']['invalidTime'], $backuser, 'HTML');
-            return;
-        }
-        $marzban_list_get = select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select");
-        $maintime = json_decode($marzban_list_get['maintime'], true);
-        $maintime = $maintime[$user['agent']];
-        $maxtime = json_decode($marzban_list_get['maxtime'], true);
-        $maxtime = $maxtime[$user['agent']];
-        if (intval($text) > intval($maxtime) || intval($text) < intval($maintime)) {
-            $texttime = strtr($textbotlang['users']['customSellVolume']['invalidTimeRange'], ['{maintime}' => $maintime, '{maxtime}' => $maxtime]);
-            sendmessage($from_id, $texttime, $backuser, 'HTML');
-            return;
-        }
-        $customvalue = "customvolume_" . $text . "_" . $user['Processing_value_one'];
-        update("user", "Processing_value_one", $customvalue, "id", $from_id);
-        step('endstepusersom', $from_id);
-    } else {
-        update("user", "Processing_value_one", $prodcut, "id", $from_id);
-        step('endstepuserom', $from_id);
-    }
+    update("user", "Processing_value_one", $prodcut, "id", $from_id);
+    step('endstepuserom', $from_id);
     $usernamePromptMsg = sendmessage($from_id, $textbotlang['users']['sell']['selectUsernamePrompt'], $selectUsernameKb, 'html');
     update("user", "Processing_value_tow", (string) ($usernamePromptMsg['result']['message_id'] ?? 0), "id", $from_id);
-} elseif ($user['step'] == "endstepuserom" || $user['step'] == "endstepusersom" || preg_match('/prodcutserviceom_(.*)/', $datain, $dataget) || $user['step'] == "getvolumecustomuserom") {
+} elseif ($user['step'] == "endstepuserom" || $user['step'] == "endstepusersom" || preg_match('/prodcutserviceom_(.*)/', $datain, $dataget)) {
     if ($datain == "ucancel") {
         // ucancel used to be (mis-)handled inside the earlier statusnamecustom
         // branch, which no longer matches the REAL step active when this
@@ -5317,23 +5054,7 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     if ($datain == "usedefaultname") {
         $text = 'user' . substr(bin2hex(random_bytes(4)), 0, 8);
     }
-    if ($user['step'] == "getvolumecustomuserom") {
-        if (!ctype_digit($text)) {
-            sendmessage($from_id, $textbotlang['users']['customSellVolume']['invalidTime'], $backuser, 'HTML');
-            return;
-        }
-        $marzban_list_get = select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select");
-        $maintime = json_decode($marzban_list_get['maintime'], true);
-        $maintime = $maintime[$user['agent']];
-        $maxtime = json_decode($marzban_list_get['maxtime'], true);
-        $maxtime = $maxtime[$user['agent']];
-        if (intval($text) > $maxtime || intval($text) < $maintime) {
-            $texttime = strtr($textbotlang['users']['customSellVolume']['invalidTimeRange'], ['{maintime}' => $maintime, '{maxtime}' => $maxtime]);
-            sendmessage($from_id, $texttime, $backuser, 'HTML');
-            return;
-        }
-        $prodcut = "customvolume_" . $text . "_" . $user['Processing_value_one'];
-    } elseif ($user['step'] == "endstepusersom" || $user['step'] == "endstepuserom") {
+    if ($user['step'] == "endstepusersom" || $user['step'] == "endstepuserom") {
         $prodcut = $user['Processing_value_one'];
     } else {
         $prodcut = $dataget[1];
@@ -5359,17 +5080,16 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         $loc = $prodcut;
     }
     update("user", "Processing_value_one", $loc, "id", $from_id);
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
     $parts = explode("_", $loc);
     if ($parts[0] == "customvolume") {
-        $info_product['Volume_constraint'] = $parts[2];
-        $info_product['name_product'] = $textbotlang['users']['customSellVolume']['title'];
-        $info_product['code_product'] = $textbotlang['users']['customSellVolume']['title'];
-        $info_product['Service_time'] = $parts[1];
-        $info_product['price_product'] = ($parts[2] * $custompricevalue) + ($parts[1] * $customtimevalueprice);
+        // 🧩 a custom plan: priced by the panel's settings, as long as they still offer it
+        $cv_p = cvol_parse_code($loc);
+        $cv_q = $cv_p ? cvol_quote_for($marzban_list_get, $user, $cv_p['gb'], $cv_p['days']) : null;
+        if ($cv_q === null || !cvol_minbal_ok($marzban_list_get, $user)) {
+            sendmessage($from_id, cvol_tx($user['lang'] ?? 'fa')['unavailable'], null, 'HTML');
+            return;
+        }
+        $info_product = ['Volume_constraint' => $cv_q['gb'], 'name_product' => cvol_title($user['lang'] ?? 'fa'), 'code_product' => 'customvolume', 'Service_time' => $cv_q['days'], 'price_product' => $cv_q['price'], 'currency' => $cv_q['cur'], 'note' => ''];
     } else {
         $__q8 = $pdo->prepare("SELECT * FROM product WHERE code_product = ? AND (Location = ? or Location = '/all') AND (FIND_IN_SET(?, lang) OR lang = 'all' OR lang IS NULL OR lang = '') LIMIT 1");
         $__q8->bindValue(1, $loc, PDO::PARAM_STR);
@@ -5394,18 +5114,16 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     step('payments', $from_id);
 } elseif ($user['step'] == "payments" && $datain == "confirmandgetservice") {
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select");
-    $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-    $custompricevalue = $eextraprice[$user['agent']];
-    $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-    $customtimevalueprice = $eextraprice[$user['agent']];
     $parts = explode("_", $user['Processing_value_one']);
     if ($parts[0] == "customvolume") {
-        $info_product['Volume_constraint'] = $parts[2];
-        $info_product['name_product'] = $textbotlang['users']['customSellVolume']['title'];
-        $info_product['code_product'] = "customvolume";
-        $info_product['Service_time'] = $parts[1];
-        $info_product['price_product'] = ($parts[2] * $custompricevalue) + ($parts[1] * $customtimevalueprice);
-        $info_product['data_limit_reset'] = "no_reset";
+        // 🧩 priced again by the panel's settings - the same as on the invoice, unless they changed
+        $cv_p = cvol_parse_code($user['Processing_value_one']);
+        $cv_q = $cv_p ? cvol_quote_for($marzban_list_get, $user, $cv_p['gb'], $cv_p['days']) : null;
+        if ($cv_q === null || !cvol_minbal_ok($marzban_list_get, $user)) {
+            sendmessage($from_id, cvol_tx($user['lang'] ?? 'fa')['unavailable'], null, 'HTML');
+            return;
+        }
+        $info_product = ['Volume_constraint' => $cv_q['gb'], 'name_product' => cvol_title($user['lang'] ?? 'fa'), 'code_product' => 'customvolume', 'Service_time' => $cv_q['days'], 'price_product' => $cv_q['price'], 'data_limit_reset' => 'no_reset'];
     } else {
         $stmt = $pdo->prepare("SELECT * FROM product WHERE code_product = :code_product AND (Location = :location OR Location = '/all') AND (FIND_IN_SET(:userlang, lang) OR lang = 'all' OR lang IS NULL OR lang = '') LIMIT 1");
         $stmt->bindValue(':code_product', $user['Processing_value_one'], PDO::PARAM_STR);
@@ -5499,6 +5217,9 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         $stmt = $pdo->prepare("INSERT IGNORE INTO invoice (id_user, id_invoice, username,time_sell, Service_location, name_product, price_product, Volume, Service_time,Status,notifctions) VALUES (?, ?, ?, ?, ?, ?, ?,?,?,?,?)");
         $Status = "active";
         $stmt->execute([$from_id, $randomString, $username_acc, $date, $user['Processing_value'], $info_product['name_product'], $info_product['price_product'], $info_product['Volume_constraint'], $info_product['Service_time'], $Status, $notifctions]);
+        if ($parts[0] == "customvolume") {
+            cvol_mark_invoice($randomString);
+        }
         $config = "";
         $output_config_link = $marzban_list_get['sublink'] == "onsublink" ? $dataoutput['subscription_url'] : "";
         if ($marzban_list_get['config'] == "onconfig") {
@@ -6274,17 +5995,10 @@ if (preg_match('/^sendresidcart-(.*)/', $datain, $dataget)) {
         $service_other = json_decode($service_other['value'], true);
         $nameloc = select("invoice", "*", "username", $usernamepanel, "select");
         $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
-        $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-        $custompricevalue = $eextraprice[$user['agent']];
-        $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-        $customtimevalueprice = $eextraprice[$user['agent']];
         $codeproduct = $service_other['code_product'];
-        if ($codeproduct == "custom_volume") {
-            $prodcut['code_product'] = "custom_volume";
-            $prodcut['name_product'] = $nameloc['name_product'];
-            $prodcut['price_product'] = ($service_other['volumebuy'] * $custompricevalue) + ($nameloc['Service_time'] * $customtimevalueprice);
-            $prodcut['Service_time'] = $service_other['Service_time'];
-            $prodcut['Volume_constraint'] = $service_other['volumebuy'];
+        // 🧩 a renewal with a custom plan: the report only names it
+        if (cvol_is_renew_code($codeproduct)) {
+            $prodcut = ['code_product' => 'custom_volume', 'name_product' => $nameloc['name_product'], 'Service_time' => $service_other['Service_time'] ?? $nameloc['Service_time'], 'Volume_constraint' => $service_other['volumebuy'] ?? $nameloc['Volume']];
         } else {
             $nameloc = select("invoice", "*", "username", $usernamepanel, "select");
             $__q11 = $pdo->prepare("SELECT * FROM product WHERE (Location = ? OR Location = '/all') AND agent= ? AND code_product = ? AND (FIND_IN_SET(?, lang) OR lang = 'all' OR lang IS NULL OR lang = '')");
@@ -6432,17 +6146,10 @@ if (preg_match('/^sendresidcart-(.*)/', $datain, $dataget)) {
         $service_other = json_decode($service_other['value'], true);
         $nameloc = select("invoice", "*", "username", $usernamepanel, "select");
         $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
-        $eextraprice = json_decode($marzban_list_get['pricecustomvolume'], true);
-        $custompricevalue = $eextraprice[$user['agent']];
-        $eextraprice = json_decode($marzban_list_get['pricecustomtime'], true);
-        $customtimevalueprice = $eextraprice[$user['agent']];
         $codeproduct = $service_other['code_product'];
-        if ($codeproduct == "custom_volume") {
-            $prodcut['code_product'] = "custom_volume";
-            $prodcut['name_product'] = $nameloc['name_product'];
-            $prodcut['price_product'] = ($service_other['volumebuy'] * $custompricevalue) + ($service_other['Service_time'] * $customtimevalueprice);
-            $prodcut['Service_time'] = $service_other['Service_time'];
-            $prodcut['Volume_constraint'] = $service_other['volumebuy'];
+        // 🧩 a renewal with a custom plan: the report only names it
+        if (cvol_is_renew_code($codeproduct)) {
+            $prodcut = ['code_product' => 'custom_volume', 'name_product' => $nameloc['name_product'], 'Service_time' => $service_other['Service_time'] ?? $nameloc['Service_time'], 'Volume_constraint' => $service_other['volumebuy'] ?? $nameloc['Volume']];
         } else {
             $nameloc = select("invoice", "*", "username", $usernamepanel, "select");
             $__q12 = $pdo->prepare("SELECT * FROM product WHERE (Location = ? OR Location = '/all') AND agent= ? AND code_product = ? AND (FIND_IN_SET(?, lang) OR lang = 'all' OR lang IS NULL OR lang = '')");
@@ -7421,17 +7128,6 @@ if (isset($update['message']['successful_payment'])) {
     update("user", "Processing_value", $location, "id", $from_id);
     $query = "SELECT * FROM product WHERE (Location = '$location' OR Location = '/all') AND agent= '{$user['agent']}' AND (FIND_IN_SET('{$user['lang']}', lang) OR lang = 'all' OR lang IS NULL OR lang = '')";
     $marzban_list_get = select("marzban_panel", "*", "code_panel", $location, "select");
-    $statuscustomvolume = json_decode($marzban_list_get['customvolume'], true)[$user['agent']];
-    if (username_method_is($marzban_list_get['MethodUsername'], 'users.customusername') || username_method_is($marzban_list_get['MethodUsername'], 'keyboard.customUsernameRandom')) {
-        $datakeyboard = "prodcutservicesom_";
-    } else {
-        $datakeyboard = "prodcutserviceom_";
-    }
-    if ($statuscustomvolume == "1" && $marzban_list_get['type'] != "Manualsale") {
-        $statuscustom = true;
-    } else {
-        $statuscustom = false;
-    }
     Editmessagetext($from_id, $message_id, $textbotlang['users']['extend']['selectservice'], KeyboardProduct($marzban_list_get['name_panel'], $query, $user['pricediscount'], "serviceextendselects-", false, "backuser", $username));
 } elseif (preg_match('/^serviceextendselects-(.*)-(.*)/', $datain, $dataget)) {
     deletemessage($from_id, $message_id);

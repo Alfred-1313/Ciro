@@ -27,6 +27,7 @@ $manageItems = [
   ...((function_exists('rbn_panels') && rbn_panels()) ? [$navItem('nodes.php', 'nodes', $navT['rbnPageTitle'], 'network', $navT['rbnPageTitle'])] : []),
   $navItem('category.php', 'category', $navT['categoryPageTitle'], 'folders', $navT['categoryPageTitle']),
   $navItem('payg.php', 'payg', $navT['pgPageTitle'], 'timer', $navT['pgPageTitle']),
+  $navItem('customvol.php', 'customvol', $navT['cvPageTitle'], 'puzzle', $navT['cvPageTitle']),
   $navItem('bulkgift.php', 'bulkgift', $navT['bgPageTitle'], 'gift', $navT['bgPageTitle']),
 ];
 if (bulkspeed_available()) { /* 🚀 only while a panel can hold a speed limit (Rebecca) */

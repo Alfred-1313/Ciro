@@ -634,6 +634,8 @@ $shopkeyboard = json_encode([
         [['text' => $textbotlang['keyboard']['financial']], ['text' => $textbotlang['Admin']['LangScope']['hubBtn']]],
         // ⏱ اکانت ساعتی is a way of selling, so its settings live with the shop's
         [['text' => $textbotlang['keyboard']['topupPackages']], ['text' => $textbotlang['Admin']['Payg']['rowLabel']]],
+        // 🧩 حجم دلخواه: every panel's custom plans, from the shop too
+        [['text' => $textbotlang['Admin']['Cvol']['btn']]],
         // 🎁 حجم یا زمان گروهی: what the shop sold, topped up for many at once;
         // 🚀 سرعت گروهی beside it only while a panel can take a speed (Rebecca)
         array_merge([['text' => $textbotlang['Admin']['BulkGift']['btn']]], bulkspeed_available() ? [['text' => $textbotlang['Admin']['BulkSpeed']['btn']]] : []),
@@ -1281,7 +1283,8 @@ if (!function_exists('panel_menu_groups')) {
             ],
             'pricing' => [
                 'label' => $textbotlang['Admin']['PanelMenu']['pricingBtn'],
-                'items' => $g(['customVolumePrice', 'customTimePrice', 'extraVolumePrice', 'extraTimePrice', 'changeLocationPrice', 'minCustomVolume', 'maxCustomVolume', 'minCustomTime', 'maxCustomTime']),
+                // 🧩 حجم دلخواه's own hub first (cvol.php); this group is glass buttons now
+                'items' => array_merge(array_filter([$textbotlang['Admin']['Cvol']['featureSettingsBtn'] ?? '']), $g(['extraVolumePrice', 'extraTimePrice', 'changeLocationPrice'])),
             ],
             'test' => [
                 'label' => $textbotlang['Admin']['PanelMenu']['testBtn'],
@@ -1431,11 +1434,10 @@ $optionMarzban = json_encode([
         [['text' => $textbotlang['keyboard']['accountCreateLimit']], ['text' => $textbotlang['keyboard']['changeUserGroup']]],
         [['text' => $textbotlang['keyboard']['testServiceTime']], ['text' => $textbotlang['keyboard']['testAccountVolume']]],
         [['text' => $textbotlang['keyboard']['testDeleteTime']]],
-        [['text' => $textbotlang['keyboard']['customVolumePrice']], ['text' => $textbotlang['keyboard']['extraVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['extraTimePrice']], ['text' => $textbotlang['keyboard']['customTimePrice']]],
+        [['text' => $textbotlang['Admin']['Cvol']['featureSettingsBtn']]],
+        [['text' => $textbotlang['keyboard']['extraVolumePrice']]],
+        [['text' => $textbotlang['keyboard']['extraTimePrice']]],
         [['text' => $textbotlang['keyboard']['changeLocationPrice']]],
-        [['text' => $textbotlang['keyboard']['minCustomVolume']], ['text' => $textbotlang['keyboard']['maxCustomVolume']]],
-        [['text' => $textbotlang['keyboard']['minCustomTime']], ['text' => $textbotlang['keyboard']['maxCustomTime']]],
         [['text' => $textbotlang['keyboard']['inboundDeactivate']]],
         [['text' => $textbotlang['keyboard']['hidePanelForUser']]],
         [['text' => $textbotlang['keyboard']['removeFromHiddenList']]],
@@ -1457,11 +1459,10 @@ $optionrebecca = json_encode([
         [['text' => $textbotlang['keyboard']['accountCreateLimit']], ['text' => $textbotlang['keyboard']['changeUserGroup']]],
         [['text' => $textbotlang['keyboard']['testServiceTime']], ['text' => $textbotlang['keyboard']['testAccountVolume']]],
         [['text' => $textbotlang['keyboard']['testDeleteTime']]],
-        [['text' => $textbotlang['keyboard']['customVolumePrice']], ['text' => $textbotlang['keyboard']['extraVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['extraTimePrice']], ['text' => $textbotlang['keyboard']['customTimePrice']]],
+        [['text' => $textbotlang['Admin']['Cvol']['featureSettingsBtn']]],
+        [['text' => $textbotlang['keyboard']['extraVolumePrice']]],
+        [['text' => $textbotlang['keyboard']['extraTimePrice']]],
         [['text' => $textbotlang['keyboard']['changeLocationPrice']]],
-        [['text' => $textbotlang['keyboard']['minCustomVolume']], ['text' => $textbotlang['keyboard']['maxCustomVolume']]],
-        [['text' => $textbotlang['keyboard']['minCustomTime']], ['text' => $textbotlang['keyboard']['maxCustomTime']]],
         [['text' => $textbotlang['keyboard']['inboundDeactivate']]],
         [['text' => $textbotlang['keyboard']['hidePanelForUser']]],
         [['text' => $textbotlang['keyboard']['removeFromHiddenList']]],
@@ -1483,11 +1484,10 @@ $optionremnawave = json_encode([
         [['text' => $textbotlang['keyboard']['accountCreateLimit']], ['text' => $textbotlang['keyboard']['changeUserGroup']]],
         [['text' => $textbotlang['keyboard']['testServiceTime']], ['text' => $textbotlang['keyboard']['testAccountVolume']]],
         [['text' => $textbotlang['keyboard']['testDeleteTime']]],
-        [['text' => $textbotlang['keyboard']['customVolumePrice']], ['text' => $textbotlang['keyboard']['extraVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['extraTimePrice']], ['text' => $textbotlang['keyboard']['customTimePrice']]],
+        [['text' => $textbotlang['Admin']['Cvol']['featureSettingsBtn']]],
+        [['text' => $textbotlang['keyboard']['extraVolumePrice']]],
+        [['text' => $textbotlang['keyboard']['extraTimePrice']]],
         [['text' => $textbotlang['keyboard']['changeLocationPrice']]],
-        [['text' => $textbotlang['keyboard']['minCustomVolume']], ['text' => $textbotlang['keyboard']['maxCustomVolume']]],
-        [['text' => $textbotlang['keyboard']['minCustomTime']], ['text' => $textbotlang['keyboard']['maxCustomTime']]],
         [['text' => $textbotlang['keyboard']['hidePanelForUser']]],
         [['text' => $textbotlang['keyboard']['removeFromHiddenList']]],
         [['text' => $textbotlang['Admin']['backAdminBtn']], ['text' => $textbotlang['Admin']['backMenuBtn']]]
@@ -1503,10 +1503,9 @@ $optionibsng = json_encode([
         [['text' => $textbotlang['keyboard']['editPanelUrl']], ['text' => $textbotlang['keyboard']['setGroupName']]],
         [['text' => $textbotlang['keyboard']['renewalMethod']], ['text' => $textbotlang['keyboard']['usernameMethod']]],
         [['text' => $textbotlang['keyboard']['accountCreateLimit']], ['text' => $textbotlang['keyboard']['changeUserGroup']]],
-        [['text' => $textbotlang['keyboard']['customVolumePrice']], ['text' => $textbotlang['keyboard']['extraVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['extraTimePrice']], ['text' => $textbotlang['keyboard']['customTimePrice']]],
-        [['text' => $textbotlang['keyboard']['minCustomVolume']], ['text' => $textbotlang['keyboard']['maxCustomVolume']]],
-        [['text' => $textbotlang['keyboard']['minCustomTime']], ['text' => $textbotlang['keyboard']['maxCustomTime']]],
+        [['text' => $textbotlang['Admin']['Cvol']['featureSettingsBtn']]],
+        [['text' => $textbotlang['keyboard']['extraVolumePrice']]],
+        [['text' => $textbotlang['keyboard']['extraTimePrice']]],
         [['text' => $textbotlang['keyboard']['hidePanelForUser']]],
         [['text' => $textbotlang['keyboard']['removeFromHiddenList']]],
         [['text' => $textbotlang['Admin']['backAdminBtn']], ['text' => $textbotlang['Admin']['backMenuBtn']]]
@@ -1522,10 +1521,9 @@ $option_mikrotik = json_encode([
         [['text' => $textbotlang['keyboard']['editPanelUrl']], ['text' => $textbotlang['keyboard']['setGroupName']]],
         [['text' => $textbotlang['keyboard']['renewalMethod']], ['text' => $textbotlang['keyboard']['usernameMethod']]],
         [['text' => $textbotlang['keyboard']['accountCreateLimit']], ['text' => $textbotlang['keyboard']['changeUserGroup']]],
-        [['text' => $textbotlang['keyboard']['customVolumePrice']], ['text' => $textbotlang['keyboard']['extraVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['extraTimePrice']], ['text' => $textbotlang['keyboard']['customTimePrice']]],
-        [['text' => $textbotlang['keyboard']['minCustomVolume']], ['text' => $textbotlang['keyboard']['maxCustomVolume']]],
-        [['text' => $textbotlang['keyboard']['minCustomTime']], ['text' => $textbotlang['keyboard']['maxCustomTime']]],
+        [['text' => $textbotlang['Admin']['Cvol']['featureSettingsBtn']]],
+        [['text' => $textbotlang['keyboard']['extraVolumePrice']]],
+        [['text' => $textbotlang['keyboard']['extraTimePrice']]],
         [['text' => $textbotlang['keyboard']['hidePanelForUser']]],
         [['text' => $textbotlang['keyboard']['removeFromHiddenList']]],
         [['text' => $textbotlang['Admin']['backAdminBtn']], ['text' => $textbotlang['Admin']['backMenuBtn']]]
@@ -1546,11 +1544,10 @@ $options_ui = json_encode([
         [['text' => $textbotlang['keyboard']['accountCreateLimit']], ['text' => $textbotlang['keyboard']['changeUserGroup']]],
         [['text' => $textbotlang['keyboard']['testServiceTime']], ['text' => $textbotlang['keyboard']['testAccountVolume']]],
         [['text' => $textbotlang['keyboard']['testDeleteTime']]],
-        [['text' => $textbotlang['keyboard']['customVolumePrice']], ['text' => $textbotlang['keyboard']['extraVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['extraTimePrice']], ['text' => $textbotlang['keyboard']['customTimePrice']]],
+        [['text' => $textbotlang['Admin']['Cvol']['featureSettingsBtn']]],
+        [['text' => $textbotlang['keyboard']['extraVolumePrice']]],
+        [['text' => $textbotlang['keyboard']['extraTimePrice']]],
         [['text' => $textbotlang['keyboard']['changeLocationPrice']]],
-        [['text' => $textbotlang['keyboard']['minCustomVolume']], ['text' => $textbotlang['keyboard']['maxCustomVolume']]],
-        [['text' => $textbotlang['keyboard']['minCustomTime']], ['text' => $textbotlang['keyboard']['maxCustomTime']]],
         [['text' => $textbotlang['keyboard']['inboundDeactivate']]],
         [['text' => $textbotlang['keyboard']['hidePanelForUser']]],
         [['text' => $textbotlang['keyboard']['removeFromHiddenList']]],
@@ -1569,11 +1566,10 @@ $optionwg = json_encode([
         [['text' => $textbotlang['keyboard']['accountCreateLimit']], ['text' => $textbotlang['keyboard']['changeUserGroup']]],
         [['text' => $textbotlang['keyboard']['testServiceTime']], ['text' => $textbotlang['keyboard']['testAccountVolume']]],
         [['text' => $textbotlang['keyboard']['testDeleteTime']]],
-        [['text' => $textbotlang['keyboard']['customVolumePrice']], ['text' => $textbotlang['keyboard']['extraVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['extraTimePrice']], ['text' => $textbotlang['keyboard']['customTimePrice']]],
+        [['text' => $textbotlang['Admin']['Cvol']['featureSettingsBtn']]],
+        [['text' => $textbotlang['keyboard']['extraVolumePrice']]],
+        [['text' => $textbotlang['keyboard']['extraTimePrice']]],
         [['text' => $textbotlang['keyboard']['changeLocationPrice']]],
-        [['text' => $textbotlang['keyboard']['minCustomVolume']], ['text' => $textbotlang['keyboard']['maxCustomVolume']]],
-        [['text' => $textbotlang['keyboard']['minCustomTime']], ['text' => $textbotlang['keyboard']['maxCustomTime']]],
         [['text' => $textbotlang['keyboard']['inboundDeactivate']]],
         [['text' => $textbotlang['keyboard']['hidePanelForUser']]],
         [['text' => $textbotlang['keyboard']['removeFromHiddenList']]],
@@ -1594,10 +1590,8 @@ $optionmarzneshin = json_encode([
         [['text' => $textbotlang['keyboard']['testServiceTime']], ['text' => $textbotlang['keyboard']['testAccountVolume']]],
         [['text' => $textbotlang['keyboard']['testDeleteTime']]],
         [['text' => $textbotlang['keyboard']['changeLocationPrice']], ['text' => $textbotlang['keyboard']['extraVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['extraTimePrice']], ['text' => $textbotlang['keyboard']['customVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['customTimePrice']]],
-        [['text' => $textbotlang['keyboard']['minCustomVolume']], ['text' => $textbotlang['keyboard']['maxCustomVolume']]],
-        [['text' => $textbotlang['keyboard']['minCustomTime']], ['text' => $textbotlang['keyboard']['maxCustomTime']]],
+        [['text' => $textbotlang['Admin']['Cvol']['featureSettingsBtn']]],
+        [['text' => $textbotlang['keyboard']['extraTimePrice']]],
         [['text' => $textbotlang['keyboard']['hidePanelForUser']]],
         [['text' => $textbotlang['keyboard']['removeFromHiddenList']]],
         [['text' => $textbotlang['Admin']['backAdminBtn']], ['text' => $textbotlang['Admin']['backMenuBtn']]]
@@ -1634,10 +1628,8 @@ $optionX_ui_single = json_encode([
         [['text' => $textbotlang['keyboard']['testServiceTime']], ['text' => $textbotlang['keyboard']['testAccountVolume']]],
         [['text' => $textbotlang['keyboard']['testDeleteTime']]],
         [['text' => $textbotlang['keyboard']['changeLocationPrice']], ['text' => $textbotlang['keyboard']['extraVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['extraTimePrice']], ['text' => $textbotlang['keyboard']['customVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['customTimePrice']]],
-        [['text' => $textbotlang['keyboard']['minCustomVolume']], ['text' => $textbotlang['keyboard']['maxCustomVolume']]],
-        [['text' => $textbotlang['keyboard']['minCustomTime']], ['text' => $textbotlang['keyboard']['maxCustomTime']]],
+        [['text' => $textbotlang['Admin']['Cvol']['featureSettingsBtn']]],
+        [['text' => $textbotlang['keyboard']['extraTimePrice']]],
         [['text' => $textbotlang['keyboard']['hidePanelForUser']]],
         [['text' => $textbotlang['keyboard']['removeFromHiddenList']]],
         [['text' => $textbotlang['Admin']['backAdminBtn']], ['text' => $textbotlang['Admin']['backMenuBtn']]]
@@ -1658,10 +1650,8 @@ $optionalireza_single = json_encode([
         [['text' => $textbotlang['keyboard']['testServiceTime']], ['text' => $textbotlang['keyboard']['testAccountVolume']]],
         [['text' => $textbotlang['keyboard']['testDeleteTime']]],
         [['text' => $textbotlang['keyboard']['changeLocationPrice']], ['text' => $textbotlang['keyboard']['extraVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['extraTimePrice']], ['text' => $textbotlang['keyboard']['customVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['customTimePrice']]],
-        [['text' => $textbotlang['keyboard']['minCustomVolume']], ['text' => $textbotlang['keyboard']['maxCustomVolume']]],
-        [['text' => $textbotlang['keyboard']['minCustomTime']], ['text' => $textbotlang['keyboard']['maxCustomTime']]],
+        [['text' => $textbotlang['Admin']['Cvol']['featureSettingsBtn']]],
+        [['text' => $textbotlang['keyboard']['extraTimePrice']]],
         [['text' => $textbotlang['keyboard']['hidePanelForUser']]],
         [['text' => $textbotlang['keyboard']['removeFromHiddenList']]],
         [['text' => $textbotlang['Admin']['backAdminBtn']], ['text' => $textbotlang['Admin']['backMenuBtn']]]
@@ -1681,10 +1671,8 @@ $optionhiddfy = json_encode([
         [['text' => $textbotlang['keyboard']['testServiceTime']], ['text' => $textbotlang['keyboard']['testAccountVolume']]],
         [['text' => $textbotlang['keyboard']['testDeleteTime']]],
         [['text' => $textbotlang['keyboard']['changeLocationPrice']], ['text' => $textbotlang['keyboard']['extraVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['extraTimePrice']], ['text' => $textbotlang['keyboard']['customVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['customTimePrice']]],
-        [['text' => $textbotlang['keyboard']['minCustomVolume']], ['text' => $textbotlang['keyboard']['maxCustomVolume']]],
-        [['text' => $textbotlang['keyboard']['minCustomTime']], ['text' => $textbotlang['keyboard']['maxCustomTime']]],
+        [['text' => $textbotlang['Admin']['Cvol']['featureSettingsBtn']]],
+        [['text' => $textbotlang['keyboard']['extraTimePrice']]],
         [['text' => $textbotlang['keyboard']['hidePanelForUser']]],
         [['text' => $textbotlang['keyboard']['removeFromHiddenList']]],
         [['text' => $textbotlang['Admin']['backAdminBtn']], ['text' => $textbotlang['Admin']['backMenuBtn']]]
@@ -1994,8 +1982,10 @@ function KeyboardProduct($location, $query, $pricediscount, $datakeyboard, $stat
     }
     $kp_ordered = help_layout_visible(help_layout_apply_order(array_keys($kp_buttons), $kp_section['order']), $kp_section);
     $product['inline_keyboard'] = array_merge($product['inline_keyboard'], help_layout_chunk_rows($kp_ordered, $kp_buttons, $kp_section['width']));
-    if ($statuscustom)
-        $product['inline_keyboard'][] = [['text' => $textbotlang['users']['customSellVolume']['title'], 'callback_data' => $customvolume]];
+    // 🧩 حجم دلخواه (cvol.php): $customvolume is the callback that opens it
+    if ($statuscustom && ($kp_cv = cvol_entry_button($kp_userlang, $customvolume))) {
+        $product['inline_keyboard'][] = [$kp_cv];
+    }
     // dedicated label, not the shared users.status.backinfo (~30 other sites use
     // that one for unrelated "back to invoice/account" screens) - this button
     // specifically returns to whichever step preceded the product list, and its
@@ -2156,8 +2146,10 @@ function keyboardTimeCategory($name_panel, $agent, $callback_data = "producttime
     }
     if ($statusbtnextend)
         $monthkeyboard['inline_keyboard'][] = [['text' => $textbotlang['keyboard']['renewCurrentPlan'], 'callback_data' => "exntedagei"]];
-    if ($statuscustomvolume == true)
-        $monthkeyboard['inline_keyboard'][] = [['text' => $textbotlang['users']['customSellVolume']['title'], 'callback_data' => "customsellvolume"]];
+    // 🧩 حجم دلخواه: $statuscustomvolume is the callback that opens it (false: none)
+    if (is_string($statuscustomvolume) && $statuscustomvolume !== '' && ($tc_cv = cvol_entry_button($user['lang'] ?? 'fa', $statuscustomvolume))) {
+        $monthkeyboard['inline_keyboard'][] = [$tc_cv];
+    }
     $monthkeyboard['inline_keyboard'][] = [
         ['text' => $textbotlang['users']['status']['backinfo'], 'callback_data' => $callback_data_back]
     ];
@@ -2269,10 +2261,9 @@ $option_ciro = json_encode([
         [['text' => $textbotlang['keyboard']['editPassword']]],
         [['text' => $textbotlang['keyboard']['editPanelUrl']], ['text' => $textbotlang['keyboard']['panelSetting']]],
         [['text' => $textbotlang['keyboard']['accountCreateLimit']], ['text' => $textbotlang['keyboard']['changeUserGroup']]],
-        [['text' => $textbotlang['keyboard']['customVolumePrice']], ['text' => $textbotlang['keyboard']['extraVolumePrice']]],
-        [['text' => $textbotlang['keyboard']['extraTimePrice']], ['text' => $textbotlang['keyboard']['customTimePrice']]],
-        [['text' => $textbotlang['keyboard']['minCustomVolume']], ['text' => $textbotlang['keyboard']['maxCustomVolume']]],
-        [['text' => $textbotlang['keyboard']['minCustomTime']], ['text' => $textbotlang['keyboard']['maxCustomTime']]],
+        [['text' => $textbotlang['Admin']['Cvol']['featureSettingsBtn']]],
+        [['text' => $textbotlang['keyboard']['extraVolumePrice']]],
+        [['text' => $textbotlang['keyboard']['extraTimePrice']]],
         [['text' => $textbotlang['keyboard']['hidePanelForUser']]],
         [['text' => $textbotlang['keyboard']['removeFromHiddenList']]],
         [['text' => $textbotlang['Admin']['backAdminBtn']], ['text' => $textbotlang['Admin']['backMenuBtn']]]

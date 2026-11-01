@@ -177,7 +177,8 @@ class ManagePanel
         } else {
             $invoice = false;
         }
-        if (!in_array($code_product, ["usertest", $textbotlang['extracted']['index_php']['customVolumeButton'], "customvolume"])) {
+        // a test account and a custom plan (🧩 حجم دلخواه) have no product behind them
+        if (!in_array($code_product, ["usertest", "customvolume", "custom_volume"], true)) {
 
             $stmt = $pdo->prepare("SELECT * FROM product WHERE (Location = :name_panel OR Location = '/all')  AND code_product = :code_product");
             $stmt->bindParam(':name_panel', $name_panel);

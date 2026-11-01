@@ -1012,10 +1012,12 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         $stmt->bindParam(':Service_location', $get_invoice['Service_location'], PDO::PARAM_STR);
         $stmt->execute();
         $info_product = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (in_array($get_invoice['name_product'], array_merge($dp_namesOf('extracted.index_php.customVolumeButton'), $dp_namesOf('extracted.index_php.customServiceButton')), true)) {
+        // 🧩 a custom plan (or one bought with the old «⚙️ سرویس دلخواه»): its own volume and days
+        if (cvol_invoice_is_custom($get_invoice)) {
+            $info_product = is_array($info_product) ? $info_product : [];
             $info_product['data_limit_reset'] = "no_reset";
             $info_product['Volume_constraint'] = $get_invoice['Volume'];
-            $info_product['name_product'] = $ct['users']['customSellVolume']['title'];
+            $info_product['name_product'] = $get_invoice['name_product'];
             $info_product['code_product'] = "customvolume";
             $info_product['Service_time'] = $get_invoice['Service_time'];
             $info_product['price_product'] = $get_invoice['price_product'];
@@ -9691,7 +9693,7 @@ if (!function_exists('money_input_steps')) {
             'getaddpricepeoduct', 'getkampricepeoduct',
             'getpricef', 'getpricnn', 'getpricnn2',
             'getpriceftime', 'getpricnntime', 'getpricnn2time',
-            'GetPriceExtra', 'GetPricecustomvo', 'GetPricetimeextra', 'GetPriceExtratime',
+            'GetPriceExtra', 'GetPricetimeextra', 'GetPriceExtratime',
             // admin: discount and gift codes
             'get_price_code', 'get_price_codesell',
             // admin: deposit limits, per gateway
@@ -13754,8 +13756,8 @@ if (!function_exists('bt_section_meta')) {
                 'alert' => 'پیام‌هایی که بین مراحل خرید میان: انتخاب مدت زمان سرویس، درخواست یادداشت برای کانفیگ، و اعلام تخفیفی که روی خرید خورده.',
             ],
             'buy_custom' => [
-                'label' => '⚙️ حجم و زمان دلخواه',
-                'alert' => 'وقتی مشتری سرویس دلخواه می‌خره: درخواست حجم و زمان (هر مسیر متن خودش رو داره) و جواب‌هایی که وقتی عدد اشتباه یا بیرون از محدوده بفرسته می‌گیره.',
+                'label' => '🧩 حجم دلخواه',
+                'alert' => 'صفحه‌ای که مشتری حجم و مدت سرویس رو خودش انتخاب می‌کنه (و دکمه‌ها و استیکرش)، صفحه‌ی تمدید با حجم دلخواه، دکمه‌ی «🧩 حجم دلخواه» زیر لیست سرویس‌ها، و تیکه‌هایی که توی کپشن میان (تخفیف، کمبود موجودی، بسته‌ی ارزون‌تر، ...). تنظیمات خود قابلیت: ✏️ مدیریت پنل ← 💰 قیمت‌گذاری ← 🧩 تنظیمات حجم دلخواه.',
             ],
             'buy_bulk' => [
                 'label' => '🗂 خرید عمده',
@@ -13907,6 +13909,10 @@ if (!function_exists('genbtn_alias_map')) {
             'rp' => 'users.sell.backToPanelListBtn',
             // ...and the product list's trip back to the panels (category step off)
             'rs' => 'users.sell.backToPanelSelectBtn',
+            // 🧩 حجم دلخواه (cvol.php): the screen's own buttons - own-key, its
+            // caption owns them - and the button under a plan list that opens it
+            'cv' => 'users.cvol.caption',
+            'ce' => 'users.cvol.entryBtn',
             'bu' => 'bottext.btnCloseBuy',
             'tp' => 'bottext.btnCloseTopup',
             'ac' => 'bottext.btnCloseAccount',
@@ -14016,7 +14022,7 @@ if (!function_exists('genbtn_alias_to_key')) {
         if (preg_match('/^k[btrh]$/', (string) $alias)) {
             return isset(subapp_apps()[(int) $idx]) || (int) $idx === subapp_back_idx();
         }
-        $extras = ['ab' => [0], 'ut' => [0], 'rw' => [0], 'bc' => [0], 'ns' => [0], 'te' => [0], 'tl' => [0], 'sc' => [0, 2], 'hb' => [0], 'hv' => [0], 'td' => [0, 1], 'su' => [1], 'uu' => [1], 'pu' => [1]];
+        $extras = ['ab' => [0], 'ut' => [0], 'rw' => [0], 'bc' => [0], 'ns' => [0], 'te' => [0], 'tl' => [0], 'sc' => [0, 2], 'hb' => [0], 'hv' => [0], 'td' => [0, 1], 'su' => [1], 'uu' => [1], 'pu' => [1], 'cv' => [1, 2, 3, 4]];
         return in_array((int) $idx, $extras[$alias] ?? [], true);
     }
 }
@@ -14132,6 +14138,21 @@ if (!function_exists('genbtn_defs')) {
         }
         if ($alias === 'rs') {
             return [0 => ['name' => '🔙 بازگشت به انتخاب پنل (زیر لیست محصولات، وقتی دسته‌بندی خاموشه)', 'text' => $textbotlang['users']['sell']['backToPanelSelectBtn'], 'style' => 'danger', 'callback_data' => 'none']];
+        }
+        if ($alias === 'cv') {
+            $cvt = $textbotlang['users']['cvol'] ?? lang_tab_texts('fa')['users']['cvol'];
+            return [
+                0 => ['name' => '✅ دکمه ادامه و پرداخت ({price} = قیمت)', 'text' => $cvt['btnContinue'], 'style' => 'success', 'callback_data' => 'none'],
+                1 => ['name' => '✏️ دکمه وارد کردن عدد', 'text' => $cvt['btnType'], 'style' => 'primary', 'callback_data' => 'none'],
+                2 => ['name' => '🔙 دکمه بازگشت', 'text' => $cvt['btnBack'], 'style' => 'danger', 'callback_data' => 'none'],
+                3 => ['name' => '💳 دکمه افزایش موجودی (وقتی موجودی کمه)', 'text' => $cvt['btnTopup'], 'style' => 'success', 'callback_data' => 'Add_Balance'],
+                4 => ['name' => '📦 دکمه بسته‌ی ارزون‌تر ({name} و {price})', 'text' => $cvt['btnNudge'], 'style' => 'primary', 'callback_data' => 'none'],
+                5 => ['name' => '✖️ دکمه انصراف (زیر «عدد دلخواهت رو بفرست»)', 'text' => $cvt['btnCancelType'], 'style' => 'danger', 'callback_data' => 'none'],
+            ];
+        }
+        if ($alias === 'ce') {
+            $cvt = $textbotlang['users']['cvol'] ?? lang_tab_texts('fa')['users']['cvol'];
+            return [0 => ['name' => '🧩 دکمه‌ی «حجم دلخواه» (زیر لیست سرویس‌ها)', 'text' => $cvt['entryBtn'], 'style' => 'primary', 'callback_data' => 'none']];
         }
         if ($alias === 'bu') {
             return [0 => ['name' => '❌ دکمه بستن (خرید اشتراک)', 'text' => $textbotlang['bottext']['btnCloseBuy'], 'style' => 'danger', 'callback_data' => 'none']];
@@ -15180,7 +15201,7 @@ if (!function_exists('genbtn_hub_payload')) {
 
     function genbtn_group_title($alias, $textbotlang)
     {
-        $titles = ['su' => '🔘 دکمه‌های نام‌گذاری سرویس', 'uu' => '🔘 دکمه‌های اکانت تست', 'pu' => '🔘 دکمه‌های نام‌گذاری اکانت ساعتی', 'cf' => '🔘 دکمه‌های تأیید خرید', 'ns' => '🔘 دکمه‌ی نداشتن سرویس فعال', 'te' => '🔘 دکمه‌ی پیام اتمام اکانت تست', 'sc' => '🔘 دکمه‌های لیست سرویس‌ها (سرویس‌های من)', 'bc' => '🔘 دکمه‌ی تهیه اشتراک (شارژ کیف پول)', 'rn' => '🔘 دکمه‌های فاکتور تمدید سرویس', 'cl' => '🔘 دکمه‌های تغییر لینک اتصال', 'td' => '🔘 دکمه‌های کد تخفیف شارژ', 'hb' => '🔘 دکمه‌ی بازگشت به دسته‌بندی آموزش', 'hv' => '🔘 دکمه‌ی بازگشت (زیر محتوای آموزش)', 'ab' => '📚 دکمه‌ی مشاهده آموزش (پیام بعد از خرید)', 'ut' => '📚 دکمه‌ی مشاهده آموزش (اکانت تست)', 'rw' => '📚 دکمه‌ی مشاهده آموزش (کانفیگ هدیه‌ی دعوت)', 'lc' => '📌 دکمه‌ی عضویت مجدد (پیام خروج از کانال)', 'ma' => '↩️ دکمه‌ی پاسخ به پیام ادمین'];
+        $titles = ['su' => '🔘 دکمه‌های نام‌گذاری سرویس', 'uu' => '🔘 دکمه‌های اکانت تست', 'pu' => '🔘 دکمه‌های نام‌گذاری اکانت ساعتی', 'cf' => '🔘 دکمه‌های تأیید خرید', 'ns' => '🔘 دکمه‌ی نداشتن سرویس فعال', 'te' => '🔘 دکمه‌ی پیام اتمام اکانت تست', 'sc' => '🔘 دکمه‌های لیست سرویس‌ها (سرویس‌های من)', 'bc' => '🔘 دکمه‌ی تهیه اشتراک (شارژ کیف پول)', 'rn' => '🔘 دکمه‌های فاکتور تمدید سرویس', 'cl' => '🔘 دکمه‌های تغییر لینک اتصال', 'td' => '🔘 دکمه‌های کد تخفیف شارژ', 'hb' => '🔘 دکمه‌ی بازگشت به دسته‌بندی آموزش', 'hv' => '🔘 دکمه‌ی بازگشت (زیر محتوای آموزش)', 'ab' => '📚 دکمه‌ی مشاهده آموزش (پیام بعد از خرید)', 'ut' => '📚 دکمه‌ی مشاهده آموزش (اکانت تست)', 'rw' => '📚 دکمه‌ی مشاهده آموزش (کانفیگ هدیه‌ی دعوت)', 'lc' => '📌 دکمه‌ی عضویت مجدد (پیام خروج از کانال)', 'ma' => '↩️ دکمه‌ی پاسخ به پیام ادمین', 'cv' => '🔘 دکمه‌های صفحه‌ی حجم دلخواه'];
         if (isset($titles[$alias])) {
             return $titles[$alias];
         }
@@ -15209,6 +15230,7 @@ if (!function_exists('genbtn_hub_payload')) {
             'ut' => 'این ۱ دکمه، زیر پیام «✅ سرویس با موفقیت ایجاد شد» بعد از گرفتن اکانت تست نشون داده می‌شه. پیش‌فرض مخفیه؛ برای نمایش، «👁 نمایش دادن این دکمه» رو بزن.',
             'rw' => 'این ۱ دکمه، زیر پیام کامل کانفیگ هدیه‌ی دعوت (حالت ۱) نشون داده می‌شه. پیش‌فرض مخفیه؛ برای نمایش، «👁 نمایش دادن این دکمه» رو بزن.',
             'lc' => 'این ۱ دکمه، زیر پیام «از کانال خارج شدید» میاد و کاربر رو به همون کانالی که ازش خارج شده برمی‌گردونه.',
+            'cv' => 'دکمه‌های صفحه‌ای که مشتری حجم و مدت سرویس دلخواه رو انتخاب می‌کنه: ✅ ادامه (جای {price} قیمت میاد)، ✏️ وارد کردن عدد، 🔙 بازگشت، 💳 افزایش موجودی (فقط وقتی موجودی کمه)، 📦 بسته‌ی ارزون‌تر (فقط وقتی یه بسته‌ی آماده ارزون‌تره؛ {name} و {price}) و ✖️ انصراف زیر سؤال «عدد دلخواهت رو بفرست». دکمه‌های ➖/➕ و عددها از تنظیمات خود حجم دلخواه میان.',
             'ma' => 'این ۱ دکمه زیر پیام‌هایی میاد که ادمین به کاربر می‌نویسه: پیام از «👀 اطلاعات کاربر ← ارسال پیام» (وقتی اجازه‌ی پاسخ داده باشی)، جواب ادمین به پیام کاربر، و جواب پشتیبانی به تیکت. کاربر با زدنش جواب رو می‌فرسته.',
         ];
         if (isset($notes[$alias])) {
@@ -15246,7 +15268,7 @@ if (!function_exists('genbtn_hub_payload')) {
             return bt_origin_get($from_id, "bt_edit|{$lang}|{$key}") ?? bt_btnitem_back_cb($key, $lang);
         }
         // 'cf' points at textbot.preInvoice (the normal-purchase تأیید خرید)
-        $backKeyMap = ['su' => 'users.sell.selectUsernamePrompt', 'uu' => 'users.usertest.selectUsernamePrompt', 'pu' => 'users.payg.askUsername', 'cf' => 'textbot.preInvoice', 'ns' => 'users.sell.service_not_available', 'te' => 'textbot.testExpired', 'tl' => 'users.usertest.limitwarning', 'sc' => 'users.sell.service_sell', 'bc' => 'users.Balance.chargeSuccess', 'rn' => 'users.extend.invoiceCreated', 'cl' => 'users.changeLink.warnchange', 'td' => 'users.Balance.topupDiscPrompt', 'hb' => 'users.help.listCaption', 'hv' => 'users.help.categoryCaption', 'ab' => 'textbot.afterPay', 'ut' => 'textbot.afterText', 'rw' => 'users.affiliates.rewardAfterPay', 'lc' => 'users.channel.left_channel', 'ma' => 'users.support.messageFromAdminAlt'];
+        $backKeyMap = ['su' => 'users.sell.selectUsernamePrompt', 'uu' => 'users.usertest.selectUsernamePrompt', 'pu' => 'users.payg.askUsername', 'cf' => 'textbot.preInvoice', 'ns' => 'users.sell.service_not_available', 'te' => 'textbot.testExpired', 'tl' => 'users.usertest.limitwarning', 'sc' => 'users.sell.service_sell', 'bc' => 'users.Balance.chargeSuccess', 'rn' => 'users.extend.invoiceCreated', 'cl' => 'users.changeLink.warnchange', 'td' => 'users.Balance.topupDiscPrompt', 'hb' => 'users.help.listCaption', 'hv' => 'users.help.categoryCaption', 'ab' => 'textbot.afterPay', 'ut' => 'textbot.afterText', 'rw' => 'users.affiliates.rewardAfterPay', 'lc' => 'users.channel.left_channel', 'ma' => 'users.support.messageFromAdminAlt', 'cv' => 'users.cvol.caption'];
         $backKey = ($origin === 'u') ? 'users.usertest.selectUsernamePrompt' : ($backKeyMap[$alias] ?? 'users.sell.selectUsernamePrompt');
         return "bt_edit|{$lang}|{$backKey}";
     }
@@ -15421,7 +15443,7 @@ if (!function_exists('genbtn_hub_payload')) {
     // back/close buttons, the other sections' close buttons and the 🎯 ones.
     function genbtn_preview_aliases()
     {
-        return ['rc', 'rp', 'rs', 'bu', 'tp', 'ac', 'at', 'ts', 'he', 'sp', 'ar', 'mg', 'sl', 'gb', 'kb'];
+        return ['rc', 'rp', 'rs', 'ce', 'bu', 'tp', 'ac', 'at', 'ts', 'he', 'sp', 'ar', 'mg', 'sl', 'gb', 'kb'];
     }
     // The button exactly as this language's customer receives it - built by
     // genbtn_render(), the same function that builds the real one, so rename,
@@ -20279,6 +20301,7 @@ if (!function_exists('bt_button')) {
             'users.sell.backToPreviousBtn',
             'users.sell.backToPanelListBtn',
             'users.sell.backToPanelSelectBtn',
+            'users.cvol.entryBtn',
             'bottext.btnCloseBuy',
             'bottext.btnCloseTopup',
             'bottext.btnCloseAccount',
@@ -20331,6 +20354,7 @@ if (!function_exists('bt_button')) {
             'users.sell.backToPreviousBtn' => 'buyflow',
             'users.sell.backToPanelListBtn' => 'buyflow',
             'users.sell.backToPanelSelectBtn' => 'buyflow',
+            'users.cvol.entryBtn' => 'buyflow',
             'bottext.btnCloseBuy' => 'buyflow',
             'bottext.btnCloseTopup' => 'topup',
             'bottext.btnCloseAccount' => 'account',
@@ -21915,6 +21939,11 @@ if (!function_exists('bt_nosticker_keys')) {
     function bt_nosticker_keys()
     {
         return [
+            // 🧩 حجم دلخواه: the renewal screen, the notes and questions around
+            // the screen, and the pieces the caption is built from - only the
+            // purchase screen itself (users.cvol.caption) brings a sticker
+            'users.cvol.captionRenew', 'users.cvol.minBalance', 'users.cvol.typePrompt', 'users.cvol.typeInvalid',
+            ...array_map(fn($k) => 'users.cvol.' . $k, cvol_fragment_keys()),
             // blocks pasted into the referral screen, never a message of their own
             'users.affiliates.membershipGiftInfo',
             // 🎁's: a button, a status line, a list label, a popup
@@ -23310,3 +23339,5 @@ require_once __DIR__ . '/cleanup.php';
 require_once __DIR__ . '/rbnodes.php';
 // 📥 ایمپورت بکاپ (the bot and the web panel take a backup and hand it to the root watcher)
 require_once __DIR__ . '/backup_import.php';
+// 🧩 حجم دلخواه (the customer builds the plan; replaces the old «⚙️ سرویس دلخواه»)
+require_once __DIR__ . '/cvol.php';

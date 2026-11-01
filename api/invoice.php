@@ -185,7 +185,7 @@ function inv_invoice_add(array $data, string $method): void
         if (!isset($data['time_service'], $data['volume_service']) || !is_numeric($data['time_service']) || !is_numeric($data['volume_service']))
             sendJsonResponse(false, "invalid value service time or volume", []);
         $product = [
-            'name_product' => $textbotlang['hardcoded']['customServiceLabel'],
+            'name_product' => cvol_title('fa'),
             'code_product' => "customvolume",
             'Service_time' => (int) $data['time_service'],
             'price_product' => 1,
@@ -250,6 +250,10 @@ function inv_invoice_add(array $data, string $method): void
         ':status' => 'active',
         ':notifctions' => $notifctions
     ]);
+    // 🧩 a custom plan is marked, so its renewal knows what it was
+    if ($product['code_product'] === 'customvolume') {
+        cvol_mark_invoice($randomString);
+    }
 
     sendJsonResponse(true, "Successful");
 }
