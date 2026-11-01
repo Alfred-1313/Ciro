@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         // the bot never lets the last one go: a keyboard with nothing on it
         // is a dead end for the customer
-        if ($err === null && $ordered && !array_filter($ordered, fn($k) => empty($new['hidden'][$k]))) {
+        if ($err === null && $ordered && !array_filter($ordered, fn($k) => empty($new['hidden'][$k]) && !($kind === 'product' && $k === 'cvol'))) {
             $err = strip_tags($fa['Admin']['Help']['hideLastAlert']);
         }
         $new['emojiSimple'] = ($_POST['simple'] ?? '') === '1';

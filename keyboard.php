@@ -1980,12 +1980,14 @@ function KeyboardProduct($location, $query, $pricediscount, $datakeyboard, $stat
         }
         $kp_buttons[$kp_key] = $kp_btn;
     }
+    // 🧩 حجم دلخواه (cvol.php): $customvolume is the callback that opens it. Its
+    // button is an item of 📐 چیدمان like the plans (key 'cvol'): placed, paired,
+    // hidden and styled there; last in the list until the admin moves it.
+    if ($statuscustom && ($kp_cv = cvol_entry_button($kp_userlang, $customvolume))) {
+        $kp_buttons['cvol'] = cvol_layout_button($kp_cv, $kp_section);
+    }
     $kp_ordered = help_layout_visible(help_layout_apply_order(array_keys($kp_buttons), $kp_section['order']), $kp_section);
     $product['inline_keyboard'] = array_merge($product['inline_keyboard'], help_layout_chunk_rows($kp_ordered, $kp_buttons, $kp_section['width']));
-    // 🧩 حجم دلخواه (cvol.php): $customvolume is the callback that opens it
-    if ($statuscustom && ($kp_cv = cvol_entry_button($kp_userlang, $customvolume))) {
-        $product['inline_keyboard'][] = [$kp_cv];
-    }
     // dedicated label, not the shared users.status.backinfo (~30 other sites use
     // that one for unrelated "back to invoice/account" screens) - this button
     // specifically returns to whichever step preceded the product list, and its

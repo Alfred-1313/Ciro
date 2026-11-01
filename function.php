@@ -1539,7 +1539,13 @@ function savedata($type, $namefiled, $valuefiled)
         update("user", "Processing_value", $data, "id", $from_id);
     } elseif ($type == "save") {
         $userdata = select("user", "*", "id", $from_id, "select");
-        $dataperevieos = json_decode($userdata['Processing_value'], true);
+        $dataperevieos = json_decode((string) $userdata['Processing_value'], true);
+        // Processing_value is also where a top-up keeps its amount (a bare
+        // number, and the column's default is 0): that is no saved data to add
+        // to, and writing a key into it is a fatal error on PHP 8
+        if (!is_array($dataperevieos)) {
+            $dataperevieos = [];
+        }
         $dataperevieos[$namefiled] = $valuefiled;
         update("user", "Processing_value", json_encode($dataperevieos), "id", $from_id);
     }
@@ -20894,6 +20900,10 @@ if (!function_exists('help_layout_items_commerce')) {
             foreach ($rows as $row) {
                 $key = (string) $row['id'];
                 $items[$key] = $section['rename'][$key] ?? $row['name_product'];
+            }
+            // 🧩 حجم دلخواه: its entry button sits among the plans (cvol.php)
+            if (function_exists('cvol_layout_on') && cvol_layout_on()) {
+                $items['cvol'] = $section['rename']['cvol'] ?? cvol_layout_label($lang);
             }
         } else {
             $rows = select("category", "*", null, null, "fetchAll");

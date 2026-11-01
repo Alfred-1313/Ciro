@@ -813,6 +813,52 @@ if (!function_exists('cvol_state_all')) {
         }
         return bt_button($lang, 'users.cvol.entryBtn', cvol_tx($lang)['entryBtn'], $callback, 'primary');
     }
+    // 🧩 The plan screen's entry button is an item of 📐 چیدمان ← محصولات
+    // (key 'cvol'), so it can be put where the admin wants among the plans, share
+    // a row, be hidden, and take its own name / emoji / colour there. It is
+    // listed once any panel offers custom plans; until the admin sets something
+    // it renders exactly as 🎨 ← حجم دلخواه draws it, last in the list.
+    function cvol_layout_on()
+    {
+        static $memo = null;
+        if ($memo === null) {
+            global $pdo;
+            $memo = false;
+            foreach ($pdo->query("SELECT * FROM marzban_panel")->fetchAll(PDO::FETCH_ASSOC) as $p) {
+                if (($p['type'] ?? '') !== 'Manualsale' && cvol_cfg($p)['on']) {
+                    $memo = true;
+                    break;
+                }
+            }
+        }
+        return $memo;
+    }
+    // what its row in the layout editors reads: the button as a customer sees it
+    function cvol_layout_label($lang)
+    {
+        $b = cvol_entry_button($lang, 'x');
+        return is_array($b) && trim((string) ($b['text'] ?? '')) !== '' ? (string) $b['text'] : cvol_tx($lang)['entryBtn'];
+    }
+    // the layout's own choices laid over the button 🎨 drew
+    function cvol_layout_button(array $btn, array $section)
+    {
+        $name = trim((string) ($section['rename']['cvol'] ?? ''));
+        if ($name !== '') {
+            $btn['text'] = $name;
+        }
+        $emo = help_layout_emoji_prefix('cvol', $section);
+        if ($emo['icon'] !== '') {
+            $btn['icon_custom_emoji_id'] = $emo['icon'];
+        } elseif ($emo['prefix'] !== '') {
+            unset($btn['icon_custom_emoji_id']);
+            $btn['text'] = $emo['prefix'] . $btn['text'];
+        }
+        $color = (string) ($section['color']['cvol'] ?? '');
+        if (in_array($color, ['primary', 'success', 'danger'], true)) {
+            $btn['style'] = $color;
+        }
+        return $btn;
+    }
     // one of the screen's own buttons (🎨 alias 'cv'), or null when hidden
     function cvol_btn($lang, $idx, $callback, array $vars = [], $force = false)
     {

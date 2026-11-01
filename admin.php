@@ -23522,11 +23522,16 @@ if ($datain == "linkappsetting") {
             // dead screen for the customer, and there is no undo from there
             $help_visible = 0;
             foreach ($help_ordered as $help_k) {
+                // 🧩 حجم دلخواه is not a plan: only some panels offer it, so it
+                // never counts as the button that has to stay
+                if ($help_kind === 'product' && (string) $help_k === 'cvol') {
+                    continue;
+                }
                 if (empty($help_hidden[(string) $help_k])) {
                     $help_visible++;
                 }
             }
-            if ($help_visible <= 1) {
+            if ($help_visible <= 1 && !($help_kind === 'product' && (string) $help_key === 'cvol')) {
                 telegram('answerCallbackQuery', [
                     'callback_query_id' => $callback_query_id,
                     'text' => $textbotlang['Admin']['Help']['hideLastAlert'],

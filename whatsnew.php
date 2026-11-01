@@ -1022,4 +1022,20 @@ return [
             . "📍 Path: ✏️ Panel management → the panel → 💰 Pricing → 🧩 Custom plan settings → 📦 Volume → 👣 Steps\n"
             . "🌐 Web panel: «Custom plan» → the «Volume» and «Days» cards (a «Steps» field with a preview of the buttons)</blockquote>",
     ],
+    [
+        'n' => 72,
+        'date' => '2026-11-01',
+        'fa' => "<blockquote>📐 <b>جای دکمهٔ «🧩 حجم دلخواه» را حالا می‌شود تعیین کرد</b>\n"
+            . "• دکمهٔ حجم دلخواه همیشه ته لیست محصول‌ها می‌افتاد و در «📐 چیدمان» اصلاً نبود. حالا خودش یک آیتم لیست است: جابه‌جایش می‌کنی، کنار یک محصول می‌گذاری (نیم‌عرض)، مخفی می‌کنی، و اسم، ایموجی و رنگش را همان‌جا عوض می‌کنی. تا چیزی تنظیم نکنی همان‌جایی می‌ماند که بود (آخر لیست).\n"
+            . "• آیتمش فقط وقتی در چیدمان هست که حجم دلخواه روی دست‌کم یک پنل روشن باشد؛ و «حداقل یک دکمه باید بماند» فقط محصول‌ها را می‌شمارد، چون همهٔ پنل‌ها حجم دلخواه ندارند.\n"
+            . "• یک خطای خاموش هم درست شد: اگر آخرین چیزی که ربات برای یک کاربر نگه داشته بود فقط یک عدد بود (مثل مبلغ یک افزایش موجودی نیمه‌کاره)، زدن دکمهٔ حجم دلخواه خطای سرور می‌داد و جوابی نمی‌آمد.\n"
+            . "📍 مسیر: 🎨 ← ظاهر دکمه‌های محصول ← 📐 چیدمان (یا 🛍 ✏️ ویرایش محصول ← 📐 چیدمان)\n"
+            . "🌐 پنل وب: «ظاهر دکمه‌ها» ← «محصولات»</blockquote>",
+        'en' => "<blockquote>📐 <b>The place of the «🧩 Custom plan» button can now be set</b>\n"
+            . "• The custom plan button always landed at the end of the product list and was not in «📐 Layout» at all. It is now an item of that list: move it, put it beside a product (half width), hide it, and change its name, emoji and colour right there. Until you set something it stays where it was (last).\n"
+            . "• Its item is in the layout only while custom plans are on for at least one panel; and «at least one button must stay» counts the products only, since not every panel offers custom plans.\n"
+            . "• A silent error is fixed too: when the last thing the bot had kept for a user was just a number (like the amount of a top-up left half done), tapping the custom plan button gave a server error and no answer.\n"
+            . "📍 Path: 🎨 → Product button looks → 📐 Layout (or 🛍 ✏️ Edit product → 📐 Layout)\n"
+            . "🌐 Web panel: «Button looks» → «Products»</blockquote>",
+    ],
 ];
