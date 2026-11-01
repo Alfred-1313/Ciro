@@ -82,12 +82,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($card === 'vol' || $card === 'days') {
             $sec = $card;
             $fields = $card === 'vol'
-                ? ['min' => $t['cvVolMin'], 'max' => $t['cvVolMax'], 'step' => $t['cvVolStep'], 'start' => $t['cvVolStart'], 'fixed' => $t['cvVolFixed']]
-                : ['min' => $t['cvDaysMin'], 'max' => $t['cvDaysMax'], 'step' => $t['cvDaysStep'], 'start' => $t['cvDaysStart'], 'fixed' => $t['cvDaysFixed']];
+                ? ['min' => $t['cvVolMin'], 'max' => $t['cvVolMax'], 'start' => $t['cvVolStart'], 'fixed' => $t['cvVolFixed']]
+                : ['min' => $t['cvDaysMin'], 'max' => $t['cvDaysMax'], 'start' => $t['cvDaysStart'], 'fixed' => $t['cvDaysFixed']];
             foreach ($fields as $k => $label) {
                 $v = $number($_POST[$k] ?? '');
-                // 0 is the volume step's way of saying «no −/+ buttons»
-                if (!ctype_digit($v) || (int) $v < ($card === 'vol' && $k === 'step' ? 0 : 1)) {
+                if (!ctype_digit($v) || (int) $v < 1) {
                     $err = sprintf($t['cvErrBad'], $label);
                     break;
                 }
@@ -95,6 +94,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if ($err === null && $c[$sec]['max'] < $c[$sec]['min']) {
                 $err = sprintf($t['cvErrMaxMin'], $fields['max']);
+            }
+            // the −/+ steps: up to three different numbers, none = no −/+ buttons
+            if ($err === null) {
+                $steps = $numList($_POST['steps'] ?? '');
+                $limit = $card === 'vol' ? 100000 : 3650;
+                $label = $card === 'vol' ? $t['cvVolSteps'] : $t['cvDaysSteps'];
+                if ($steps === null || count($steps) > 3 || count($steps) !== count(array_unique($steps)) || array_filter($steps, fn($x) => $x < 1 || $x > $limit)) {
+                    $err = sprintf($t['cvErrSteps'], $label);
+                } else {
+                    $c[$sec]['steps'] = cvol_steps_clean($steps, $limit);
+                }
             }
             if ($err === null) {
                 $list = $numList($_POST['list'] ?? '');
@@ -280,6 +290,10 @@ echo web_lang_assets();
 .cv-top{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--bd);font-size:.84rem}
 .cv-top:first-child{border-top:0}
 .cv-cfg{display:none}
+.cv-steps-prev{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;direction:ltr;min-height:26px}
+.cv-steps-prev span{padding:3px 9px;border-radius:7px;background:var(--sf3);color:var(--text);font-size:.78rem;font-variant-numeric:tabular-nums}
+.cv-steps-prev span.mid{background:var(--acs);color:var(--ach);font-weight:600}
+.cv-steps-prev span.none{background:transparent;color:var(--mute)}
 .set-row[hidden]{display:none}
 @media (max-width:640px){.cv-price{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.cv-price .lv,.cv-price .h0{grid-column:1/-1}}
 </style>
@@ -363,11 +377,11 @@ echo web_lang_assets();
   <div class="card-body">
     <?php if ($c['mode'] === 'days'): ?>
       <?= $field($t['cvVolFixed'], $num('fixed', $c['vol']['fixed']), $t['cvVolFixedHint']) ?>
-      <?= $hidden('min', $c['vol']['min']) . $hidden('max', $c['vol']['max']) . $hidden('step', $c['vol']['step']) . $hidden('start', $c['vol']['start']) . $hidden('list', implode(' ', $c['vol']['chips'])) ?>
+      <?= $hidden('min', $c['vol']['min']) . $hidden('max', $c['vol']['max']) . $hidden('steps', implode(' ', $c['vol']['steps'])) . $hidden('start', $c['vol']['start']) . $hidden('list', implode(' ', $c['vol']['chips'])) ?>
     <?php else: ?>
       <?= $field($t['cvVolMin'], $num('min', $c['vol']['min'])) ?>
       <?= $field($t['cvVolMax'], $num('max', $c['vol']['max'])) ?>
-      <?= $field($t['cvVolStep'], $num('step', $c['vol']['step']), $t['cvVolStepHint']) ?>
+      <?= $field($t['cvVolSteps'], $input('steps', implode(' ', $c['vol']['steps']), 'inputmode="numeric" dir="ltr" autocomplete="off" placeholder="1 10" data-steps="vol"') . '<div class="cv-steps-prev" data-for="vol" aria-hidden="true"></div>', $t['cvVolStepsHint']) ?>
       <?= $field($t['cvVolStart'], $num('start', $c['vol']['start']), $t['cvVolStartHint']) ?>
       <?= $field($t['cvVolChips'], $input('list', implode(' ', $c['vol']['chips']), 'dir="ltr" autocomplete="off" placeholder="10 20 50 100"'), $t['cvVolChipsHint']) ?>
       <?= $hidden('fixed', $c['vol']['fixed']) ?>
@@ -382,13 +396,13 @@ echo web_lang_assets();
   <div class="card-body">
     <?php $d = $c['days']; if ($c['mode'] === 'vol'): ?>
       <?= $field($t['cvDaysFixed'], $num('fixed', $d['fixed']), $t['cvDaysFixedHint']) ?>
-      <?= $hidden('pick', $d['pick']) . $hidden('list', implode(' ', $d['list'])) . $hidden('min', $d['min']) . $hidden('max', $d['max']) . $hidden('step', $d['step']) . $hidden('start', $d['start']) ?>
+      <?= $hidden('pick', $d['pick']) . $hidden('list', implode(' ', $d['list'])) . $hidden('min', $d['min']) . $hidden('max', $d['max']) . $hidden('steps', implode(' ', $d['steps'])) . $hidden('start', $d['start']) ?>
     <?php else: ?>
       <?= $field($t['cvDaysPick'], $select('pick', ['list' => $t['cvPickList'], 'step' => $t['cvPickStep']], $d['pick'])) ?>
       <?= $field($t['cvDaysList'], $input('list', implode(' ', $d['list']), 'dir="ltr" autocomplete="off" placeholder="30 60 90"'), $t['cvDaysListHint'], ' data-pick="list"' . ($d['pick'] === 'list' ? '' : ' hidden')) ?>
       <?= $field($t['cvDaysMin'], $num('min', $d['min']), '', ' data-pick="step"' . ($d['pick'] === 'step' ? '' : ' hidden')) ?>
       <?= $field($t['cvDaysMax'], $num('max', $d['max']), '', ' data-pick="step"' . ($d['pick'] === 'step' ? '' : ' hidden')) ?>
-      <?= $field($t['cvDaysStep'], $num('step', $d['step']), '', ' data-pick="step"' . ($d['pick'] === 'step' ? '' : ' hidden')) ?>
+      <?= $field($t['cvDaysSteps'], $input('steps', implode(' ', $d['steps']), 'inputmode="numeric" dir="ltr" autocomplete="off" placeholder="1 7" data-steps="days"') . '<div class="cv-steps-prev" data-for="days" aria-hidden="true"></div>', $t['cvDaysStepsHint'], ' data-pick="step"' . ($d['pick'] === 'step' ? '' : ' hidden')) ?>
       <?= $field($t['cvDaysStart'], $num('start', $d['start']), '', ' data-pick="step"' . ($d['pick'] === 'step' ? '' : ' hidden')) ?>
       <?= $hidden('fixed', $d['fixed']) ?>
     <?php endif; ?>
@@ -530,6 +544,25 @@ echo web_lang_assets();
       out.classList.toggle('mute', mute);
     });
   }
+  // the buttons a steps field makes: −10 −1 [value] +1 +10
+  function stepsPreview(inp) {
+    var box = document.querySelector('.cv-steps-prev[data-for="' + inp.getAttribute('data-steps') + '"]');
+    if (!box) return;
+    var nums = String(inp.value).replace(/[۰-۹]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d); }).split(/[\s,،]+/).filter(Boolean).map(Number);
+    var ok = nums.length > 0 && nums.length <= 3 && nums.every(function (n) { return n >= 1 && Math.floor(n) === n; }) && new Set(nums).size === nums.length;
+    box.textContent = '';
+    function chip(txt, cls) { var s = document.createElement('span'); s.textContent = txt; if (cls) s.className = cls; box.appendChild(s); }
+    if (!String(inp.value).trim()) { chip('—', 'none'); return; }
+    if (!ok) { chip('?', 'none'); return; }
+    nums.sort(function (a, b) { return a - b; });
+    nums.slice().reverse().forEach(function (n) { chip('−' + n); });
+    chip(inp.getAttribute('data-steps') === 'vol' ? 'GB' : 'day', 'mid');
+    nums.forEach(function (n) { chip('+' + n); });
+  }
+  document.querySelectorAll('input[data-steps]').forEach(function (i) {
+    stepsPreview(i);
+    i.addEventListener('input', function () { stepsPreview(i); });
+  });
   document.addEventListener('input', function (e) {
     if (e.target.closest && (e.target.closest('#prices') || e.target.closest('#calc'))) draw();
   });

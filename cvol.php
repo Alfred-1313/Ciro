@@ -43,15 +43,37 @@ if (!function_exists('cvol_cfg')) {
             // both: volume and days are the customer's; vol: only the volume
             // (the days are fixed); days: only the days (the volume is fixed)
             'mode' => 'both',
-            'vol' => ['min' => 1, 'max' => 500, 'step' => 5, 'start' => 20, 'fixed' => 50, 'chips' => [10, 20, 50, 100]],
-            // pick: step (➖/➕ between min and max) or list (one of a few)
-            'days' => ['min' => 1, 'max' => 365, 'step' => 5, 'start' => 30, 'fixed' => 30, 'pick' => 'list', 'list' => [30, 60, 90]],
+            // steps: each is a −/+ pair of buttons (up to 3; none = no −/+, the
+            // volume is picked from the ready buttons or typed)
+            'vol' => ['min' => 1, 'max' => 500, 'steps' => [1, 10], 'start' => 20, 'fixed' => 50, 'chips' => [10, 20, 50, 100]],
+            // pick: step (−/+ between min and max) or list (one of a few)
+            'days' => ['min' => 1, 'max' => 365, 'steps' => [1, 7], 'start' => 30, 'fixed' => 30, 'pick' => 'list', 'list' => [30, 60, 90]],
             // [[from GB, % off the volume part], ...], smallest first
             'tiers' => [],
             'sale' => ['pct' => 0, 'until' => 0],
             'nudge' => true,
             'langs' => $langs,
         ];
+    }
+
+    // up to three different whole numbers from 1 to $max, smallest first
+    function cvol_steps_clean($raw, $max)
+    {
+        $out = [];
+        foreach ((array) $raw as $x) {
+            if (is_numeric($x) && (float) $x == (int) $x && (int) $x >= 1 && (int) $x <= $max) {
+                $out[(int) $x] = (int) $x;
+            }
+        }
+        ksort($out);
+        return array_slice(array_values($out), 0, 3);
+    }
+    // «±1، ±10» - how a list of steps is said
+    function cvol_steps_text(array $steps, $sep = '، ')
+    {
+        return implode($sep, array_map(function ($x) {
+            return '±' . $x;
+        }, $steps));
     }
 
     // every field in range, every list clean - whatever was stored or posted
@@ -85,11 +107,17 @@ if (!function_exists('cvol_cfg')) {
             }
         }
         ksort($chips);
+        // saved before the steps were a list: that one step, and the ×5 one the
+        // screen drew beside it (a step of 0 meant none)
+        $vsteps = $v['steps'] ?? null;
+        if (!is_array($vsteps)) {
+            $ls = array_key_exists('step', $v) ? $int($v['step'], 5) : null;
+            $vsteps = $ls === null ? $d['vol']['steps'] : ($ls > 0 ? [$ls, $ls * 5] : []);
+        }
         $o['vol'] = [
             'min' => $vmin,
             'max' => $vmax,
-            // 0 = no ➖/➕ buttons: the volume is picked from the ready buttons or typed
-            'step' => max(0, min(100000, $int($v['step'] ?? null, $d['vol']['step']))),
+            'steps' => cvol_steps_clean($vsteps, 100000),
             'start' => $abs($int($v['start'] ?? null, $d['vol']['start']), 100000),
             'fixed' => $abs($int($v['fixed'] ?? null, $d['vol']['fixed']), 100000),
             'chips' => array_slice(array_values($chips), 0, 6),
@@ -110,10 +138,15 @@ if (!function_exists('cvol_cfg')) {
         if ($pick === 'list' && !$list) {
             $pick = 'step';
         }
+        $dsteps = $t['steps'] ?? null;
+        if (!is_array($dsteps)) {
+            $ls = array_key_exists('step', $t) ? $int($t['step'], 5) : null;
+            $dsteps = $ls === null ? $d['days']['steps'] : ($ls > 0 ? [$ls, $ls * 5] : []);
+        }
         $o['days'] = [
             'min' => $dmin,
             'max' => $dmax,
-            'step' => $abs($int($t['step'] ?? null, $d['days']['step']), 3650),
+            'steps' => cvol_steps_clean($dsteps, 3650),
             'start' => $abs($int($t['start'] ?? null, $d['days']['start']), 3650),
             'fixed' => $abs($int($t['fixed'] ?? null, $d['days']['fixed']), 3650),
             'pick' => $pick,
@@ -208,10 +241,10 @@ if (!function_exists('cvol_cfg')) {
         // the old feature took any number of days in its range: so does this one
         if ($daysSet) {
             $c['days']['pick'] = 'step';
-            $c['days']['step'] = ($c['days']['max'] - $c['days']['min']) <= 60 ? 1 : 5;
+            $c['days']['steps'] = ($c['days']['max'] - $c['days']['min']) <= 60 ? [1, 7] : [7, 30];
         }
         $span = $c['vol']['max'] - $c['vol']['min'];
-        $c['vol']['step'] = $span <= 50 ? 1 : ($span <= 300 ? 5 : 10);
+        $c['vol']['steps'] = $span <= 50 ? [1, 5] : ($span <= 300 ? [5, 25] : [10, 50]);
         // the old prices were in the bot's own currency
         $pgb = $j('pricecustomvolume');
         $pday = $j('pricecustomtime');
@@ -891,10 +924,10 @@ if (!function_exists('cvol_state_all')) {
 
     // The screen for $st (the state) - [text, keyboard], or null when the plan
     // is not on offer any more.
-    function cvol_screen(array $u, array $st)
+    function cvol_screen(array $u, array $st, $preview = false)
     {
         $panel = cvol_panel($st['p'] ?? '');
-        if (!is_array($panel) || !cvol_available($panel, $u)) {
+        if (!is_array($panel) || (!$preview && !cvol_available($panel, $u))) {
             return null;
         }
         $c = cvol_cfg($panel);
@@ -957,23 +990,30 @@ if (!function_exists('cvol_state_all')) {
 
         $rows = [];
         $free = cvol_free($c);
-        $stepper = function ($kind, $val, $min, $max, $step, $label) {
-            $big = $step * 5;
+        // one −/+ pair per step: the value in the middle for one or two steps;
+        // three would crowd it, so it gets a row of its own above them
+        $stepper = function ($kind, $val, $min, $max, array $steps, $label) {
+            if (!$steps) {
+                return [];
+            }
             $cb = function ($x) use ($kind, $min, $max) {
                 return "cvb|{$kind}|" . max($min, min($max, $x));
             };
-            return [
-                ['text' => '−' . cvol_num($big), 'callback_data' => $cb($val - $big)],
-                ['text' => '−' . cvol_num($step), 'callback_data' => $cb($val - $step)],
-                ['text' => $label, 'callback_data' => 'cvb|n'],
-                ['text' => '+' . cvol_num($step), 'callback_data' => $cb($val + $step)],
-                ['text' => '+' . cvol_num($big), 'callback_data' => $cb($val + $big)],
-            ];
+            $minus = [];
+            $plus = [];
+            foreach (array_reverse($steps) as $st) {
+                $minus[] = ['text' => '−' . cvol_num($st), 'callback_data' => $cb($val - $st)];
+            }
+            foreach ($steps as $st) {
+                $plus[] = ['text' => '+' . cvol_num($st), 'callback_data' => $cb($val + $st)];
+            }
+            $mid = ['text' => $label, 'callback_data' => 'cvb|n'];
+            return count($steps) <= 2 ? [array_merge($minus, [$mid], $plus)] : [[$mid], array_merge($minus, $plus)];
         };
         $chipsInRange = false;
         if ($free['vol']) {
-            if ($c['vol']['step'] > 0) {
-                $rows[] = $stepper('v', $g, $c['vol']['min'], $c['vol']['max'], $c['vol']['step'], '📦 ' . $unitG($g));
+            foreach ($stepper('v', $g, $c['vol']['min'], $c['vol']['max'], $c['vol']['steps'], '📦 ' . $unitG($g)) as $stepRow) {
+                $rows[] = $stepRow;
             }
             $chips = [];
             foreach ($c['vol']['chips'] as $x) {
@@ -1000,13 +1040,17 @@ if (!function_exists('cvol_state_all')) {
                     $rows[] = $row;
                 }
             } else {
-                $rows[] = $stepper('d', $d, $c['days']['min'], $c['days']['max'], $c['days']['step'], '📅 ' . $unitD($d));
+                foreach ($stepper('d', $d, $c['days']['min'], $c['days']['max'], $c['days']['steps'], '📅 ' . $unitD($d)) as $stepRow) {
+                    $rows[] = $stepRow;
+                }
             }
         }
         if ($free['vol'] || ($free['days'] && $c['days']['pick'] === 'step')) {
             // with no ➖/➕ and no ready number to tap, typing is the only way to
             // choose the volume - so its button stays even if 🎨 hid it
-            $onlyTyping = $free['vol'] && $c['vol']['step'] <= 0 && !$chipsInRange;
+            $volControl = !empty($c['vol']['steps']) || $chipsInRange;
+            $daysControl = $c['days']['pick'] === 'list' || !empty($c['days']['steps']);
+            $onlyTyping = ($free['vol'] && !$volControl) || ($free['days'] && !$daysControl);
             if ($b = cvol_btn($lang, 1, 'cvb|t', [], $onlyTyping)) {
                 $rows[] = [$b];
             }
@@ -1346,6 +1390,39 @@ if (!function_exists('cvol_hub')) {
         return cvol_money_rate((float) $raw, currency_for_lang($lang));
     }
 
+    // what each filter says right now ('' = not set)
+    function cvol_filter_lines(array $c, array $t)
+    {
+        $minbal = [];
+        $round = [];
+        foreach (panel_langs() as $l) {
+            $cur = currency_for_lang($l);
+            if ($c['langs'][$l]['minbal'] > 0) {
+                $minbal[] = cvol_lang_label($l) . ': ' . money($c['langs'][$l]['minbal'], $cur);
+            }
+            if ($c['langs'][$l]['round'] > 0) {
+                $round[] = cvol_lang_label($l) . ': ' . money($c['langs'][$l]['round'], $cur);
+            }
+        }
+        $tiers = [];
+        foreach ($c['tiers'] as [$g, $p]) {
+            $tiers[] = strtr($t['tierItem'], ['{gb}' => $g, '{pct}' => $p]);
+        }
+        $s = $c['sale'];
+        $ended = $s['pct'] > 0 && $s['until'] > 0 && $s['until'] <= time();
+        $sale = ($s['pct'] <= 0 || $ended) ? '' : ($s['until'] > 0
+            ? strtr($t['saleUntil'], ['{pct}' => $s['pct'], '{date}' => cvol_date($s['until'], 'fa')])
+            : strtr($t['saleForever'], ['{pct}' => $s['pct']]));
+        return [
+            'minbal' => implode(' · ', $minbal),
+            'round' => implode(' · ', $round),
+            'tiers' => implode(' · ', $tiers),
+            'sale' => $sale,
+            'saleEnded' => $ended,
+            'nudge' => (bool) $c['nudge'],
+        ];
+    }
+
     // a panel's hub - [text, keyboard]
     function cvol_hub(array $panel, $note = '')
     {
@@ -1359,15 +1436,15 @@ if (!function_exists('cvol_hub')) {
             }
         }
         $mode = $c['mode'] === 'vol' ? strtr($t['modeVol'], ['{days}' => $c['days']['fixed']]) : ($c['mode'] === 'days' ? strtr($t['modeDays'], ['{gb}' => $c['vol']['fixed']]) : $t['modeBoth']);
+        $volSteps = cvol_steps_text($c['vol']['steps']);
         $vol = $c['mode'] === 'days' ? strtr($t['volFixed'], ['{gb}' => $c['vol']['fixed']])
-            : strtr($c['vol']['step'] > 0 ? $t['volFree'] : $t['volFreeNoStep'], ['{min}' => $c['vol']['min'], '{max}' => $c['vol']['max'], '{step}' => $c['vol']['step'], '{start}' => $c['vol']['start']])
+            : strtr($volSteps !== '' ? $t['volFree'] : $t['volFreeNoStep'], ['{min}' => $c['vol']['min'], '{max}' => $c['vol']['max'], '{steps}' => $volSteps, '{start}' => $c['vol']['start']])
             . ($c['vol']['chips'] ? strtr($t['volChips'], ['{list}' => implode('، ', $c['vol']['chips'])]) : '');
+        $daysSteps = cvol_steps_text($c['days']['steps']);
         $days = $c['mode'] === 'vol' ? strtr($t['daysFixed'], ['{days}' => $c['days']['fixed']])
             : ($c['days']['pick'] === 'list' ? strtr($t['daysList'], ['{list}' => implode('، ', $c['days']['list'])])
-                : strtr($t['daysStep'], ['{min}' => $c['days']['min'], '{max}' => $c['days']['max'], '{step}' => $c['days']['step'], '{start}' => $c['days']['start']]));
+                : strtr($daysSteps !== '' ? $t['daysStep'] : $t['daysStepNo'], ['{min}' => $c['days']['min'], '{max}' => $c['days']['max'], '{steps}' => $daysSteps, '{start}' => $c['days']['start']]));
         $prices = [];
-        $minbal = [];
-        $round = [];
         $langs = [];
         $warn = [];
         foreach (panel_langs() as $l) {
@@ -1389,26 +1466,24 @@ if (!function_exists('cvol_hub')) {
                 $prices[] = $same ? '      ' . $t['icon_' . $x] . ' ' . $t['lvl_' . $x] . ': ' . $t['priceSame']
                     : strtr($t['priceLevel'], ['{icon}' => $t['icon_' . $x], '{level}' => $t['lvl_' . $x], '{gb}' => cvol_price_label($c, $l, 'gb', $x, $t), '{day}' => cvol_price_label($c, $l, 'day', $x, $t)]);
             }
-            if ($c['langs'][$l]['minbal'] > 0) {
-                $minbal[] = cvol_lang_label($l) . ': ' . money($c['langs'][$l]['minbal'], $cur);
-            }
-            if ($c['langs'][$l]['round'] > 0) {
-                $round[] = cvol_lang_label($l) . ': ' . money($c['langs'][$l]['round'], $cur);
-            }
         }
-        $tiers = [];
-        foreach ($c['tiers'] as [$g, $p]) {
-            $tiers[] = strtr($t['tierItem'], ['{gb}' => $g, '{pct}' => $p]);
-        }
-        $s = $c['sale'];
-        $sale = $s['pct'] <= 0 ? $t['none'] : ($s['until'] > 0 && $s['until'] <= time() ? $t['saleEnded']
-            : ($s['until'] > 0 ? strtr($t['saleUntil'], ['{pct}' => $s['pct'], '{date}' => cvol_date($s['until'], 'fa')]) : strtr($t['saleForever'], ['{pct}' => $s['pct']])));
         if ($c['on'] && !$lv) {
             array_unshift($warn, $t['warnNoLevel']);
         }
         foreach (cvol_cheaper_warnings($panel) as [$l, $p, $cp]) {
             $cur = currency_for_lang($l);
             $warn[] = strtr($t['warnCheaper'], ['{name}' => htmlspecialchars((string) $p['name_product']), '{gb}' => cvol_num($p['Volume_constraint']), '{days}' => (int) $p['Service_time'], '{price}' => money($p['price_product'], $cur), '{cprice}' => money($cp, $cur)]);
+        }
+        // only the filters that are on: the rest is one tap away (🔎)
+        $fl = cvol_filter_lines($c, $t);
+        $flLines = [];
+        foreach ([['flMinbal', $fl['minbal']], ['flRound', $fl['round']], ['flTiers', $fl['tiers']], ['flSale', $fl['sale']]] as [$k, $v]) {
+            if ($v !== '') {
+                $flLines[] = $t[$k] . ' — ' . $v;
+            }
+        }
+        if ($fl['nudge']) {
+            $flLines[] = $t['flNudge'];
         }
         $manual = ($panel['type'] ?? '') === 'Manualsale';
         $text = strtr($t['hub'], [
@@ -1419,13 +1494,9 @@ if (!function_exists('cvol_hub')) {
             '{vol}' => $vol,
             '{days}' => $days,
             '{prices}' => implode("\n", $prices),
-            '{minbal}' => $minbal ? implode(' · ', $minbal) : $t['none'],
-            '{round}' => $round ? implode(' · ', $round) : $t['none'],
-            '{tiers}' => $tiers ? implode(' · ', $tiers) : $t['none'],
-            '{sale}' => $sale,
-            '{nudge}' => $c['nudge'] ? $t['on'] : $t['off'],
+            '{filters}' => $flLines ? "\n▫️ " . implode("\n▫️ ", $flLines) : ' ' . $t['none'],
             '{langs}' => implode(' · ', $langs),
-            '{warnings}' => $warn ? $t['warnTitle'] . "\n" . implode("\n", $warn) : '',
+            '{warnings}' => $warn ? "\n\n" . $t['warnTitle'] . "\n" . implode("\n", $warn) : '',
         ]);
         if ($note !== '') {
             $text = $note . "\n\n" . $text;
@@ -1435,20 +1506,70 @@ if (!function_exists('cvol_hub')) {
         if (!$manual) {
             $rows[] = [$c['on'] ? cvol_b($t['btnTurnOff'], $h . 'on', 'success') : cvol_b($t['btnTurnOn'], $h . 'on', 'danger')];
         }
-        $lvRow = [];
-        foreach (cvol_levels() as $l) {
-            $lvRow[] = cvol_b(strtr($t['btnLevel'], ['{icon}' => $t['icon_' . $l], '{level}' => $t['lvl_' . $l], '{state}' => $c['levels'][$l] ? '✅' : '❌']), $h . 'lv|' . $l, $c['levels'][$l] ? 'success' : 'danger');
-        }
-        $rows[] = $lvRow;
-        $rows[] = [cvol_b($t['btnMode'], $h . 'mo'), cvol_b($t['btnPrices'], $h . 'pr|' . panel_langs()[0])];
+        $rows[] = [cvol_b($t['btnPrices'], $h . 'pr|' . panel_langs()[0]), cvol_b($t['btnMode'], $h . 'mo')];
         $rows[] = [cvol_b($t['btnVol'], $h . 'vo'), cvol_b($t['btnDays'], $h . 'dy')];
-        $rows[] = [cvol_b($t['btnMinbal'], $h . 'mb|' . panel_langs()[0])];
-        $rows[] = [cvol_b($t['btnTiers'], $h . 'ti'), cvol_b($t['btnSale'], $h . 'sa')];
-        $rows[] = [cvol_b(strtr($t['btnNudge'], ['{state}' => $c['nudge'] ? '✅' : '❌']), $h . 'nu', $c['nudge'] ? 'success' : 'danger'), cvol_b($t['btnLangs'], $h . 'lg')];
-        $rows[] = [cvol_b($t['btnStats'], $h . 'st'), cvol_b($t['btnHelp'], $h . 'hl')];
-        $rows[] = [cvol_b($t['btnLooks'], 'bt_edit|fa|users.cvol.caption')];
+        $rows[] = [cvol_b($t['btnFilters'], $h . 'fl'), cvol_b($t['btnAccess'], $h . 'ac')];
+        $rows[] = [cvol_b($t['btnPreview'], $h . 'pv'), cvol_b($t['btnStats'], $h . 'st')];
+        // 🎨: the screen's words, buttons and sticker, one tab per language
+        $looks = [];
+        foreach (panel_langs() as $l) {
+            $looks[] = cvol_b(strtr($t['btnLooksLang'], ['{lang}' => cvol_lang_label($l)]), "bt_group|{$l}|cvol");
+        }
+        $rows[] = $looks;
+        $rows[] = [cvol_b($t['btnHelp'], $h . 'hl')];
         $rows[] = [cvol_b($t['btnBack'], $h . 'bk', 'danger')];
         return [$text, cvol_kb($rows)];
+    }
+
+    // What a customer of $lang in group $lvl would see - the screen itself,
+    // with buttons that only say they are a preview - and the controls to look
+    // at another language or group. [text, keyboard]
+    function cvol_preview(array $panel, $lang, $lvl)
+    {
+        global $from_id;
+        $t = cvol_atx();
+        $c = cvol_cfg($panel);
+        $pc = (string) $panel['code_panel'];
+        $lang = in_array($lang, panel_langs(), true) ? $lang : panel_langs()[0];
+        $lvl = in_array($lvl, cvol_levels(), true) ? $lvl : 'f';
+        $head = strtr($t['previewHead'], ['{panel}' => htmlspecialchars((string) $panel['name_panel']), '{lang}' => cvol_lang_label($lang), '{level}' => $t['icon_' . $lvl] . ' ' . $t['lvl_' . $lvl]]);
+        [$g, $d] = cvol_fit($c, $c['vol']['start'], $c['days']['start']);
+        $q = cvol_quote($c, $lang, $lvl, $g, $d);
+        $rows = [];
+        if ($q === null) {
+            $body = $t['previewNoPrice'];
+        } else {
+            // a balance that covers it: the shortage line is another story
+            $u = ['id' => (string) $from_id, 'lang' => $lang, 'agent' => $lvl, 'Balance' => $q['price'] * 10, 'pricediscount' => 0, 'Processing_value_four' => 1];
+            $screen = cvol_screen($u, ['c' => 'b', 'p' => $pc, 'g' => $g, 'd' => $d], true);
+            if ($screen === null) {
+                $body = $t['previewNoPrice'];
+            } else {
+                $body = $screen[0];
+                $kb = json_decode($screen[1], true);
+                foreach ((array) ($kb['inline_keyboard'] ?? []) as $row) {
+                    foreach ($row as &$btn) {
+                        $btn['callback_data'] = "cvh|{$pc}|pvx";
+                    }
+                    unset($btn);
+                    $rows[] = $row;
+                }
+            }
+        }
+        $langRow = [];
+        foreach (panel_langs() as $l) {
+            $langRow[] = cvol_b(($l === $lang ? '✓ ' : '') . cvol_lang_label($l), "cvh|{$pc}|pw|{$l}|{$lvl}", $l === $lang ? 'success' : 'primary');
+        }
+        $lvRow = [];
+        foreach (cvol_levels() as $x) {
+            $lvRow[] = cvol_b(($x === $lvl ? '✓ ' : '') . $t['icon_' . $x] . ' ' . $t['lvl_' . $x], "cvh|{$pc}|pw|{$lang}|{$x}", $x === $lvl ? 'success' : 'primary');
+        }
+        if (count($langRow) > 1) {
+            $rows[] = $langRow;
+        }
+        $rows[] = $lvRow;
+        $rows[] = [cvol_b($t['btnClosePreview'], 'cvl|x', 'danger')];
+        return [$head . $body, cvol_kb($rows)];
     }
 
     // One of the hub's own screens. $act names it, $a and $b are its arguments.
@@ -1460,6 +1581,8 @@ if (!function_exists('cvol_hub')) {
         $h = "cvh|{$pc}|";
         $name = htmlspecialchars((string) $panel['name_panel']);
         $back = [cvol_b($t['btnBack'], $h . 'm', 'danger')];
+        // the filters' screens go back to the filters
+        $backFl = [cvol_b($t['btnBack'], $h . 'fl', 'danger')];
         $mark = function ($on) {
             return $on ? '✅ ' : '';
         };
@@ -1493,10 +1616,10 @@ if (!function_exists('cvol_hub')) {
                     ])];
                     break;
                 }
-                $stepLine = $v['step'] > 0 ? strtr($t['volStepLine'], ['{step}' => $v['step'], '{big}' => $v['step'] * 5]) : $t['volStepOff'];
+                $stepLine = $v['steps'] ? strtr($t['volStepLine'], ['{list}' => cvol_steps_text($v['steps'])]) : $t['volStepOff'];
                 $out = [strtr($t['vol'], ['{panel}' => $name, '{min}' => $v['min'], '{max}' => $v['max'], '{step_line}' => $stepLine, '{start}' => $v['start'], '{chips}' => $v['chips'] ? implode('، ', $v['chips']) : $t['none']]), cvol_kb([
                     [cvol_b(strtr($t['volMinBtn'], ['{v}' => $v['min']]), $h . 'in|vmin'), cvol_b(strtr($t['volMaxBtn'], ['{v}' => $v['max']]), $h . 'in|vmax')],
-                    [cvol_b($v['step'] > 0 ? strtr($t['volStepBtn'], ['{v}' => $v['step']]) : $t['volStepBtnOff'], $h . 'in|vstep'), cvol_b(strtr($t['volStartBtn'], ['{v}' => $v['start']]), $h . 'in|vstart')],
+                    [cvol_b($v['steps'] ? strtr($t['stepsBtn'], ['{list}' => cvol_steps_text($v['steps'])]) : $t['stepsBtnOff'], $h . 'sp|v'), cvol_b(strtr($t['volStartBtn'], ['{v}' => $v['start']]), $h . 'in|vstart')],
                     [cvol_b($t['volChipsBtn'], $h . 'in|vchips')],
                     $back,
                 ])];
@@ -1511,13 +1634,22 @@ if (!function_exists('cvol_hub')) {
                     ])];
                     break;
                 }
-                $out = [strtr($t['days'], ['{panel}' => $name, '{pick}' => $d['pick'] === 'list' ? $t['pickList'] : $t['pickStep'], '{list}' => $d['list'] ? implode('، ', $d['list']) : $t['none'], '{min}' => $d['min'], '{max}' => $d['max'], '{step}' => $d['step'], '{start}' => $d['start']]), cvol_kb([
-                    [cvol_b($mark($d['pick'] === 'list') . $t['pickListBtn'], $h . 'dp|list', $d['pick'] === 'list' ? 'success' : 'primary'), cvol_b($mark($d['pick'] === 'step') . $t['pickStepBtn'], $h . 'dp|step', $d['pick'] === 'step' ? 'success' : 'primary')],
-                    [cvol_b(strtr($t['daysListBtn'], ['{v}' => $d['list'] ? implode(', ', $d['list']) : '—']), $h . 'in|dlist')],
-                    [cvol_b(strtr($t['daysMinBtn'], ['{v}' => $d['min']]), $h . 'in|dmin'), cvol_b(strtr($t['daysMaxBtn'], ['{v}' => $d['max']]), $h . 'in|dmax')],
-                    [cvol_b(strtr($t['daysStepBtn'], ['{v}' => $d['step']]), $h . 'in|dstep'), cvol_b(strtr($t['daysStartBtn'], ['{v}' => $d['start']]), $h . 'in|dstart')],
-                    $back,
-                ])];
+                // only what the way of picking uses: the options, or the range, its steps and its start
+                if ($d['pick'] === 'list') {
+                    $body = strtr($t['daysBodyList'], ['{list}' => $d['list'] ? implode('، ', $d['list']) : $t['none']]);
+                } else {
+                    $stepLine = $d['steps'] ? strtr($t['daysStepLine'], ['{list}' => cvol_steps_text($d['steps'])]) : $t['daysStepOff'];
+                    $body = strtr($t['daysBodyStep'], ['{min}' => $d['min'], '{max}' => $d['max'], '{step_line}' => $stepLine, '{start}' => $d['start']]);
+                }
+                $kb = [[cvol_b($mark($d['pick'] === 'list') . $t['pickListBtn'], $h . 'dp|list', $d['pick'] === 'list' ? 'success' : 'primary'), cvol_b($mark($d['pick'] === 'step') . $t['pickStepBtn'], $h . 'dp|step', $d['pick'] === 'step' ? 'success' : 'primary')]];
+                if ($d['pick'] === 'list') {
+                    $kb[] = [cvol_b(strtr($t['daysListBtn'], ['{v}' => $d['list'] ? implode(', ', $d['list']) : '—']), $h . 'in|dlist')];
+                } else {
+                    $kb[] = [cvol_b(strtr($t['daysMinBtn'], ['{v}' => $d['min']]), $h . 'in|dmin'), cvol_b(strtr($t['daysMaxBtn'], ['{v}' => $d['max']]), $h . 'in|dmax')];
+                    $kb[] = [cvol_b($d['steps'] ? strtr($t['stepsBtn'], ['{list}' => cvol_steps_text($d['steps'])]) : $t['stepsBtnOff'], $h . 'sp|d'), cvol_b(strtr($t['daysStartBtn'], ['{v}' => $d['start']]), $h . 'in|dstart')];
+                }
+                $kb[] = $back;
+                $out = [strtr($t['days'], ['{panel}' => $name, '{pick}' => $d['pick'] === 'list' ? $t['pickList'] : $t['pickStep'], '{body}' => $body]), cvol_kb($kb)];
                 break;
             case 'pr':
                 $l = in_array($a, panel_langs(), true) ? $a : panel_langs()[0];
@@ -1550,7 +1682,7 @@ if (!function_exists('cvol_hub')) {
                 if ($row) {
                     $kb[] = $row;
                 }
-                $kb[] = $back;
+                $kb[] = $backFl;
                 $out = [strtr($t['minbal'], ['{panel}' => $name, '{lang}' => cvol_lang_label($l), '{cur}' => cvol_cur_label($cur), '{minbal}' => $li['minbal'] > 0 ? money($li['minbal'], $cur) : $t['none'], '{round}' => $li['round'] > 0 ? money($li['round'], $cur) : $t['roundOff']]), cvol_kb($kb)];
                 break;
             case 'ti':
@@ -1563,7 +1695,7 @@ if (!function_exists('cvol_hub')) {
                 if (count($c['tiers']) < 5) {
                     $kb[] = [cvol_b($t['tierAddBtn'], $h . 'in|tier', 'success')];
                 }
-                $kb[] = $back;
+                $kb[] = $backFl;
                 $out = [strtr($t['tiers'], ['{panel}' => $name, '{list}' => $list ? implode("\n", $list) : $t['none']]), cvol_kb($kb)];
                 break;
             case 'sa':
@@ -1574,17 +1706,68 @@ if (!function_exists('cvol_hub')) {
                 if ($s['pct'] > 0) {
                     $kb[] = [cvol_b($t['saleDelBtn'], $h . 'sx', 'danger')];
                 }
-                $kb[] = $back;
+                $kb[] = $backFl;
                 $out = [strtr($t['sale'], ['{panel}' => $name, '{sale}' => $sale]), cvol_kb($kb)];
                 break;
+            case 'fl':
+                $fl = cvol_filter_lines($c, $t);
+                $none = $t['none'];
+                $out = [strtr($t['filters'], [
+                    '{panel}' => $name,
+                    '{minbal}' => $fl['minbal'] !== '' ? $fl['minbal'] : $none,
+                    '{round}' => $fl['round'] !== '' ? $fl['round'] : $none,
+                    '{tiers}' => $fl['tiers'] !== '' ? $fl['tiers'] : $none,
+                    '{sale}' => $fl['sale'] !== '' ? $fl['sale'] : ($fl['saleEnded'] ? $t['saleEnded'] : $none),
+                    '{nudge}' => $fl['nudge'] ? $t['on'] : $t['off'],
+                ]), cvol_kb([
+                    [cvol_b($t['flBtnMinbal'], $h . 'mb|' . panel_langs()[0]), cvol_b($t['btnTiers'], $h . 'ti')],
+                    [cvol_b($t['btnSale'], $h . 'sa'), cvol_b(strtr($t['btnNudge'], ['{state}' => $fl['nudge'] ? '✅' : '❌']), $h . 'nu|fl', $fl['nudge'] ? 'success' : 'danger')],
+                    $back,
+                ])];
+                break;
+            case 'ac':
             case 'lg':
-                $kb = [];
+                $lvRow = [];
+                $lvOn = [];
+                foreach (cvol_levels() as $l) {
+                    $lvRow[] = cvol_b(strtr($t['btnLevel'], ['{icon}' => $t['icon_' . $l], '{level}' => $t['lvl_' . $l], '{state}' => $c['levels'][$l] ? '✅' : '❌']), $h . 'lv|' . $l, $c['levels'][$l] ? 'success' : 'danger');
+                    if ($c['levels'][$l]) {
+                        $lvOn[] = $t['icon_' . $l] . ' ' . $t['lvl_' . $l];
+                    }
+                }
+                $kb = [$lvRow];
+                $lgOn = [];
                 foreach (panel_langs() as $l) {
                     $on = $c['langs'][$l]['show'];
                     $kb[] = [cvol_b(strtr($t['langBtn'], ['{lang}' => cvol_lang_label($l), '{state}' => $on ? '✅' : '❌']), $h . 'lt|' . $l, $on ? 'success' : 'danger')];
+                    $lgOn[] = cvol_lang_label($l) . ' ' . ($on ? '✅' : '❌');
                 }
                 $kb[] = $back;
-                $out = [strtr($t['langs'], ['{panel}' => $name]), cvol_kb($kb)];
+                $out = [strtr($t['access'], ['{panel}' => $name, '{levels}' => $lvOn ? implode('، ', $lvOn) : $t['levelsNone'], '{langs}' => implode(' · ', $lgOn)]), cvol_kb($kb)];
+                break;
+            case 'sp':
+                // a volume's or a day count's −/+ steps: change, delete, add
+                $k = $a === 'd' ? 'd' : 'v';
+                $sec = $k === 'v' ? 'vol' : 'days';
+                $steps = $c[$sec]['steps'];
+                $unitW = $k === 'v' ? $t['unitGbW'] : $t['unitDayW'];
+                $mid = ($k === 'v' ? '📦 ' : '📅 ') . $c[$sec]['start'] . ' ' . $unitW;
+                $minus = array_map(function ($x) {
+                    return '−' . $x;
+                }, array_reverse($steps));
+                $plus = array_map(function ($x) {
+                    return '+' . $x;
+                }, $steps);
+                $prev = !$steps ? $t['stepsNone'] : (count($steps) <= 2 ? implode(' | ', array_merge($minus, [$mid], $plus)) : $mid . "\n" . implode(' | ', array_merge($minus, $plus)));
+                $kb = [];
+                foreach ($steps as $i => $x) {
+                    $kb[] = [cvol_b(strtr($t['stepEditBtn'], ['{v}' => $x]), $h . "in|{$k}sedit|{$i}"), cvol_b(strtr($t['stepDelBtn'], ['{v}' => $x]), $h . "sd|{$k}|{$i}", 'danger')];
+                }
+                if (count($steps) < 3) {
+                    $kb[] = [cvol_b($t['stepAddBtn'], $h . "in|{$k}sadd", 'success')];
+                }
+                $kb[] = [cvol_b($t['btnBack'], $h . ($k === 'v' ? 'vo' : 'dy'), 'danger')];
+                $out = [strtr($t['steps'], ['{panel}' => $name, '{what}' => $k === 'v' ? $t['stepsWhatVol'] : $t['stepsWhatDays'], '{unit}' => $unitW, '{list}' => $steps ? cvol_steps_text($steps) : $t['none'], '{preview}' => $prev]), cvol_kb($kb)];
                 break;
             case 'st':
                 $s = cvol_stats($panel);
@@ -1617,14 +1800,22 @@ if (!function_exists('cvol_hub')) {
         $t = cvol_atx();
         $c = cvol_cfg($panel);
         $pc = (string) $panel['code_panel'];
-        $screen = in_array($f, ['vmin', 'vmax', 'vstep', 'vstart', 'vfixed', 'vchips'], true) ? 'vo'
-            : (in_array($f, ['dmin', 'dmax', 'dstep', 'dstart', 'dfixed', 'dlist'], true) ? 'dy'
-                : ($f === 'gb' || $f === 'day' ? 'pr|' . $a : ($f === 'minbal' ? 'mb|' . $a : ($f === 'tier' ? 'ti' : 'sa'))));
-        $now = ['vmin' => $c['vol']['min'], 'vmax' => $c['vol']['max'], 'vstep' => $c['vol']['step'], 'vstart' => $c['vol']['start'], 'vfixed' => $c['vol']['fixed'],
-            'dmin' => $c['days']['min'], 'dmax' => $c['days']['max'], 'dstep' => $c['days']['step'], 'dstart' => $c['days']['start'], 'dfixed' => $c['days']['fixed']];
+        $screen = in_array($f, ['vmin', 'vmax', 'vstart', 'vfixed', 'vchips'], true) ? 'vo'
+            : (in_array($f, ['dmin', 'dmax', 'dstart', 'dfixed', 'dlist'], true) ? 'dy'
+                : (in_array($f, ['vsadd', 'vsedit'], true) ? 'sp|v' : (in_array($f, ['dsadd', 'dsedit'], true) ? 'sp|d'
+                    : ($f === 'gb' || $f === 'day' ? 'pr|' . $a : ($f === 'minbal' ? 'mb|' . $a : ($f === 'tier' ? 'ti' : 'sa'))))));
+        $now = ['vmin' => $c['vol']['min'], 'vmax' => $c['vol']['max'], 'vstart' => $c['vol']['start'], 'vfixed' => $c['vol']['fixed'],
+            'dmin' => $c['days']['min'], 'dmax' => $c['days']['max'], 'dstart' => $c['days']['start'], 'dfixed' => $c['days']['fixed']];
         if (isset($now[$f])) {
             $what = $t['f_' . $f];
-            $hint = strtr($f === 'vstep' ? $t['hintStepVol'] : $t['hintNumber'], ['{now}' => $now[$f]]);
+            $hint = strtr($t['hintNumber'], ['{now}' => $now[$f]]);
+        } elseif (in_array($f, ['vsadd', 'vsedit', 'dsadd', 'dsedit'], true)) {
+            $what = $t['f_' . $f];
+            $hint = $t['hintStepNew'];
+            if ($f === 'vsedit' || $f === 'dsedit') {
+                $old = $c[$f[0] === 'v' ? 'vol' : 'days']['steps'][(int) $a] ?? null;
+                $hint = ($old !== null ? strtr($t['hintStepNow'], ['{old}' => $old]) . ' ' : '') . $hint;
+            }
         } elseif ($f === 'vchips' || $f === 'dlist') {
             $what = $t['f_' . $f];
             $hint = strtr($t['hintList'], ['{example}' => $f === 'vchips' ? '10 20 50 100' : '30 60 90']);
@@ -1652,11 +1843,33 @@ if (!function_exists('cvol_hub')) {
         $raw = trim(strtr((string) $raw, ['۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4', '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9', '٬' => '', ',' => ' ', '،' => ' ']));
         $ints = preg_match_all('/\d+/', $raw, $m) ? array_map('intval', $m[0]) : [];
         $one = (count($ints) === 1 && preg_match('/^\d+$/', $raw)) ? $ints[0] : null;
-        $map = ['vmin' => ['vol', 'min'], 'vmax' => ['vol', 'max'], 'vstep' => ['vol', 'step'], 'vstart' => ['vol', 'start'], 'vfixed' => ['vol', 'fixed'],
-            'dmin' => ['days', 'min'], 'dmax' => ['days', 'max'], 'dstep' => ['days', 'step'], 'dstart' => ['days', 'start'], 'dfixed' => ['days', 'fixed']];
+        $map = ['vmin' => ['vol', 'min'], 'vmax' => ['vol', 'max'], 'vstart' => ['vol', 'start'], 'vfixed' => ['vol', 'fixed'],
+            'dmin' => ['days', 'min'], 'dmax' => ['days', 'max'], 'dstart' => ['days', 'start'], 'dfixed' => ['days', 'fixed']];
+        // a step: one more, or one changed (its place in the list is $a)
+        if (in_array($f, ['vsadd', 'vsedit', 'dsadd', 'dsedit'], true)) {
+            $sec = $f[0] === 'v' ? 'vol' : 'days';
+            if ($one === null || $one < 1 || $one > ($sec === 'vol' ? 100000 : 3650)) {
+                return $t['bad'];
+            }
+            $steps = $c[$sec]['steps'];
+            if (substr($f, 2) === 'edit') {
+                if (!isset($steps[(int) $a])) {
+                    return $t['bad'];
+                }
+                unset($steps[(int) $a]);
+            } elseif (count($steps) >= 3) {
+                return $t['stepsFull'];
+            }
+            if (in_array($one, $steps, true)) {
+                return $t['stepDup'];
+            }
+            $steps[] = $one;
+            sort($steps);
+            $c[$sec]['steps'] = array_values($steps);
+            return $c;
+        }
         if (isset($map[$f])) {
-            // 0 is allowed for the volume's step only: it takes the ➖/➕ buttons away
-            if ($one === null || $one < ($f === 'vstep' ? 0 : 1)) {
+            if ($one === null || $one < 1) {
                 return $t['bad'];
             }
             [$sec, $k] = $map[$f];
@@ -1929,13 +2142,37 @@ if (!function_exists('cvol_hub')) {
                     cvol_save($panel, $c);
                 }
                 $answer();
-                $show(cvol_hub($panel));
+                $show(cvol_hub_screen($panel, 'ac'));
                 return true;
             case 'nu':
                 $c['nudge'] = !$c['nudge'];
                 cvol_save($panel, $c);
                 $answer();
-                $show(cvol_hub($panel));
+                $show($a === 'fl' ? cvol_hub_screen($panel, 'fl') : cvol_hub($panel));
+                return true;
+            case 'sd':
+                // 🗑 one of the −/+ steps
+                $sec = $a === 'd' ? 'days' : 'vol';
+                if (isset($c[$sec]['steps'][(int) $b])) {
+                    array_splice($c[$sec]['steps'], (int) $b, 1);
+                    cvol_save($panel, $c);
+                }
+                $answer($t['saved']);
+                $show(cvol_hub_screen($panel, 'sp', $a === 'd' ? 'd' : 'v'));
+                return true;
+            case 'pv':
+                // 👁 a message of its own: the hub stays where it is
+                [$x, $k] = cvol_preview($panel, panel_langs()[0], 'f');
+                sendmessage($from_id, $x, $k, 'HTML');
+                $answer();
+                return true;
+            case 'pw':
+                [$x, $k] = cvol_preview($panel, $a, $b);
+                Editmessagetext($from_id, $message_id, $x, $k);
+                $answer();
+                return true;
+            case 'pvx':
+                $answer($t['previewPopup']);
                 return true;
             case 'ms':
                 if (in_array($a, ['both', 'vol', 'days'], true)) {
@@ -1982,7 +2219,7 @@ if (!function_exists('cvol_hub')) {
                     cvol_save($panel, $c);
                 }
                 $answer();
-                $show(cvol_hub_screen($panel, 'lg'));
+                $show(cvol_hub_screen($panel, 'ac'));
                 return true;
             case 'in':
                 $h['f'] = $a;

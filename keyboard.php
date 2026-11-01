@@ -2621,6 +2621,35 @@ function keyboard_list_text($lang, $groupFilter = null)
             $keyboard_text['inline_keyboard'][] = [['text' => '📌 نحوه‌ی نمایش کانفیگ (هدیه‌ی دعوت)', 'callback_data' => "cfgdeliv|list|{$lang}|r", 'style' => 'primary']];
             $keyboard_text['inline_keyboard'][] = [['text' => '⚙️ قوانین اکانت کانفیگ رایگان', 'callback_data' => "affrwrule|{$lang}|open", 'style' => 'primary']];
         }
+        // 🧩 حجم دلخواه has screens and messages of its own: one heading and one
+        // row here (its 27 items made this screen the biggest in the bot)
+        if ($groupFilter === 'buyflow' && !empty($bt_grouped['cvol'])) {
+            $bt_cv_custom = false;
+            foreach (array_merge($bt_grouped['cvol'], $bt_grouped['cvolpieces'] ?? []) as $bt_g) {
+                list(, $bt_g_style) = $bt_decorate($bt_g['key'], $bt_g['label']);
+                if ($bt_g_style !== '') {
+                    $bt_cv_custom = true;
+                    break;
+                }
+            }
+            $keyboard_text['inline_keyboard'][] = [['text' => bt_section_meta('buy_custom')['label'], 'callback_data' => 'bt_sep|buy_custom']];
+            $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupCvolLabel'], 'callback_data' => "bt_group|$lang|cvol", 'style' => $bt_cv_custom ? 'success' : 'primary']];
+        }
+        if ($groupFilter === 'cvol') {
+            // the text pieces are a screen of their own; the feature's own settings (prices, steps, filters) are one tap away
+            if (!empty($bt_grouped['cvolpieces'])) {
+                $bt_cp_custom = false;
+                foreach ($bt_grouped['cvolpieces'] as $bt_g) {
+                    list(, $bt_g_style) = $bt_decorate($bt_g['key'], $bt_g['label']);
+                    if ($bt_g_style !== '') {
+                        $bt_cp_custom = true;
+                        break;
+                    }
+                }
+                $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupCvolPiecesLabel'], 'callback_data' => "bt_group|$lang|cvolpieces", 'style' => $bt_cp_custom ? 'success' : 'primary']];
+            }
+            $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['cvolSettingsRow'], 'callback_data' => 'cvl', 'style' => 'primary']];
+        }
         if ($groupFilter === 'buyflow') {
             $keyboard_text['inline_keyboard'][] = [['text' => bt_section_meta('cfgdeliv_link')['label'], 'callback_data' => 'bt_sep|cfgdeliv_link']];
             $keyboard_text['inline_keyboard'][] = [['text' => '📌 نحوه‌ی نمایش کانفیگ', 'callback_data' => "cfgdeliv|list|{$lang}|b", 'style' => 'primary']];
@@ -2722,6 +2751,10 @@ function keyboard_list_text($lang, $groupFilter = null)
             if ($bt_sa_from !== null) {
                 $keyboard_text['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => $bt_sa_from, 'style' => 'danger']];
             }
+            // 🧩's screens go back up the same way: the pieces to the screens, those to 🛒
+            if ($groupFilter === 'cvol' || $groupFilter === 'cvolpieces') {
+                $keyboard_text['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_group|$lang|" . ($groupFilter === 'cvol' ? 'buyflow' : 'cvol'), 'style' => 'danger']];
+            }
             // the service actions' messages are a page of 🛍 سرویس‌های من
             if ($groupFilter === 'msmore') {
                 $keyboard_text['inline_keyboard'][] = [['text' => '🔙 بازگشت به منوی قبل', 'callback_data' => "bt_group|$lang|myservices", 'style' => 'danger']];
@@ -2746,6 +2779,8 @@ function keyboard_list_text($lang, $groupFilter = null)
             'payg' => 'groupPaygCaption',
             'misc' => 'groupMiscCaption',
             'msmore' => 'groupMsMoreCaption',
+            'cvol' => 'groupCvolCaption',
+            'cvolpieces' => 'groupCvolPiecesCaption',
         ][$groupFilter] ?? 'groupBuyflowCaption';
         $bt_caption_tpl = isset($bt_payg_subs[$groupFilter]) ? $bt_payg_subs[$groupFilter]['caption'] : $textbotlang['bottext'][$bt_captionKey];
         $bt_caption = strtr($bt_caption_tpl, ['{lang}' => $textbotlang['bottext']['langs'][$lang] ?? $lang]);

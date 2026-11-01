@@ -21,7 +21,8 @@ $labels = [];
 foreach ($bt['items'] as $it) {
     if (!empty($it['key'])) {
         $g = $it['group'] ?? '';
-        $labels[$it['key']] = ['label' => $it['label'] ?? $it['key'], 'group' => isset($paygSubs[$g]) ? 'payg' : $g, 'sub' => isset($paygSubs[$g]) ? $g : '', 'sec' => (string) ($it['section'] ?? '')];
+        // 🧩's text pieces are a sub-screen in the bot; here they are the same tab, under their own headings
+        $labels[$it['key']] = ['label' => $it['label'] ?? $it['key'], 'group' => isset($paygSubs[$g]) ? 'payg' : ($g === 'cvolpieces' ? 'cvol' : $g), 'sub' => isset($paygSubs[$g]) ? $g : '', 'sec' => (string) ($it['section'] ?? '')];
     }
 }
 foreach (bottext_all_item_keys($textbotlang) as $key) {
@@ -164,7 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // each group named as its screen in the bot names it
 $captionOf = ['myservices' => 'groupServicesCaption', 'subapps' => 'groupSubappsCaption', 'topup' => 'groupTopupCaption', 'topupdisc' => 'groupTopupDiscCaption', 'account' => 'groupAccountCaption',
     'help' => 'groupHelpCaption', 'verify' => 'groupVerifyCaption', 'wheel' => 'groupWheelCaption', 'referral' => 'groupReferralCaption', 'usermgmt' => 'groupUserMgmtCaption', 'buyflow' => 'groupBuyflowCaption',
-    'payg' => 'groupPaygCaption', 'misc' => 'groupMiscCaption', 'msmore' => 'groupMsMoreCaption'];
+    'payg' => 'groupPaygCaption', 'misc' => 'groupMiscCaption', 'msmore' => 'groupMsMoreCaption', 'cvol' => 'groupCvolCaption'];
 $groupName = function ($g) use ($bt, $captionOf, $t) {
     if ($g === '') {
         return $t['bottextHomeGroup'];

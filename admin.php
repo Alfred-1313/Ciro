@@ -24084,7 +24084,7 @@ if ($datain == "linkappsetting") {
         $bt_lang = 'fa';
     }
     // ⏱'s index owns no items itself: «reset all» there means all of its sub-screens'
-    $bt_reset_groups = $bt_group === 'payg' ? array_keys($textbotlang['bottext']['paygSubs'] ?? []) : [$bt_group];
+    $bt_reset_groups = $bt_group === 'payg' ? array_keys($textbotlang['bottext']['paygSubs'] ?? []) : ($bt_group === 'cvol' ? ['cvol', 'cvolpieces'] : [$bt_group]);
     $bt_group_keys = array_column(array_filter($textbotlang['bottext']['items'], function ($it) use ($bt_reset_groups) {
         return in_array($it['group'] ?? '', $bt_reset_groups, true);
     }), 'key');
@@ -24205,7 +24205,12 @@ if ($datain == "linkappsetting") {
         $bt_lang = 'fa';
     }
     list($bt_group_text, $bt_group_kb) = keyboard_list_text($bt_lang, $bt_group);
-    Editmessagetext($from_id, $message_id, $bt_group_text, $bt_group_kb, 'HTML');
+    $bt_group_res = Editmessagetext($from_id, $message_id, $bt_group_text, $bt_group_kb, 'HTML');
+    // a screen Telegram refuses (too many buttons, a bad icon, ...) used to be a
+    // silent dead button: say what it answered
+    if (is_array($bt_group_res) && empty($bt_group_res['ok']) && stripos((string) ($bt_group_res['description'] ?? ''), 'not modified') === false) {
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => '❌ تلگرام این صفحه رو قبول نکرد: ' . mb_substr((string) ($bt_group_res['description'] ?? '?'), 0, 150), 'show_alert' => true]);
+    }
 } elseif (preg_match('/^btsw\|tog\|([a-z]{2})\|(.+)$/', $datain, $dataget) && $adminrulecheck['rule'] == "administrator") {
     $bt_lang = in_array($dataget[1], panel_langs(), true) ? $dataget[1] : 'fa';
     $bt_key = $dataget[2];

@@ -1006,4 +1006,20 @@ return [
             . "📍 Path: ✏️ Panel management → the panel → 💰 Pricing → 🧩 Custom plan settings → 📦 Volume / 🎛 Choice mode\n"
             . "🌐 Web panel: «Custom plan» → the «Volume» card</blockquote>",
     ],
+    [
+        'n' => 71,
+        'date' => '2026-11-01',
+        'fa' => "<blockquote>🧩 <b>حجم دلخواه: چند گام، منوی مرتب‌تر، و 🎨 که دوباره باز می‌شود</b>\n"
+            . "• «👣 گام‌ها»: برای حجم و برای مدت تا ۳ گام می‌گذاری (مثلاً ۱ و ۱۰)؛ هر گام یک جفت دکمهٔ −/+ زیر صفحهٔ مشتری می‌سازد و هر کدام را می‌توانی عوض یا حذف کنی. گام‌های قبلی (مثل ۱ و ۵) همان‌طور مانده‌اند و حالا قابل تغییرند؛ بدون هیچ گامی هم می‌شود (مشتری از دکمه‌های آماده یا با تایپ عدد انتخاب می‌کند).\n"
+            . "• 🎨 ← «🛒 پیام‌ها و ظاهر مراحل خرید» بعد از آپدیت قبلی با ۸۴ دکمه شلوغ‌ترین صفحهٔ ربات شده بود و (به احتمال زیاد به همین دلیل) باز نمی‌شد. حجم دلخواه حالا صفحهٔ خودش را دارد (🎨 ← 🛒 ← 🧩 حجم دلخواه؛ تکه‌های متنش یک پله داخل‌تر) و آن صفحه به اندازهٔ قبل برگشته. اگر تلگرام صفحه‌ای از 🎨 را قبول نکند، حالا دلیلش را در یک پاپ‌آپ می‌نویسد.\n"
+            . "• تنظیمات مرتب‌تر شد: «🔎 فیلترها و تخفیف‌ها» (حداقل موجودی، گرد کردن، تخفیف پلکانی، تخفیف ویژه، پیشنهاد بستهٔ ارزان‌تر)، «👥 گروه‌ها و زبان‌ها» و «👁 پیش‌نمایش» که صفحهٔ مشتری را برای هر زبان و گروه نشان می‌دهد. صفحهٔ «📅 تنظیم مدت» هم فقط چیزی را نشان می‌دهد که به روش انتخاب مربوط است.\n"
+            . "📍 مسیر: ✏️ مدیریت پنل ← انتخاب پنل ← 💰 قیمت‌گذاری ← 🧩 تنظیمات حجم دلخواه ← 📦 تنظیم حجم ← 👣 گام‌ها\n"
+            . "🌐 پنل وب: «حجم دلخواه» ← کارت «حجم» و «مدت» (فیلد «گام‌ها» با پیش‌نمایش دکمه‌ها)</blockquote>",
+        'en' => "<blockquote>🧩 <b>Custom plans: several steps, a tidier menu, and 🎨 opens again</b>\n"
+            . "• «👣 Steps»: for the volume and for the days you can set up to 3 steps (e.g. 1 and 10); each makes a −/+ pair of buttons on the customer's screen, and each can be changed or removed. The old steps (like 1 and 5) were kept as they were and can now be edited; no steps at all works too (the customer picks from the ready buttons or types a number).\n"
+            . "• 🎨 → «🛒 Messages and look of the purchase steps» had become the busiest screen of the bot after the previous update (84 buttons) and, most likely for that reason, would not open. Custom plans now have a screen of their own (🎨 → 🛒 → 🧩 Custom plan; its text pieces one level deeper) and that screen is back to its old size. If Telegram refuses any 🎨 screen, the bot now says why in a popup.\n"
+            . "• The settings are tidier: «🔎 Filters and discounts» (minimum balance, rounding, volume discounts, the special sale, the cheaper-plan suggestion), «👥 Groups and languages» and «👁 Preview», which shows the customer's screen for every language and group. The «📅 Days» screen shows only what the chosen way of picking uses.\n"
+            . "📍 Path: ✏️ Panel management → the panel → 💰 Pricing → 🧩 Custom plan settings → 📦 Volume → 👣 Steps\n"
+            . "🌐 Web panel: «Custom plan» → the «Volume» and «Days» cards (a «Steps» field with a preview of the buttons)</blockquote>",
+    ],
 ];
