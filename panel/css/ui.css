@@ -264,3 +264,37 @@
 .stat-num {
   font-variant-numeric: tabular-nums;
 }
+
+/* the admin's Telegram photo in the sidebar card (admin_profile.php) */
+.user-mono.has-photo,
+[data-theme="shab"] .user-mono.has-photo {
+  overflow: hidden;
+  padding: 0;
+  background: var(--sf3);
+  box-shadow: 0 0 0 1px var(--bd);
+}
+.user-mono.has-photo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+}
+/* a photo that arrives after the page: in, not popped */
+.user-mono.photo-in img {
+  animation: user-photo-in 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@keyframes user-photo-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+.uname bdi {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .user-mono.photo-in img { animation: user-photo-fade 160ms ease both; }
+  @keyframes user-photo-fade { from { opacity: 0; } to { opacity: 1; } }
+}

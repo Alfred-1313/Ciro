@@ -6,7 +6,12 @@ $pageLede = $pageLede ?? '';
 $activeNav = $activeNav ?? '';
 $showPageHead = $showPageHead ?? true;
 $currentUser = $_SESSION['admin_user'] ?? $textbotlang['panel']['layoutDefaultAdminName'];
-$initials = mb_strtoupper(mb_substr($currentUser, 0, 1, 'UTF-8'), 'UTF-8');
+// the sidebar's admin: their Telegram name and photo (admin_profile.php), the login name until Telegram has answered
+require_once __DIR__ . '/admin_profile.php';
+$adminProfile = panel_admin_profile();
+$adminName = $adminProfile['name'] !== '' ? $adminProfile['name'] : $currentUser;
+$adminTip = $adminName . ($adminProfile['username'] !== '' ? ' (@' . $adminProfile['username'] . ')' : '');
+$initials = mb_strtoupper(mb_substr($adminName, 0, 1, 'UTF-8'), 'UTF-8');
 $navT = $textbotlang['panel'];
 // [href, activeNav key, title (tooltip / search), icon, label]
 $navItem = fn(string $href, string $key, string $title, string $icon, string $label) =>
@@ -168,13 +173,36 @@ foreach ($navSections as $navGroup) {
         <p class="nav-empty" id="nav-empty" hidden><?= htmlspecialchars($textbotlang['panel']['layoutNavNoResults']) ?></p>
       </nav>
       <div class="sidebar-foot">
-        <a href="settings.php" class="user-pill" data-title="<?= htmlspecialchars($currentUser) ?>">
-          <div class="user-mono"><?= htmlspecialchars($initials) ?></div>
+        <a href="settings.php" class="user-pill" id="user-pill" data-title="<?= htmlspecialchars($adminTip) ?>"<?= $adminProfile['stale'] ? ' data-refresh="1"' : '' ?>>
+          <div class="user-mono<?= $adminProfile['photo'] !== '' ? ' has-photo' : '' ?>"><?php if ($adminProfile['photo'] !== ''): ?><img src="avatar.php?v=<?= (int) $adminProfile['v'] ?>" alt="" width="36" height="36" decoding="async"><?php else: ?><?= htmlspecialchars($initials) ?><?php endif; ?></div>
           <div class="user-info">
-            <div class="uname"><?= htmlspecialchars($currentUser) ?></div>
+            <div class="uname"><bdi><?= htmlspecialchars($adminName) ?></bdi></div>
             <div class="urole"><?= $textbotlang['panel']['layoutMobileMenuLabel'] ?></div>
           </div>
         </a>
+        <?php if ($adminProfile['stale']): ?>
+        <script>
+          // the Telegram name and photo, asked for once the page is up (Telegram may be slow)
+          (function () {
+            var pill = document.getElementById('user-pill');
+            if (!pill || !window.fetch) { return; }
+            fetch('avatar.php?info=1', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (p) {
+              if (!p || !p.name) { return; }
+              var name = pill.querySelector('.uname bdi'), mono = pill.querySelector('.user-mono');
+              name.textContent = p.name;
+              pill.setAttribute('data-title', p.name + (p.username ? ' (@' + p.username + ')' : ''));
+              if (p.src) {
+                var img = new Image(36, 36);
+                img.alt = '';
+                img.onload = function () { mono.textContent = ''; mono.classList.add('has-photo', 'photo-in'); mono.appendChild(img); };
+                img.src = p.src;
+              } else {
+                mono.textContent = Array.from(p.name)[0].toUpperCase();
+              }
+            }).catch(function () {});
+          })();
+        </script>
+        <?php endif; ?>
       </div>
     </aside>
 

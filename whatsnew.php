@@ -916,4 +916,16 @@ return [
             . "• Web panel: a new «Backup» page does the same with an upload (up to the server's upload limit), with the same detection, password, database choice, confirmation, a live progress bar and the result.\n"
             . "• This needs the new server script; one «🔄 Update the bot» updates the script too.</blockquote>",
     ],
+    [
+        'n' => 67,
+        'date' => '2026-11-01',
+        'fa' => "<blockquote>👤 <b>پنل وب: عکس و اسم تلگرام ادمین</b>\n"
+            . "• پایین منوی پنل وب، به‌جای شناسهٔ عددی و یک حرف، عکس پروفایل و اسم تلگرام ادمینی که وارد شده نشان داده می‌شود (روی آن بمانی، یوزرنیم تلگرامش هم می‌آید).\n"
+            . "• ربات این‌ها را از تلگرام می‌گیرد و تا ۶ ساعت نگه می‌دارد؛ اگر اسم یا عکست را عوض کنی، حداکثر بعد از ۶ ساعت پنل هم عوض می‌شود. گرفتنش بعد از باز شدن صفحه انجام می‌شود، پس صفحه کند نمی‌شود.\n"
+            . "• اگر تنظیمات حریم خصوصی تلگرام عکس را نشان ندهد، حرف اول اسم تلگرامت می‌آید. عکس فقط برای ادمینی که وارد پنل شده باز می‌شود.</blockquote>",
+        'en' => "<blockquote>👤 <b>Web panel: the admin's Telegram photo and name</b>\n"
+            . "• At the bottom of the web panel's menu, the signed-in admin's Telegram profile photo and name now show instead of a numeric id and a letter (hover it for their Telegram username).\n"
+            . "• The bot fetches them from Telegram and keeps them for 6 hours; a new name or photo reaches the panel within 6 hours. The fetch happens after the page has opened, so pages are not slowed down.\n"
+            . "• When Telegram's privacy settings hide the photo, the first letter of the Telegram name shows instead. The photo opens only for the admin signed in to the panel.</blockquote>",
+    ],
 ];
