@@ -1526,6 +1526,8 @@ addFieldToTable("invoice", "currency", null, "VARCHAR(10) NULL");
 addFieldToTable("marzban_panel", "cvol", null, "TEXT NULL");
 addFieldToTable("invoice", "cvol", null, "VARCHAR(4) NULL");
 addFieldToTable("user", "cvol_state", null, "TEXT NULL");
+// ⚙️ a Rebecca panel's own service for test accounts (rbsvc.php); empty = the purchase one
+addFieldToTable("marzban_panel", "rb_test_service", null, "VARCHAR(20) NULL");
 addFieldToTable("setting", "wallet_migrated", "0", "VARCHAR(5)");
 // 💱 converting a balance on a language switch - off until an admin turns it on
 addFieldToTable("setting", "wallet_convert", '{}', "TEXT");

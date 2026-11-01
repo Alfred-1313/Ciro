@@ -972,4 +972,24 @@ return [
             . "👛 Minimum balance per language (below it, a message and a top-up button instead of the screen) · 🔢 Price rounding · 🎁 Volume discounts (e.g. 10% from 50 GB up, up to 5 steps) · 🔥 A special sale with an end date · 💡 Suggesting a cheaper ready plan to the customer · 🌐 Languages · 📊 Sales and the most picked choices · ⚠️ Warnings when a language has no price or a custom plan undercuts a ready one.\n"
             . "The screen opens with the customer's own last choice on that panel; the web panel also has a calculator that shows each group's price before you save.</blockquote>",
     ],
+    [
+        'n' => 69,
+        'date' => '2026-11-01',
+        'fa' => "<blockquote>⚙️ <b>پنل ربکا: انتخاب سرویس از لیست، بدون نام کاربری</b>\n"
+            . "• در پنل‌های ربکا، «⚙️ تنظیم پروتکل و اینباند» دیگر نام کاربری نمی‌خواهد: ربات سرویس‌های خود پنل ربکا را می‌گیرد و با دکمهٔ شیشه‌ای نشان می‌دهد (کنار هر کدام تعداد کاربرهایش). روی هر سرویس بزنی، همان ذخیره می‌شود.\n"
+            . "• هر پنلِ ربات سرویس خودش را دارد؛ اگر دو پنل در ربات به یک پنل ربکا وصل باشند، می‌توانی برای پنل A یک سرویس و برای پنل B سرویس دیگری از همان پنل انتخاب کنی.\n"
+            . "• سرویس اکانت تست جداست (تب «🎁 سرویس اکانت تست»)؛ پیش‌فرض «همون سرویس خرید» است.\n"
+            . "• سرویسی که در پنل هاست فعال ندارد با ⚠️ نشان داده می‌شود و انتخاب نمی‌شود (کاربرش کانفیگ نمی‌گرفت). عوض کردن سرویس فقط روی کاربرهای جدید اثر دارد.\n"
+            . "• اگر لیست از پنل گرفته نشود (پنل در دسترس نیست یا توکن دسترسی ندارد)، دلیلش نوشته می‌شود و روش قبلی (نام کاربری) به‌عنوان راه جایگزین هست. بقیهٔ نوع پنل‌ها مثل قبل با نام کاربری کار می‌کنند.\n"
+            . "📍 مسیر: ✏️ مدیریت پنل ← انتخاب پنل ربکا ← ⚙️ تنظیم پروتکل و اینباند\n"
+            . "🌐 پنل وب: «پنل‌ها (سرورها)» ← کارت «سرویس پنل‌های ربکا»</blockquote>",
+        'en' => "<blockquote>⚙️ <b>Rebecca panels: pick the service from a list, no username</b>\n"
+            . "• On Rebecca panels «⚙️ Set protocol and inbound» no longer asks for a username: the bot fetches the Rebecca panel's own services and shows them as glass buttons (each with its number of users). Tap one and it is saved.\n"
+            . "• Each panel of the bot keeps its own service; when two panels of the bot point at one Rebecca panel, panel A can use one service and panel B another one of the same panel.\n"
+            . "• Test accounts have a service of their own (the «🎁 Test account service» tab); by default it is the purchase service.\n"
+            . "• A service with no working host in the panel shows ⚠️ and cannot be picked (its users would get no config). A new service applies to new users only.\n"
+            . "• When the list cannot be read (the panel is unreachable or the token has no access), the reason is shown and the old way (a username) is there as a fallback. Other panel types keep the username way.\n"
+            . "📍 Path: ✏️ Panel management → a Rebecca panel → ⚙️ Set protocol and inbound\n"
+            . "🌐 Web panel: «Panels (servers)» → the «Rebecca panels' service» card</blockquote>",
+    ],
 ];

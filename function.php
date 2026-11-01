@@ -23341,3 +23341,5 @@ require_once __DIR__ . '/rbnodes.php';
 require_once __DIR__ . '/backup_import.php';
 // 🧩 حجم دلخواه (the customer builds the plan; replaces the old «⚙️ سرویس دلخواه»)
 require_once __DIR__ . '/cvol.php';
+// ⚙️ a Rebecca panel's service, picked from the panel's own list
+require_once __DIR__ . '/rbsvc.php';

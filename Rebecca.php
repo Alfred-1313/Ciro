@@ -54,10 +54,12 @@ function adduser_rebecca($location, $data_limit, $username_ac, $timestamp, $name
     $product = select('product', "*", "name_product", $name_product, "select");
     $panel = select("marzban_panel", "*", "name_panel", $location, "select");
     if (is_array($product) && $product['inbounds'] != null) {
-        $panel['proxies'] = $product['inbounds'];
+        $service_ids = json_decode($product['inbounds'], true);
+        $service_id = is_array($service_ids) ? (int) reset($service_ids) : (int) $service_ids;
+    } else {
+        // the panel's service (rbsvc.php) - a test account's own one when set
+        $service_id = rbsvc_for_new($panel, $name_product == "usertest");
     }
-    $service_ids = json_decode($panel['proxies'], true);
-    $service_id = is_array($service_ids) ? (int) reset($service_ids) : (int) $service_ids;
     $data = array(
         'username' => $username_ac,
         'service_id' => $service_id,

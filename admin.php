@@ -7952,6 +7952,11 @@ if (preg_match('/^renamereset-([a-z]{2})$/', $datain, $rn_m) && $adminrulecheck[
 if (function_exists('cvol_admin_dispatch') && cvol_admin_dispatch()) {
     return;
 }
+// rbsvc.php: ⚙️ تنظیم پروتکل و اینباند on a Rebecca panel - its services as
+// buttons instead of a username (other panels go on to the username question)
+if (function_exists('rbsvc_admin_dispatch') && rbsvc_admin_dispatch()) {
+    return;
+}
 // backup_import.php: 📥 a backup handed to the bot (🗄 تنظیمات بکاپ) - one
 // message carries the whole import: the prompt, the files as they come in,
 // a password when one is asked, the last yes, then the watcher's progress.
