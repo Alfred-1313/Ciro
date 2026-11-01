@@ -76,6 +76,8 @@ try {
         addFieldToTable($tableName, 'last_message_time', '0');
         addFieldToTable($tableName, 'Processing_value_four', '');
         addFieldToTable($tableName, 'renew_resume_ctx', '');
+        // 💰 what a customer lacks for a pending purchase (shortfall.php)
+        addFieldToTable($tableName, 'short_ctx', null, 'TEXT NULL');
         addFieldToTable($tableName, 'username', 'none');
         addFieldToTable($tableName, 'Processing_value', 'none');
         addFieldToTable($tableName, 'number', 'none');

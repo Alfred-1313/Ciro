@@ -1005,8 +1005,21 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
     update("user", "Processing_value_one", "0", "id", $Balance_id['id']);
     update("user", "Processing_value_tow", "0", "id", $Balance_id['id']);
     update("user", "Processing_value_four", "0", "id", $Balance_id['id']);
+    if (function_exists('sf_ctx_clear')) {
+        sf_ctx_clear($Balance_id['id']);
+    }
+    // the payment of a purchase or a renewal ends the way it began: back at home
+    if (in_array($steppay[0], ['getconfigafterpay', 'getextenduser'], true)) {
+        step('home', $Balance_id['id']);
+    }
     if ($steppay[0] == "getconfigafterpay") {
         $get_invoice = select("invoice", "*", "username", $steppay[1], "select");
+        // 💰 paid, but not yet enough for what it was paid for: it is a top-up and
+        // the purchase waits (shortfall.php)
+        if (is_array($get_invoice) && !sf_covers($Balance_id, $Payment_report['price'], $get_invoice['price_product'])) {
+            sf_settle_short($order_id, $Payment_report, $Balance_id, (float) $get_invoice['price_product'], "sfg|{$get_invoice['id_invoice']}");
+            return;
+        }
         $stmt = $pdo->prepare("SELECT * FROM product WHERE name_product = :name_product AND (Location = :Service_location  or Location = '/all')");
         $stmt->bindParam(':name_product', $get_invoice['name_product'], PDO::PARAM_STR);
         $stmt->bindParam(':Service_location', $get_invoice['Service_location'], PDO::PARAM_STR);
@@ -1145,9 +1158,12 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
                 update("setting", "numbercount", $value);
             }
         }
-        $Balance_prims = $Balance_id['Balance'] - $get_invoice['price_product'];
+        // what was paid came on top of what the customer had; the price comes off
+        // both and what is left stays (paying exactly what was lacking leaves 0)
+        $Balance_prims = (float) $Balance_id['Balance'] + (float) $Payment_report['price'] - (float) $get_invoice['price_product'];
         if ($Balance_prims <= 0)
             $Balance_prims = 0;
+        $Balance_prims = round($Balance_prims, 2);
         update("user", "Balance", $Balance_prims, "id", $Balance_id['id']);
         $balanceformatsell = select("user", "Balance", "id", $get_invoice['id_user'], "select")['Balance'];
         $balanceformatsell = money($balanceformatsell, currency_for_user($Balance_id), false);
@@ -1223,7 +1239,14 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         }
         $dateacc = date('Y/m/d H:i:s');
         $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
-        $Balance_Low_user = 0;
+        // 💰 the price it was priced at when the shortfall was taken (shortfall.php)
+        $sf_price = sf_discounted($prodcut['price_product'], $Balance_id);
+        if (!sf_covers($Balance_id, $Payment_report['price'], $sf_price)) {
+            sf_settle_short($order_id, $Payment_report, $Balance_id, $sf_price, 'Add_Balance', [[['text' => $ct['users']['status']['backservice'], 'callback_data' => "product_" . $nameloc['id_invoice']]]]);
+            return;
+        }
+        // what was paid came on top of what the customer had; the price comes off both
+        $Balance_Low_user = max(0, round((float) $Balance_id['Balance'] + (float) $Payment_report['price'] - $sf_price, 2));
         update("user", "Balance", $Balance_Low_user, "id", $Balance_id['id']);
         $extend = $ManagePanel->extend($marzban_list_get['Methodextend'], $prodcut['Volume_constraint'], $prodcut['Service_time'], $nameloc['username'], $prodcut['code_product'], $marzban_list_get['code_panel']);
         affrw_mark_renewed($extend, $nameloc['username'], $marzban_list_get['name_panel']);
@@ -1266,7 +1289,8 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         if (intval($valurcashbackextend) != 0) {
             $result = ($prodcut['price_product'] * $valurcashbackextend) / 100;
             $pricelastextend = $result;
-            update("user", "Balance", $pricelastextend, "id", $Balance_id['id']);
+            // added to what is left of the payment (it used to be set, over a balance that was always 0 by now)
+            balance_add($Balance_id['id'], $pricelastextend);
             sendmessage($Balance_id['id'], sprintf($ct['users']['extend']['giftCharged'], $result), null, 'HTML');
         }
         $priceproductformat = number_format($prodcut['price_product']);
@@ -8124,7 +8148,7 @@ if (!function_exists('topup_custom_screen_show')) {
             '{minprice}' => $floor !== null ? number_format($floor) : '—',
             '{min}' => $pmin !== null ? number_format((float) $pmin) : '—',
             '{max}' => $pmax !== null ? number_format((float) $pmax) : '—',
-        ]) . topup_disc_custom_block($from_id, $lang, $key, $textbotlang), json_encode([
+        ]) . topup_disc_custom_block($from_id, $lang, $key, $textbotlang) . (function_exists('sf_range_note_for') ? sf_range_note_for($from_id, $key) : ''), json_encode([
             'inline_keyboard' => [$row],
         ]), 'HTML');
         // remembered so it can be taken away once an invoice is actually made -
@@ -23369,3 +23393,5 @@ require_once __DIR__ . '/backup_import.php';
 require_once __DIR__ . '/cvol.php';
 // ⚙️ a Rebecca panel's service, picked from the panel's own list
 require_once __DIR__ . '/rbsvc.php';
+// 💰 افزایش موجودی به اندازهٔ کمبود (خرید و تمدید) - the same
+require_once __DIR__ . '/shortfall.php';

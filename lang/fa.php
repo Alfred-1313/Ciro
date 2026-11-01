@@ -1471,6 +1471,13 @@ return array (
       'cx_p19' => array ('label' => '❌ خطای ساخت لینک پرداخت', 'key' => 'users.Balance.errorLinkPayment', 'group' => 'topup', 'section' => 'topup_errors'),
       'cx_p20' => array ('label' => '❌ خطا در تایید', 'key' => 'users.Balance.confirmError', 'group' => 'topup', 'section' => 'topup_errors'),
       'cx_p21' => array ('label' => '❌ مراحل خرید یا پرداخت از اول', 'key' => 'users.Balance.restartPurchaseOrPay', 'group' => 'topup', 'section' => 'topup_errors'),
+      // 💰 افزایش موجودی به اندازهٔ کمبود (shortfall.php)
+      'sf_1' => array ('label' => '💡 جملهٔ «کمبود موجودی برای این خرید» (زیر پیام موجودی ناکافی)', 'key' => 'users.Balance.shortLine', 'group' => 'buyflow', 'section' => 'balance'),
+      'sf_2' => array ('label' => '💡 نقل‌قول «کمبود کمتر از حداقل شارژ است»', 'key' => 'users.Balance.shortUnderMin', 'group' => 'topup', 'section' => 'topup_flow'),
+      'sf_3' => array ('label' => '💡 نقل‌قول «کمبود بیشتر از حداکثر شارژ است»', 'key' => 'users.Balance.shortOverMax', 'group' => 'topup', 'section' => 'topup_flow'),
+      'sf_4' => array ('label' => '⚠️ بعد از شارژ، هنوز برای خرید کم است', 'key' => 'users.Balance.shortCharged', 'group' => 'topup', 'section' => 'topup_done'),
+      'sf_5' => array ('label' => '⛔️ این خرید دیگه معتبر نیست', 'key' => 'users.Balance.shortGone', 'group' => 'topup', 'section' => 'topup_errors'),
+      'sf_6' => array ('label' => '✅ موجودی الان برای این خرید کافیه', 'key' => 'users.Balance.shortEnough', 'group' => 'topup', 'section' => 'topup_errors'),
       'cx_p22' => array ('label' => '💱 موجودی به ارز زبان جدید تبدیل شد', 'key' => 'users.Balance.walletConverted', 'group' => 'topup', 'section' => 'topup_errors'),
       'cx_m1' => array ('label' => '☎️ صفحه‌ی پشتیبانی (سوالات متداول)', 'key' => 'users.support.btnsupport', 'group' => 'misc', 'section' => 'misc_support'),
       'cx_m2' => array ('label' => '📌 انتخاب بخش پشتیبانی', 'key' => 'users.support.selectDepartment', 'group' => 'misc', 'section' => 'misc_support'),
@@ -2140,6 +2147,18 @@ return array (
 برای ادامه، دکمهٔ زیر را بزنید.',
       'confirmContinueBtn' => '✅ ادامه با %s',
       'insufficientBalanceSimple' => '❌ موجودی کافی نمی‌باشد.',
+      // 💰 افزایش موجودی به اندازهٔ کمبود (shortfall.php)
+      'shortLine' => '💡 برای این خرید <b>{need}</b> کم داری.
+با دکمهٔ زیر همین مبلغ رو شارژ کن؛ بعد از پرداخت، خرید خودکار انجام می‌شه.',
+      'shortUnderMin' => '💡 حداقل افزایش موجودی با این روش <b>{min}</b> است، ولی برای این خرید فقط <b>{need}</b> کم داری؛ برای همین فاکتور هم‌مبلغ ساخته نمی‌شه.
+یکی از گزینه‌های زیر یا «مبلغ دلخواه» رو انتخاب کن (حداقل {min}). بعد از پرداخت، خرید خودکار انجام می‌شه و مبلغ اضافه توی موجودی‌ت می‌مونه.',
+      'shortOverMax' => '💡 حداکثر افزایش موجودی با این روش <b>{max}</b> است، ولی برای این خرید <b>{need}</b> کم داری؛ برای همین فاکتور هم‌مبلغ ساخته نمی‌شه.
+یکی از گزینه‌های زیر یا «مبلغ دلخواه» رو انتخاب کن. اگه بعد از شارژ هنوز کم بود، دوباره کمبود رو نشونت می‌دیم.',
+      'shortCharged' => '✅ <b>{amount}</b> به موجودی‌ت اضافه شد؛ موجودی فعلی: <b>{balance}</b>
+⚠️ برای این خرید هنوز <b>{need}</b> کم داری.',
+      'shortGone' => '⛔️ این خرید دیگه معتبر نیست. از اول شروعش کن.',
+      'shortEnough' => '✅ موجودی‌ت الان برای این خرید کافیه. خرید رو از اول تایید کن.',
+      'shortBackBtn' => '🔙 بازگشت',
     ),
     'Discount' => 
     array (

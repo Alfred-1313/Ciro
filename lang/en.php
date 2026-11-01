@@ -446,6 +446,17 @@ Please use the menu buttons below, or send /start.',
 💸 To top up your balance, enter the amount in Dollar:
 ✅ Minimum amount %s Dollar, maximum amount %s Dollar',
                         'insufficientBalanceSimple' => '❌ Insufficient balance.',
+                        'shortLine' => '💡 You are <b>{need}</b> short for this purchase.
+Use the button below to top up exactly that; once it is paid, the purchase is made automatically.',
+                        'shortUnderMin' => '💡 The minimum top-up with this method is <b>{min}</b>, but you are only <b>{need}</b> short for this purchase, so an invoice for exactly that cannot be made.
+Pick one of the options below or «Custom amount» (at least {min}). Once it is paid, the purchase is made automatically and the extra stays in your balance.',
+                        'shortOverMax' => '💡 The maximum top-up with this method is <b>{max}</b>, but you are <b>{need}</b> short for this purchase, so an invoice for exactly that cannot be made.
+Pick one of the options below or «Custom amount». If you are still short after topping up, we will show you what is left.',
+                        'shortCharged' => '✅ <b>{amount}</b> was added to your balance; current balance: <b>{balance}</b>
+⚠️ You are still <b>{need}</b> short for this purchase.',
+                        'shortGone' => '⛔️ This purchase is no longer valid. Please start again.',
+                        'shortEnough' => '✅ Your balance now covers this purchase. Please confirm it again from the start.',
+                        'shortBackBtn' => '🔙 Back',
                         'topupDiscHaveCodeBtn' => '🎁 I have a discount code',
                         'topupDiscBackBtn' => '🔙 Back to previous menu',
                         'topupDiscPrompt' => '🎁 Send your discount code:',

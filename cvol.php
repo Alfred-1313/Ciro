@@ -1106,9 +1106,11 @@ if (!function_exists('cvol_state_all')) {
         $code = "customvolume_{$d}_{$g}";
         $go = $ctx === 'r' ? 'cvb|r' : (($named ? 'prodcutservices' : 'prodcutservice') . ($ctx === 'o' ? 'om_' : '_') . $code);
         $rows[] = [cvol_btn($lang, 0, $go, ['{price}' => money($ctx === 'o' ? $total : $pay, $cur)])];
-        if ($short !== '' && ($b = cvol_btn($lang, 3, 'Add_Balance'))) {
-            $rows[] = [$b];
-        }
+        // Short of balance: ✅ ادامه goes on to the confirm step, whose «افزایش موجودی»
+        // makes the invoice for exactly what is lacking (shortfall.php) and the
+        // purchase follows the payment. A plain top-up button here would not carry
+        // the amount, so there is none; the one on the «minimum balance» screen
+        // (cvol_open) stays - that one has no purchase to finish.
         if ($nudge) {
             $ncb = $ctx === 'r' ? 'serviceextendselect_' . $nudge['code_product'] : (($named ? 'prodcutservices_' : 'prodcutservice_') . $nudge['code_product']);
             if (strlen($ncb) <= 64 && ($b = cvol_btn($lang, 4, $ncb, ['{name}' => (string) $nudge['name_product'], '{price}' => money($nudgePay, $cur)]))) {

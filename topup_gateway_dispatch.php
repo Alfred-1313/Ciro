@@ -16,6 +16,11 @@
 if (!isset($from_id, $datain)) {
     return;
 }
+// 💰 what a pending purchase lacks, taken straight to a method whose range it is
+// outside of: the customer goes the usual way (shortfall.php)
+if (function_exists('sf_guard') && sf_guard()) {
+    return;
+}
     if ($datain == "cart_to_offline") {
         topup_card_invoice_generate($from_id, $user, $message_id, $textbotlang, $setting);
     } elseif ($datain == "aqayepardakht") {

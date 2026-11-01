@@ -1038,4 +1038,24 @@ return [
             . "📍 Path: 🎨 → Product button looks → 📐 Layout (or 🛍 ✏️ Edit product → 📐 Layout)\n"
             . "🌐 Web panel: «Button looks» → «Products»</blockquote>",
     ],
+    [
+        'n' => 73,
+        'date' => '2026-11-01',
+        'fa' => "<blockquote>💰 <b>خرید با موجودی کم: فاکتور شارژ دقیقاً به اندازهٔ کمبود، و خرید خودکار بعد از پرداخت</b>\n"
+            . "• وقتی مشتری برای خرید کانفیگ (چه محصول آماده، چه 🧩 حجم دلخواه) موجودی کم دارد و «تایید و پرداخت» را می‌زند، پیام «موجودی کافی نیست» حالا می‌گوید چقدر کم دارد. دکمهٔ «افزایش موجودی» او را به روش‌های پرداخت می‌برد و فاکتوری که می‌سازد دقیقاً همان کمبود است (مثل تمدید: ۸۰ هزار تومان قیمت، ۴۰ هزار موجودی ← فاکتور ۴۰ هزار).\n"
+            . "• بعد از پرداخت لازم نیست مشتری دوباره راه را برود: مبلغ به موجودی اضافه می‌شود، سرویس خودکار ساخته می‌شود، قیمت از موجودی کم می‌شود و اگر چیزی اضافه مانده بود در موجودی می‌ماند.\n"
+            . "• فیلتر «حداقل و حداکثر افزایش موجودی» هر درگاه رعایت می‌شود. اگر کمبود کمتر از حداقل (یا بیشتر از حداکثر) درگاهی که مشتری زد باشد، فاکتور همان مبلغ ساخته نمی‌شود؛ او به همان مسیر همیشگی «افزایش موجودی» (مبلغ‌های آماده و «مبلغ دلخواه») می‌رود و بالای صفحه یک نقل‌قول دلیلش را می‌گوید. هر مبلغی که شارژ کند، به شرط اینکه قیمت را بپوشاند، سرویس بعد از پرداخت خودکار ساخته می‌شود؛ اگر هنوز کم بود، کمبود باقی‌مانده را با دکمهٔ «افزایش موجودی» می‌بیند. این فیلتر برای تمدید هم همین‌طور است.\n"
+            . "• تمدید با کش‌بک: کش‌بک تمدید حالا به موجودی اضافه می‌شود (قبلاً جایگزین آن می‌شد).\n"
+            . "• صفحهٔ 🧩 مشتری دکمهٔ «💳 افزایش موجودی» ندارد؛ «✅ ادامه» همین مسیر را می‌رود و مبلغ کمبود را همراه می‌برد. (دکمهٔ افزایش موجودی صفحهٔ «حداقل موجودی» مثل قبل ماند.)\n"
+            . "📍 مسیر مشتری: 🔐 خرید اشتراک ← انتخاب ← تایید و پرداخت ← 💰 افزایش موجودی\n"
+            . "🎨 متن‌ها: 🎨 ← «پیام‌ها و ظاهر مراحل خرید» ← «💡 جملهٔ کمبود موجودی»؛ 🎨 ← «پیام‌ها و ظاهر افزایش موجودی» ← دو نقل‌قول فیلتر، «بعد از شارژ هنوز کم است» و دو پاپ‌آپ (هر زبان جدا)</blockquote>",
+        'en' => "<blockquote>💰 <b>Buying with too little balance: a top-up invoice for exactly what is lacking, and the purchase made after the payment</b>\n"
+            . "• When a customer is short of balance for a config (a ready product or a 🧩 custom plan) and taps «Confirm and pay», the «insufficient balance» message now says how much is lacking. «Increase balance» takes them to the payment methods and the invoice it makes is exactly that amount (like a renewal: price 80,000, balance 40,000 → an invoice of 40,000).\n"
+            . "• After the payment the customer does not go the whole way again: the amount is credited, the service is made by itself, the price comes off the balance, and anything left over stays.\n"
+            . "• Each gateway's «minimum and maximum top-up» still holds. If what is lacking is below the minimum (or above the maximum) of the gateway they picked, an invoice of that amount is not made; they go the usual «Increase balance» way (ready amounts and «Custom amount») with a quote at the top saying why. Whatever amount they pay, as long as it covers the price, the service is made by itself after the payment; if it is still short they see what is left with an «Increase balance» button. Renewals work the same way.\n"
+            . "• Renewal cashback is now added to the balance (it used to replace it).\n"
+            . "• The 🧩 customer screen no longer has a «💳 Increase balance» button; «✅ Continue» takes that way and carries the missing amount. (The button on the «minimum balance» screen stays as it was.)\n"
+            . "📍 Customer path: 🔐 Buy → pick → Confirm and pay → 💰 Increase balance\n"
+            . "🎨 Texts: 🎨 → «Messages and look of the purchase steps» → «💡 Short-of-balance line»; 🎨 → «Messages and look of top-up» → the two filter quotes, «still short after the top-up» and two popups (each language apart)</blockquote>",
+    ],
 ];

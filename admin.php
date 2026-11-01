@@ -9391,6 +9391,24 @@ if (preg_match('/^btact\|text\|([a-z]{2})\|(.+)$/', $datain, $btm) && $adminrule
         'users.Balance.chargeSuccess' => "• مبلغ واریزی: <code>{amount}</code>\n"
             . "• موجودی فعلی کاربر: <code>{balance}</code>\n"
             . "• بلوک تخفیف (وقتی تخفیف اعمال بشه، وگرنه خالیه): <code>{discount_block}</code>",
+        'users.Balance.shortLine' => "• مبلغ کمبود برای این خرید: <code>{need}</code>\n"
+            . "• قیمت این خرید: <code>{price}</code>\n"
+            . "• موجودی فعلی کاربر: <code>{balance}</code>",
+        'users.Balance.shortUnderMin' => "• مبلغ کمبود: <code>{need}</code>\n"
+            . "• حداقل شارژ با این روش: <code>{min}</code>\n"
+            . "• حداکثر شارژ با این روش: <code>{max}</code>\n"
+            . "• قیمت این خرید: <code>{price}</code>\n"
+            . "• موجودی فعلی کاربر: <code>{balance}</code>\n"
+            . "\n💡 این نقل‌قول فقط وقتی زیر کپشن صفحهٔ «مبلغ» میاد که کمبود از حداقل شارژ همون درگاه کمتر باشه.",
+        'users.Balance.shortOverMax' => "• مبلغ کمبود: <code>{need}</code>\n"
+            . "• حداقل شارژ با این روش: <code>{min}</code>\n"
+            . "• حداکثر شارژ با این روش: <code>{max}</code>\n"
+            . "• قیمت این خرید: <code>{price}</code>\n"
+            . "• موجودی فعلی کاربر: <code>{balance}</code>\n"
+            . "\n💡 این نقل‌قول فقط وقتی زیر کپشن صفحهٔ «مبلغ» میاد که کمبود از حداکثر شارژ همون درگاه بیشتر باشه.",
+        'users.Balance.shortCharged' => "• مبلغ شارژ شده: <code>{amount}</code>\n"
+            . "• موجودی فعلی کاربر: <code>{balance}</code>\n"
+            . "• کمبود باقی‌مانده برای خرید: <code>{need}</code>",
         'users.Balance.chargeSuccessDiscount' => "• مبلغ تخفیف: <code>{bonus}</code>\n"
             . "• موجودی فعلی کاربر: <code>{balance}</code>",
         'textbot.cardRandomAmountNotice' => "• مبلغ نهایی فاکتور، به ریال: <code>{price_rial}</code>",

@@ -685,6 +685,10 @@ if (function_exists('cvol_customer_dispatch')) {
         $datain = $cv_res;
     }
 }
+// 💰 «افزایش موجودی» of a purchase that is short (shortfall.php)
+if (function_exists('sf_dispatch') && sf_dispatch()) {
+    return;
+}
 if ($text == "/start" || $datain == "start" || $text == "start") {
     update("user", "Processing_value", "0", "id", $from_id);
     update("user", "Processing_value_one", "0", "id", $from_id);
@@ -2259,6 +2263,8 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     ]), "id", $from_id);
     $Balance_prim = $pricelastextend - $user['Balance'];
     update("user", "Processing_value", $Balance_prim, "id", $from_id);
+    // 💰 what it lacks, for the amount screens' quote and for the payment to finish the renewal (shortfall.php)
+    sf_ctx_save($from_id, ['t' => 'renew', 'need' => sf_round($Balance_prim, $user), 'price' => $pricelastextend, 'inv' => $id_invoice, 'at' => time()]);
     // decode the shared step_payment as a LOCAL copy only - never touch how
     // $step_payment/$noCreditText themselves get built (keyboard.php), so
     // every other call site of that shared picker keeps its own unmodified
@@ -4776,12 +4782,9 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         cvol_mark_invoice($randomString);
     }
     if ($priceproduct > $user['Balance'] && $user['agent'] != "n2" && intval($priceproduct) != 0) {
-        $Balance_prim = $priceproduct - $user['Balance'];
-        if ($Balance_prim <= 1)
-            $Balance_prim = 0;
-        $bakinfos = balancebtn_kb($user['lang'] ?? 'fa', $textbotlang);
-        Editmessagetext($from_id, $message_id, $textbotlang['users']['Balance']['insufficientBalanceSimple'], $bakinfos, 'HTML');
-        step('home', $from_id);
+        // 💰 what is lacking, and a «افزایش موجودی» that carries it: the invoice
+        // just made is what the payment will complete (shortfall.php)
+        sf_purchase_short($user, $randomString, $priceproduct, $message_id);
         return;
     }
     if (intval($user['maxbuyagent']) != 0 and $user['agent'] == "n2") {
@@ -5419,7 +5422,7 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     }
     $tp_kb['inline_keyboard'][] = $tp_customBackRow;
     step("topup_pkg:{$tp_key}", $from_id);
-    Editmessagetext($from_id, $message_id, topup_caption_for($tp_lang, $tp_key, $textbotlang['users']['Balance']['pkgPromptTitle']) . topup_disc_caption_block($from_id, $tp_lang, $tp_key, $textbotlang), json_encode($tp_kb), 'HTML');
+    Editmessagetext($from_id, $message_id, topup_caption_for($tp_lang, $tp_key, $textbotlang['users']['Balance']['pkgPromptTitle']) . topup_disc_caption_block($from_id, $tp_lang, $tp_key, $textbotlang) . sf_range_note_for($from_id, $tp_key), json_encode($tp_kb), 'HTML');
 // 'get_step_payment' is included because the confirm-before-invoice screen is
 // rendered AFTER that step is set - without it, the back button on that screen
 // matched nothing and simply did nothing when tapped
@@ -5483,7 +5486,7 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     }
     $tp_kb['inline_keyboard'][] = $tp_customBackRow;
     step("topup_pkg:{$tp_key}", $from_id);
-    Editmessagetext($from_id, $message_id, topup_caption_for($tp_lang, $tp_key, $textbotlang['users']['Balance']['pkgPromptTitle']) . topup_disc_caption_block($from_id, $tp_lang, $tp_key, $textbotlang), json_encode($tp_kb), 'HTML');
+    Editmessagetext($from_id, $message_id, topup_caption_for($tp_lang, $tp_key, $textbotlang['users']['Balance']['pkgPromptTitle']) . topup_disc_caption_block($from_id, $tp_lang, $tp_key, $textbotlang) . sf_range_note_for($from_id, $tp_key), json_encode($tp_kb), 'HTML');
 } elseif (preg_match('/^topup_pkg:([a-z0-9]+)$/', (string) $user['step'], $tp_m) && preg_match('/^toppick:([0-9]{1,3})$/', (string) $datain, $tp_pick)) {
     $tp_key = $tp_m[1];
     $tp_lang = $user['lang'] ?? 'fa';
