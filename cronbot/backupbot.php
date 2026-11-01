@@ -85,7 +85,7 @@ if ($botBackupEnabled) {
     }
     $botRootDir = dirname(__DIR__);
     $botBackupPassword = $setting['backup_bot_password'] ?? '';
-    $zipWhy = backup_zip_create($botFolderZipPath, $botRootDir, ['.'], $botBackupPassword, ['.git/*', '*.bak_*']);
+    $zipWhy = backup_zip_create($botFolderZipPath, $botRootDir, ['.'], $botBackupPassword, ['.git/*', '*.bak_*', 'vendor/*', 'storage/restore/*', 'restore_request*']);
     if ($zipWhy === '') {
         telegram('sendDocument', [
             'chat_id' => $setting['Channel_Report'],

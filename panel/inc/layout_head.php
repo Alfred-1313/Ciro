@@ -44,7 +44,8 @@ array_push(
   $navItem('subapps.php', 'subapps', $navT['saPageTitle'], 'smartphone', $navT['saPageTitle']),
   $navItem('bottext.php', 'bottext', $navT['bottextPageTitle'], 'file-pen', $navT['bottextPageTitle']),
   $navItem('tools.php', 'tools', $navT['toolsPageTitle'], 'wrench', $navT['toolsPageTitle']),
-  $navItem('cleanup.php', 'cleanup', $navT['clnPageTitle'], 'brush-cleaning', $navT['clnPageTitle'])
+  $navItem('cleanup.php', 'cleanup', $navT['clnPageTitle'], 'brush-cleaning', $navT['clnPageTitle']),
+  $navItem('backup.php', 'backup', $navT['bkpPageTitle'], 'database-backup', $navT['bkpPageTitle'])
 );
 $navSections = [
   ['heading' => $navT['layoutNavKeyboard'], 'items' => [

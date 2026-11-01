@@ -138,7 +138,7 @@ run_step() {
     # The one place every long step passes through, so the bot's progress bar is
     # drawn from here instead of from seven separate call sites - and a step
     # added to the update later moves the bar without anyone remembering to.
-    if [ -n "$MZ_TPL_PROGRESS" ] && [ "$rc" -eq 0 ] && [ "$STEP_TOTAL" -gt 0 ]; then
+    if { [ -n "$MZ_TPL_PROGRESS" ] || [ -n "$CIRO_RESTORE_PCT" ]; } && [ "$rc" -eq 0 ] && [ "$STEP_TOTAL" -gt 0 ]; then
         _selfupdate_progress $(( STEP_NO * 100 / STEP_TOTAL ))
     fi
     if [ "$rc" -eq 0 ]; then
@@ -1775,9 +1775,15 @@ _zip_open_entry() {
     _zip_extract "$zip" "$entry" "$ZIP_PW" "$out"; rc=$?
     case "$rc" in
         0) return 0 ;;
-        4) _zip_say_damaged; return 1 ;;
-        5) _zip_say_unsupported; return 1 ;;
+        4) RESTORE_FAIL="damaged"; _zip_say_damaged; return 1 ;;
+        5) RESTORE_FAIL="unsupported"; _zip_say_unsupported; return 1 ;;
     esac
+    # run for the bot's 📥 import (no terminal): the password it was given is the only one
+    if [ -n "$CIRO_NONINTERACTIVE" ]; then
+        RESTORE_FAIL="password"
+        printf "    ${C_BAD}●${CR} ${C_BAD}That password does not open the zip.${CR}\n"
+        return 1
+    fi
     [ -z "$ZIP_PW" ] && printf "    ${C_DIM}This zip is password-protected (the password from the bot's backup settings).${CR}\n"
     while true; do
         printf "  ${C_PROMPT}❯${CR} Zip password ${C_DIM}[0 = back]${CR}: "
@@ -1887,6 +1893,7 @@ _restore_old_folder() {
     printf "    ${C_DIM}Bot folder in the zip: %s - %s${CR}\n" "${label:-/}" "$kind"
     printf "    ${C_OK}✔${CR} ${C_OK}Its code is not restored - this bot already runs the newest files${CR}${C_DIM}%s${CR}\n" "${cur:+ ($cur)}"
     _restore_carry_data "$from" "$dir"
+    RESTORE_OLD="${ver:-original}"
     if [ "$CARRIED_AGENTS" -gt 0 ] || [ "$CARRIED_TOKEN" -gt 0 ]; then
         printf "    ${C_OK}✔${CR} ${C_OK}Its own data is kept:${CR}${C_DIM}%s%s${CR}\n" \
             "$([ "$CARRIED_AGENTS" -gt 0 ] && echo " ${CARRIED_AGENTS} agent bot(s)")" \
@@ -1902,7 +1909,7 @@ _restore_old_folder() {
 # RESTORE_ENTRY. Returns 0 ready, 1 unusable (reason printed), 2 back.
 _restore_prepare() {
     local f="$1" work="$2" n pick i m rc db fl
-    RESTORE_SQL=""; RESTORE_ENTRY=""; ZIP_PW=""
+    RESTORE_SQL=""; RESTORE_ENTRY=""; ZIP_PW="${RESTORE_PW:-}"
     ZS_SQL=(); ZS_BOTS=(); ZS_BOT_DB=(); ZS_BOT_VER=()
     if ! _is_zip "$f"; then
         if ! _restore_is_sql "$f"; then
@@ -1947,8 +1954,16 @@ _restore_prepare() {
             printf "    ${C_KEY}[%d]${CR} ${C_TXT}%s${CR}${C_DIM}%s%s${CR}\n" "$i" "${ZS_SQL[$((i - 1))]}" \
                 "${db:+  · database $db}" "${fl:+  · bot folder $fl}"
         done
-        printf "  ${C_PROMPT}❯${CR} Which one? ${C_DIM}[1-%d, 0 = back]${CR}: " "$n"
-        read -r pick
+        if [ -n "$RESTORE_PICK" ]; then
+            pick=0
+            for ((i = 1; i <= n; i++)); do
+                [ "${ZS_SQL[$((i - 1))]}" = "$RESTORE_PICK" ] && pick=$i
+            done
+            [ "$pick" -gt 0 ] || { RESTORE_FAIL="pick"; return 1; }
+        else
+            printf "  ${C_PROMPT}❯${CR} Which one? ${C_DIM}[1-%d, 0 = back]${CR}: " "$n"
+            read -r pick
+        fi
         [[ "$pick" =~ ^[0-9]+$ ]] && [ "$pick" -ge 1 ] && [ "$pick" -le "$n" ] || return 2
         RESTORE_ENTRY="${ZS_SQL[$((pick - 1))]}"
         if [ -f "$work/hdr_$pick.sql" ]; then
@@ -2110,8 +2125,14 @@ _restore_db() {
     fi
     printf "    ${C_WARN}!${CR} ${C_WARN}Everything in %s is replaced. A copy of it is saved first.${CR}\n" "$dbname"
     [ "${#ZS_BOTS[@]}" -gt 0 ] && printf "    ${C_DIM}Only the database is restored; the bot's files are not overwritten.${CR}\n"
-    printf "  ${C_PROMPT}❯${CR} Continue? ${C_DIM}[y/N]${CR}: "
-    local confirm; read -r confirm
+    local confirm
+    # RESTORE_YES: the admin already said yes in the bot
+    if [ -n "$RESTORE_YES" ]; then
+        confirm=y
+    else
+        printf "  ${C_PROMPT}❯${CR} Continue? ${C_DIM}[y/N]${CR}: "
+        read -r confirm
+    fi
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
         printf "\n    ${C_DIM}Restore cancelled - nothing was changed.${CR}\n"
         rm -rf "$work"; return 0
@@ -2121,10 +2142,12 @@ _restore_db() {
     mkdir -p "$CIRO_BACKUP_DIR"
     local safe="$CIRO_BACKUP_DIR/pre-restore_db_${dbname}_$(date +%Y%m%d_%H%M%S).sql"
     local my="mysql -h '$dbhost' -u '$dbuser' -p'$dbpass' '$dbname'"
+    # --ssl-mode is MySQL's; MariaDB's mysqldump stops at it, so it goes without
     if ! run_step "Saving the current database" \
-        "mysqldump -h '$dbhost' -u '$dbuser' -p'$dbpass' --no-tablespaces --ssl-mode=DISABLED '$dbname' > '$safe'"; then
+        "mysqldump -h '$dbhost' -u '$dbuser' -p'$dbpass' --no-tablespaces --ssl-mode=DISABLED '$dbname' > '$safe' 2>/dev/null || mysqldump -h '$dbhost' -u '$dbuser' -p'$dbpass' --no-tablespaces '$dbname' > '$safe'"; then
         show_step_error; rm -f "$safe"
         printf "\n    ${C_BAD}●${CR} ${C_BAD}Could not save the current database - nothing was changed.${CR}\n"
+        RESTORE_FAIL="safe"
         rm -rf "$work"; return 1
     fi
     _restore_prune "pre-restore_db_${dbname}_"
@@ -2138,10 +2161,12 @@ _restore_db() {
         if run_step "Putting the previous database back" \
             "{ echo 'SET FOREIGN_KEY_CHECKS=0;'; cat '$work/drop.sql'; cat '$safe'; } | $my"; then
             printf "\n    ${C_BAD}●${CR} ${C_BAD}The import failed, so the database was put back as it was.${CR}\n"
+            RESTORE_FAIL="import"
         else
             show_step_error
             printf "\n    ${C_BAD}●${CR} ${C_BAD}The import failed and the old data could not be put back.${CR}\n"
             printf "    ${C_DIM}It is saved in %s${CR}\n" "$safe"
+            RESTORE_FAIL="import_lost"; RESTORE_SAFE="$safe"
         fi
         rm -rf "$work"; return 1
     fi
@@ -2150,6 +2175,7 @@ _restore_db() {
     chown -R www-data:www-data "$dir" 2>/dev/null
 
     echo ""
+    RESTORE_NOTE="db"; RESTORE_SAFE="$safe"
     printf "    ${C_OK}✔${CR} ${C_OK}Restored into %s (%s).${CR}\n" "$dbname" "$name"
     printf "    ${C_DIM}The data it had before is kept in %s${CR}\n" "$safe"
     _restore_zip_folders "$file" "$dir" "$src" "$work"
@@ -2196,7 +2222,7 @@ _restore_files() {
     work=$(mktemp -d /var/tmp/ciro_restore.XXXXXX)
     from="$work/new/${prefix}"
     echo ""
-    ZIP_PW=""
+    ZIP_PW="${RESTORE_PW:-}"
     # the password (if the zip has one) is asked here, once, on index.php
     _zip_open_entry "$file" "${prefix}index.php" "$work/probe.tmp"; rc=$?
     if [ "$rc" -ne 0 ]; then rm -rf "$work"; return "$rc"; fi
@@ -2235,8 +2261,12 @@ _restore_files() {
     fi
     printf "    ${C_WARN}!${CR} ${C_WARN}The bot's files are replaced with the ones in this backup. A copy of them is saved first.${CR}\n"
     printf "    ${C_DIM}config.php stays as it is, so the bot keeps its own database, token and address.${CR}\n"
-    printf "  ${C_PROMPT}❯${CR} Continue? ${C_DIM}[y/N]${CR}: "
-    read -r confirm
+    if [ -n "$RESTORE_YES" ]; then
+        confirm=y
+    else
+        printf "  ${C_PROMPT}❯${CR} Continue? ${C_DIM}[y/N]${CR}: "
+        read -r confirm
+    fi
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
         printf "\n    ${C_DIM}Restore cancelled - nothing was changed.${CR}\n"
         rm -rf "$work"; return 0
@@ -2244,7 +2274,10 @@ _restore_files() {
     echo ""
 
     rm -f "${from}config.php" "${from}update_request" "${from}update_request.running" "${from}rollback_request" \
-          "${from}update_progress.json" "${from}update_status.json" "${from}update_backups.json"
+          "${from}update_progress.json" "${from}update_status.json" "${from}update_backups.json" \
+          "${from}restore_request" "${from}restore_request.running" "${from}restore_progress.json" \
+          "${from}restore_status.json" "${from}watch_caps.json"
+    rm -rf "${from}storage/restore"
     # named like the update snapshots - after the bot's @username, or its directory
     tag=$(grep '^\$usernamebot' "$dir/config.php" 2>/dev/null | cut -d"'" -f2 | tr -cd 'A-Za-z0-9_' | cut -c1-32)
     [ -z "$tag" ] && tag=$(basename "$dir" | tr -cd 'A-Za-z0-9_' | cut -c1-32)
@@ -2254,6 +2287,7 @@ _restore_files() {
         "tar --warning=no-file-changed -czf '$snap' -C '$(dirname "$dir")' --exclude='*.bak*' --exclude='.git' '$(basename "$dir")'"; then
         show_step_error; rm -f "$snap"
         printf "\n    ${C_BAD}●${CR} ${C_BAD}Could not save the current files - nothing was changed.${CR}\n"
+        RESTORE_FAIL="safe"
         rm -rf "$work"; return 1
     fi
     _restore_prune "pre-restore_files_${tag}_"
@@ -2274,6 +2308,7 @@ _restore_files() {
     if [ -n "$bad" ]; then
         printf "    ${C_BAD}●${CR} ${C_BAD}PHP syntax errors in the restored files:${CR}${C_KEY}%s${CR}\n" "$bad"
         _rollback_update "$snap" "$dir" restore
+        RESTORE_FAIL="syntax"
         return 1
     fi
     # the restored code gets the columns and tables it expects
@@ -2281,6 +2316,7 @@ _restore_files() {
     chown -R www-data:www-data "$dir" 2>/dev/null
 
     echo ""
+    RESTORE_NOTE="files"; RESTORE_SAFE="$snap"
     printf "    ${C_OK}✔${CR} ${C_OK}The bot's files were restored into %s (%s).${CR}\n" "$dir" "$name"
     printf "    ${C_DIM}The files it had before are kept in %s${CR}\n" "$snap"
     return 0
@@ -4250,7 +4286,7 @@ function update_bot() {
     local ROLLBACK="${BK_DIR}/pre-update_${BK_TAG}_${STAMP}.tar.gz"
     mkdir -p "$BK_DIR"
     run_step "Backing up the current install" \
-        "tar --warning=no-file-changed -czf '$ROLLBACK' -C '$(dirname "$BOT_DIR")' --exclude='*.bak*' --exclude='.git' --exclude='log.txt' --exclude='error_log' --exclude='update_request' --exclude='update_request.running' --exclude='rollback_request' --exclude='update_progress.json' --exclude='update_status.json' --exclude='update_backups.json' '$(basename "$BOT_DIR")'" \
+        "tar --warning=no-file-changed -czf '$ROLLBACK' -C '$(dirname "$BOT_DIR")' --exclude='*.bak*' --exclude='.git' --exclude='log.txt' --exclude='error_log' --exclude='update_request' --exclude='update_request.running' --exclude='rollback_request' --exclude='update_progress.json' --exclude='update_status.json' --exclude='update_backups.json' --exclude='restore_request' --exclude='restore_request.running' --exclude='restore_progress.json' --exclude='restore_status.json' --exclude='watch_caps.json' --exclude='storage/restore' '$(basename "$BOT_DIR")'" \
         || { show_step_error; printf "  ${C_BAD}Could not create a rollback archive. Refusing to continue.${CR}\n"; sleep 3; show_menu; return 1; }
     # keep only this bot's newest CIRO_SNAPSHOTS_KEEP - the bot lists exactly
     # these for "بازگشت به نسخه قبلی"; another bot's are never touched
@@ -4501,6 +4537,8 @@ _selfupdate_tg_edit() {
 # bar that only really moves seven times.
 _selfupdate_progress() {
     local pct="$1" text
+    # a restore: the web panel's page reads how far it is from its status file
+    [ -n "$CIRO_RESTORE_PCT" ] && printf '{"state":"running","pct":%s,"at":%s}\n' "$pct" "$(date +%s)" > "$CIRO_RESTORE_PCT" 2>/dev/null
     [ -n "$MZ_TPL_PROGRESS" ] || return 0
     text="${MZ_TPL_PROGRESS//\{bar\}/$(_selfupdate_bar "$pct")}"
     text="${text//\{percent\}/$pct}"
@@ -4608,6 +4646,169 @@ _selfupdate_publish_backups() {
     chmod 664 "${dir}/${CIRO_BACKUPS_LIST}" 2>/dev/null
 }
 
+# ── Backups imported from inside the bot (📥 ایمپورت بکاپ) ───
+# The bot takes the zip from its admin, works out what it holds and its
+# password, and asks for a yes - then leaves this request. The restore itself
+# is menu 7's, run here: only root can import the database and lay files over
+# the bot. www-data wrote the request, so everything in it is checked: a bare
+# file name in the bot's own inbox, a known kind, a dump the zip really has.
+CIRO_RESTORE_REQUEST="restore_request"
+CIRO_RESTORE_CTX="restore_progress.json"
+CIRO_RESTORE_STATUS="restore_status.json"
+CIRO_RESTORE_INBOX="storage/restore"
+# what this watcher can be asked for: the bot offers 📥 only while a watcher
+# that knows restores is running (an older copy of this script ignores them)
+CIRO_WATCH_CAPS="watch_caps.json"
+
+_selfwatch_caps() {
+    local f="$1/${CIRO_WATCH_CAPS}"
+    printf '{"caps":["update","rollback","restore"],"at":%s}\n' "$(date +%s)" > "$f" 2>/dev/null
+    chown www-data:www-data "$f" 2>/dev/null
+    chmod 664 "$f" 2>/dev/null
+}
+
+# _selfrestore_status DIR STATE [RESULTS] - what the web panel's page shows
+_selfrestore_status() {
+    printf '{"state":"%s","at":%s,"results":%s}\n' "$2" "$(date +%s)" "${3:-[]}" > "$1/${CIRO_RESTORE_STATUS}" 2>/dev/null
+    chown www-data:www-data "$1/${CIRO_RESTORE_STATUS}" 2>/dev/null
+    chmod 664 "$1/${CIRO_RESTORE_STATUS}" 2>/dev/null
+}
+
+# the bot's message and its wording, read once (same keys as the update's)
+_selfrestore_ctx_load() {
+    local dir="$1" ctx="$1/${CIRO_RESTORE_CTX}"
+    MZ_TOKEN=""; MZ_CHAT=""; MZ_MSG=""; MZ_LANG=""
+    MZ_TPL_PROGRESS=""; MZ_TPL_DONE=""; MZ_TPL_FAIL=""
+    [ -f "$ctx" ] || return 1
+    MZ_TOKEN=$(grep '^\$APIKEY' "$dir/config.php" 2>/dev/null | cut -d"'" -f2)
+    MZ_CHAT=$(jq -r '.chat_id // empty' "$ctx" 2>/dev/null)
+    MZ_MSG=$(jq -r '.message_id // empty' "$ctx" 2>/dev/null)
+    MZ_LANG=$(jq -r '.lang // empty' "$ctx" 2>/dev/null)
+    MZ_TPL_PROGRESS=$(jq -r '.progress // empty' "$ctx" 2>/dev/null)
+    MZ_TPL_DONE=$(jq -r '.done // empty' "$ctx" 2>/dev/null)
+    MZ_TPL_FAIL=$(jq -r '.fail // empty' "$ctx" 2>/dev/null)
+    [ -n "$MZ_TOKEN" ] && [ -n "$MZ_CHAT" ] && [ -n "$MZ_MSG" ]
+}
+
+# The finished message is the bot's own (it says what each file did, in the
+# admin's language); the plain template is the fallback.
+_selfrestore_finish_php() {
+    local dir="$1" results="$2" ok="$3" rc
+    [ -n "$MZ_CHAT" ] && [ -n "$MZ_MSG" ] || return 1
+    command -v php >/dev/null 2>&1 || return 1
+    grep -q 'function bkimp_finish_edit' "$dir/function.php" "$dir/backup_import.php" 2>/dev/null || return 1
+    cat > /tmp/ciro_restore_finish.php <<'FINEOF'
+<?php
+require 'config.php';
+require 'botapi.php';
+require 'panels.php';
+require 'function.php';
+require 'jdf.php';
+require 'vendor/autoload.php';
+bkimp_finish_edit(getenv('MZ_CHAT'), getenv('MZ_MSG'), getenv('MZ_LANG'), getenv('MZ_RESULTS'), getenv('MZ_OK') === '1');
+FINEOF
+    ( cd "$dir" && MZ_CHAT="$MZ_CHAT" MZ_MSG="$MZ_MSG" MZ_LANG="$MZ_LANG" MZ_RESULTS="$results" MZ_OK="$ok" \
+        php /tmp/ciro_restore_finish.php ) >> /tmp/ciro_selfupdate.log 2>&1
+    rc=$?
+    rm -f /tmp/ciro_restore_finish.php
+    return $rc
+}
+
+_selfrestore_run() {
+    local dir="$1" req="$1/${CIRO_RESTORE_REQUEST}" claimed inbox age n i kind file entry pw path rc
+    local cfg dbhost dbname dbuser dbpass name results="" allok=1 steps=0 item
+    [ -f "$req" ] || return 0
+    claimed="${req}.running"
+    mv -f "$req" "$claimed" 2>/dev/null || return 0
+    inbox="${dir}/${CIRO_RESTORE_INBOX}"
+    age=$(( $(date +%s) - $(stat -c %Y "$claimed" 2>/dev/null || echo 0) ))
+    if [ "$age" -gt 900 ] || ! command -v jq >/dev/null 2>&1; then
+        # nobody is waiting on a request this old; never act on it later
+        rm -f "$claimed" "${dir}/${CIRO_RESTORE_CTX}"
+        find "$inbox" -maxdepth 1 -type f \( -name '*.zip' -o -name '*.sql' \) -delete 2>/dev/null
+        _selfrestore_status "$dir" "stale"
+        return 0
+    fi
+    n=$(jq -r '.items | length' "$claimed" 2>/dev/null)
+    [[ "$n" =~ ^[12]$ ]] || n=0
+    cfg="$dir/config.php"
+    dbhost=$(grep '^\$dbhost' "$cfg" | cut -d"'" -f2); [ -z "$dbhost" ] && dbhost="localhost"
+    dbname=$(grep '^\$dbname' "$cfg" | cut -d"'" -f2)
+    dbuser=$(grep '^\$usernamedb' "$cfg" | cut -d"'" -f2)
+    dbpass=$(grep '^\$passworddb' "$cfg" | cut -d"'" -f2)
+    name=$(jq -r --arg d "$dir" '.[] | select(.dir == $d) | .name' "$BOTS_REGISTRY" 2>/dev/null | head -1)
+    [ -z "$name" ] && name=$(basename "$dir")
+    _selfrestore_ctx_load "$dir"
+    _selfrestore_status "$dir" "running"
+    CIRO_RESTORE_PCT="$dir/${CIRO_RESTORE_STATUS}"
+    # the bar moves once per finished step: menu 7 takes 3 for a database, 4 for files
+    for ((i = 0; i < n; i++)); do
+        case "$(jq -r ".items[$i].kind" "$claimed")" in db) steps=$((steps + 3)) ;; files) steps=$((steps + 4)) ;; esac
+    done
+    STEP_NO=0; STEP_TOTAL=$steps
+    _selfupdate_progress 5
+    {
+        echo "[$(date '+%F %T')] restore requested from the bot in $dir ($n file(s))"
+    } >> /tmp/ciro_selfupdate.log
+    for ((i = 0; i < n; i++)); do
+        kind=$(jq -r ".items[$i].kind // empty" "$claimed")
+        file=$(jq -r ".items[$i].file // empty" "$claimed")
+        entry=$(jq -r ".items[$i].entry // empty" "$claimed")
+        pw=$(jq -r ".items[$i].pw // empty" "$claimed")
+        path="${inbox}/${file}"
+        RESTORE_NOTE=""; RESTORE_FAIL=""; RESTORE_OLD=""; RESTORE_SAFE=""; CARRIED_AGENTS=0; CARRIED_TOKEN=0
+        rc=1
+        if ! [[ "$file" =~ ^[a-f0-9]{32}\.(zip|sql)$ ]] || [ ! -f "$path" ] || [ -L "$path" ]; then
+            RESTORE_FAIL="missing"
+        elif [ -z "$dbname" ] || [ -z "$dbuser" ] || [ -z "$dbpass" ]; then
+            RESTORE_FAIL="config"
+        elif [ "$kind" = "db" ]; then
+            if _restore_is_botfolder "$path"; then
+                RESTORE_FAIL="kind"
+            else
+                # run in this shell, not a subshell: it sets RESTORE_* for the message
+                RESTORE_PW="$pw" RESTORE_PICK="$entry" RESTORE_YES=1 CIRO_NONINTERACTIVE=1 \
+                    _restore_db "$path" "$dir" "$name" "$dbhost" "$dbuser" "$dbpass" "$dbname" >> /tmp/ciro_selfupdate.log 2>&1
+                rc=$?
+                [ "$rc" -ne 0 ] && [ -z "$RESTORE_FAIL" ] && RESTORE_FAIL="import"
+            fi
+        elif [ "$kind" = "files" ]; then
+            if _restore_is_botfolder "$path"; then
+                RESTORE_PW="$pw" RESTORE_YES=1 CIRO_NONINTERACTIVE=1 \
+                    _restore_files "$path" "$dir" "$name" "$dbname" >> /tmp/ciro_selfupdate.log 2>&1
+                rc=$?
+                [ "$rc" -ne 0 ] && [ -z "$RESTORE_FAIL" ] && RESTORE_FAIL="files"
+                [ "$rc" -eq 0 ] && [ -n "$RESTORE_OLD" ] && RESTORE_NOTE="old"
+            else
+                RESTORE_FAIL="kind"
+            fi
+        else
+            RESTORE_FAIL="kind"
+        fi
+        [ "$rc" -eq 0 ] || allok=0
+        item=$(jq -cn --arg k "$kind" --arg note "$RESTORE_NOTE" --arg fail "$RESTORE_FAIL" --arg old "$RESTORE_OLD" \
+            --arg safe "$RESTORE_SAFE" --argjson ok "$([ "$rc" -eq 0 ] && echo true || echo false)" \
+            --argjson agents "${CARRIED_AGENTS:-0}" --argjson token "${CARRIED_TOKEN:-0}" \
+            '{kind:$k, ok:$ok, note:$note, fail:$fail, old:$old, safe:$safe, agents:$agents, token:$token}')
+        results="${results:+$results,}$item"
+        rm -f "$path"
+    done
+    results="[${results}]"
+    CIRO_RESTORE_PCT=""
+    rm -f "$claimed"
+    # nothing the admin sent stays on the server
+    find "$inbox" -maxdepth 1 -type f \( -name '*.zip' -o -name '*.sql' \) -delete 2>/dev/null
+    _selfwatch_caps "$dir"
+    if [ "$allok" -eq 1 ] && [ "$n" -gt 0 ]; then
+        _selfrestore_status "$dir" "done" "$results"
+        _selfrestore_finish_php "$dir" "$results" 1 || _selfupdate_final "done" ""
+    else
+        _selfrestore_status "$dir" "failed" "$results"
+        _selfrestore_finish_php "$dir" "$results" 0 || _selfupdate_final "fail" ""
+    fi
+    rm -f "${dir}/${CIRO_RESTORE_CTX}"
+}
+
 selfupdate_watch() {
     _legacy_migrate locked >> /tmp/ciro_selfupdate.log 2>&1
     bots_registry_ensure
@@ -4643,6 +4844,9 @@ selfupdate_watch() {
             || [ "$(jq 'length' "${dir}/${CIRO_BACKUPS_LIST}" 2>/dev/null || echo 0)" -gt "$CIRO_SNAPSHOTS_KEEP" ]; then
             _selfupdate_publish_backups "$dir"
         fi
+        _selfwatch_caps "$dir"
+        # ── a backup the admin sent to the bot (📥 ایمپورت بکاپ) ──
+        _selfrestore_run "$dir"
         # ── going back to an earlier snapshot ────────────────
         rbreq="${dir}/${CIRO_ROLLBACK_REQUEST}"
         if [ -f "$rbreq" ]; then
@@ -6434,7 +6638,7 @@ function transfer_bot() {
         "set -o pipefail; mysqldump -h '$dbhost' -u '$dbuser' -p'$dbpass' --single-transaction --no-tablespaces '$dbname' | gzip > '$work/db.sql.gz' && [ \$(gunzip -c '$work/db.sql.gz' | head -c 100 | wc -c) -gt 0 ]" \
         || { show_step_error; rm -rf "$work"; _tr_thaw_here; _tr_back "Could not save the database." "Nothing was changed."; return 1; }
     run_step "Packing the bot folder" \
-        "tar --anchored --exclude=./config.php --exclude=./update_request --exclude=./update_request.running --exclude=./rollback_request --exclude=./update_progress.json --exclude=./update_status.json --exclude=./update_backups.json -czf '$work/files.tar.gz' -C '$dir' ." \
+        "tar --anchored --exclude=./config.php --exclude=./update_request --exclude=./update_request.running --exclude=./rollback_request --exclude=./update_progress.json --exclude=./update_status.json --exclude=./update_backups.json --exclude=./restore_request --exclude=./restore_request.running --exclude=./restore_progress.json --exclude=./restore_status.json --exclude=./watch_caps.json --exclude=./storage/restore -czf '$work/files.tar.gz' -C '$dir' ." \
         || { show_step_error; rm -rf "$work"; _tr_thaw_here; _tr_back "Could not pack the bot folder." "Nothing was changed."; return 1; }
     if [ "$keep_copy" -eq 1 ]; then
         cp "$work/db.sql.gz" "/root/ciro_transfer_${dbname}_${stamp}.sql.gz"

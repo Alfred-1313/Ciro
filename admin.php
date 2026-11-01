@@ -7945,6 +7945,162 @@ if (preg_match('/^renamereset-([a-z]{2})$/', $datain, $rn_m) && $adminrulecheck[
 }
 
 //----------------[  🖥 نودهای ربکا  ]----------------
+// backup_import.php: 📥 a backup handed to the bot (🗄 تنظیمات بکاپ) - one
+// message carries the whole import: the prompt, the files as they come in,
+// a password when one is asked, the last yes, then the watcher's progress.
+// Administrators only; the files never leave storage/restore until used.
+if (preg_match('/^bkimp_(start|hub|cancel|go|back|yes|pick)(?:\|([a-f0-9]{6})\|(\d))?$/', $datain, $bi_m) && $adminrulecheck['rule'] == "administrator") {
+    $bi_t = $textbotlang['Admin']['BackupImport'];
+    $bi_alert = function ($text) use ($callback_query_id) {
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => $text, 'show_alert' => true]);
+    };
+    $bi_hub = function ($note = '') use ($textbotlang, $from_id, $message_id) {
+        [$bk_caption, $bk_kb] = backup_settings_hub_payload($textbotlang);
+        Editmessagetext($from_id, $message_id, ($note !== '' ? $note . "\n\n" : '') . $bk_caption, $bk_kb, 'HTML');
+    };
+    $bi_st = bkimp_state($from_id);
+    switch ($bi_m[1]) {
+        case 'start':
+            if (bkimp_busy()) {
+                $bi_alert($bi_t['busy']);
+                break;
+            }
+            if (!bkimp_watcher_ready()) {
+                Editmessagetext($from_id, $message_id, $bi_t['noWatcher'], json_encode(['inline_keyboard' => [[['text' => $bi_t['backBtn'], 'callback_data' => 'bkimp_hub', 'style' => 'primary']]]]), 'HTML');
+                break;
+            }
+            bkimp_reset($from_id);
+            $bi_st = bkimp_state($from_id, ['items' => [], 'msg' => (int) $message_id]);
+            [$bi_text, $bi_kb] = bkimp_screen($bi_st);
+            Editmessagetext($from_id, $message_id, $bi_text, $bi_kb, 'HTML');
+            step('bkimp_wait', $from_id);
+            break;
+        case 'hub':
+            $bi_hub();
+            break;
+        case 'cancel':
+            bkimp_reset($from_id);
+            step('home', $from_id);
+            $bi_hub($bi_t['cancelled']);
+            break;
+        case 'pick':
+            [$bi_text, $bi_kb] = bkimp_screen(bkimp_pick($from_id, $bi_m[2], $bi_m[3]));
+            Editmessagetext($from_id, $message_id, $bi_text, $bi_kb, 'HTML');
+            break;
+        case 'back':
+            [$bi_text, $bi_kb] = bkimp_screen($bi_st);
+            Editmessagetext($from_id, $message_id, $bi_text, $bi_kb, 'HTML');
+            break;
+        case 'go':
+        case 'yes':
+            if (!bkimp_ready($bi_st)) {
+                $bi_alert($bi_t['expired']);
+                bkimp_reset($from_id);
+                step('home', $from_id);
+                $bi_hub();
+                break;
+            }
+            if ($bi_m[1] === 'go') {
+                [$bi_text, $bi_kb] = bkimp_confirm_screen($bi_st);
+                Editmessagetext($from_id, $message_id, $bi_text, $bi_kb, 'HTML');
+                break;
+            }
+            if (bkimp_busy()) {
+                $bi_alert($bi_t['busy']);
+                break;
+            }
+            if (!bkimp_watcher_ready()) {
+                Editmessagetext($from_id, $message_id, $bi_t['noWatcher'], json_encode(['inline_keyboard' => [[['text' => $bi_t['backBtn'], 'callback_data' => 'bkimp_back', 'style' => 'primary']]]]), 'HTML');
+                break;
+            }
+            Editmessagetext($from_id, $message_id, bkimp_queued_text(), json_encode(['inline_keyboard' => []]), 'HTML');
+            if (!bkimp_request($bi_st, $from_id, $message_id)) {
+                [$bi_text, $bi_kb] = bkimp_screen($bi_st, $bi_t['failPlain']);
+                Editmessagetext($from_id, $message_id, $bi_text, $bi_kb, 'HTML');
+                break;
+            }
+            // the files are the watcher's now; only the conversation is forgotten
+            @unlink(bkimp_inbox() . '/state_' . preg_replace('/[^A-Za-z0-9_-]/', '', (string) $from_id) . '.json');
+            step('home', $from_id);
+            break;
+    }
+    return;
+}
+// ...a file handed in while the import waits for one
+if (in_array($user['step'], ['bkimp_wait', 'bkimp_pass'], true) && $datain === '' && $adminrulecheck['rule'] == "administrator"
+    && !in_array($text, [$textbotlang['Admin']['backAdminBtn'], $textbotlang['Admin']['backMenuBtn']], true)) {
+    $bi_t = $textbotlang['Admin']['BackupImport'];
+    $bi_st = bkimp_state($from_id);
+    // the import's message: edited where it is when it is the last thing in
+    // the chat (a password, deleted), sent anew under a file the admin posted
+    $bi_show = function (array $screen, $fresh) use ($from_id, &$bi_st) {
+        if ($fresh || empty($bi_st['msg'])) {
+            if (!empty($bi_st['msg'])) {
+                deletemessage($from_id, $bi_st['msg']);
+            }
+            $r = sendmessage($from_id, $screen[0], $screen[1], 'HTML');
+            $bi_st['msg'] = (int) ($r['result']['message_id'] ?? 0);
+            bkimp_state($from_id, $bi_st);
+            return;
+        }
+        Editmessagetext($from_id, $bi_st['msg'], $screen[0], $screen[1], 'HTML');
+    };
+    if ($document) {
+        $bi_name = (string) ($document['file_name'] ?? 'backup');
+        $bi_size = (int) ($document['file_size'] ?? 0);
+        if ($bi_size > BKIMP_MAX_BOT) {
+            $bi_show(bkimp_screen($bi_st, strtr($bi_t['tooBig'], ['{name}' => htmlspecialchars($bi_name), '{size}' => bkimp_size($bi_size)])), true);
+            return;
+        }
+        // a new message under the file, edited once the file has been looked at
+        $bi_show([strtr($bi_t['downloading'], ['{name}' => htmlspecialchars($bi_name)]), json_encode(['inline_keyboard' => []])], true);
+        $bi_ext = preg_match('/\.sql$/i', $bi_name) ? 'sql' : 'zip';
+        [$bi_path, $bi_why] = bkimp_download($fileid, $bi_ext);
+        if ($bi_path === '') {
+            $bi_show(bkimp_screen($bi_st, strtr($bi_t['downloadFail'], ['{why}' => htmlspecialchars($bi_why)])), false);
+            return;
+        }
+        // a zip named .sql, or a dump named .zip, keeps the name its content calls for
+        $bi_fh = @fopen($bi_path, 'rb');
+        $bi_magic = $bi_fh ? (string) fread($bi_fh, 4) : '';
+        if ($bi_fh) {
+            fclose($bi_fh);
+        }
+        $bi_real = $bi_magic === "PK\x03\x04" ? 'zip' : 'sql';
+        if ($bi_real !== $bi_ext) {
+            $bi_to = substr($bi_path, 0, -strlen($bi_ext)) . $bi_real;
+            if (@rename($bi_path, $bi_to)) {
+                $bi_path = $bi_to;
+            }
+        }
+        $bi_msg = $bi_st['msg'];
+        [$bi_st, $bi_why] = bkimp_take($from_id, $bi_path, $bi_name);
+        $bi_note = $bi_why === '' ? '' : strtr($bi_t['notBackup'], ['{name}' => htmlspecialchars($bi_name), '{why}' => bkimp_why($bi_why, $bi_t)]);
+        $bi_st['msg'] = $bi_msg;
+        bkimp_state($from_id, $bi_st);
+        step(bkimp_locked($bi_st) !== null ? 'bkimp_pass' : 'bkimp_wait', $from_id);
+        $bi_show(bkimp_screen($bi_st, $bi_note), false);
+        return;
+    }
+    if ($user['step'] === 'bkimp_pass' && bkimp_locked($bi_st) !== null && trim((string) ($update['message']['text'] ?? '')) !== '') {
+        // as typed (Persian digits and all), and out of the chat at once
+        $bi_pw = (string) $update['message']['text'];
+        deletemessage($from_id, $message_id);
+        [$bi_st2, $bi_why, $bi_name, $bi_drop] = bkimp_password($from_id, $bi_pw);
+        $bi_note = $bi_why === '' ? '' : ($bi_drop ? strtr($bi_t['notBackup'], ['{name}' => htmlspecialchars($bi_name), '{why}' => bkimp_why($bi_why, $bi_t)])
+            : ($bi_why === 'password' ? $bi_t['passWrong'] : strtr($bi_t['passFail'], ['{why}' => bkimp_why($bi_why, $bi_t)])));
+        $bi_st2['msg'] = $bi_st['msg'];
+        $bi_st = $bi_st2;
+        bkimp_state($from_id, $bi_st);
+        step(bkimp_locked($bi_st) !== null ? 'bkimp_pass' : 'bkimp_wait', $from_id);
+        $bi_show(bkimp_screen($bi_st, $bi_note), false);
+        return;
+    }
+    if (trim((string) $text) !== '') {
+        sendmessage($from_id, $user['step'] === 'bkimp_pass' ? $bi_t['notPass'] : $bi_t['notFile'], null, 'HTML');
+        return;
+    }
+}
 // rbnodes.php: a Rebecca panel's nodes - their state, actions, the core and
 // service updates, a new node, editing one, the report picture, a node's
 // traffic chart and the history of their ups and downs. Administrators only.

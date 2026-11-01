@@ -19757,6 +19757,7 @@ if (!function_exists('backup_settings_hub_payload')) {
             [['text' => ($botOn ? '✅ ' : '❌ ') . $t['botEnabledBtn'], 'callback_data' => 'backupset_toggle_bot', 'style' => ($botOn ? 'success' : 'danger')]],
             [['text' => ($botSet ? '🔐 ' : '🔓 ') . $t['botPasswordBtn'], 'callback_data' => 'backupset_bot', 'style' => ($botSet ? 'success' : 'primary')]],
             [['text' => strtr($t['intervalBtn'], ['{hours}' => $backupInterval]), 'callback_data' => 'backupset_interval', 'style' => 'primary']],
+            [['text' => $textbotlang['Admin']['BackupImport']['importBtn'], 'callback_data' => 'bkimp_start', 'style' => 'primary']],
             [['text' => $t['closeBtn'], 'callback_data' => 'backupset_close', 'style' => 'danger']],
         ]];
         return [$caption, json_encode($kb)];
@@ -19938,7 +19939,7 @@ if (!function_exists('backup_run_now')) {
             $botFolderZipName = $backupDir . '/botfolder_manual_' . $stamp . '.zip';
             $botRootDir = __DIR__;
             $botBackupPassword = $forceNoPassword ? '' : ($setting['backup_bot_password'] ?? '');
-            $zipWhy = backup_zip_create($botFolderZipName, $botRootDir, ['.'], $botBackupPassword, ['.git/*', '*.bak_*']);
+            $zipWhy = backup_zip_create($botFolderZipName, $botRootDir, ['.'], $botBackupPassword, ['.git/*', '*.bak_*', 'vendor/*', 'storage/restore/*', 'restore_request*']);
             if ($zipWhy === '') {
                 $sent = telegram('sendDocument', [
                     'chat_id' => $setting['Channel_Report'],
@@ -23307,3 +23308,5 @@ require_once __DIR__ . '/bulkspeed.php';
 require_once __DIR__ . '/cleanup.php';
 // 🖥 نودهای ربکا (پایش، گزارش، مدیریت) - the same
 require_once __DIR__ . '/rbnodes.php';
+// 📥 ایمپورت بکاپ (the bot and the web panel take a backup and hand it to the root watcher)
+require_once __DIR__ . '/backup_import.php';

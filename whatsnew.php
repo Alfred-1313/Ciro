@@ -898,4 +898,22 @@ return [
             . "• An empty list shows a quiet drawing, a button colour picker shows the chosen colour inside it, and keyboard focus is always visible.\n"
             . "• With «reduce motion», «reduce transparency» or «increase contrast» on in your phone or system settings, the panel follows them.</blockquote>",
     ],
+    [
+        'n' => 66,
+        'date' => '2026-11-01',
+        'fa' => "<blockquote>📥 <b>ایمپورت بکاپ از داخل ربات و پنل وب</b>\n"
+            . "• در «🗄 تنظیمات بکاپ» دکمهٔ «📥 ایمپورت بکاپ» آمد: فایل بکاپ دیتابیس (zip یا sql) و/یا زیپ فولدر ربات را همان‌جا بفرست؛ یکی یا هر دو، پشت سر هم. ربات خودش تشخیص می‌دهد هر فایل دیتابیس است یا فولدر ربات، و اگر زیپ رمز داشته باشد رمزش را می‌پرسد (پیام رمز بلافاصله پاک می‌شود؛ رمز اشتباه را می‌گوید). اگر یک زیپ چند فایل دیتابیس داشته باشد، انتخاب می‌کنی کدام.\n"
+            . "• قبل از هر کاری خلاصه را می‌بینی (از کدام دیتابیس، کدام نسخه، دقیقاً چه چیزی عوض می‌شود) و یک تأیید آخر. بعد اسکریپت سرور، دقیقاً مثل گزینهٔ ۷ (Restore)، اول از وضعیت فعلی نسخهٔ امن می‌گیرد و بکاپ را جایگزین می‌کند؛ پیشرفت کار روی همان پیام با نوار درصد دیده می‌شود و آخرش نتیجهٔ هر فایل و مسیر نسخهٔ امن می‌آید. اگر وسط کار خطایی پیش بیاید همان مورد به حالت قبل برمی‌گردد.\n"
+            . "• فولدرِ نسخهٔ قدیمی‌تر (یا پروژهٔ اصلی) روی کدهای فعلی ریخته نمی‌شود؛ فقط داده‌هایش (ربات‌های نمایندگی و توکن API) منتقل می‌شود. config.php همین سرور همیشه سر جایش می‌ماند.\n"
+            . "• تلگرام به ربات اجازهٔ دریافت فایل بزرگ‌تر از ۲۰ مگابایت را نمی‌دهد؛ برای همین بکاپ فولدر ربات از این به بعد بدون پوشهٔ vendor گرفته می‌شود (این پوشه را نصب‌کننده خودش می‌سازد) و خیلی کوچک‌تر است. برای فایل بزرگ‌تر از پنل وب استفاده کن.\n"
+            . "• پنل وب: صفحهٔ تازهٔ «بکاپ» همین کار را با آپلود فایل انجام می‌دهد (تا سقف آپلود سرور)، با همان تشخیص، رمز، انتخاب فایل دیتابیس، تأیید، نوار پیشرفت زنده و نتیجه.\n"
+            . "• این قابلیت به اسکریپت سرور تازه نیاز دارد؛ با یک بار «🔄 آپدیت ربات» اسکریپت هم به‌روز می‌شود.</blockquote>",
+        'en' => "<blockquote>📥 <b>Import a backup from the bot and the web panel</b>\n"
+            . "• «🗄 Backup settings» has a «📥 Import a backup» button: send the database backup (zip or sql) and/or the bot folder zip right there, one or both, one after the other. The bot works out which file is the database and which the bot's folder, and asks for the password of a zip that has one (the password message is deleted at once; a wrong one is said so). A zip with several database files lets you choose which.\n"
+            . "• Before anything happens you see a summary (which database it came from, which version, exactly what is replaced) and a last confirmation. Then the server script, exactly like option 7 (Restore), first takes a safe copy of what is there now and puts the backup in place; the progress shows on the same message as a percentage bar, and at the end the result of each file and where the safe copy is. Anything failing half way is put back as it was.\n"
+            . "• A folder of an older version (or of the original project) is not laid over the current code; only its data (the agents' bots and the API token) is carried over. This server's config.php always stays.\n"
+            . "• Telegram does not let a bot receive files larger than 20 MB, so the bot folder backup is now taken without the vendor folder (the installer builds it) and is much smaller. Use the web panel for a larger file.\n"
+            . "• Web panel: a new «Backup» page does the same with an upload (up to the server's upload limit), with the same detection, password, database choice, confirmation, a live progress bar and the result.\n"
+            . "• This needs the new server script; one «🔄 Update the bot» updates the script too.</blockquote>",
+    ],
 ];
