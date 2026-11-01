@@ -5666,6 +5666,8 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'featDpayRenew' => 'Renewing a subscription',
                 'featDpayLimits' => 'Hold to the gateway\'s minimum and maximum top-up',
                 'featDpayLimitsHint' => 'Off: paying directly ignores the minimum and maximum of «Increase balance», and the customer pays whatever the service costs. On: each gateway\'s own minimum and maximum apply to paying directly too.',
+                'featDpayGift' => 'Top-up gift on paying directly',
+                'featDpayGiftHint' => 'Off: paying directly earns no gift and its invoice says nothing about one. On: the same top-up gift rules (gateway, minimum amount, uses, expiry, ready amounts, an activated code) run for it too, and the gift is added to the wallet after the payment.',
                 'featDpayHint' => 'With «Pay directly» the customer pays for the service from a gateway right now; once it is paid the service is made (or renewed) and the wallet balance is not touched. The buttons\' names and colours are edited in «Button looks», the text of the step in «Bot texts».',
                 'featShopTitle' => 'Shop features',
                 'featShopSub' => 'The buy flow for %s customers; a switch never changed for this language follows Persian',

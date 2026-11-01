@@ -1205,7 +1205,10 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
             $textconfrom = sprintf($textbotlang['hardcoded']['paymentConfirmedNewService'], $username_ac, $get_invoice['Service_location'], $Balance_id['id'], $Payment_report['id_order'], $Balance_id['username'], wallet_amount_text($Balance_id), $format_price_cart, $Payment_report['dec_not_confirmed']);
             Editmessagetext($from_id, $message_id, $textconfrom, $Confirm_pay);
         }
-        direct_pay_gift($Payment_report, $Balance_id);
+        // 🎁 a direct payment earns the top-up gift only where the admin turned that on (directpay.php)
+        if (!$dp_direct || dpay_cfg($Balance_id['lang'] ?? 'fa')['gift']) {
+            direct_pay_gift($Payment_report, $Balance_id);
+        }
     } elseif ($steppay[0] == "getextenduser") {
         $balanceformatsell = money(select("user", "Balance", "id", $Balance_id['id'], "select")['Balance'], currency_for_user($Balance_id), false);
         $partsdic = explode("%", $steppay[1]);
@@ -1326,7 +1329,9 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
             $textconfrom = sprintf($textbotlang['hardcoded']['paymentConfirmedRenew'], $usernamepanel, $prodcut['name_product'], $nameloc['Service_location'], $Balance_id['id'], $Payment_report['id_order'], $Balance_id['username'], wallet_amount_text($Balance_id), $format_price_cart, $Payment_report['dec_not_confirmed']);
             Editmessagetext($from_id, $message_id, $textconfrom, $Confirm_pay);
         }
-        direct_pay_gift($Payment_report, $Balance_id);
+        if (!$dp_direct || dpay_cfg($Balance_id['lang'] ?? 'fa')['gift']) {
+            direct_pay_gift($Payment_report, $Balance_id);
+        }
     } elseif ($steppay[0] == "getextravolumeuser") {
         $steppay = explode("%", $steppay[1]);
         $volume = $steppay[1];
@@ -16339,6 +16344,9 @@ if (!function_exists('topup_disc_promise_save')) {
     // the invoice being created.
     function topup_disc_promise_save($orderId, $userId, $lang, $gatewayKey, $amount)
     {
+        if (function_exists('dpay_gift_blocked') && dpay_gift_blocked($userId)) {
+            return;
+        }
         try {
             $eff = topup_disc_effective($userId, $lang, $gatewayKey, $amount, $orderId);
             if ($eff === null || (float) $eff['bonus'] <= 0) {
@@ -16965,6 +16973,10 @@ if (!function_exists('topup_disc_caption_block')) {
     // topup_disc_award() credits once the invoice is paid.
     function topup_disc_caption_block($userId, $lang, $gatewayKey, $textbotlang, $amount = null, $forPackage = false)
     {
+        // 💳 a direct payment with the 🎁 switch off promises no gift (directpay.php)
+        if (function_exists('dpay_gift_blocked') && dpay_gift_blocked($userId)) {
+            return '';
+        }
         // with no amount picked yet this only asks "is a discount on for this
         // user" - a stand-in amount no 💰 حداقل مبلغ can be above, or a discount
         // with a minimum would hide the very line that announces that minimum

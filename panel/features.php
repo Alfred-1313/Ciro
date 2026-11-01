@@ -103,6 +103,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($posted('dpay_limits') !== $now['limits']) {
             dpay_toggle($lang, 'limits');
         }
+        if ($posted('dpay_gift') !== $now['gift']) {
+            dpay_toggle($lang, 'gift');
+        }
     } elseif ($card === 'phone') {
         $codes = preg_split('/[\s,،]+/u', trim((string) ($_POST['phone_prefix'] ?? '')), -1, PREG_SPLIT_NO_EMPTY);
         if (($_POST['phone_default'] ?? '') === '1') {
@@ -260,6 +263,7 @@ echo web_lang_assets();
         <?= $chk('dpay_renew', in_array('renew', $dp['paths'], true), $t['featDpayRenew']) ?>
       </div></div>
     <?= $field($t['featDpayLimits'], $chk('dpay_limits', $dp['limits'], $t['refOn']), $t['featDpayLimitsHint']) ?>
+    <?= $field($t['featDpayGift'], $chk('dpay_gift', $dp['gift'], $t['refOn']), $t['featDpayGiftHint']) ?>
   </div>
   <?= $saveBtn ?></form>
 </div>

@@ -28,6 +28,8 @@ if (!function_exists('dpay_cfg')) {
             'on' => (string) feature_setting_value('dpay_on', $lang, '0') === '1',
             'paths' => $paths,
             'limits' => (string) feature_setting_value('dpay_limits', $lang, '0') === '1',
+            // 🎁 هدیهٔ شارژ on a direct payment, the way a top-up has it
+            'gift' => (string) feature_setting_value('dpay_gift', $lang, '0') === '1',
         ];
     }
     function dpay_path_on($lang, $path)
@@ -43,6 +45,8 @@ if (!function_exists('dpay_cfg')) {
             feature_setting_set('dpay_on', $lang, $c['on'] ? '0' : '1');
         } elseif ($what === 'limits') {
             feature_setting_set('dpay_limits', $lang, $c['limits'] ? '0' : '1');
+        } elseif ($what === 'gift') {
+            feature_setting_set('dpay_gift', $lang, $c['gift'] ? '0' : '1');
         } elseif (in_array($what, dpay_paths_all(), true)) {
             $paths = in_array($what, $c['paths'], true) ? array_values(array_diff($c['paths'], [$what])) : array_merge($c['paths'], [$what]);
             // 'none' rather than '': an empty value reads as «never set» and brings the default back
@@ -123,6 +127,15 @@ if (!function_exists('dpay_cfg')) {
             '{price}' => money((float) $price, $cur),
             '{balance}' => money((float) ($userRow['Balance'] ?? 0), $cur),
         ]);
+        // 🎁 the gifts a top-up announces above its methods (an automatic one, a code the customer
+        // already activated), when the admin has them on for direct payments
+        if (dpay_cfg($lang)['gift']) {
+            $full = topup_disc_method_caption($userRow['id'], $lang, lang_tab_texts($lang));
+            $base = lang_tab_texts($lang)['users']['Balance']['selectPaymentGrouped'];
+            if ($base !== '' && strpos($full, $base) === 0 && trim(substr($full, strlen($base))) !== '') {
+                $caption .= "\n\n" . trim(substr($full, strlen($base)));
+            }
+        }
         return [$caption, sf_payment_keyboard($backCallback, $lang, $textbotlang)];
     }
     // A purchase confirmed with 💳 پرداخت مستقیم: the unpaid invoice it made is what
@@ -161,6 +174,21 @@ if (!function_exists('dpay_cfg')) {
         step('home', $from_id);
         return 'buybacktow';
     }
+    // Is this customer in the middle of a direct payment whose language has the
+    // 🎁 هدیهٔ شارژ switch off? Then the gift is neither promised on the invoice
+    // nor paid (topup_disc_caption_block / topup_disc_promise_save look here).
+    function dpay_gift_blocked($userId)
+    {
+        $u = select("user", "*", "id", $userId, "select");
+        if (!is_array($u) || (string) ($u['step'] ?? '') !== 'get_step_payment') {
+            return false;
+        }
+        $ctx = sf_ctx_get($u);
+        if (!is_array($ctx) || ($ctx['t'] ?? '') !== 'direct') {
+            return false;
+        }
+        return !dpay_cfg($u['lang'] ?? 'fa')['gift'];
+    }
     // what the checkout holds the amount of a direct payment to: with
     // «رعایت حداقل و حداکثر» off, only the gateway's own floor (the way a ready
     // amount is held); on, the gateway's range as for any top-up. null: not a
@@ -194,6 +222,7 @@ if (!function_exists('dpay_cfg')) {
         $rows[] = [$b(in_array('cvol', $c['paths'], true), $t['pathCvol'], "dpay|tog|{$lang}|cvol")];
         $rows[] = [$b(in_array('renew', $c['paths'], true), $t['pathRenew'], "dpay|tog|{$lang}|renew")];
         $rows[] = [$b($c['limits'], $t['limits'], "dpay|tog|{$lang}|limits")];
+        $rows[] = [$b($c['gift'], $t['gift'], "dpay|tog|{$lang}|gift")];
         $rows[] = [['text' => $t['btnConfirm'], 'callback_data' => "gbs|hub|{$lang}|cf", 'style' => 'primary']];
         $rows[] = [['text' => $t['btnRenew'], 'callback_data' => "gbs|hub|{$lang}|rn", 'style' => 'primary']];
         $rows[] = [['text' => $t['btnCaption'], 'callback_data' => "bt_edit|{$lang}|users.Balance.directPayCaption", 'style' => 'primary']];

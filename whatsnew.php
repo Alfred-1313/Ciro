@@ -1084,4 +1084,28 @@ return [
             . "🌐 Web panel: «Features» → the «Pay directly» card (on/off, paths, minimum and maximum); the buttons' look in «Buttons» and the text in «Bot texts»\n"
             . "💡 How it differs from «Increase balance»: increasing the balance adds money to the wallet and the purchase is then paid from it; paying directly takes the money for that very service and the wallet stays apart.</blockquote>",
     ],
+    [
+        'n' => 75,
+        'date' => '2026-11-01',
+        'fa' => "<blockquote>🎁 <b>هدیهٔ شارژ روی «پرداخت مستقیم»</b>\n"
+            . "<b>ماجرا چیه؟</b> «هدیهٔ شارژ» همون تخفیف/هدیه‌ایه که برای هر درگاه می‌ذاری (مثلاً ۱۰٪ بیشتر وقتی کیف پول شارژ می‌کنن، خودکار یا با کد). تا حالا فقط وقتی مشتری کیف پولش رو شارژ می‌کرد کار می‌کرد. حالا می‌تونی بذاری وقتی با «💳 پرداخت مستقیم» سرویس می‌خره هم هدیه بگیره.\n"
+            . "<b>مثال:</b> برای کارت‌به‌کارت ۱۰٪ هدیه گذاشتی و مشتری با پرداخت مستقیم یه سرویس ۱۵۰ هزار تومانی می‌خره. سرویس ساخته می‌شه و ۱۵ هزار تومان هدیه هم به کیف پولش اضافه می‌شه (و بهش پیام «تخفیف اعمال شد» می‌رسه).\n"
+            . "<b>پیش‌فرض خاموشه:</b> یعنی پرداخت مستقیم هدیه‌ای نمی‌ده و روی فاکتورش هم حرفی از هدیه نیست. وقتی روشنش کنی دقیقاً همون قانون‌های هدیهٔ شارژ اجرا می‌شه: هر درگاه هدیهٔ خودش رو داره، حداقل مبلغ، تعداد دفعات برای هر کاربر، تاریخ انقضا، بسته‌های آماده و کدی که مشتری از قبل فعال کرده. هدیه بالای لیست درگاه‌ها و روی فاکتور نشون داده می‌شه و بعد از پرداخت به کیف پول اضافه می‌شه.\n"
+            . "<b>چطور روشنش کنم؟</b>\n"
+            . "1️⃣ 🏬 تنظیمات فروشگاه ← 🛒 وضعیت قابلیت‌های فروشگاه (زبان رو بالا انتخاب کن)\n"
+            . "2️⃣ «💳 دکمهٔ پرداخت مستقیم» باید ✅ باشه ← «⚙️ تنظیمات پرداخت مستقیم»\n"
+            . "3️⃣ «🎁 هدیهٔ شارژ روی پرداخت مستقیم» رو بزن تا ✅ بشه\n"
+            . "ℹ️ خود هدیه‌ها (درصد، حداقل مبلغ، کد) مثل قبل از بخش هدیهٔ شارژ هر درگاه تنظیم می‌شن. «افزایش موجودی به اندازهٔ کمبود» (وقتی موجودی کمه) از قبل هم هدیه می‌گرفت و تغییری نکرده.\n"
+            . "🌐 پنل وب: «قابلیت‌ها» ← کارت «پرداخت مستقیم» ← «هدیهٔ شارژ روی پرداخت مستقیم»</blockquote>",
+        'en' => "<blockquote>🎁 <b>Top-up gift on «Pay directly»</b>\n"
+            . "<b>What is it?</b> The «top-up gift» is the gift you set for each gateway (say 10% extra when the wallet is topped up, automatic or with a code). Until now it only worked when a customer topped up the wallet. Now you can have it work when they buy with «💳 Pay directly» too.\n"
+            . "<b>Example:</b> you set a 10% gift on card to card and a customer pays directly for a 150,000 service. The service is made and 15,000 of gift is added to their wallet as well (with the «Discount applied» message).\n"
+            . "<b>It is off by default:</b> paying directly earns no gift and its invoice says nothing about one. Turn it on and exactly the top-up gift rules run: each gateway has its own gift, the minimum amount, the uses per customer, the expiry, ready amounts and a code the customer activated earlier. The gift is shown above the gateway list and on the invoice and is added to the wallet after the payment.\n"
+            . "<b>How do I turn it on?</b>\n"
+            . "1️⃣ 🏬 Shop settings → 🛒 Shop feature status (pick the language at the top)\n"
+            . "2️⃣ «💳 Pay directly button» must be ✅ → «⚙️ Pay directly settings»\n"
+            . "3️⃣ Tap «🎁 Top-up gift on paying directly» until it is ✅\n"
+            . "ℹ️ The gifts themselves (percent, minimum amount, codes) are set as before in each gateway's top-up gift. «Top up exactly what is lacking» (when the balance is short) already earned the gift and is unchanged.\n"
+            . "🌐 Web panel: «Features» → the «Pay directly» card → «Top-up gift on paying directly»</blockquote>",
+    ],
 ];
