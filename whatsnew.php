@@ -1058,4 +1058,30 @@ return [
             . "📍 Customer path: 🔐 Buy → pick → Confirm and pay → 💰 Increase balance\n"
             . "🎨 Texts: 🎨 → «Messages and look of the purchase steps» → «💡 Short-of-balance line»; 🎨 → «Messages and look of top-up» → the two filter quotes, «still short after the top-up» and two popups (each language apart)</blockquote>",
     ],
+    [
+        'n' => 74,
+        'date' => '2026-11-01',
+        'fa' => "<blockquote>💳 <b>پرداخت مستقیم: یه دکمهٔ جدید کنار «تایید و پرداخت»</b>\n"
+            . "<b>ماجرا چیه؟</b> تا حالا مشتری برای خرید باید اول کیف پولش رو شارژ می‌کرد و بعد خرید می‌کرد. حالا می‌تونی یه دکمهٔ «💳 پرداخت مستقیم» بذاری: مشتری همون لحظه از یکی از درگاه‌ها (مثلاً کارت‌به‌کارت یا زرین‌پال) پول سرویس رو می‌ده، و بعد از پرداخت سرویس خودکار ساخته (یا تمدید) می‌شه. اصلاً به کیف پولش دست نمی‌زنیم؛ هر چقدر داشته همون می‌مونه.\n"
+            . "<b>توی صفحهٔ تایید چی می‌بینه؟</b> دکمهٔ «تایید و پرداخت» اسمش می‌شه «✅ تایید و پرداخت از کیف پول» و کنارش «💳 پرداخت مستقیم» میاد؛ «🔙 بازگشت» می‌ره زیرشون. این برای سه جا کار می‌کنه: خرید اشتراک، 🧩 حجم دلخواه و تمدید.\n"
+            . "<b>چطور روشنش کنم؟</b> این قابلیت <b>خاموشه</b> تا خودت روشنش کنی:\n"
+            . "1️⃣ 🏬 تنظیمات فروشگاه ← 🛒 وضعیت قابلیت‌های فروشگاه\n"
+            . "2️⃣ بالا زبان رو انتخاب کن (هر زبان جدا تنظیم می‌شه) و «💳 دکمهٔ پرداخت مستقیم در صفحهٔ تایید» رو بزن تا ✅ بشه\n"
+            . "3️⃣ دکمهٔ «⚙️ تنظیمات پرداخت مستقیم» که زیرش میاد رو باز کن و مسیرها رو انتخاب کن: فقط خرید اشتراک؟ فقط تمدید؟ هر سه؟ هر کدوم ✅ باشه، دکمه همونجا میاد\n"
+            . "<b>حداقل و حداکثر شارژ</b> (🔎 توی همون صفحه): هر درگاه یه حداقل و حداکثر برای «افزایش موجودی» داره. پیش‌فرض این گزینه <b>خاموشه</b> یعنی پرداخت مستقیم به اون محدودیت‌ها کاری نداره و مشتری قیمت سرویس رو هر چقدر هست می‌پردازه. اگه روشنش کنی همون حداقل و حداکثر روی پرداخت مستقیم هم اعمال می‌شه.\n"
+            . "<b>ظاهر و متن‌ها:</b> اسم، رنگ، ایموجی و جای دکمه‌ها (و دکمهٔ تایید) از 🎨 ← «دکمه‌های تأیید خرید» و «دکمه‌های فاکتور تمدید» عوض می‌شه، و متنی که بالای لیست درگاه‌ها میاد از 🎨 ← «پیام‌ها و ظاهر مراحل خرید» ← «💳 متن مرحلهٔ پرداخت مستقیم» (برای هر زبان جدا).\n"
+            . "🌐 پنل وب: «قابلیت‌ها» ← کارت «پرداخت مستقیم» (روشن/خاموش، مسیرها و حداقل و حداکثر)؛ ظاهر دکمه‌ها از «دکمه‌ها» و متن از «متن‌های ربات»\n"
+            . "💡 فرقش با «افزایش موجودی»: افزایش موجودی پول رو به کیف پول اضافه می‌کنه و بعد خرید از کیف پول انجام می‌شه؛ پرداخت مستقیم پول رو همون لحظه برای همون سرویس می‌گیره و کیف پول جدا می‌مونه.</blockquote>",
+        'en' => "<blockquote>💳 <b>Pay directly: a new button beside «Confirm and pay»</b>\n"
+            . "<b>What is it?</b> Until now a customer had to top up the wallet first and then buy. Now you can add a «💳 Pay directly» button: the customer pays for the service from a gateway right away (card to card, Zarinpal, ...), and once it is paid the service is made (or renewed) by itself. The wallet is not touched at all; whatever they had stays.\n"
+            . "<b>What do they see on the confirm page?</b> «Confirm and pay» becomes «✅ Confirm and pay from wallet», «💳 Pay directly» comes beside it, and «🔙 Back» goes under them. It works in three places: buying a subscription, 🧩 custom plans and renewals.\n"
+            . "<b>How do I turn it on?</b> It is <b>off</b> until you turn it on:\n"
+            . "1️⃣ 🏬 Shop settings → 🛒 Shop feature status\n"
+            . "2️⃣ Pick the language at the top (each language is set apart) and tap «💳 «Pay directly» button on the confirm page» until it is ✅\n"
+            . "3️⃣ Open «⚙️ Pay directly settings» that appears under it and choose the paths: only buying? only renewals? all three? Each one that is ✅ gets the button\n"
+            . "<b>Minimum and maximum top-up</b> (🔎 on the same screen): every gateway has a minimum and a maximum for «Increase balance». This option is <b>off</b> by default, so paying directly ignores those limits and the customer pays the service's price, whatever it is. Turn it on and each gateway's minimum and maximum apply to paying directly too.\n"
+            . "<b>Look and texts:</b> the names, colours, emoji and place of the buttons (and the confirm button) are changed in 🎨 → «Confirm buttons» and «Renewal invoice buttons», and the text above the gateway list in 🎨 → «Messages and look of the purchase steps» → «💳 Pay directly step text» (each language apart).\n"
+            . "🌐 Web panel: «Features» → the «Pay directly» card (on/off, paths, minimum and maximum); the buttons' look in «Buttons» and the text in «Bot texts»\n"
+            . "💡 How it differs from «Increase balance»: increasing the balance adds money to the wallet and the purchase is then paid from it; paying directly takes the money for that very service and the wallet stays apart.</blockquote>",
+    ],
 ];

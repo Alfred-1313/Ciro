@@ -89,6 +89,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 shop_feature_set($key, $lang, $posted('shop_' . $key) ? $on : $off);
             }
         }
+    } elseif ($card === 'dpay') {
+        // 💳 پرداخت مستقیم (directpay.php): each switch written only where it changed
+        $now = dpay_cfg($lang);
+        if ($posted('dpay_on') !== $now['on']) {
+            dpay_toggle($lang, 'on');
+        }
+        foreach (dpay_paths_all() as $path) {
+            if ($posted('dpay_' . $path) !== in_array($path, $now['paths'], true)) {
+                dpay_toggle($lang, $path);
+            }
+        }
+        if ($posted('dpay_limits') !== $now['limits']) {
+            dpay_toggle($lang, 'limits');
+        }
     } elseif ($card === 'phone') {
         $codes = preg_split('/[\s,،]+/u', trim((string) ($_POST['phone_prefix'] ?? '')), -1, PREG_SPLIT_NO_EMPTY);
         if (($_POST['phone_default'] ?? '') === '1') {
@@ -229,6 +243,23 @@ echo web_lang_assets();
     <?php foreach ($shopSwitches as $key => [$on, $off, $label]): ?>
       <?= $chk('shop_' . $key, $shopOn($key), $label) ?>
     <?php endforeach; ?>
+  </div>
+  <?= $saveBtn ?></form>
+</div>
+
+<?php $dp = dpay_cfg($lang); ?>
+<div class="card fade-up" id="dpay" style="margin-bottom:14px">
+  <?= $cardHead('⟦i:credit-card⟧ ' . $t['featDpayTitle'], sprintf($t['featDpaySub'], htmlspecialchars($langName))) ?>
+  <?= $formOpen('dpay') ?>
+  <div class="card-body">
+    <?= $field($t['featDpayOn'], $chk('dpay_on', $dp['on'], $t['refOn']), $t['featDpayHint']) ?>
+    <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($t['featDpayTitle']) ?> — <?= htmlspecialchars($t['featDpayPaths']) ?></div></div>
+      <div class="set-ctl" style="display:flex;gap:10px;flex-wrap:wrap">
+        <?= $chk('dpay_buy', in_array('buy', $dp['paths'], true), $t['featDpayBuy']) ?>
+        <?= $chk('dpay_cvol', in_array('cvol', $dp['paths'], true), $t['featDpayCvol']) ?>
+        <?= $chk('dpay_renew', in_array('renew', $dp['paths'], true), $t['featDpayRenew']) ?>
+      </div></div>
+    <?= $field($t['featDpayLimits'], $chk('dpay_limits', $dp['limits'], $t['refOn']), $t['featDpayLimitsHint']) ?>
   </div>
   <?= $saveBtn ?></form>
 </div>

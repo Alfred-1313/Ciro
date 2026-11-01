@@ -1016,7 +1016,9 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         $get_invoice = select("invoice", "*", "username", $steppay[1], "select");
         // 💰 paid, but not yet enough for what it was paid for: it is a top-up and
         // the purchase waits (shortfall.php)
-        if (is_array($get_invoice) && !sf_covers($Balance_id, $Payment_report['price'], $get_invoice['price_product'])) {
+        // 💳 paid directly: the wallet is left alone, whatever it holds
+        $dp_direct = dpay_is_direct_invoice($get_invoice);
+        if (is_array($get_invoice) && !$dp_direct && !sf_covers($Balance_id, $Payment_report['price'], $get_invoice['price_product'])) {
             sf_settle_short($order_id, $Payment_report, $Balance_id, (float) $get_invoice['price_product'], "sfg|{$get_invoice['id_invoice']}");
             return;
         }
@@ -1164,7 +1166,9 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         if ($Balance_prims <= 0)
             $Balance_prims = 0;
         $Balance_prims = round($Balance_prims, 2);
-        update("user", "Balance", $Balance_prims, "id", $Balance_id['id']);
+        if (!$dp_direct) {
+            update("user", "Balance", $Balance_prims, "id", $Balance_id['id']);
+        }
         $balanceformatsell = select("user", "Balance", "id", $get_invoice['id_user'], "select")['Balance'];
         $balanceformatsell = money($balanceformatsell, currency_for_user($Balance_id), false);
         $balancebefore = wallet_amount_text($Balance_id);
@@ -1241,13 +1245,17 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
         // 💰 the price it was priced at when the shortfall was taken (shortfall.php)
         $sf_price = sf_discounted($prodcut['price_product'], $Balance_id);
-        if (!sf_covers($Balance_id, $Payment_report['price'], $sf_price)) {
+        // 💳 paid directly: the wallet is left alone, whatever it holds
+        $dp_direct = !empty($service_other['direct']);
+        if (!$dp_direct && !sf_covers($Balance_id, $Payment_report['price'], $sf_price)) {
             sf_settle_short($order_id, $Payment_report, $Balance_id, $sf_price, 'Add_Balance', [[['text' => $ct['users']['status']['backservice'], 'callback_data' => "product_" . $nameloc['id_invoice']]]]);
             return;
         }
         // what was paid came on top of what the customer had; the price comes off both
         $Balance_Low_user = max(0, round((float) $Balance_id['Balance'] + (float) $Payment_report['price'] - $sf_price, 2));
-        update("user", "Balance", $Balance_Low_user, "id", $Balance_id['id']);
+        if (!$dp_direct) {
+            update("user", "Balance", $Balance_Low_user, "id", $Balance_id['id']);
+        }
         $extend = $ManagePanel->extend($marzban_list_get['Methodextend'], $prodcut['Volume_constraint'], $prodcut['Service_time'], $nameloc['username'], $prodcut['code_product'], $marzban_list_get['code_panel']);
         affrw_mark_renewed($extend, $nameloc['username'], $marzban_list_get['name_panel']);
         if ($extend['status'] == false) {
@@ -6908,6 +6916,10 @@ if (!function_exists('topup_checkout_limits')) {
     // over its 1,000,000 default. The method list keeps the gateway's own range.
     function topup_checkout_limits($lang, $key)
     {
+        // 💳 a direct payment holds to the gateway's range only when the admin asked it to (directpay.php)
+        if (function_exists('dpay_checkout_limits') && ($dpay_l = dpay_checkout_limits($lang, $key)) !== null) {
+            return $dpay_l;
+        }
         $origin = (string) ($GLOBALS['topup_amount_origin_step'] ?? '');
         if (strpos($origin, 'topup_pkg:') === 0) {
             return [topup_usd_floor_toman($lang, $key), null];
@@ -14106,6 +14118,8 @@ if (!function_exists('genbtn_defs')) {
             return [
                 0 => ['name' => '🔴 دکمه انصراف', 'text' => $textbotlang['keyboard']['backToPlansBtn'], 'style' => 'danger', 'callback_data' => 'none'],
                 1 => ['name' => '🟢 دکمه تأیید و پرداخت', 'text' => $textbotlang['keyboard']['payAndGetService'], 'style' => 'success', 'callback_data' => 'none'],
+                // 💳 only on a page where پرداخت مستقیم is on for the path (directpay.php)
+                2 => ['name' => '💳 دکمه پرداخت مستقیم', 'text' => $textbotlang['keyboard']['directPayBtn'] ?? '💳 پرداخت مستقیم', 'style' => 'primary', 'callback_data' => 'none'],
             ];
         }
         if ($alias === 'ns') {
@@ -14164,6 +14178,8 @@ if (!function_exists('genbtn_defs')) {
                 // the renewal invoice's own flow, own-key trick still applies.
                 // Tapping it re-renders the exact same invoice (rn_reshow_).
                 2 => ['name' => '🔴 دکمه بازگشت (از صفحه‌ی پرداخت)', 'text' => $textbotlang['users']['extend']['backFromPaymentBtn'] ?? '🔙 بازگشت به منوی قبلی', 'style' => 'danger', 'callback_data' => 'none'],
+                // 💳 only on an invoice where پرداخت مستقیم is on for renewals (directpay.php)
+                3 => ['name' => '💳 دکمه پرداخت مستقیم', 'text' => $textbotlang['keyboard']['directPayBtn'] ?? '💳 پرداخت مستقیم', 'style' => 'primary', 'callback_data' => 'none'],
             ];
         }
         if ($alias === 'cl') {
@@ -15093,6 +15109,9 @@ if (!function_exists('sell_confirm_kb')) {
         $cbs = [0 => $cancelCallback, 1 => $confirmCallback];
         $buttons = [];
         foreach ($defs as $idx => $d) {
+            if (!isset($cbs[$idx])) {
+                continue; // 💳 پرداخت مستقیم's button is drawn by dpay_confirm_kb()
+            }
             $ov = genbtn_override($lang, 'users.sell.confirmButtons', $idx);
             $buttons[$idx] = genbtn_render($d, $ov, $cbs[$idx]);
         }
@@ -15156,6 +15175,10 @@ if (!function_exists('extend_invoice_kb')) {
         $backBtn = genbtn_render($defs[1], $backOv, $backCallback);
         $balanceBtn = balancebtn_button($lang, $textbotlang);
         $balanceBtn['callback_data'] = $topupCallback;
+        // 💳 پرداخت مستقیم on for renewals: the confirm button says it pays from the wallet, the direct button sits beside it
+        if (function_exists('dpay_path_on') && dpay_path_on($lang, 'renew')) {
+            return dpay_renew_kb($lang, $textbotlang, $confirmCallback, $backCallback, $topupCallback, $balanceBtn);
+        }
         return json_encode(['inline_keyboard' => [[$confirmBtn, $balanceBtn], [$backBtn]]]);
     }
 }
@@ -15264,12 +15287,12 @@ if (!function_exists('genbtn_hub_payload')) {
             'su' => 'این ۲ دکمه، زیر پیام انتخاب نام سرویس (مرحله‌ی خرید) به کاربر نشون داده می‌شن.',
             'uu' => 'این ۲ دکمه، زیر پیام درخواست نام کاربری اکانت تست میان: 🔴 انصراف، 🟢 ساختن با اسم پیش‌فرض. جدا از دکمه‌های نام‌گذاری خرید معمولی‌ان؛ هر زبان تنظیم خودش رو داره.',
             'pu' => 'این ۲ دکمه، زیر سؤال نام کاربری اکانت ساعتی میان (وقتی «💡 روش ساخت نام کاربری» دلخواه باشه): 🔴 برمی‌گرده به صفحه‌ی تعرفه، 🟢 با اسم پیش‌فرض اکانت ساعتی می‌سازه. جدا از دکمه‌های نام‌گذاری خرید معمولی‌ان.',
-            'cf' => 'این ۲ دکمه، زیر صفحه‌ی تأیید نهایی خرید نشون داده می‌شن - هر سه حالت (عادی/تخفیف‌دار/حجم دلخواه) از این یکی استفاده می‌کنن، پس ویرایششون روی هر سه اثر می‌ذاره.',
+            'cf' => 'این دکمه‌ها زیر صفحه‌ی تأیید نهایی خرید نشون داده می‌شن - هر سه حالت (عادی/تخفیف‌دار/حجم دلخواه) از این یکی استفاده می‌کنن، پس ویرایششون روی هر سه اثر می‌ذاره. دکمه‌ی ۳ (💳 پرداخت مستقیم) فقط وقتی میاد که توی «🏬 تنظیمات فروشگاه ← 🛒 وضعیت قابلیت‌های فروشگاه» روشنش کرده باشی؛ اون موقع دکمه‌ی تأیید هم «تایید و پرداخت از کیف پول» می‌شه (اسمش از همین‌جا قابل تغییره) و بازگشت می‌ره زیرشون - مگه اینکه توی 📐 چیدمان جور دیگه‌ای چیده باشی.',
             'ns' => 'این ۱ دکمه، زیر پیامِ «سرویس فعالی ندارید» (وقتی 🛍 سرویس‌های من خالیه) به کاربر نشون داده می‌شه.',
             'te' => 'این ۱ دکمه، زیر پیامِ «اکانت تست شما به پایان رسید» به کاربر نشون داده می‌شه (همون پیامی که کرون موقع تموم‌شدن اعتبار اکانت تست می‌فرسته). متن، رنگ، ایموجی و مخفی بودنش مال هر زبان جداست.',
             'sc' => 'این دکمه‌ها زیر لیست سرویس‌های کاربر (🛍 سرویس‌های من) میان و توی همه‌ی صفحه‌ها یکی‌ان: ❌ بستن همیشه؛ و وقتی سرویس‌ها از یه صفحه (۲۰ تا) بیشتر باشن، 🔎 جستجو سریع و دکمه‌های صفحه - توی صفحه‌ی اول «صفحه بعد»، توی صفحه‌های بعد «بعدی / قبلی».',
             'bc' => 'این ۱ دکمه، زیر پیام تایید نهاییِ شارژ کیف پول (هر روش پرداختی) نشون داده می‌شه.',
-            'rn' => 'دکمه‌ی ۱ و ۲ زیر فاکتور تمدید سرویس نشون داده می‌شن (دکمه‌ی «افزایش موجودی» بینشون از تنظیمات مشترک همون دکمه میاد، جدا نیست). دکمه‌ی ۳ وقتی کاربر روی «افزایش موجودی» بزنه، زیر لیست روش‌های پرداخت میاد و با تپ روش، برمی‌گردونه به همون فاکتور تمدید.',
+            'rn' => 'دکمه‌ی ۱ و ۲ زیر فاکتور تمدید سرویس نشون داده می‌شن (دکمه‌ی «افزایش موجودی» بینشون از تنظیمات مشترک همون دکمه میاد، جدا نیست). دکمه‌ی ۳ وقتی کاربر روی «افزایش موجودی» بزنه، زیر لیست روش‌های پرداخت میاد و با تپ روش، برمی‌گردونه به همون فاکتور تمدید. دکمه‌ی ۴ (💳 پرداخت مستقیم) فقط وقتی کنار دکمه‌ی تأیید میاد که توی «🏬 تنظیمات فروشگاه ← 🛒 وضعیت قابلیت‌های فروشگاه» برای تمدید روشنش کرده باشی.',
             'cl' => 'این ۲ دکمه، زیر پیام هشدار «تغییر لینک اتصال» (قبل از تایید نهایی) نشون داده می‌شن.',
             'td' => 'دکمه‌ی ۱ («کد تخفیف دارم») زیر لیست روش‌های پرداختِ 💰 افزایش موجودی میاد - ولی فقط وقتی که برای این زبان حداقل یک کد تخفیف شارژ ساخته باشی، وگرنه اصلاً نشون داده نمی‌شه. دکمه‌ی ۲ زیر همون صفحه‌ی وارد کردن کد میاد. اگر کاربر یه کد رو فعال کرده باشه، دکمه‌ی ۱ دیگه بهش نشون داده نمی‌شه (چون خود کپشن تخفیف فعال رو نوشته).',
             'ab' => 'این ۱ دکمه، زیر پیام «✅ سرویس با موفقیت ایجاد شد» (بعد از خرید) نشون داده می‌شه - برای همه‌ی نوع پنل‌ها، خرید چندتایی، پرداخت آنلاین و سفارشی که ادمین برای کاربر ثبت می‌کنه. پیش‌فرض مخفیه؛ برای نمایش، «👁 نمایش دادن این دکمه» رو بزن.',
@@ -23395,3 +23418,5 @@ require_once __DIR__ . '/cvol.php';
 require_once __DIR__ . '/rbsvc.php';
 // 💰 افزایش موجودی به اندازهٔ کمبود (خرید و تمدید) - the same
 require_once __DIR__ . '/shortfall.php';
+// 💳 پرداخت مستقیم - the same
+require_once __DIR__ . '/directpay.php';

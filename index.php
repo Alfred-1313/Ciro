@@ -689,6 +689,10 @@ if (function_exists('cvol_customer_dispatch')) {
 if (function_exists('sf_dispatch') && sf_dispatch()) {
     return;
 }
+// 💳 پرداخت مستقیم (directpay.php): 🔙 from its payment methods goes back to the plan list
+if (function_exists('dpay_dispatch') && ($dp_res = dpay_dispatch()) !== false) {
+    $datain = $dp_res;
+}
 if ($text == "/start" || $datain == "start" || $text == "start") {
     update("user", "Processing_value", "0", "id", $from_id);
     update("user", "Processing_value_one", "0", "id", $from_id);
@@ -2198,12 +2202,18 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             'reply_markup' => $Response
         ]);
     }
-} elseif (preg_match('/^rn_topup_(\w+)/', $datain, $dataget)) {
+} elseif (preg_match('/^rn_(topup|direct)_(\w+)/', $datain, $dataget)) {
+    // 💳 rn_direct_: the same, for the whole price and paid by a gateway (directpay.php)
+    $rn_direct = ($dataget[1] === 'direct');
+    if ($rn_direct && !dpay_path_on($user['lang'] ?? 'fa', 'renew')) {
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => strip_tags(sf_text('directPayGone', $user['lang'] ?? 'fa')), 'show_alert' => true]);
+        return;
+    }
     // reached by tapping افزایش موجودی on the renewal invoice - owns
     // everything the insufficient-balance branch of confirmserivce used to
     // do (state-prep + pending order + show the payment-method screen),
     // just moved here so a mere confirm-tap no longer creates it
-    $id_invoice = $dataget[1];
+    $id_invoice = $dataget[2];
     $userdata = json_decode($user['Processing_value'], true);
     if (!is_array($userdata) || ($userdata['id_invoice'] ?? null) != $id_invoice) {
         sendmessage($from_id, $textbotlang['users']['extend']['restartError'], $keyboard, 'HTML');
@@ -2261,10 +2271,11 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         'data_limit' => $userdata['data_limit'] ?? null,
         'time' => $userdata['time'] ?? null,
     ]), "id", $from_id);
-    $Balance_prim = $pricelastextend - $user['Balance'];
+    $Balance_prim = $rn_direct ? $pricelastextend : $pricelastextend - $user['Balance'];
     update("user", "Processing_value", $Balance_prim, "id", $from_id);
-    // 💰 what it lacks, for the amount screens' quote and for the payment to finish the renewal (shortfall.php)
-    sf_ctx_save($from_id, ['t' => 'renew', 'need' => sf_round($Balance_prim, $user), 'price' => $pricelastextend, 'inv' => $id_invoice, 'at' => time()]);
+    // 💰 what it lacks, for the amount screens' quote and for the payment to finish the renewal (shortfall.php);
+    // a direct payment pays the whole price and lacks nothing
+    sf_ctx_save($from_id, ['t' => $rn_direct ? 'direct' : 'renew', 'need' => sf_round($Balance_prim, $user), 'price' => $pricelastextend, 'inv' => $id_invoice, 'at' => time()]);
     // decode the shared step_payment as a LOCAL copy only - never touch how
     // $step_payment/$noCreditText themselves get built (keyboard.php), so
     // every other call site of that shared picker keeps its own unmodified
@@ -2287,7 +2298,11 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     } else {
         $extendPaymentKbJson = $step_payment;
     }
-    Editmessagetext($from_id, $message_id, topup_disc_method_caption($from_id, $user['lang'] ?? 'fa', $textbotlang), $extendPaymentKbJson);
+    if ($rn_direct) {
+        Editmessagetext($from_id, $message_id, dpay_methods_view($user, $Balance_prim, 'rn_reshow_' . $id_invoice)[0], $extendPaymentKbJson, 'HTML');
+    } else {
+        Editmessagetext($from_id, $message_id, topup_disc_method_caption($from_id, $user['lang'] ?? 'fa', $textbotlang), $extendPaymentKbJson);
+    }
     step('get_step_payment', $from_id);
     $stmt = $pdo->prepare("INSERT IGNORE INTO service_other (id_user, username,value,type,time,price,output,status) VALUES (?, ?,?, ?, ?,?,?,?)");
     $dateacc = date('Y/m/d H:i:s');
@@ -2298,7 +2313,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         "oldtime" => $DataUserOut['expire'],
         'code_product' => $prodcut['code_product'],
         'id_order' => $randomString
-    ));
+    ) + ($rn_direct ? ['direct' => 1] : []));
     $type = "extend_user";
     $status = "unpaid";
     $extend = '';
@@ -4682,6 +4697,11 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         $info_product['Volume_constraint'] = $textbotlang['users']['status']['unlimited'];
     if (intval($info_product['Service_time']) == 0)
         $info_product['Service_time'] = $textbotlang['users']['status']['unlimited'];
+    // 💳 with پرداخت مستقیم on for this path the page has the extra button (directpay.php)
+    $dp_path = (($info_product['code_product'] ?? '') === 'customvolume') ? 'cvol' : 'buy';
+    $dp_confirm_kb = dpay_path_on($user['lang'] ?? 'fa', $dp_path)
+        ? dpay_confirm_kb($user['lang'] ?? 'fa', $customer_texts ?? $textbotlang, "confirmandgetservice", "buybacktow", "dpaybuy")
+        : $payment;
     $info_product_price_product = money($info_product['price_product'], $info_product['currency'] ?? null);
     $userBalance = money($user['Balance'], currency_for_user($user));
     $replacements = [
@@ -4699,16 +4719,23 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         $textin = str_replace($textbotlang['common']['units']['gb'], "", $textin);
     }
     if (!username_method_is($marzban_list_get['MethodUsername'], 'common.labels.customUsername') && !username_method_is($marzban_list_get['MethodUsername'], 'common.labels.customUsernameRandom')) {
-        Editmessagetext($from_id, $message_id, $textin, $payment);
+        Editmessagetext($from_id, $message_id, $textin, $dp_confirm_kb);
     } else {
-        sendmessage($from_id, $textin, $payment, 'HTML');
+        sendmessage($from_id, $textin, $dp_confirm_kb, 'HTML');
     }
     step('payment', $from_id);
-} elseif ($user['step'] == "payment" && $datain == "confirmandgetservice") {
+} elseif ($user['step'] == "payment" && ($datain == "confirmandgetservice" || $datain == "dpaybuy")) {
     $userdate = json_decode($user['Processing_value'], true);
-    Editmessagetext($from_id, $message_id, $text_inline, json_encode(['inline_keyboard' => []]));
     // $pats for customm service
     $parts = explode("_", $user['Processing_value_one']);
+    // 💳 «پرداخت مستقیم» tapped on a page that no longer has it (the admin turned it off, or the path):
+    // nothing is bought from the wallet in its place
+    $dp_direct = ($datain == "dpaybuy");
+    if ($dp_direct && !dpay_path_on($user['lang'] ?? 'fa', $parts[0] == "customvolume" ? 'cvol' : 'buy')) {
+        telegram('answerCallbackQuery', ['callback_query_id' => $callback_query_id, 'text' => strip_tags(sf_text('directPayGone', $user['lang'] ?? 'fa')), 'show_alert' => true]);
+        return;
+    }
+    Editmessagetext($from_id, $message_id, $text_inline, json_encode(['inline_keyboard' => []]));
     // $partsdic for discount value
     $partsdic = explode("_", $user['Processing_value_four']);
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
@@ -4780,6 +4807,13 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     // 🧩 marked, so its renewal and its count in 📊 know what it was
     if ($parts[0] == "customvolume") {
         cvol_mark_invoice($randomString);
+    }
+    // 💳 paid directly: the whole price from a gateway, the wallet untouched (directpay.php)
+    if ($dp_direct && intval($priceproduct) != 0) {
+        if (!dpay_start_buy($user, $randomString, $priceproduct, $message_id, $username_ac)) {
+            step('home', $from_id);
+        }
+        return;
     }
     if ($priceproduct > $user['Balance'] && $user['agent'] != "n2" && intval($priceproduct) != 0) {
         // 💰 what is lacking, and a «افزایش موجودی» that carries it: the invoice

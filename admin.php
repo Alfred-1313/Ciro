@@ -5197,6 +5197,13 @@ if (!function_exists('shop_feature_status_payload')) {
         $rows[] = panel_lang_tabs($lang, "sfs_lang:%s");
         $rows[] = [$btn($extravolunme_v == 'onextra', $textbotlang['Admin']['Status']['statusVolumeExtra'], $tog('extravolunme', $extravolunme_v))];
         $rows[] = [$btn($paydirect_v == 'ondirectbuy', $textbotlang['Admin']['Status']['paydirect'], $tog('paydirect', $paydirect_v))];
+        // 💳 پرداخت مستقیم (directpay.php): off until turned on; its paths and limits sit one tap deeper
+        $dp_t = panel_texts()['Admin']['DirectPay'];
+        $dp_on = dpay_cfg($lang)['on'];
+        $rows[] = [$btn($dp_on, $dp_t['rowLabel'], "dpay|tog|{$lang}|on")];
+        if ($dp_on) {
+            $rows[] = [['text' => $dp_t['hubBtn'], 'callback_data' => "dpay|hub|{$lang}", 'style' => 'primary']];
+        }
         $rows[] = [$btn($statustimeextra_v == 'ontimeextraa', $textbotlang['Admin']['Status']['statusTimeExtra'], $tog('statustimeextra', $statustimeextra_v))];
         $rows[] = [$btn($disorderss_v == 'ondisorder', $textbotlang['keyboard']['sendDisruptionReport'], $tog('disorderss', $disorderss_v))];
         // placed right before the category row so the two read top-to-bottom in
@@ -7957,6 +7964,10 @@ if (function_exists('cvol_admin_dispatch') && cvol_admin_dispatch()) {
 if (function_exists('rbsvc_admin_dispatch') && rbsvc_admin_dispatch()) {
     return;
 }
+// directpay.php: 💳 پرداخت مستقیم - its switch in 🛒 وضعیت قابلیت‌های فروشگاه and its settings hub
+if (function_exists('dpay_admin_dispatch') && dpay_admin_dispatch()) {
+    return;
+}
 // backup_import.php: 📥 a backup handed to the bot (🗄 تنظیمات بکاپ) - one
 // message carries the whole import: the prompt, the files as they come in,
 // a password when one is asked, the last yes, then the watcher's progress.
@@ -9391,6 +9402,8 @@ if (preg_match('/^btact\|text\|([a-z]{2})\|(.+)$/', $datain, $btm) && $adminrule
         'users.Balance.chargeSuccess' => "• مبلغ واریزی: <code>{amount}</code>\n"
             . "• موجودی فعلی کاربر: <code>{balance}</code>\n"
             . "• بلوک تخفیف (وقتی تخفیف اعمال بشه، وگرنه خالیه): <code>{discount_block}</code>",
+        'users.Balance.directPayCaption' => "• مبلغی که مشتری می‌پردازد (قیمت سرویس): <code>{price}</code>\n"
+            . "\n💡 این متن بالای لیست روش‌های پرداخت میاد، وقتی مشتری «پرداخت مستقیم» رو بزنه.",
         'users.Balance.shortLine' => "• مبلغ کمبود برای این خرید: <code>{need}</code>\n"
             . "• قیمت این خرید: <code>{price}</code>\n"
             . "• موجودی فعلی کاربر: <code>{balance}</code>",

@@ -76,6 +76,7 @@ try {
         addFieldToTable($tableName, 'last_message_time', '0');
         addFieldToTable($tableName, 'Processing_value_four', '');
         addFieldToTable($tableName, 'renew_resume_ctx', '');
+        // 💳 a purchase paid directly (directpay.php) lives on the invoice below
         // 💰 what a customer lacks for a pending purchase (shortfall.php)
         addFieldToTable($tableName, 'short_ctx', null, 'TEXT NULL');
         addFieldToTable($tableName, 'username', 'none');
@@ -1528,6 +1529,8 @@ addFieldToTable("invoice", "currency", null, "VARCHAR(10) NULL");
 addFieldToTable("marzban_panel", "cvol", null, "TEXT NULL");
 addFieldToTable("invoice", "cvol", null, "VARCHAR(4) NULL");
 addFieldToTable("user", "cvol_state", null, "TEXT NULL");
+// 💳 پرداخت مستقیم (directpay.php): the invoice of a purchase paid directly, so the payment leaves the wallet alone
+addFieldToTable("invoice", "pay_direct", "0", "VARCHAR(2)");
 // ⚙️ a Rebecca panel's own service for test accounts (rbsvc.php); empty = the purchase one
 addFieldToTable("marzban_panel", "rb_test_service", null, "VARCHAR(20) NULL");
 addFieldToTable("setting", "wallet_migrated", "0", "VARCHAR(5)");

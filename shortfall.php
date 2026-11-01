@@ -88,7 +88,9 @@ if (!function_exists('sf_ctx_get')) {
         if (!($step === 'get_step_payment' || $step === 'topup_pick_method' || strpos($step, 'topup_pkg:') === 0 || strpos($step, 'topup_custom:') === 0)) {
             return false;
         }
-        return sf_ctx_get($userRow) !== null;
+        $ctx = sf_ctx_get($userRow);
+        // a direct payment (directpay.php) pays the whole price: nothing is lacking
+        return $ctx !== null && in_array($ctx['t'] ?? '', ['buy', 'renew'], true);
     }
 
     // «what is lacking is outside this method's range» - the quote under the
