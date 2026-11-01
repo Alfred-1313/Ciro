@@ -21,7 +21,7 @@ $key = (string) ($_GET['gw'] ?? $_POST['gw'] ?? '');
 $key = in_array($key, $gws, true) ? $key : ($gws[0] ?? '');
 $has = $key !== '' ? topup_gw_customizables($key) : [];
 $here = 'topuplook.php?' . http_build_query(['lang' => $lang, 'gw' => $key]);
-$colorNames = ['primary' => '🔵 ' . $t['menuColorBlue'], 'success' => '🟢 ' . $t['menuColorGreen'], 'danger' => '🔴 ' . $t['menuColorRed']];
+$colorNames = ['primary' => $t['menuColorBlue'], 'success' => $t['menuColorGreen'], 'danger' => $t['menuColorRed']];
 $b = $tx['users']['Balance'];
 
 // the texts this gateway has, in the order the customer meets them:
@@ -241,7 +241,7 @@ $activeNav = 'topuplook';
 include __DIR__ . '/inc/layout_head.php';
 echo web_lang_assets();
 $colorSel = function ($name, $cur, $default) use ($t, $colorNames) {
-    $h = '<select class="select" name="' . $name . '" style="width:auto"><option value="">' . htmlspecialchars(sprintf($t['tlColorDefault'], $colorNames[$default] ?? '⚪️')) . '</option>';
+    $h = '<select class="select" name="' . $name . '" style="width:auto"><option value="">' . htmlspecialchars(sprintf($t['tlColorDefault'], $colorNames[$default] ?? '')) . '</option>';
     foreach ($colorNames as $v => $label) {
         $h .= '<option value="' . $v . '"' . ($cur === $v ? ' selected' : '') . '>' . htmlspecialchars($label) . '</option>';
     }
@@ -249,19 +249,19 @@ $colorSel = function ($name, $cur, $default) use ($t, $colorNames) {
 };
 $posSel = fn($name, $cur) => '<select class="select" name="' . $name . '" style="width:auto"><option value="right">' . $t['menuPosRight'] . '</option><option value="left"' . ($cur === 'left' ? ' selected' : '') . '>' . $t['menuPosLeft'] . '</option></select>';
 $emojiIn = function ($name, array $style) use ($t) {
-    $h = '<input type="text" class="input" name="' . $name . '[emoji]" value="' . htmlspecialchars((string) ($style['emoji'] ?? '')) . '" style="width:64px;text-align:center" placeholder="' . (!empty($style['emojiIcon']) ? '✨' : '—') . '">';
+    $h = '<input type="text" class="input" name="' . $name . '[emoji]" value="' . htmlspecialchars((string) ($style['emoji'] ?? '')) . '" style="width:64px;text-align:center" placeholder="' . (!empty($style['emojiIcon']) ? '✦' : '—') . '">';
     if (!empty($style['emoji']) || !empty($style['emojiIcon'])) {
         $h .= ' <label class="lang-chip" style="display:inline-flex"><input type="checkbox" name="' . $name . '[emoji_del]" value="1"> ' . $t['chnEmojiDel'] . '</label>';
     }
     return $h;
 };
-$chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="checkbox" name="' . $name . '" value="1"' . ($on ? ' checked' : '') . '> ' . htmlspecialchars($label) . '</label>';
+$chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="checkbox" name="' . $name . '" value="1"' . ($on ? ' checked' : '') . '> ' . htmlspecialchars(ui_plain($label)) . '</label>';
 ?>
 
 <?= web_lang_tabs($lang, fn($code) => 'topuplook.php?' . http_build_query(['lang' => $code])) ?>
 <div class="lang-tabs fade-up">
   <?php foreach ($gws as $g): $live = gateway_allowed_for_lang($g, $lang) && gateway_globally_on($g); ?>
-    <a href="topuplook.php?<?= http_build_query(['lang' => $lang, 'gw' => $g]) ?>" class="lang-tab<?= $g === $key ? ' on' : '' ?>"><?= $live ? '' : '⚪️ ' ?><?= htmlspecialchars(trim(strip_tags((string) ($names[$g] ?? $g)))) ?></a>
+    <a href="topuplook.php?<?= http_build_query(['lang' => $lang, 'gw' => $g]) ?>" class="lang-tab<?= $g === $key ? ' on' : '' ?>"><?= $live ? '' : '⟦i:circle:muted⟧ ' ?><?= htmlspecialchars(ui_plain(trim(strip_tags((string) ($names[$g] ?? $g))))) ?></a>
   <?php endforeach; ?>
 </div>
 
@@ -273,11 +273,11 @@ $chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="checkbox
   <input type="hidden" name="gw" value="<?= htmlspecialchars($key) ?>">
 
   <div class="card" style="margin-bottom:14px">
-    <div class="card-head"><div><div class="card-title">📝 <?= $t['tlTexts'] ?></div><div class="card-subtitle"><?= $t['tlTextsSub'] ?></div></div></div>
+    <div class="card-head"><div><div class="card-title">⟦i:square-pen⟧ <?= $t['tlTexts'] ?></div><div class="card-subtitle"><?= $t['tlTextsSub'] ?></div></div></div>
     <div class="card-body">
       <?php foreach ($texts as $kind => [$lbl, $def, $popup, $hint]): $own = tl_text_own($kind, $lang, $key, $tx); ?>
         <div class="set-row" style="flex-direction:column;align-items:stretch">
-          <div><div class="set-label"><?= $own !== '' ? '✏️ ' : '' ?><?= htmlspecialchars($lbl) ?></div><?php if ($hint !== ''): ?><div class="set-hint"><?= htmlspecialchars($hint) ?></div><?php endif; ?></div>
+          <div><div class="set-label"><?= $own !== '' ? '⟦i:pencil⟧ ' : '' ?><?= htmlspecialchars($lbl) ?></div><?php if ($hint !== ''): ?><div class="set-hint"><?= htmlspecialchars($hint) ?></div><?php endif; ?></div>
           <textarea class="textarea" name="text[<?= $kind ?>]" rows="<?= $popup ? 2 : 4 ?>" placeholder="<?= htmlspecialchars(mb_substr(strip_tags((string) $def), 0, 400)) ?>"><?= htmlspecialchars($own) ?></textarea>
           <details><summary class="field-hint"><?= $t['tlShowDefault'] ?></summary><pre style="white-space:pre-wrap;font-size:.8rem;margin:6px 0"><?= htmlspecialchars((string) $def) ?></pre></details>
         </div>
@@ -287,14 +287,14 @@ $chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="checkbox
   </div>
 
   <div class="card" style="margin-bottom:14px">
-    <div class="card-head"><div><div class="card-title">🎛 <?= $t['tlSlots'] ?></div><div class="card-subtitle"><?= $t['tlSlotsSub'] ?></div></div></div>
+    <div class="card-head"><div><div class="card-title">⟦i:sliders-horizontal⟧ <?= $t['tlSlots'] ?></div><div class="card-subtitle"><?= $t['tlSlotsSub'] ?></div></div></div>
     <div class="card-body">
       <div class="tbl-wrap"><table class="tbl-xl">
         <thead><tr><th><?= $t['menuColButton'] ?></th><th><?= $t['menuColName'] ?></th><th><?= $t['menuColEmoji'] ?></th><th><?= $t['menuEmojiPos'] ?></th><th><?= $t['menuColColor'] ?></th></tr></thead>
         <tbody>
         <?php foreach (topup_slot_defs($tx) as $slot => $def): $st = topup_btnstyle_for($lang, $key, $slot); $n = "slot[$slot]"; ?>
           <tr>
-            <td class="cs"><?= htmlspecialchars((string) $def['label']) ?><div class="field-hint"><?= htmlspecialchars(strip_tags((string) ($tp['slotSectionLabel'][$def['screen']] ?? ''))) ?></div></td>
+            <td class="cs"><?= htmlspecialchars((string) $def['label']) ?><div class="field-hint"><?= htmlspecialchars(ui_plain(strip_tags((string) ($tp['slotSectionLabel'][$def['screen']] ?? '')))) ?></div></td>
             <td><input type="text" class="input" name="<?= $n ?>[name]" value="<?= htmlspecialchars((string) ($st['label'] ?? '')) ?>" placeholder="<?= htmlspecialchars((string) $def['label']) ?>" maxlength="64"></td>
             <td style="white-space:nowrap"><?= $emojiIn($n, $st) ?></td>
             <td><?= $posSel($n . '[pos]', (string) ($st['pos'] ?? '')) ?></td>
@@ -313,7 +313,7 @@ $chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="checkbox
 
   <?php $pkgs = topup_packages_for($lang, $key); ?>
   <div class="card" style="margin-bottom:14px">
-    <div class="card-head"><div><div class="card-title">📦 <?= $t['tlPackages'] ?></div><div class="card-subtitle"><?= $t['tlPackagesSub'] ?></div></div></div>
+    <div class="card-head"><div><div class="card-title">⟦i:package⟧ <?= $t['tlPackages'] ?></div><div class="card-subtitle"><?= $t['tlPackagesSub'] ?></div></div></div>
     <div class="card-body">
       <?php if (!$pkgs): ?><div class="field-hint"><?= $t['tlNoPackages'] ?></div><?php else: ?>
       <div class="tbl-wrap"><table class="tbl-xl">
@@ -335,7 +335,7 @@ $chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="checkbox
 
   <?php if ($invItems): ?>
   <div class="card" style="margin-bottom:14px">
-    <div class="card-head"><div><div class="card-title">🧾 <?= $t['tlInvoice'] ?></div><div class="card-subtitle"><?= $key === 'card' ? $t['tlInvoiceCardSub'] : $t['tlInvoiceSub'] ?></div></div></div>
+    <div class="card-head"><div><div class="card-title">⟦i:receipt-text⟧ <?= $t['tlInvoice'] ?></div><div class="card-subtitle"><?= $key === 'card' ? $t['tlInvoiceCardSub'] : $t['tlInvoiceSub'] ?></div></div></div>
     <div class="card-body">
       <div class="tbl-wrap"><table class="tbl-xl">
         <thead><tr><th><?= $t['menuColButton'] ?></th><th><?= $t['menuColName'] ?></th><th><?= $t['menuColEmoji'] ?></th><th><?= $t['menuColColor'] ?></th></tr></thead>

@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/icons.php';
+// icons in place of the ⟦i:…⟧ tokens of the page's text (icons.php)
+ob_start('ui_rich_filter');
 $pageLede = $pageLede ?? '';
 $activeNav = $activeNav ?? '';
 $showPageHead = $showPageHead ?? true;
@@ -13,36 +15,36 @@ $pageTitlePlain = ui_plain((string) $pageTitle);
 $manageItems = [
   $navItem('users.php', 'users', $navT['layoutPageTitleUsers'], 'users', $navT['layoutMenuSectionMain']),
   $navItem('invoice.php', 'invoice', $navT['layoutPageTitleInvoice'], 'invoice', $navT['layoutMenuSectionManagement']),
-  $navItem('service.php', 'service', $navT['layoutPageTitleService'], 'server', $navT['layoutMenuSectionFinancial']),
+  $navItem('service.php', 'service', $navT['layoutPageTitleService'], 'shield-check', $navT['layoutMenuSectionFinancial']),
   $navItem('product.php', 'product', $navT['layoutPageTitleProduct'], 'package', $navT['layoutMenuSectionSystem']),
   $navItem('servers.php', 'servers', $navT['srvPageTitle'], 'server', $navT['srvPageTitle']),
   // 🖥 نودهای ربکا: only where there is a Rebecca panel
-  ...((function_exists('rbn_panels') && rbn_panels()) ? [$navItem('nodes.php', 'nodes', $navT['rbnPageTitle'], 'server', $navT['rbnPageTitle'])] : []),
-  $navItem('category.php', 'category', $navT['categoryPageTitle'], 'folder', $navT['categoryPageTitle']),
-  $navItem('payg.php', 'payg', $navT['pgPageTitle'], 'chart', $navT['pgPageTitle']),
+  ...((function_exists('rbn_panels') && rbn_panels()) ? [$navItem('nodes.php', 'nodes', $navT['rbnPageTitle'], 'network', $navT['rbnPageTitle'])] : []),
+  $navItem('category.php', 'category', $navT['categoryPageTitle'], 'folders', $navT['categoryPageTitle']),
+  $navItem('payg.php', 'payg', $navT['pgPageTitle'], 'timer', $navT['pgPageTitle']),
   $navItem('bulkgift.php', 'bulkgift', $navT['bgPageTitle'], 'gift', $navT['bgPageTitle']),
 ];
 if (bulkspeed_available()) { /* 🚀 only while a panel can hold a speed limit (Rebecca) */
-  $manageItems[] = $navItem('bulkspeed.php', 'bulkspeed', $navT['bsPageTitle'], 'zap', $navT['bsPageTitle']);
+  $manageItems[] = $navItem('bulkspeed.php', 'bulkspeed', $navT['bsPageTitle'], 'gauge', $navT['bsPageTitle']);
 }
 array_push(
   $manageItems,
-  $navItem('features.php', 'features', $navT['featPageTitle'], 'settings', $navT['featPageTitle']),
-  $navItem('referral.php', 'referral', $navT['refPageTitle'], 'users', $navT['refPageTitle']),
+  $navItem('features.php', 'features', $navT['featPageTitle'], 'toggle-right', $navT['featPageTitle']),
+  $navItem('referral.php', 'referral', $navT['refPageTitle'], 'user-plus', $navT['refPageTitle']),
   $navItem('payment.php', 'payment', $navT['layoutPageTitlePayment'], 'card', $navT['layoutSearchBoxPlaceholder']),
-  $navItem('channels.php', 'channels', $navT['chnPageTitle'], 'eye', $navT['chnPageTitle']),
-  $navItem('help.php', 'help', $navT['helpPageTitle'], 'edit', $navT['helpPageTitle']),
+  $navItem('channels.php', 'channels', $navT['chnPageTitle'], 'megaphone', $navT['chnPageTitle']),
+  $navItem('help.php', 'help', $navT['helpPageTitle'], 'book-open', $navT['helpPageTitle']),
   $navItem('gateways.php', 'gateways', $navT['gwPageTitle'], 'wallet', $navT['gwPageTitle']),
-  $navItem('topuplook.php', 'topuplook', $navT['tlPageTitle'], 'invoice', $navT['tlPageTitle']),
-  $navItem('discounts.php', 'discounts', $navT['discPageTitle'], 'chart', $navT['discPageTitle']),
-  $navItem('menu.php', 'menu', $navT['menuPageTitle'], 'dashboard', $navT['menuPageTitle']),
-  $navItem('buttons.php', 'buttons', $navT['btnPageTitle'], 'package', $navT['btnPageTitle']),
-  $navItem('looks.php', 'looks', $navT['looksPageTitle'], 'menu', $navT['looksPageTitle']),
-  $navItem('svclook.php', 'svclook', $navT['svcPageTitle'], 'package', $navT['svcPageTitle']),
-  $navItem('subapps.php', 'subapps', $navT['saPageTitle'], 'package', $navT['saPageTitle']),
-  $navItem('bottext.php', 'bottext', $navT['bottextPageTitle'], 'edit', $navT['bottextPageTitle']),
-  $navItem('tools.php', 'tools', $navT['toolsPageTitle'], 'settings', $navT['toolsPageTitle']),
-  $navItem('cleanup.php', 'cleanup', $navT['clnPageTitle'], 'trash', $navT['clnPageTitle'])
+  $navItem('topuplook.php', 'topuplook', $navT['tlPageTitle'], 'message-square-text', $navT['tlPageTitle']),
+  $navItem('discounts.php', 'discounts', $navT['discPageTitle'], 'ticket-percent', $navT['discPageTitle']),
+  $navItem('menu.php', 'menu', $navT['menuPageTitle'], 'layout-grid', $navT['menuPageTitle']),
+  $navItem('buttons.php', 'buttons', $navT['btnPageTitle'], 'mouse-pointer-click', $navT['btnPageTitle']),
+  $navItem('looks.php', 'looks', $navT['looksPageTitle'], 'palette', $navT['looksPageTitle']),
+  $navItem('svclook.php', 'svclook', $navT['svcPageTitle'], 'messages-square', $navT['svcPageTitle']),
+  $navItem('subapps.php', 'subapps', $navT['saPageTitle'], 'smartphone', $navT['saPageTitle']),
+  $navItem('bottext.php', 'bottext', $navT['bottextPageTitle'], 'file-pen', $navT['bottextPageTitle']),
+  $navItem('tools.php', 'tools', $navT['toolsPageTitle'], 'wrench', $navT['toolsPageTitle']),
+  $navItem('cleanup.php', 'cleanup', $navT['clnPageTitle'], 'brush-cleaning', $navT['clnPageTitle'])
 );
 $navSections = [
   ['heading' => $navT['layoutNavKeyboard'], 'items' => [
@@ -55,6 +57,14 @@ $navSections = [
   ]],
 ];
 $brandMark = panel_brand_mark();
+$pageIcon = '';
+foreach ($navSections as $navGroup) {
+  foreach ($navGroup['items'] as $navEntry) {
+    if ($navEntry['key'] !== '' && $navEntry['key'] === $activeNav) {
+      $pageIcon = $navEntry['icon'];
+    }
+  }
+}
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -73,6 +83,7 @@ $brandMark = panel_brand_mark();
   <link rel="stylesheet" href="css/style.css?v=<?= (int) @filemtime(__DIR__ . '/../css/style.css') ?>">
   <link rel="stylesheet" href="css/shab.css?v=<?= (int) @filemtime(__DIR__ . '/../css/shab.css') ?>">
   <link rel="stylesheet" href="css/daterange.css?v=<?= (int) @filemtime(__DIR__ . '/../css/daterange.css') ?>">
+  <link rel="stylesheet" href="css/ui.css?v=<?= (int) @filemtime(__DIR__ . '/../css/ui.css') ?>">
   <script src="js/theme-init.js?v=<?= (int) @filemtime(__DIR__ . '/../js/theme-init.js') ?>"></script>
   <script>
     window.PANEL_I18N = <?= json_encode(
@@ -100,7 +111,7 @@ $brandMark = panel_brand_mark();
 <body>
 
   <div id="load-bar"></div>
-  <div id="toast-area"></div>
+  <div id="toast-area" role="status" aria-live="polite"></div>
 
   <div class="confirm-veil" id="confirm-veil">
     <div class="confirm-box">
@@ -170,7 +181,7 @@ $brandMark = panel_brand_mark();
       <header class="topbar">
         <button type="button" class="icon-btn menu-toggle" onclick="openSidebar()"
           aria-label="<?= htmlspecialchars($textbotlang['panel']['jsNavExpand']) ?>"><?= icon('menu', 18) ?></button>
-        <h1 class="topbar-title"><bdi><?= htmlspecialchars($pageTitlePlain) ?></bdi></h1>
+        <h1 class="topbar-title"><?php if ($pageIcon !== ''): ?><span class="page-ico" aria-hidden="true"><?= icon($pageIcon, 18) ?></span><?php endif; ?><bdi><?= htmlspecialchars($pageTitlePlain) ?></bdi></h1>
       </header>
       <main class="content">
         <?php if ($showPageHead && $pageLede): ?>

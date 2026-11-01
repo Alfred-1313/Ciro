@@ -72,19 +72,34 @@ window.toast = function (msg, type, dur) {
     if (!area) return;
     var el = document.createElement('div');
     el.className = 'toast toast-' + type;
+    var closeLabel = (window.t && t('jsToastClose')) || 'Close';
     el.innerHTML =
-        '<div class="toast-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<div class="toast-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
         (_TOAST_ICONS[type] || _TOAST_ICONS.info) +
         '</svg></div>' +
         '<div style="flex:1;color:var(--text2)">' + String(msg).replace(/</g, '&lt;') + '</div>' +
-        '<button class="toast-close">✕</button>';
+        '<button type="button" class="toast-close" aria-label="' + closeLabel.replace(/"/g, '&quot;') + '">' +
+        '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+    // the mark draws itself in (ui.css): each stroke measured as 1
+    el.querySelectorAll('.toast-icon svg > *').forEach(function (s) { s.setAttribute('pathLength', '1'); });
     area.appendChild(el);
-    var timer = setTimeout(function () {
+    // the time to read it runs only while it can be read: not under the pointer, not in a hidden tab
+    var left = dur, started = 0, timer = null;
+    function close() {
+        document.removeEventListener('visibilitychange', onVis);
         el.classList.add('closing');
         setTimeout(function () { el.remove(); }, 200);
-    }, dur);
+    }
+    function run() { if (timer || document.hidden || !el.isConnected) return; started = Date.now(); timer = setTimeout(close, left); }
+    function hold() { if (!timer) return; clearTimeout(timer); timer = null; left = Math.max(900, left - (Date.now() - started)); }
+    function onVis() { if (document.hidden) hold(); else run(); }
+    el.addEventListener('mouseenter', hold);
+    el.addEventListener('mouseleave', run);
+    document.addEventListener('visibilitychange', onVis);
+    run();
     el.querySelector('.toast-close').addEventListener('click', function () {
-        clearTimeout(timer);
+        hold();
+        document.removeEventListener('visibilitychange', onVis);
         el.remove();
     });
     return el;

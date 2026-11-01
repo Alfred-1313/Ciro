@@ -162,7 +162,7 @@ summary.se-sum::-webkit-details-marker{display:none}
         <select class="select" id="se-os" style="width:auto"><option value="android"><?= $t['seOsAndroid'] ?></option><option value="ios"><?= $t['seOsIos'] ?></option><option value="other"><?= $t['seOsOther'] ?></option></select></label>
       <label class="grp"><?= $t['saLookLabel'] ?>
         <select class="select" id="se-look" style="width:auto"><?php foreach (subapp_looks() as $lk => $ln): ?><option value="<?= htmlspecialchars($lk) ?>"<?= subapp_look($lang) === $lk ? ' selected' : '' ?>><?= htmlspecialchars($ln) ?></option><?php endforeach; ?></select></label>
-      <label class="grp">🌓
+      <label class="grp">⟦i:sun-moon⟧
         <select class="select" id="se-th" style="width:auto"><?php foreach (subapp_themes() as $tk => $tn): ?><option value="<?= htmlspecialchars($tk) ?>"<?= subapp_theme($lang) === $tk ? ' selected' : '' ?>><?= htmlspecialchars($tn) ?></option><?php endforeach; ?></select></label>
       <span class="sp"></span>
       <span class="se-un" id="se-un"><?= $t['seUnsaved'] ?></span>
@@ -170,22 +170,22 @@ summary.se-sum::-webkit-details-marker{display:none}
       <button type="submit" class="btn btn-primary btn-sm" style="width:auto"><?= icon('check', 13) ?> <?= $t['seSave'] ?></button>
     </div>
     <div class="se-hint">
-      <span>✋ <b><?= $t['seHintDragT'] ?></b> <?= $t['seHintDrag'] ?></span>
-      <span>↔️ <b><?= $t['seHintSizeT'] ?></b> <?= $t['seHintSize'] ?></span>
-      <span>✏️ <b><?= $t['seHintTextT'] ?></b> <?= $t['seHintText'] ?></span>
-      <span>🗑 <b><?= $t['seHintDelT'] ?></b> <?= $t['seHintDel'] ?></span>
+      <span>⟦i:hand⟧ <b><?= $t['seHintDragT'] ?></b> <?= $t['seHintDrag'] ?></span>
+      <span>⟦i:arrow-left-right⟧ <b><?= $t['seHintSizeT'] ?></b> <?= $t['seHintSize'] ?></span>
+      <span>⟦i:pencil⟧ <b><?= $t['seHintTextT'] ?></b> <?= $t['seHintText'] ?></span>
+      <span>⟦i:trash-2⟧ <b><?= $t['seHintDelT'] ?></b> <?= $t['seHintDel'] ?></span>
     </div>
     <div class="se-stage"><div class="se-frame" id="se-frame" data-dev="phone"><iframe id="se-pv" title="<?= htmlspecialchars($t['sePreview']) ?>" src="about:blank"></iframe></div></div>
   </section>
 
   <details class="card" style="margin-bottom:14px">
-    <summary class="se-sum">📝 <?= $t['seTexts'] ?> <span class="set-hint" style="font-weight:400"><?= $t['seTextsHint'] ?></span></summary>
+    <summary class="se-sum">⟦i:square-pen⟧ <?= $t['seTexts'] ?> <span class="set-hint" style="font-weight:400"><?= $t['seTextsHint'] ?></span></summary>
     <div class="card-body" style="display:flex;flex-direction:column;gap:14px;border-top:1px solid var(--bd)">
       <?php foreach ($wordGroups as $g => $words): ?>
-        <h3 style="margin:4px 2px -4px;font-size:.9rem"><?= htmlspecialchars($groupTitles[$g]) ?></h3>
+        <h3 style="margin:4px 2px -4px;font-size:.9rem"><?= htmlspecialchars(ui_plain($groupTitles[$g])) ?></h3>
         <?php foreach ($words as $w): ?>
           <div class="field se-w" data-key="<?= $w ?>" data-group="<?= $g ?>">
-            <label><?= htmlspecialchars($texts[$w]['label']) ?></label>
+            <label><?= htmlspecialchars(ui_plain($texts[$w]['label'])) ?></label>
             <textarea class="textarea" dir="auto" rows="<?= min(5, substr_count($texts[$w]['value'], "\n") + 1) ?>" name="texts[<?= $w ?>]" data-default="<?= htmlspecialchars($texts[$w]['default']) ?>"><?= htmlspecialchars($texts[$w]['value']) ?></textarea>
           </div>
         <?php endforeach; ?>

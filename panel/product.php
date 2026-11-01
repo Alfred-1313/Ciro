@@ -295,7 +295,7 @@ echo web_lang_assets();
 (function () {
   var curByLang = <?= json_encode($curByLang) ?>, curDefault = <?= json_encode(currency_default_code()) ?>;
   var resetTypes = <?= json_encode($resetPanels) ?>;
-  // 🚀 Rebecca only: its panel, or every panel while one of them is Rebecca
+  // Rebecca only: its panel, or every panel while one of them is Rebecca
   var hasRebecca = <?= json_encode(in_array('rebecca', array_column($panels, 'type'), true)) ?>;
   var $ = function (id) { return document.getElementById(id); };
   var curTouched = false;

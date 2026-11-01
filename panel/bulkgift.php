@@ -109,15 +109,15 @@ $jobs = bulkgift_active_jobs();
 $activeIds = array_map(fn($j) => (int) $j['id'], $jobs);
 $history = array_values(array_filter(bulkgift_recent(10), fn($j) => !in_array((int) $j['id'], $activeIds, true)));
 $stateName = ['queued' => $t['bgStateQueued'], 'running' => $t['bgStateRunning'], 'done' => $t['bgStateDone'], 'cancelled' => $t['bgStateCancelled']];
-$plain = fn($s) => trim(strip_tags((string) $s));
+$plain = fn($s) => ui_plain(trim(strip_tags((string) $s)));
 
 $field = function ($label, $ctl, $hint = '') {
-    return '<div class="set-row"><div><div class="set-label">' . htmlspecialchars($label) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . htmlspecialchars($hint) . '</div>' : '') . '</div><div class="set-ctl">' . $ctl . '</div></div>';
+    return '<div class="set-row"><div><div class="set-label">' . htmlspecialchars(ui_plain($label)) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . htmlspecialchars(ui_plain($hint)) . '</div>' : '') . '</div><div class="set-ctl">' . $ctl . '</div></div>';
 };
 $select = function ($name, $options, $value) {
     $h = '<select class="select" name="' . $name . '">';
     foreach ($options as $v => $label) {
-        $h .= '<option value="' . htmlspecialchars((string) $v) . '"' . ((string) $v === (string) $value ? ' selected' : '') . '>' . htmlspecialchars($label) . '</option>';
+        $h .= '<option value="' . htmlspecialchars((string) $v) . '"' . ((string) $v === (string) $value ? ' selected' : '') . '>' . htmlspecialchars(ui_plain($label)) . '</option>';
     }
     return $h . '</select>';
 };
@@ -151,7 +151,7 @@ include __DIR__ . '/inc/layout_head.php';
 <?php foreach ($jobs as $job): $jp = bulkgift_job_params($job); $live = bulkgift_is_live($jp); $counts = bulkgift_counts($job['id']);
   $done = $counts['total'] - $counts['pending'] - $counts['claimed']; $pct = $counts['total'] > 0 ? (int) floor($done * 100 / $counts['total']) : 0; ?>
 <div class="card fade-up" id="now<?= (int) $job['id'] ?>" style="margin-bottom:14px">
-  <?= $cardHead(($live ? '🔜 ' . htmlspecialchars($t['bgLiveTitle']) : '⏳ ' . htmlspecialchars($t['bgNowTitle'])), htmlspecialchars($live ? sprintf($t['bgLiveSub'], $plain(bulkgift_when($jp['win_to'] ?? time()))) : $t['bgNowSub'])) ?>
+  <?= $cardHead(($live ? '⟦i:clock⟧ ' . htmlspecialchars($t['bgLiveTitle']) : '⟦i:hourglass⟧ ' . htmlspecialchars($t['bgNowTitle'])), htmlspecialchars($live ? sprintf($t['bgLiveSub'], $plain(bulkgift_when($jp['win_to'] ?? time()))) : $t['bgNowSub'])) ?>
   <div class="card-body">
     <div class="set-row">
       <div>
@@ -195,8 +195,8 @@ include __DIR__ . '/inc/layout_head.php';
   #bgmore[open] .bg-chev { transform: rotate(180deg); }
 </style>
 <div class="card fade-up" id="form" style="margin-bottom:14px">
-  <?= $cardHead('🎁 ' . htmlspecialchars($t['bgFormTitle']), htmlspecialchars($t['bgFormSub'])) ?>
-  <details id="bgguide" class="notice" style="margin:12px 16px 0"><summary style="cursor:pointer;font-weight:700">📖 <?= htmlspecialchars($t['bgGuide']) ?></summary><div style="margin-top:8px;line-height:1.9"><?= nl2br(htmlspecialchars($t['bgGuideText'])) ?></div></details>
+  <?= $cardHead('⟦i:gift⟧ ' . htmlspecialchars($t['bgFormTitle']), htmlspecialchars($t['bgFormSub'])) ?>
+  <details id="bgguide" class="notice" style="margin:12px 16px 0"><summary style="cursor:pointer;font-weight:700">⟦i:book-open⟧ <?= htmlspecialchars($t['bgGuide']) ?></summary><div style="margin-top:8px;line-height:1.9"><?= nl2br(htmlspecialchars($t['bgGuideText'])) ?></div></details>
   <?php if ($preview !== null): ?>
     <div class="notice notice-ok" style="margin:12px 16px 0">
       <?php if ($previewLive): ?>
@@ -226,7 +226,7 @@ include __DIR__ . '/inc/layout_head.php';
     </div>
     <div data-job="camp"><?= $field($t['bgHours'], $input('hours', $raw['hours'], 'inputmode="numeric" dir="ltr" style="max-width:110px" placeholder="24"'), $t['bgHoursHint']) ?></div>
     <details id="bgmore"<?= $moreOpen ? ' open' : '' ?>>
-      <summary class="set-row" style="cursor:pointer;list-style:none"><div><div class="set-label">🎯 <?= htmlspecialchars($t['bgMore']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgMoreHint']) ?></div></div><div class="set-ctl"><span class="bg-chev" aria-hidden="true">▾</span></div></summary>
+      <summary class="set-row" style="cursor:pointer;list-style:none"><div><div class="set-label">⟦i:target⟧ <?= htmlspecialchars($t['bgMore']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgMoreHint']) ?></div></div><div class="set-ctl"><span class="bg-chev" aria-hidden="true">▾</span></div></summary>
       <div data-job="now"><?= $field($t['bgScope'], $select('scope', ['bot' => $plain($r['whoBot']), 'panel' => $plain($r['whoPanel'])], $raw['scope'])) ?></div>
       <div data-scope="bot"><?= $field($t['bgLang'], $select('lang', $langOptions, $raw['lang']), $t['bgLangHint']) ?></div>
       <div data-job="now">
@@ -241,7 +241,7 @@ include __DIR__ . '/inc/layout_head.php';
             <?php endforeach; ?>
           </div></div>
         </div>
-        <div class="set-row"><div><div class="set-label">🎁 <?= htmlspecialchars($t['bgRefs']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgRefsHint']) ?></div></div>
+        <div class="set-row"><div><div class="set-label">⟦i:gift⟧ <?= htmlspecialchars($t['bgRefs']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bgRefsHint']) ?></div></div>
           <div class="set-ctl"><label class="lang-chip" style="justify-content:center"><input type="hidden" name="refs" value="0"><input type="checkbox" name="refs" value="1"<?= $raw['refs'] === '1' ? ' checked' : '' ?>> <?= htmlspecialchars($t['bgRefsOn']) ?></label></div>
         </div>
       </div>
@@ -273,7 +273,7 @@ include __DIR__ . '/inc/layout_head.php';
 </script>
 
 <div class="card fade-up" id="history" style="margin-bottom:14px">
-  <?= $cardHead('📋 ' . htmlspecialchars($t['bgHistoryTitle']), '') ?>
+  <?= $cardHead('⟦i:clipboard-list⟧ ' . htmlspecialchars($t['bgHistoryTitle']), '') ?>
   <div class="card-body">
     <?php if (!$history): ?><div class="cf"><?= htmlspecialchars($t['bgHistoryEmpty']) ?></div><?php endif; ?>
     <?php foreach ($history as $h): $hc = bulkgift_counts($h['id']); $hr = $h['state'] === 'done' && !bulkgift_is_live(bulkgift_job_params($h)) ? count(bulkgift_retryable_ids($h['id'])) : 0; ?>
@@ -283,11 +283,11 @@ include __DIR__ . '/inc/layout_head.php';
           <div class="set-hint"><?= htmlspecialchars(sprintf($t['bgRowHint'], $stateName[$h['state']] ?? $h['state'], safe_date((int) ($h['started_at'] ?: $h['created_at']), 'Y/m/d H:i'))) ?></div>
         </div>
         <div class="set-ctl" style="text-align:end;white-space:nowrap">
-          <span title="<?= htmlspecialchars($t['bgDone']) ?>">✅ <?= number_format($hc['done']) ?></span>
-          &nbsp;<span title="<?= htmlspecialchars($t['bgSkipped']) ?>">⏭ <?= number_format($hc['skipped']) ?></span>
-          &nbsp;<span title="<?= htmlspecialchars($t['bgFailed']) ?>">❌ <?= number_format($hc['failed'] + $hc['unknown']) ?></span>
+          <span title="<?= htmlspecialchars($t['bgDone']) ?>">⟦i:circle-check:ok⟧ <?= number_format($hc['done']) ?></span>
+          &nbsp;<span title="<?= htmlspecialchars($t['bgSkipped']) ?>">⟦i:skip-forward⟧ <?= number_format($hc['skipped']) ?></span>
+          &nbsp;<span title="<?= htmlspecialchars($t['bgFailed']) ?>">⟦i:circle-x:no⟧ <?= number_format($hc['failed'] + $hc['unknown']) ?></span>
           <?php if ($hr > 0): ?>
-            <?= $formOpen(' style="display:inline-block;margin-inline-start:8px"') ?><input type="hidden" name="action" value="retry"><input type="hidden" name="id" value="<?= (int) $h['id'] ?>"><button class="btn btn-ghost btn-sm" type="submit">🔁 <?= htmlspecialchars(sprintf($t['bgRetryBtn'], number_format($hr))) ?></button></form>
+            <?= $formOpen(' style="display:inline-block;margin-inline-start:8px"') ?><input type="hidden" name="action" value="retry"><input type="hidden" name="id" value="<?= (int) $h['id'] ?>"><button class="btn btn-ghost btn-sm" type="submit">⟦i:repeat⟧ <?= htmlspecialchars(sprintf($t['bgRetryBtn'], number_format($hr))) ?></button></form>
           <?php endif; ?>
         </div>
       </div>

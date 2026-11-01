@@ -129,7 +129,7 @@ $jobs = bulkspeed_active_jobs();
 $activeIds = array_map(fn($j) => (int) $j['id'], $jobs);
 $history = array_values(array_filter(bulkspeed_recent(10), fn($j) => !in_array((int) $j['id'], $activeIds, true)));
 $stateName = ['queued' => $t['bgStateQueued'], 'running' => $t['bgStateRunning'], 'done' => $t['bgStateDone'], 'cancelled' => $t['bgStateCancelled']];
-$plain = fn($s) => trim(strip_tags((string) $s));
+$plain = fn($s) => ui_plain(trim(strip_tags((string) $s)));
 $cardHead = fn($title, $sub) => '<div class="card-head"><div><div class="card-title">' . $title . '</div><div class="card-subtitle">' . $sub . '</div></div></div>';
 $formOpen = fn($extra = '') => '<form method="POST" action="bulkspeed.php"' . $extra . '><input type="hidden" name="_csrf" value="' . csrf_token() . '">';
 // a run's settings in a line
@@ -151,7 +151,7 @@ include __DIR__ . '/inc/layout_head.php';
 <?php foreach ($jobs as $job): $counts = bulkspeed_counts($job['id']);
   $done = $counts['total'] - $counts['pending'] - $counts['claimed']; $pct = $counts['total'] > 0 ? (int) floor($done * 100 / $counts['total']) : 0; ?>
 <div class="card fade-up" id="now<?= (int) $job['id'] ?>" style="margin-bottom:14px">
-  <?= $cardHead('⏳ ' . htmlspecialchars($t['bgNowTitle']), htmlspecialchars($t['bgNowSub'])) ?>
+  <?= $cardHead('⟦i:hourglass⟧ ' . htmlspecialchars($t['bgNowTitle']), htmlspecialchars($t['bgNowSub'])) ?>
   <div class="card-body">
     <div class="set-row">
       <div>
@@ -197,14 +197,14 @@ include __DIR__ . '/inc/layout_head.php';
   $agentNames = ['n' => $textbotlang['keyboard']['normalAgent'] ?? 'n', 'n2' => $textbotlang['keyboard']['advancedAgent'] ?? 'n2'];
   $box = function ($name, $now, $typedValue) {
       $value = $typedValue !== null ? (string) $typedValue : ((float) $now > 0 ? speed_limit_store($now) : '');
-      return '<input type="text" class="input" name="' . htmlspecialchars($name) . '" value="' . htmlspecialchars($value) . '" inputmode="decimal" dir="ltr" style="max-width:130px" placeholder="♾">';
+      return '<input type="text" class="input" name="' . htmlspecialchars($name) . '" value="' . htmlspecialchars($value) . '" inputmode="decimal" dir="ltr" style="max-width:130px" placeholder="∞">';
   };
 ?>
 <div class="card fade-up" id="speeds" style="margin-bottom:14px">
-  <?= $cardHead('🚀 ' . htmlspecialchars($t['bsSpeedsTitle']), htmlspecialchars($t['bsSpeedsSub'])) ?>
+  <?= $cardHead('⟦i:rocket⟧ ' . htmlspecialchars($t['bsSpeedsTitle']), htmlspecialchars($t['bsSpeedsSub'])) ?>
   <?= $formOpen(' id="spform"') ?><input type="hidden" name="action" value="speeds">
   <div class="card-body">
-    <div class="set-row"><div><div class="set-label">🛍 <?= htmlspecialchars($t['bsSecProducts']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bsSecProductsHint']) ?></div></div></div>
+    <div class="set-row"><div><div class="set-label">⟦i:shopping-bag⟧ <?= htmlspecialchars($t['bsSecProducts']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bsSecProductsHint']) ?></div></div></div>
     <?php if (!$hubProducts): ?>
       <div class="cf"><?= htmlspecialchars($t['bsNoProducts']) ?></div>
     <?php else: ?>
@@ -223,14 +223,14 @@ include __DIR__ . '/inc/layout_head.php';
         </table>
       </div>
     <?php endif; ?>
-    <div class="set-row" style="margin-top:14px"><div><div class="set-label">🧪 <?= htmlspecialchars($t['bsSecTests']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bsSecTestsHint']) ?></div></div></div>
+    <div class="set-row" style="margin-top:14px"><div><div class="set-label">⟦i:flask-conical⟧ <?= htmlspecialchars($t['bsSecTests']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bsSecTestsHint']) ?></div></div></div>
     <?php foreach ($panels as $pn): ?>
       <div class="set-row"><div><div class="set-label"><?= htmlspecialchars((string) $pn['name_panel']) ?></div></div>
         <div class="set-ctl"><?= $box('sp_test[' . (int) $pn['id'] . ']', $pn['speed_usertest'] ?? 0, $typed['test'][(string) $pn['id']] ?? null) ?></div>
       </div>
     <?php endforeach; ?>
     <?php if ($hubRefs): ?>
-      <div class="set-row" style="margin-top:14px"><div><div class="set-label">🎁 <?= htmlspecialchars($t['bsSecRefs']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bsSecRefsHint']) ?></div></div></div>
+      <div class="set-row" style="margin-top:14px"><div><div class="set-label">⟦i:gift⟧ <?= htmlspecialchars($t['bsSecRefs']) ?></div><div class="set-hint"><?= htmlspecialchars($t['bsSecRefsHint']) ?></div></div></div>
       <?php foreach ($hubRefs as $rl => $rr): ?>
         <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($plain(bulkgift_lang_name($rl))) ?></div><div class="set-hint"><?= htmlspecialchars((string) $rr['panel']['name_panel']) ?></div></div>
           <div class="set-ctl"><?= $box('sp_ref[' . $rl . ']', $rr['speed'], $typed['ref'][$rl] ?? null) ?></div>
@@ -246,7 +246,7 @@ include __DIR__ . '/inc/layout_head.php';
 </div>
 
 <div class="card fade-up" id="form" style="margin-bottom:14px">
-  <?= $cardHead('🚀 ' . htmlspecialchars($t['bsFormTitle']), htmlspecialchars($t['bsFormSub'])) ?>
+  <?= $cardHead('⟦i:rocket⟧ ' . htmlspecialchars($t['bsFormTitle']), htmlspecialchars($t['bsFormSub'])) ?>
   <?php if ($preview !== null): ?>
     <div class="notice notice-ok" style="margin:12px 16px 0">
       <?= htmlspecialchars(sprintf($t['bsCountResult'], number_format($preview['n']))) ?>
@@ -302,7 +302,7 @@ include __DIR__ . '/inc/layout_head.php';
 <?php endif; ?>
 
 <div class="card fade-up" id="history" style="margin-bottom:14px">
-  <?= $cardHead('📋 ' . htmlspecialchars($t['bgHistoryTitle']), '') ?>
+  <?= $cardHead('⟦i:clipboard-list⟧ ' . htmlspecialchars($t['bgHistoryTitle']), '') ?>
   <div class="card-body">
     <?php if (!$history): ?><div class="cf"><?= htmlspecialchars($t['bgHistoryEmpty']) ?></div><?php endif; ?>
     <?php foreach ($history as $h): $hc = bulkspeed_counts($h['id']); $hr = $h['state'] === 'done' ? bulkspeed_failed_count($h['id']) : 0; ?>
@@ -312,11 +312,11 @@ include __DIR__ . '/inc/layout_head.php';
           <div class="set-hint"><?= htmlspecialchars(sprintf($t['bgRowHint'], $stateName[$h['state']] ?? $h['state'], safe_date((int) ($h['started_at'] ?: $h['created_at']), 'Y/m/d H:i'))) ?></div>
         </div>
         <div class="set-ctl" style="text-align:end;white-space:nowrap">
-          <span title="<?= htmlspecialchars($t['bsDone']) ?>">✅ <?= number_format($hc['done']) ?></span>
-          &nbsp;<span title="<?= htmlspecialchars($t['bgSkipped']) ?>">⏭ <?= number_format($hc['skipped']) ?></span>
-          &nbsp;<span title="<?= htmlspecialchars($t['bsFailed']) ?>">❌ <?= number_format($hc['failed']) ?></span>
+          <span title="<?= htmlspecialchars($t['bsDone']) ?>">⟦i:circle-check:ok⟧ <?= number_format($hc['done']) ?></span>
+          &nbsp;<span title="<?= htmlspecialchars($t['bgSkipped']) ?>">⟦i:skip-forward⟧ <?= number_format($hc['skipped']) ?></span>
+          &nbsp;<span title="<?= htmlspecialchars($t['bsFailed']) ?>">⟦i:circle-x:no⟧ <?= number_format($hc['failed']) ?></span>
           <?php if ($hr > 0): ?>
-            <?= $formOpen(' style="display:inline-block;margin-inline-start:8px"') ?><input type="hidden" name="action" value="retry"><input type="hidden" name="id" value="<?= (int) $h['id'] ?>"><button class="btn btn-ghost btn-sm" type="submit">🔁 <?= htmlspecialchars(sprintf($t['bgRetryBtn'], number_format($hr))) ?></button></form>
+            <?= $formOpen(' style="display:inline-block;margin-inline-start:8px"') ?><input type="hidden" name="action" value="retry"><input type="hidden" name="id" value="<?= (int) $h['id'] ?>"><button class="btn btn-ghost btn-sm" type="submit">⟦i:repeat⟧ <?= htmlspecialchars(sprintf($t['bgRetryBtn'], number_format($hr))) ?></button></form>
           <?php endif; ?>
         </div>
       </div>

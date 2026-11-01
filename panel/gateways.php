@@ -269,7 +269,7 @@ $pageLede = $t['gwPageLede'];
 $activeNav = 'gateways';
 include __DIR__ . '/inc/layout_head.php';
 echo web_lang_assets();
-$chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="hidden" name="' . $name . '" value="0"><input type="checkbox" name="' . $name . '" value="1"' . ($on ? ' checked' : '') . '> ' . htmlspecialchars($label) . '</label>';
+$chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="hidden" name="' . $name . '" value="0"><input type="checkbox" name="' . $name . '" value="1"' . ($on ? ' checked' : '') . '> ' . htmlspecialchars(ui_plain($label)) . '</label>';
 ?>
 
 <?= web_lang_tabs($lang, fn($code) => 'gateways.php?' . http_build_query(['lang' => $code])) ?>
@@ -287,27 +287,27 @@ $chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="hidden" 
 <form method="POST" action="gateways.php?<?= http_build_query(['lang' => $lang]) ?>" class="card fade-up" id="gw-<?= htmlspecialchars($key) ?>" style="margin-bottom:14px">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
   <input type="hidden" name="gw" value="<?= htmlspecialchars($key) ?>">
-  <div class="card-head"><div><div class="card-title"><?= ($offered && $globalOn) ? '✅' : '❌' ?> <?= htmlspecialchars($names[$key] ?? $key) ?></div>
+  <div class="card-head"><div><div class="card-title"><?= ($offered && $globalOn) ? '⟦i:circle-check:ok⟧' : '⟦i:circle-x:no⟧' ?> <?= htmlspecialchars(ui_plain($names[$key] ?? $key)) ?></div>
     <div class="card-subtitle"><?= ($offered && !$globalOn) ? $t['gwGlobalOffNote'] : '' ?></div></div></div>
   <div class="card-body">
     <div class="set-row"><div><div class="set-label"><?= $t['gwOffered'] ?></div><div class="set-hint"><?= $t['gwOfferedHint'] ?></div></div><div class="set-ctl"><?= $chk('offered', $offered, $t['refOn']) ?></div></div>
     <div class="set-row"><div><div class="set-label"><?= $t['gwGlobal'] ?></div><div class="set-hint"><?= $t['gwGlobalHint'] ?></div></div><div class="set-ctl"><?= $chk('global', $globalOn, $t['refOn']) ?></div></div>
     <?php foreach ($fields[$key] ?? [] as $i => $f): ?>
       <?php if ($f['type'] === 'cards'): ?>
-        <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($gl[$f['label']] ?? $f['label']) ?></div><div class="set-hint"><?= $t['gwCardsHint'] ?></div></div>
+        <div class="set-row"><div><div class="set-label"><?= htmlspecialchars(ui_plain($gl[$f['label']] ?? $f['label'])) ?></div><div class="set-hint"><?= $t['gwCardsHint'] ?></div></div>
           <div class="set-ctl"><textarea class="textarea" name="cards" rows="3" dir="ltr" placeholder="6037991122223333 | Ali"><?= htmlspecialchars(implode("\n", array_map(fn($c) => $c['number'] . (($c['name'] ?? '') !== '' ? ' | ' . $c['name'] : ''), gw_cards_has_override($lang) ? gw_cards_for_lang($lang) : []))) ?></textarea></div></div>
       <?php else: $global = gw_field_scope($f) === 'global'; $val = $global ? (string) getPaySettingValue($f['field']) : (gw_pay_override_has($f['field'], $lang) ? (string) pay_value($f['field'], $lang, '') : ''); ?>
-        <div class="set-row"><div><div class="set-label"><?= htmlspecialchars(($global ? '🌐 ' : '') . ($gl[$f['label']] ?? $f['label'])) ?></div>
+        <div class="set-row"><div><div class="set-label"><?= htmlspecialchars(($global ? '⟦i:globe⟧ ' : '') . ui_plain($gl[$f['label']] ?? $f['label'])) ?></div>
           <div class="set-hint"><?= $global ? $t['gwFieldGlobal'] : sprintf($t['gwFieldOwn'], htmlspecialchars((string) pay_value($f['field'], null, '—'))) ?></div></div>
           <div class="set-ctl"><input type="text" class="input" name="f[<?= $i ?>]" value="<?= htmlspecialchars($val) ?>" dir="auto"></div></div>
       <?php endif; ?>
     <?php endforeach; ?>
     <?php if ($key === 'card'): $help = gw_pay_override_has('helpcart', $lang) ? json_decode((string) pay_value('helpcart', $lang, ''), true) : null; ?>
-      <div class="set-row"><div><div class="set-label">💳 <?= $t['gwCardLegacy'] ?></div><div class="set-hint"><?= $t['gwCardLegacyHint'] ?></div></div>
-        <div class="set-ctl lang-chips"><?php foreach (card_legacy_toggle_fields() as $field => $def): ?><label class="lang-chip"><input type="checkbox" name="cl[<?= $field ?>]" value="1"<?= pay_value($field, $lang, $def['off']) === $def['on'] ? ' checked' : '' ?>> <?= htmlspecialchars($def['label']) ?></label><?php endforeach; ?></div></div>
+      <div class="set-row"><div><div class="set-label">⟦i:credit-card⟧ <?= $t['gwCardLegacy'] ?></div><div class="set-hint"><?= $t['gwCardLegacyHint'] ?></div></div>
+        <div class="set-ctl lang-chips"><?php foreach (card_legacy_toggle_fields() as $field => $def): ?><label class="lang-chip"><input type="checkbox" name="cl[<?= $field ?>]" value="1"<?= pay_value($field, $lang, $def['off']) === $def['on'] ? ' checked' : '' ?>> <?= htmlspecialchars(ui_plain($def['label'])) ?></label><?php endforeach; ?></div></div>
       <div class="set-row"><div><div class="set-label"><?= $t['gwCardTime'] ?></div><div class="set-hint"><?= $t['gwCardTimeHint'] ?></div></div>
         <div class="set-ctl"><input type="text" class="input" name="cl_time" value="<?= intval(pay_value('timeauto_not_verify', $lang, '0')) ?>" inputmode="numeric"></div></div>
-      <div class="set-row"><div><div class="set-label"><?= $t['gwCardHelp'] ?></div><div class="set-hint"><?= $t['gwCardHelpHint'] ?><?= is_array($help) && in_array($help['type'] ?? '', ['photo', 'video'], true) ? '<br>' . sprintf($t['gwCardHelpMedia'], $help['type'] === 'photo' ? '🖼' : '🎬') : '' ?></div></div>
+      <div class="set-row"><div><div class="set-label"><?= $t['gwCardHelp'] ?></div><div class="set-hint"><?= $t['gwCardHelpHint'] ?><?= is_array($help) && in_array($help['type'] ?? '', ['photo', 'video'], true) ? '<br>' . sprintf($t['gwCardHelpMedia'], $help['type'] === 'photo' ? '⟦i:image⟧' : '⟦i:clapperboard⟧') : '' ?></div></div>
         <div class="set-ctl"><textarea class="textarea" name="cl_help" rows="3" dir="auto"><?= htmlspecialchars((string) ($help['text'] ?? '')) ?></textarea>
           <?php if ($help !== null): ?><label class="lang-chip" style="margin-top:6px"><input type="checkbox" name="cl_help_shared" value="1"> <?= $t['gwCardHelpShared'] ?></label><?php endif; ?></div></div>
       <?php [$accOn, $accOff] = card_access_counts($lang); ?>
@@ -323,9 +323,9 @@ $chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="hidden" 
         <div class="set-ctl"><textarea class="textarea" name="cl_exc" rows="3" dir="ltr" placeholder="123456789"><?= htmlspecialchars(implode("\n", array_keys(card_exc_members($lang)))) ?></textarea></div></div>
     <?php endif; ?>
     <?php if ($key === 'ton'): $memo = topup_memo_config($lang, 'ton'); ?>
-      <div class="set-row"><div><div class="set-label">🏷 <?= $t['gwTonPrefix'] ?></div><div class="set-hint"><?= $t['gwTonPrefixHint'] ?></div></div>
+      <div class="set-row"><div><div class="set-label">⟦i:tag⟧ <?= $t['gwTonPrefix'] ?></div><div class="set-hint"><?= $t['gwTonPrefixHint'] ?></div></div>
         <div class="set-ctl"><input type="text" class="input" name="memo_prefix" value="<?= htmlspecialchars($memo['prefix']) ?>" dir="ltr" maxlength="12"></div></div>
-      <div class="set-row"><div><div class="set-label">🎲 <?= $t['gwTonLen'] ?></div><div class="set-hint"><?= $t['gwTonLenHint'] ?></div></div>
+      <div class="set-row"><div><div class="set-label">⟦i:dices⟧ <?= $t['gwTonLen'] ?></div><div class="set-hint"><?= $t['gwTonLenHint'] ?></div></div>
         <div class="set-ctl"><input type="text" class="input" name="memo_len" value="<?= (int) $memo['len'] ?>" inputmode="numeric"></div></div>
     <?php endif; ?>
     <div class="set-row"><div><div class="set-label"><?= sprintf($t['gwRange'], htmlspecialchars($curRow['title'] ?? $cur)) ?></div><div class="set-hint"><?= $t['gwRangeHint'] ?></div></div>

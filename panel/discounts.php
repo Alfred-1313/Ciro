@@ -191,8 +191,8 @@ $activeNav = 'discounts';
 include __DIR__ . '/inc/layout_head.php';
 echo web_lang_assets();
 $curTitle = htmlspecialchars(($curRow['title'] ?? $cur) . (!empty($curRow['symbol']) ? ' (' . $curRow['symbol'] . ')' : ''));
-$chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="checkbox" name="' . $name . '" value="1"' . ($on ? ' checked' : '') . '> ' . htmlspecialchars($label) . '</label>';
-$modeSel = fn($mode) => '<select class="select" name="mode" style="width:auto"><option value="percent">٪ ' . $t['discPercent'] . '</option><option value="fixed"' . ($mode === 'fixed' ? ' selected' : '') . '>💵 ' . $t['discFixed'] . '</option></select>';
+$chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="checkbox" name="' . $name . '" value="1"' . ($on ? ' checked' : '') . '> ' . htmlspecialchars(ui_plain($label)) . '</label>';
+$modeSel = fn($mode) => '<select class="select" name="mode" style="width:auto"><option value="percent">٪ ' . $t['discPercent'] . '</option><option value="fixed"' . ($mode === 'fixed' ? ' selected' : '') . '>⟦i:banknote⟧ ' . $t['discFixed'] . '</option></select>';
 $hidden = fn($a, $k) => '<input type="hidden" name="_csrf" value="' . csrf_token() . '"><input type="hidden" name="a" value="' . $a . '"><input type="hidden" name="k" value="' . htmlspecialchars($k) . '">';
 $action = 'discounts.php?' . http_build_query(['lang' => $lang]);
 $num = fn($v) => rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
@@ -219,13 +219,13 @@ $card = function (string $k, string $title, string $sub) use ($lang, $t, $faTx, 
     }
     ?>
 <div class="card fade-up" id="d-<?= htmlspecialchars(str_replace('@', 'g-', $k)) ?>" style="margin-bottom:14px">
-  <div class="card-head"><div><div class="card-title"><?= htmlspecialchars($title) ?><?= $liveAuto ? ' <span class="tag tag-ok">' . htmlspecialchars(topup_disc_admin_value_label($auto, $lang) . ($appMode !== 'all' ? ' 📦' : '')) . '</span>' : '' ?></div>
+  <div class="card-head"><div><div class="card-title"><?= htmlspecialchars($title) ?><?= $liveAuto ? ' <span class="tag tag-ok">' . htmlspecialchars(topup_disc_admin_value_label($auto, $lang) . ($appMode !== 'all' ? ' ⟦i:package⟧' : '')) . '</span>' : '' ?></div>
     <div class="card-subtitle"><?= $sub ?></div></div></div>
   <div class="card-body">
     <form method="POST" action="<?= $action ?>">
       <?= $hidden('auto', $k) ?>
       <input type="hidden" name="days_was" value="<?= $days ?>">
-      <div class="set-row"><div><div class="set-label">🎯 <?= $t['discAuto'] ?></div><div class="set-hint"><?= $t['discAutoHint'] ?></div></div><div class="set-ctl"><?= $chk('enabled', !empty($auto['enabled']), $t['refOn']) ?></div></div>
+      <div class="set-row"><div><div class="set-label">⟦i:target⟧ <?= $t['discAuto'] ?></div><div class="set-hint"><?= $t['discAutoHint'] ?></div></div><div class="set-ctl"><?= $chk('enabled', !empty($auto['enabled']), $t['refOn']) ?></div></div>
       <?php if (empty($auto['enabled']) && (float) ($auto['value'] ?? 0) > 0): ?><div class="notice notice-warn"><?= $t['discValueOff'] ?></div><?php endif; ?>
       <div class="set-row"><div><div class="set-label"><?= $t['discValue'] ?></div><div class="set-hint"><?= $t['discValueHint'] ?></div></div>
         <div class="set-ctl" style="display:flex;gap:6px"><?= $modeSel($auto['mode'] ?? 'percent') ?><input type="text" class="input" name="value" value="<?= $num($auto['value'] ?? 0) ?>" inputmode="decimal"></div></div>
@@ -236,7 +236,7 @@ $card = function (string $k, string $title, string $sub) use ($lang, $t, $faTx, 
       <div class="set-row"><div><div class="set-label"><?= $t['discPerUser'] ?></div><div class="set-hint"><?= $t['discPerUserHint'] ?></div></div>
         <div class="set-ctl"><input type="text" class="input" name="per_user" value="<?= (int) ($auto['limitPerUser'] ?? 1) ?>" inputmode="numeric"></div></div>
       <div class="set-row"><div><div class="set-label"><?= $t['discNewOnly'] ?></div><div class="set-hint"><?= $t['discNewOnlyHint'] ?></div></div><div class="set-ctl"><?= $chk('new_only', !empty($auto['newUserOnly']), $t['refOn']) ?></div></div>
-      <div class="set-row"><div><div class="set-label">📦 <?= $t['discApplies'] ?></div><div class="set-hint"><?= $t['discAppliesHint'] ?></div></div>
+      <div class="set-row"><div><div class="set-label">⟦i:package⟧ <?= $t['discApplies'] ?></div><div class="set-hint"><?= $t['discAppliesHint'] ?></div></div>
         <div class="set-ctl" style="display:flex;gap:6px;flex-wrap:wrap">
           <select class="select" name="applies" style="width:auto" onchange="this.form.applies_amount.hidden = this.value !== 'one'">
             <option value="all"<?= $appMode === 'all' ? ' selected' : '' ?>><?= $t['discAppliesAll'] ?></option>
@@ -253,10 +253,10 @@ $card = function (string $k, string $title, string $sub) use ($lang, $t, $faTx, 
     </form>
     <form method="POST" action="<?= $action ?>" onsubmit="return confirm(<?= htmlspecialchars(json_encode($t['discResetUsageConfirm'], JSON_UNESCAPED_UNICODE)) ?>)" style="display:flex;justify-content:flex-end;padding-top:6px">
       <?= $hidden('resetusage', $k) ?>
-      <button type="submit" class="btn btn-ghost btn-sm">🔁 <?= $t['discResetUsage'] ?></button>
+      <button type="submit" class="btn btn-ghost btn-sm">⟦i:repeat⟧ <?= $t['discResetUsage'] ?></button>
     </form>
 
-    <div class="set-row" style="margin-top:10px"><div><div class="set-label">🎟 <?= $t['discCodes'] ?></div><div class="set-hint"><?= $t['discCodesHint'] ?></div></div></div>
+    <div class="set-row" style="margin-top:10px"><div><div class="set-label">⟦i:ticket⟧ <?= $t['discCodes'] ?></div><div class="set-hint"><?= $t['discCodesHint'] ?></div></div></div>
     <?php if (!$codes): ?><div class="field-hint"><?= $t['discNoCodes'] ?></div><?php endif; ?>
     <?php foreach ($codes as $i => $c):
       $st = topup_disc_code_status($c);

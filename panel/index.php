@@ -118,7 +118,7 @@ $statBtn = function (string $key, int $base) use ($textbotlang, $lang) {
         . '<input type="hidden" name="back" value="dash"><input type="hidden" name="key" value="' . $key . '"><input type="hidden" name="act" value="' . $act . '">'
         . ($lang !== '' ? '<input type="hidden" name="lang" value="' . htmlspecialchars($lang) . '">' : '')
         . '<button type="submit" title="' . htmlspecialchars($title) . '" aria-label="' . htmlspecialchars($title) . '">' . $label . '</button></form>';
-    return ($base > 0 ? $form('clear', '↩︎', $t['clnStatBack'], '') : '') . $form('reset', '↺', $t['clnStatReset'], $t['clnStatConfirm']);
+    return ($base > 0 ? $form('clear', '⟦i:undo-2⟧', $t['clnStatBack'], '') : '') . $form('reset', '⟦i:rotate-ccw⟧', $t['clnStatReset'], $t['clnStatConfirm']);
 };
 $statSince = fn(int $base, bool $lead = true) => $base > 0 ? ' <span class="stat-since">' . ($lead ? '· ' : '') . htmlspecialchars(sprintf($textbotlang['panel']['clnStatSince'], safe_date($base, 'Y/m/d H:i'))) . '</span>' : '';
 ?>
@@ -134,7 +134,7 @@ $statSince = fn(int $base, bool $lead = true) => $base > 0 ? ' <span class="stat
 
 <div class="stats fade-up">
     <div class="stat">
-        <div class="stat-label"><?= $textbotlang['panel']['dashTotalUsers'] ?></div>
+        <div class="stat-label">⟦i:users⟧ <?= $textbotlang['panel']['dashTotalUsers'] ?></div>
         <div class="stat-num"><?= number_format($totalUsers) ?></div>
         <div class="stat-meta"><?= $dr['active']
             ? ($newInRange > 0 ? '<span class="up">+' . number_format($newInRange) . '</span> ' . htmlspecialchars(dr_text($dr)) : htmlspecialchars(dr_text($dr)) . ' · ' . $textbotlang['panel']['dashNoChange'])
@@ -143,19 +143,19 @@ $statSince = fn(int $base, bool $lead = true) => $base > 0 ? ' <span class="stat
     </div>
     <div class="stat ok">
         <?= $statBtn('rev', $baseRev) ?>
-        <div class="stat-label"><?= $textbotlang['panel']['dashTotalRevenue'] ?></div>
+        <div class="stat-label">⟦i:coins⟧ <?= $textbotlang['panel']['dashTotalRevenue'] ?></div>
         <div class="stat-num"<?= count($totalRevenue) > 1 ? ' style="font-size:1.15rem;line-height:1.6"' : '' ?>><?= web_money_lines($totalRevenue) ?></div>
         <div class="stat-meta"><?= $dr['active'] ? htmlspecialchars(dr_text($dr)) . ' · ' : '' ?><?= $textbotlang['panel']['dashTotalSales'] ?><?= $statSince($baseRev) ?></div>
     </div>
     <div class="stat warn">
         <?= $statBtn('act', $baseAct) ?>
-        <div class="stat-label"><?= $textbotlang['panel']['dashActiveService'] ?></div>
+        <div class="stat-label">⟦i:shield-check⟧ <?= $textbotlang['panel']['dashActiveService'] ?></div>
         <div class="stat-num"><?= number_format($activeNow) ?></div>
         <?php if ($baseAct > 0): ?><div class="stat-meta"><?= $statSince($baseAct, false) ?></div><?php endif; ?>
     </div>
     <div class="stat <?= $pendingPay > 0 ? 'no' : '' ?>">
         <?= $pendingPay > 0 ? '' : $statBtn('tx', $baseTx) ?>
-        <div class="stat-label"><?= $pendingPay > 0 ? $textbotlang['panel']['dashPendingPayment'] : $textbotlang['panel']['dashTodayTransaction'] ?></div>
+        <div class="stat-label"><?= $pendingPay > 0 ? '⟦i:hourglass:warn⟧ ' . $textbotlang['panel']['dashPendingPayment'] : '⟦i:receipt-text⟧ ' . $textbotlang['panel']['dashTodayTransaction'] ?></div>
         <div class="stat-num" style="<?= $pendingPay > 0 ? 'color:var(--no)' : '' ?>">
             <?= number_format($pendingPay > 0 ? $pendingPay : ($dr['active'] ? $txInRange : $txToday)) ?>
         </div>
@@ -165,7 +165,7 @@ $statSince = fn(int $base, bool $lead = true) => $base > 0 ? ' <span class="stat
     </div>
     <?php if ($paygEver > 0): ?>
     <div class="stat">
-        <div class="stat-label"><a href="payg.php<?= $langQ ?>" style="color:inherit"><?= htmlspecialchars($textbotlang['panel']['pgPageTitle']) ?></a></div>
+        <div class="stat-label"><a href="payg.php<?= $langQ ?>" style="color:inherit">⟦i:timer⟧ <?= htmlspecialchars($textbotlang['panel']['pgPageTitle']) ?></a></div>
         <div class="stat-num"<?= count($paygIncome) > 1 ? ' style="font-size:1.15rem;line-height:1.6"' : '' ?>><?= web_money_lines($paygIncome) ?></div>
         <div class="stat-meta"><?= htmlspecialchars(sprintf($textbotlang['panel']['pgDashMeta'], number_format($paygOpen))) ?></div>
     </div>

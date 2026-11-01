@@ -14,13 +14,13 @@ $t = $textbotlang['panel'];
 $fa = lang_tab_texts('fa');
 $lang = web_lang_pick();
 $kinds = [
-    'panel' => '🖥 ' . $t['looksPanel'],
-    'category' => '🗂 ' . $t['looksCategory'],
-    'product' => '🛍 ' . $t['looksProduct'],
-    'gateway' => '💳 ' . $t['looksGateway'],
-    'langpick' => '🌐 ' . $t['looksLangpick'],
-    'categories' => '📚 ' . $t['looksHelpCats'],
-    'tutorials' => '📘 ' . $t['looksHelpTuts'],
+    'panel' => '⟦i:monitor⟧ ' . $t['looksPanel'],
+    'category' => '⟦i:folder-kanban⟧ ' . $t['looksCategory'],
+    'product' => '⟦i:shopping-bag⟧ ' . $t['looksProduct'],
+    'gateway' => '⟦i:credit-card⟧ ' . $t['looksGateway'],
+    'langpick' => '⟦i:globe⟧ ' . $t['looksLangpick'],
+    'categories' => '⟦i:book-open⟧ ' . $t['looksHelpCats'],
+    'tutorials' => '⟦i:book-text⟧ ' . $t['looksHelpTuts'],
 ];
 $kind = (string) ($_GET['kind'] ?? $_POST['kind'] ?? '');
 $kind = isset($kinds[$kind]) ? $kind : 'panel';
@@ -30,7 +30,7 @@ foreach (help_layout_items($lang, $kind) as $k => $label) {
 }
 $section = help_layout_section($lang, $kind);
 $ordered = array_map('strval', help_layout_apply_order(array_keys($items), $section['order']));
-$colors = ['' => $t['menuColorDefault'], 'primary' => '🔵 ' . $t['menuColorBlue'], 'success' => '🟢 ' . $t['menuColorGreen'], 'danger' => '🔴 ' . $t['menuColorRed']];
+$colors = ['' => $t['menuColorDefault'], 'primary' => $t['menuColorBlue'], 'success' => $t['menuColorGreen'], 'danger' => $t['menuColorRed']];
 $here = 'looks.php?' . http_build_query(['lang' => $lang, 'kind' => $kind]);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -168,7 +168,7 @@ $rowsNow = help_layout_chunk_rows($ordered, array_combine($ordered, $ordered) ?:
 // what the customer reads on a button: its emoji (✨ = premium) and its name
 $face = function ($key) use ($items, $section) {
     $e = help_layout_emoji_prefix($key, $section);
-    return $e['prefix'] . ($section['rename'][$key] ?? $items[$key]) . ($e['icon'] !== '' ? ' ✨' : '');
+    return $e['prefix'] . ($section['rename'][$key] ?? $items[$key]) . ($e['icon'] !== '' ? ' ⟦i:sparkles:accent⟧' : '');
 };
 ?>
 
@@ -186,7 +186,7 @@ $face = function ($key) use ($items, $section) {
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
   <input type="hidden" name="kind" value="<?= $kind ?>">
   <div class="card" style="margin-bottom:14px">
-    <div class="card-head"><div><div class="card-title">🧩 <?= $t['menuArrange'] ?></div><div class="card-subtitle"><?= $t['menuArrangeSub'] ?></div></div></div>
+    <div class="card-head"><div><div class="card-title">⟦i:puzzle⟧ <?= $t['menuArrange'] ?></div><div class="card-subtitle"><?= $t['menuArrangeSub'] ?></div></div></div>
     <div class="card-body">
       <div class="kb-grid">
         <?php foreach ($rowsNow as $r => $row): ?>
@@ -194,7 +194,7 @@ $face = function ($key) use ($items, $section) {
             <?php foreach ($row as $key): $key = (string) $key; $i = array_search($key, $ordered, true); $c = ['primary' => '#2b6ef2', 'success' => '#16a34a', 'danger' => '#dc2626'][$section['color'][$key] ?? ''] ?? ''; $off = !empty($section['hidden'][$key]); ?>
               <div class="kb-chip<?= $c === '' ? ' plain' : '' ?><?= $off ? ' off' : '' ?>" draggable="true"<?= $c !== '' ? ' style="background:' . $c . '"' : '' ?>>
                 <input type="hidden" name="it[<?= $i ?>][key]" value="<?= htmlspecialchars($key) ?>"><input type="hidden" name="it[<?= $i ?>][row]" value="<?= $r + 1 ?>" class="kb-rowin">
-                <?= $off ? '🚫 ' : '' ?><?= htmlspecialchars($face($key)) ?>
+                <?= $off ? '⟦i:eye-off:muted⟧ ' : '' ?><?= htmlspecialchars($face($key)) ?>
               </div>
             <?php endforeach; ?>
             <?php if (count($row) < 2): ?><div class="kb-slot">＋</div><?php endif; ?>
@@ -206,7 +206,7 @@ $face = function ($key) use ($items, $section) {
   </div>
 
   <div class="card">
-    <div class="card-head"><div><div class="card-title">🔘 <?= $t['menuButtons'] ?></div><div class="card-subtitle"><?= $t['menuButtonsSub'] ?></div></div></div>
+    <div class="card-head"><div><div class="card-title">⟦i:circle-dot⟧ <?= $t['menuButtons'] ?></div><div class="card-subtitle"><?= $t['menuButtonsSub'] ?></div></div></div>
     <div class="card-body">
       <div class="tbl-wrap"><table class="tbl-xl">
         <thead><tr><th><?= $t['menuColButton'] ?></th><th><?= $t['menuColName'] ?></th><th><?= $t['menuColEmoji'] ?></th><th><?= $t['menuColColor'] ?></th><th><?= $t['menuColHidden'] ?></th></tr></thead>
@@ -215,7 +215,7 @@ $face = function ($key) use ($items, $section) {
           <tr>
             <td class="cs"><?= htmlspecialchars($items[$key]) ?></td>
             <td><input type="text" class="input" name="<?= $n ?>[name]" value="<?= htmlspecialchars((string) ($section['rename'][$key] ?? '')) ?>" placeholder="<?= htmlspecialchars($items[$key]) ?>" maxlength="150"></td>
-            <td style="white-space:nowrap"><input type="text" class="input" name="<?= $n ?>[emoji]" value="<?= htmlspecialchars((string) ($section['emoji'][$key] ?? '')) ?>" style="width:64px;text-align:center" placeholder="<?= $icon ? '✨' : '—' ?>">
+            <td style="white-space:nowrap"><input type="text" class="input" name="<?= $n ?>[emoji]" value="<?= htmlspecialchars((string) ($section['emoji'][$key] ?? '')) ?>" style="width:64px;text-align:center" placeholder="<?= $icon ? '✦' : '—' ?>">
               <?php if ($icon || !empty($section['emoji'][$key])): ?><label class="lang-chip" style="display:inline-flex;margin-top:4px"><input type="checkbox" name="<?= $n ?>[emoji_del]" value="1"> <?= $t['chnEmojiDel'] ?></label><?php endif; ?></td>
             <td><select class="select" name="<?= $n ?>[style]"><?php foreach ($colors as $v => $label): ?><option value="<?= $v ?>"<?= (string) ($section['color'][$key] ?? '') === $v ? ' selected' : '' ?>><?= htmlspecialchars($label) ?></option><?php endforeach; ?></select></td>
             <td><label class="lang-chip"><input type="hidden" name="<?= $n ?>[hidden]" value="0"><input type="checkbox" name="<?= $n ?>[hidden]" value="1"<?= !empty($section['hidden'][$key]) ? ' checked' : '' ?>> <?= $t['menuHidden'] ?></label></td>
@@ -228,13 +228,13 @@ $face = function ($key) use ($items, $section) {
       <?php if ($kind === 'gateway'): $famTx = lang_tab_texts($lang); ?>
         <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($fa['Admin']['BtnStyle']['groupMethodsBtn']) ?></div><div class="set-hint"><?= $t['looksGroupsHint'] ?></div></div>
           <div class="set-ctl"><label class="lang-chip"><input type="checkbox" name="groups" value="1"<?= topup_group_methods_on($lang) ? ' checked' : '' ?>> <?= $t['refOn'] ?></label></div></div>
-        <div class="set-row" style="flex-direction:column;align-items:stretch"><div><div class="set-label">🗂 <?= $t['looksFamilies'] ?></div><div class="set-hint"><?= $t['looksFamiliesHint'] ?></div></div>
+        <div class="set-row" style="flex-direction:column;align-items:stretch"><div><div class="set-label">⟦i:folder-kanban⟧ <?= $t['looksFamilies'] ?></div><div class="set-hint"><?= $t['looksFamiliesHint'] ?></div></div>
           <div class="tbl-wrap"><table class="tbl-xl"><tbody>
           <?php foreach (array_keys(gateway_groups()) as $group): $fs = topup_group_btnstyle_for($lang, $group); $fname = trim(strip_tags((string) gateway_group_label($group, $famTx))); ?>
             <tr>
               <td class="cs"><?= htmlspecialchars($fname) ?></td>
               <td><input type="text" class="input" name="fam[<?= $group ?>][name]" value="<?= htmlspecialchars((string) ($fs['label'] ?? '')) ?>" placeholder="<?= htmlspecialchars($fname) ?>" maxlength="64"></td>
-              <td><select class="select" name="fam[<?= $group ?>][color]"><?php foreach (['primary' => '🔵 ' . $t['menuColorBlue'], 'success' => '🟢 ' . $t['menuColorGreen'], 'danger' => '🔴 ' . $t['menuColorRed']] as $v => $label): ?><option value="<?= $v ?>"<?= (string) ($fs['color'] ?? 'primary') === $v ? ' selected' : '' ?>><?= htmlspecialchars($label) ?></option><?php endforeach; ?></select></td>
+              <td><select class="select" name="fam[<?= $group ?>][color]"><?php foreach (['primary' => $t['menuColorBlue'], 'success' => $t['menuColorGreen'], 'danger' => $t['menuColorRed']] as $v => $label): ?><option value="<?= $v ?>"<?= (string) ($fs['color'] ?? 'primary') === $v ? ' selected' : '' ?>><?= htmlspecialchars($label) ?></option><?php endforeach; ?></select></td>
             </tr>
           <?php endforeach; ?>
           </tbody></table></div>

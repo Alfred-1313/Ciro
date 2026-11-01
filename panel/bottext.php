@@ -170,7 +170,7 @@ $groupName = function ($g) use ($bt, $captionOf, $t) {
         return $t['bottextHomeGroup'];
     }
     $cap = (string) ($bt[$captionOf[$g] ?? ''] ?? $g);
-    return trim(preg_replace('/\s*—?\s*\{lang\}/u', '', strip_tags(strtok($cap, "\n"))));
+    return ui_plain(trim(preg_replace('/\s*—?\s*\{lang\}/u', '', strip_tags(strtok($cap, "\n")))));
 };
 
 $group = $_GET['group'] ?? '*';
@@ -267,20 +267,20 @@ echo web_lang_assets();
                     </div>
                 <?php endif; ?>
                 <?php if ($group === 'account'): ?>
-                    <div class="field-hint">🔘 <?= $t['acTopupBtnHint'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-at"><?= $t['acTopupBtnLink'] ?></a></div>
+                    <div class="field-hint">⟦i:circle-dot⟧ <?= $t['acTopupBtnHint'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-at"><?= $t['acTopupBtnLink'] ?></a></div>
                 <?php endif; ?>
                 <?php if ($group === 'subapps'): $curLook = subapp_look($lang); ?>
-                    <div class="field-hint">📲 <?= $t['saLinkHint'] ?> <a href="subapps.php?<?= http_build_query(['lang' => $lang]) ?>"><?= $t['saLinkText'] ?></a></div>
+                    <div class="field-hint">⟦i:smartphone⟧ <?= $t['saLinkHint'] ?> <a href="subapps.php?<?= http_build_query(['lang' => $lang]) ?>"><?= $t['saLinkText'] ?></a></div>
                     <div class="field">
                         <label><?= $t['saLookLabel'] ?></label>
                         <div class="lang-chips">
                             <?php foreach (subapp_looks() as $lk => $ln): ?>
                                 <label class="lang-chip"><input type="radio" name="subapp_look" value="<?= htmlspecialchars($lk) ?>"<?= $curLook === $lk ? ' checked' : '' ?>> <?= htmlspecialchars($ln) ?>
-                                    <a href="<?= htmlspecialchars(subapp_preview_link($lk, $lang)) ?>" target="_blank" rel="noopener noreferrer">👁 <?= $t['saLookPreview'] ?></a></label>
+                                    <a href="<?= htmlspecialchars(subapp_preview_link($lk, $lang)) ?>" target="_blank" rel="noopener noreferrer">⟦i:eye⟧ <?= $t['saLookPreview'] ?></a></label>
                             <?php endforeach; ?>
                         </div>
                         <div class="field-hint"><?= $t['saLookHint'] ?></div>
-                        <label style="margin-top:10px">🌓 <?= $t['saThemeLabel'] ?></label>
+                        <label style="margin-top:10px">⟦i:sun-moon⟧ <?= $t['saThemeLabel'] ?></label>
                         <div class="lang-chips">
                             <?php foreach (subapp_themes() as $tk => $tn): ?>
                                 <label class="lang-chip"><input type="radio" name="subapp_theme" value="<?= htmlspecialchars($tk) ?>"<?= subapp_theme($lang) === $tk ? ' checked' : '' ?>> <?= htmlspecialchars($tn) ?></label>
@@ -291,16 +291,16 @@ echo web_lang_assets();
                 <?php endif; ?>
                 <?php $sub = ''; $sec = ''; foreach ($visible as $key => $v): $k = htmlspecialchars($key); ?>
                     <?php if ($v['sub'] !== '' && $v['sub'] !== $sub): $sub = $v['sub']; ?>
-                        <h3 style="margin:6px 2px -6px;font-size:.95rem"><?= htmlspecialchars($paygSubs[$sub]['label']) ?></h3>
+                        <h3 style="margin:6px 2px -6px;font-size:.95rem"><?= htmlspecialchars(ui_plain($paygSubs[$sub]['label'])) ?></h3>
                     <?php endif; ?>
                     <?php if ($v['sec'] !== '' && $v['sec'] !== $sec): $sec = $v['sec']; ?>
-                        <h3 style="margin:6px 2px -6px;font-size:.95rem"><?= htmlspecialchars($bt['msSections'][$sec] ?? bt_section_meta($sec)['label']) ?></h3>
+                        <h3 style="margin:6px 2px -6px;font-size:.95rem"><?= htmlspecialchars(ui_plain($bt['msSections'][$sec] ?? bt_section_meta($sec)['label'])) ?></h3>
                         <?php if ($sec === 'myservices_screen'): ?>
-                            <div class="field-hint">🔘 <a href="svclook.php?<?= http_build_query(['lang' => $lang, 'part' => 'status']) ?>"><?= htmlspecialchars($bt['msSections']['myservices_screenBtns']) ?></a></div>
+                            <div class="field-hint">⟦i:circle-dot⟧ <a href="svclook.php?<?= http_build_query(['lang' => $lang, 'part' => 'status']) ?>"><?= htmlspecialchars(ui_plain($bt['msSections']['myservices_screenBtns'])) ?></a></div>
                         <?php elseif ($sec === 'subapps_entry'): ?>
-                            <div class="field-hint">🔘 <?= $t['saEntryBtnsHint'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-gb"><?= $t['saEntryBtnsLink'] ?></a></div>
+                            <div class="field-hint">⟦i:circle-dot⟧ <?= $t['saEntryBtnsHint'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-gb"><?= $t['saEntryBtnsLink'] ?></a></div>
                         <?php elseif ($sec === 'subapps_list'): ?>
-                            <div class="field-hint">🔘 <?= $t['saListBtnsHint'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-kb"><?= $t['saListBtnsLink'] ?></a></div>
+                            <div class="field-hint">⟦i:circle-dot⟧ <?= $t['saListBtnsHint'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-kb"><?= $t['saListBtnsLink'] ?></a></div>
                         <?php endif; ?>
                     <?php endif; ?>
                     <?php bt_web_field($key, $v, $lang, $t, $isAlert, $switchable, $canReact, $noSticker); ?>

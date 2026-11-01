@@ -194,8 +194,8 @@ $v = [
 ];
 $apps = app_rows_for_lang($lang);
 
-$chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="hidden" name="' . $name . '" value="0"><input type="checkbox" name="' . $name . '" value="1"' . ($on ? ' checked' : '') . '> ' . htmlspecialchars($label) . '</label>';
-$field = fn($label, $ctl, $hint = '') => '<div class="set-row"><div><div class="set-label">' . htmlspecialchars($label) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . $hint . '</div>' : '') . '</div><div class="set-ctl">' . $ctl . '</div></div>';
+$chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="hidden" name="' . $name . '" value="0"><input type="checkbox" name="' . $name . '" value="1"' . ($on ? ' checked' : '') . '> ' . htmlspecialchars(ui_plain($label)) . '</label>';
+$field = fn($label, $ctl, $hint = '') => '<div class="set-row"><div><div class="set-label">' . htmlspecialchars(ui_plain($label)) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . ui_plain($hint) . '</div>' : '') . '</div><div class="set-ctl">' . $ctl . '</div></div>';
 $input = fn($name, $value, $extra = '') => '<input type="text" class="input" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '" ' . $extra . '>';
 $cardHead = fn($title, $sub) => '<div class="card-head"><div><div class="card-title">' . $title . '</div><div class="card-subtitle">' . $sub . '</div></div></div>';
 $formOpen = fn($card, $extra = '') => '<form method="POST" action="features.php?' . http_build_query(['lang' => $lang]) . '"' . $extra . '><input type="hidden" name="_csrf" value="' . csrf_token() . '"><input type="hidden" name="card" value="' . $card . '">';
@@ -212,7 +212,7 @@ echo web_lang_assets();
 <?= web_lang_tabs($lang, fn($code) => 'features.php?' . http_build_query(['lang' => $code])) ?>
 
 <div class="card fade-up" id="switches" style="margin-bottom:14px">
-  <?= $cardHead('🌐 ' . $t['featSwitchesTitle'], sprintf($t['featSwitchesSub'], htmlspecialchars($langName))) ?>
+  <?= $cardHead('⟦i:globe⟧ ' . $t['featSwitchesTitle'], sprintf($t['featSwitchesSub'], htmlspecialchars($langName))) ?>
   <?= $formOpen('switches') ?>
   <div class="card-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px">
     <?php foreach ($switches as $key => [$on, $off, $label]): ?>
@@ -223,7 +223,7 @@ echo web_lang_assets();
 </div>
 
 <div class="card fade-up" id="shop" style="margin-bottom:14px">
-  <?= $cardHead('🛒 ' . $t['featShopTitle'], sprintf($t['featShopSub'], htmlspecialchars($langName))) ?>
+  <?= $cardHead('⟦i:shopping-cart⟧ ' . $t['featShopTitle'], sprintf($t['featShopSub'], htmlspecialchars($langName))) ?>
   <?= $formOpen('shop') ?>
   <div class="card-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px">
     <?php foreach ($shopSwitches as $key => [$on, $off, $label]): ?>
@@ -234,7 +234,7 @@ echo web_lang_assets();
 </div>
 
 <div class="card fade-up" id="phone" style="margin-bottom:14px">
-  <?= $cardHead('📞 ' . $t['featPhoneTitle'], $t['featPhoneSub']) ?>
+  <?= $cardHead('⟦i:phone⟧ ' . $t['featPhoneTitle'], $t['featPhoneSub']) ?>
   <?= $formOpen('phone') ?>
   <div class="card-body">
     <?= $field($t['featPhonePrefix'], $input('phone_prefix', $v['phone'], 'dir="ltr" placeholder="98, 1, 44"'), $t['featPhonePrefixHint']) ?>
@@ -245,12 +245,12 @@ echo web_lang_assets();
 </div>
 
 <div class="card fade-up" id="apps" style="margin-bottom:14px">
-  <?= $cardHead('🔗 ' . $t['featAppsTitle'], $t['featAppsSub']) ?>
+  <?= $cardHead('⟦i:link⟧ ' . $t['featAppsTitle'], $t['featAppsSub']) ?>
   <div class="card-body">
     <?php if (!$apps): ?><div class="cf"><?= $t['featAppsNone'] ?></div><?php endif; ?>
     <?php foreach ($apps as $a): $shared = count(app_row_langs($a)) > 1; ?>
       <div class="set-row">
-        <div><div class="set-label"><?= ($shared ? '🌍 ' : '') . htmlspecialchars($a['name']) ?></div><div class="set-hint" dir="ltr"><?= htmlspecialchars($a['link']) ?></div></div>
+        <div><div class="set-label"><?= ($shared ? '⟦i:earth⟧ ' : '') . htmlspecialchars($a['name']) ?></div><div class="set-hint" dir="ltr"><?= htmlspecialchars($a['link']) ?></div></div>
         <div class="set-ctl" style="display:flex;gap:6px">
           <?= $formOpen('appedit', ' style="display:flex;gap:6px;flex:1"') ?><input type="hidden" name="app_id" value="<?= (int) $a['id'] ?>"><input type="text" class="input" name="app_link" value="<?= htmlspecialchars($a['link']) ?>" dir="ltr"><button class="btn btn-ghost btn-sm" type="submit"><?= icon('check', 13) ?></button></form>
           <?= $formOpen('appdel', ' onsubmit="return confirm(' . htmlspecialchars(json_encode($t['featAppDeleteConfirm'], JSON_UNESCAPED_UNICODE)) . ')"') ?><input type="hidden" name="app_id" value="<?= (int) $a['id'] ?>"><button class="btn btn-no btn-sm btn-icon" type="submit"><?= icon('trash', 13) ?></button></form>
@@ -268,14 +268,14 @@ echo web_lang_assets();
 </div>
 
 <div class="card fade-up" id="wheel" style="margin-bottom:14px">
-  <?= $cardHead('🎲 ' . $t['featWheelTitle'], $t['featWheelSub']) ?>
+  <?= $cardHead('⟦i:dices⟧ ' . $t['featWheelTitle'], $t['featWheelSub']) ?>
   <?= $formOpen('wheel') ?>
   <div class="card-body"><?= $field(sprintf($t['featWheelPrice'], $curTitle), $input('wheel_price', $v['wheel'], 'inputmode="decimal"')) ?></div>
   <?= $saveBtn ?></form>
 </div>
 
 <div class="card fade-up" id="loc" style="margin-bottom:14px">
-  <?= $cardHead('📍 ' . $t['featLocTitle'], $t['featLocSub']) ?>
+  <?= $cardHead('⟦i:map-pin⟧ ' . $t['featLocTitle'], $t['featLocSub']) ?>
   <?= $formOpen('loc') ?>
   <div class="card-body">
     <?= $field($t['featLocAll'], $input('loc_limit_all', $v['locAll'], 'inputmode="numeric"')) ?>
@@ -287,7 +287,7 @@ echo web_lang_assets();
 </div>
 
 <div class="card fade-up" id="lottery" style="margin-bottom:14px">
-  <?= $cardHead('🎟 ' . $t['featLotteryTitle'], $t['featLotterySub']) ?>
+  <?= $cardHead('⟦i:ticket⟧ ' . $t['featLotteryTitle'], $t['featLotterySub']) ?>
   <?= $formOpen('lottery') ?>
   <div class="card-body">
     <?php foreach ([1, 2, 3] as $r): ?>
@@ -299,7 +299,7 @@ echo web_lang_assets();
 </div>
 
 <div class="card fade-up" style="margin-bottom:14px">
-  <?= $cardHead('👥 ' . $t['refPageTitle'], $t['featRefHint']) ?>
+  <?= $cardHead('⟦i:users⟧ ' . $t['refPageTitle'], $t['featRefHint']) ?>
   <div class="card-body"><a class="btn btn-ghost" href="referral.php?<?= http_build_query(['lang' => $lang]) ?>"><?= icon('users', 13) ?> <?= $t['refPageTitle'] ?></a></div>
 </div>
 

@@ -264,13 +264,13 @@ include __DIR__ . '/inc/layout_head.php';
                 <?php if ($affBlock['c'] || $affBlock['r']): ?>
                     <div class="kv">
                         <span class="kv-key"><?= $textbotlang['panel']['userAffBlockState'] ?></span>
-                        <span class="kv-val" style="color:var(--no)">⛔️ <?= trim(($affBlock['c'] ? '💼 ' : '') . ($affBlock['r'] ? '🎁' : '')) ?></span>
+                        <span class="kv-val" style="color:var(--no)">⟦i:ban:no⟧ <?= trim(($affBlock['c'] ? '⟦i:briefcase⟧ ' : '') . ($affBlock['r'] ? '⟦i:gift⟧' : '')) ?></span>
                     </div>
                 <?php endif; ?>
                 <?php if ((int) ($user['score'] ?? 0) > 0): ?>
                     <div class="kv">
                         <span class="kv-key"><?= $textbotlang['panel']['userColStatus'] ?></span>
-                        <span class="kv-val" style="color:var(--warn)">⭐ <?= number_format((int) $user['score']) ?></span>
+                        <span class="kv-val" style="color:var(--warn)">⟦i:star:warn⟧ <?= number_format((int) $user['score']) ?></span>
                     </div>
                 <?php endif; ?>
                 <?php if (!empty($user['expire'])): ?>
@@ -512,7 +512,7 @@ include __DIR__ . '/inc/layout_head.php';
                                     if ($refName === 'none')
                                         $refName = '';
                                     // which plan they count for: 💼, 🎁 or both
-                                    $refPlans = ((string) ($ref['affiliates'] ?? '') === (string) $id ? '💼' : '') . ((string) ($ref['aff_rw'] ?? '') === (string) $id ? '🎁' : '');
+                                    $refPlans = ((string) ($ref['affiliates'] ?? '') === (string) $id ? '⟦i:briefcase⟧' : '') . ((string) ($ref['aff_rw'] ?? '') === (string) $id ? '⟦i:gift⟧' : '');
                                     $refUname = $ref['username'] ?? '';
                                     if ($refUname === 'none')
                                         $refUname = '';

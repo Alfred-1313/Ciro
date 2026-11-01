@@ -19,7 +19,7 @@ $names = [
     'text_Tariff_list' => $tx['textbot']['tariffList'], 'text_support' => $tx['textbot']['support'], 'text_help' => $tx['textbot']['help'],
     'text_change_language' => $tx['language']['changeButton'],
 ];
-$colors = ['' => $t['menuColorDefault'], 'primary' => '🔵 ' . $t['menuColorBlue'], 'success' => '🟢 ' . $t['menuColorGreen'], 'danger' => '🔴 ' . $t['menuColorRed']];
+$colors = ['' => $t['menuColorDefault'], 'primary' => $t['menuColorBlue'], 'success' => $t['menuColorGreen'], 'danger' => $t['menuColorRed']];
 $layout = mainmenu_layout_get($lang);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -138,7 +138,7 @@ $pos = ($layout['emoji_pos_global'] ?? '') === 'left' ? 'left' : 'right';
 <form method="POST" action="menu.php?<?= http_build_query(['lang' => $lang]) ?>" class="fade-up">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
 <div class="card" style="margin-bottom:14px">
-  <div class="card-head"><div><div class="card-title">🧩 <?= $t['menuArrange'] ?></div><div class="card-subtitle"><?= $t['menuArrangeSub'] ?></div></div></div>
+  <div class="card-head"><div><div class="card-title">⟦i:puzzle⟧ <?= $t['menuArrange'] ?></div><div class="card-subtitle"><?= $t['menuArrangeSub'] ?></div></div></div>
   <div class="card-body">
     <div class="kb-grid" id="kbGrid">
       <?php $i = 0; foreach ($layout['keyboard'] as $r => $row): ?>
@@ -146,7 +146,7 @@ $pos = ($layout['emoji_pos_global'] ?? '') === 'left' ? 'left' : 'right';
           <?php foreach ((array) $row as $b): if (!is_array($b) || !isset($b['text'])) continue; [$label] = mainmenu_btn_preview($b, $names[$b['text']] ?? $b['text'], $simple, $pos); $c = ['primary' => '#2b6ef2', 'success' => '#16a34a', 'danger' => '#dc2626'][$b['style'] ?? ''] ?? ''; ?>
             <div class="kb-chip<?= $c === '' ? ' plain' : '' ?><?= !empty($b['hidden']) ? ' off' : '' ?>" draggable="true"<?= $c !== '' ? ' style="background:' . $c . '"' : '' ?>>
               <input type="hidden" name="btn[<?= $i ?>][token]" value="<?= htmlspecialchars($b['text']) ?>"><input type="hidden" name="btn[<?= $i ?>][row]" value="<?= $r + 1 ?>" class="kb-rowin">
-              <?= !empty($b['hidden']) ? '🚫 ' : '' ?><?= htmlspecialchars($label) ?><?= !empty($b['icon_emoji']) ? ' ✨' : '' ?>
+              <?= !empty($b['hidden']) ? '⟦i:eye-off:muted⟧ ' : '' ?><?= htmlspecialchars($label) ?><?= !empty($b['icon_emoji']) ? ' ⟦i:sparkles:accent⟧' : '' ?>
             </div>
           <?php $i++; endforeach; ?>
           <?php if (count((array) $row) < 2): ?><div class="kb-slot">＋</div><?php endif; ?>
@@ -158,7 +158,7 @@ $pos = ($layout['emoji_pos_global'] ?? '') === 'left' ? 'left' : 'right';
 </div>
 
 <div class="card">
-  <div class="card-head"><div><div class="card-title">🔘 <?= $t['menuButtons'] ?></div><div class="card-subtitle"><?= $t['menuButtonsSub'] ?></div></div></div>
+  <div class="card-head"><div><div class="card-title">⟦i:circle-dot⟧ <?= $t['menuButtons'] ?></div><div class="card-subtitle"><?= $t['menuButtonsSub'] ?></div></div></div>
   <div class="card-body">
     <div class="tbl-wrap"><table class="tbl-xl">
       <thead><tr><th><?= $t['menuColButton'] ?></th><th><?= $t['menuColName'] ?></th><th><?= $t['menuColEmoji'] ?></th><th><?= $t['menuColColorGlass'] ?></th><th><?= $t['menuColColorReply'] ?></th><th><?= $t['menuColHidden'] ?></th><th><?= $t['menuColSticker'] ?></th></tr></thead>
@@ -167,11 +167,11 @@ $pos = ($layout['emoji_pos_global'] ?? '') === 'left' ? 'left' : 'right';
         <tr>
           <td class="cs"><?= htmlspecialchars($names[$b['text']] ?? $b['text']) ?><?= $b['text'] === 'text_change_language' ? '<div class="field-hint">' . $t['menuLangBtnShared'] . '</div>' : '' ?></td>
           <td><input type="text" class="input" name="<?= $n ?>[custom_text]" value="<?= htmlspecialchars((string) ($b['custom_text'] ?? '')) ?>" placeholder="<?= htmlspecialchars($names[$b['text']] ?? '') ?>" maxlength="64"></td>
-          <td><input type="text" class="input" name="<?= $n ?>[emoji]" value="<?= htmlspecialchars((string) ($b['emoji'] ?? '')) ?>" style="width:64px;text-align:center" placeholder="<?= !empty($b['icon_emoji']) ? '✨' : '—' ?>"></td>
+          <td><input type="text" class="input" name="<?= $n ?>[emoji]" value="<?= htmlspecialchars((string) ($b['emoji'] ?? '')) ?>" style="width:64px;text-align:center" placeholder="<?= !empty($b['icon_emoji']) ? '✦' : '—' ?>"></td>
           <td><select class="select" name="<?= $n ?>[style]"><?php foreach ($colors as $v => $label): ?><option value="<?= $v ?>"<?= ($b['style'] ?? '') === $v ? ' selected' : '' ?>><?= htmlspecialchars($label) ?></option><?php endforeach; ?></select></td>
           <td><select class="select" name="<?= $n ?>[style_reply]"><?php foreach ($colors as $v => $label): ?><option value="<?= $v ?>"<?= ($b['style_reply'] ?? '') === $v ? ' selected' : '' ?>><?= htmlspecialchars($label) ?></option><?php endforeach; ?></select></td>
           <td><label class="lang-chip"><input type="hidden" name="<?= $n ?>[hidden]" value="0"><input type="checkbox" name="<?= $n ?>[hidden]" value="1"<?= !empty($b['hidden']) ? ' checked' : '' ?>> <?= $t['menuHidden'] ?></label></td>
-          <td style="white-space:nowrap"><?= !empty($b['sticker']) ? '✅' : (mainmenu_btn_sticker($b) !== '' ? '<span title="' . htmlspecialchars($t['menuStickerDefault']) . '">🔹</span>' : '<span class="cf">—</span>') ?>
+          <td style="white-space:nowrap"><?= !empty($b['sticker']) ? '⟦i:circle-check:ok⟧' : (mainmenu_btn_sticker($b) !== '' ? '<span class="tag tag-plain" title="' . htmlspecialchars($t['menuStickerDefault']) . '">' . htmlspecialchars($t['btStickerDefaultTag']) . '</span>' : '<span class="cf">—</span>') ?>
             <input type="text" class="input" name="<?= $n ?>[sticker]" value="" dir="ltr" style="width:150px;padding:4px 8px" placeholder="<?= htmlspecialchars($t['btStickerPlaceholder']) ?>">
             <?php if (!empty($b['sticker'])): ?><label class="lang-chip"><input type="checkbox" name="<?= $n ?>[sticker_del]" value="1"> <?= $t['btStickerDelete'] ?></label><?php endif; ?></td>
         </tr>

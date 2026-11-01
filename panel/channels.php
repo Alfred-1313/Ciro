@@ -14,7 +14,7 @@ $ct = lang_tab_texts('fa')['Admin']['channel'];
 $lang = web_lang_pick();
 $rows = channels_effective_order($lang);
 $auds = ['all' => $ct['gateAll'], 'new' => $ct['gateNew'], 'invited' => $ct['gateInvited'], 'none' => $ct['gateNone']];
-$colors = ['' => $t['menuColorDefault'], 'primary' => '🔵 ' . $t['menuColorBlue'], 'success' => '🟢 ' . $t['menuColorGreen'], 'danger' => '🔴 ' . $t['menuColorRed']];
+$colors = ['' => $t['menuColorDefault'], 'primary' => $t['menuColorBlue'], 'success' => $t['menuColorGreen'], 'danger' => $t['menuColorRed']];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check_post();
@@ -124,17 +124,17 @@ echo web_lang_assets();
   <div class="notice notice-warn"><?= $t['chnEmpty'] ?></div>
 <?php else: ?>
 <div class="card fade-up" style="margin-bottom:14px">
-  <div class="card-head"><div><div class="card-title">👁 <?= $t['menuPreview'] ?></div><div class="card-subtitle"><?= $t['chnPreviewSub'] ?></div></div></div>
+  <div class="card-head"><div><div class="card-title">⟦i:eye⟧ <?= $t['menuPreview'] ?></div><div class="card-subtitle"><?= $t['chnPreviewSub'] ?></div></div></div>
   <div class="card-body" style="display:flex;flex-direction:column;gap:6px;max-width:420px">
     <?php foreach ($rows as $r): if (!empty($r['hidden'])) continue; [$label, $icon] = channel_button_text($r); $c = ['primary' => '#2b6ef2', 'success' => '#16a34a', 'danger' => '#dc2626'][channel_button_style($r)] ?? 'var(--sf3)'; ?>
-      <div style="text-align:center;padding:9px 6px;border-radius:9px;background:<?= $c ?>;color:#fff;font-size:.84rem"><?= htmlspecialchars($label) ?><?= $icon !== '' ? ' ✨' : '' ?></div>
+      <div style="text-align:center;padding:9px 6px;border-radius:9px;background:<?= $c ?>;color:#fff;font-size:.84rem"><?= htmlspecialchars($label) ?><?= $icon !== '' ? ' ⟦i:sparkles:accent⟧' : '' ?></div>
     <?php endforeach; ?>
   </div>
 </div>
 
 <form method="POST" action="channels.php?<?= http_build_query(['lang' => $lang]) ?>" class="card fade-up">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
-  <div class="card-head"><div><div class="card-title">📯 <?= $t['chnButtons'] ?></div><div class="card-subtitle"><?= $t['chnButtonsSub'] ?></div></div></div>
+  <div class="card-head"><div><div class="card-title">⟦i:megaphone⟧ <?= $t['chnButtons'] ?></div><div class="card-subtitle"><?= $t['chnButtonsSub'] ?></div></div></div>
   <div class="card-body">
     <div class="tbl-wrap"><table class="tbl-xl">
       <thead><tr><th><?= $t['chnColOrder'] ?></th><th><?= $t['chnColChannel'] ?></th><th><?= $t['chnColJoin'] ?></th><th><?= $t['menuColName'] ?></th><th><?= $t['menuColEmoji'] ?></th><th><?= $t['menuEmojiPos'] ?></th><th><?= $t['menuColColor'] ?></th><th><?= $t['menuColHidden'] ?></th></tr></thead>
@@ -145,7 +145,7 @@ echo web_lang_assets();
           <td class="cs"><?= htmlspecialchars((string) $r['remark']) ?><div class="field-hint" dir="ltr"><?= htmlspecialchars((string) ($r['linkjoin'] ?? '')) ?></div></td>
           <td><select class="select" name="<?= $n ?>[aud]"><?php foreach ($auds as $v => $label): ?><option value="<?= $v ?>"<?= $aud === $v ? ' selected' : '' ?>><?= htmlspecialchars($label) ?></option><?php endforeach; ?></select></td>
           <td><input type="text" class="input" name="<?= $n ?>[name]" value="<?= htmlspecialchars((string) ($r['custom_text'] ?? '')) ?>" placeholder="<?= htmlspecialchars((string) $r['remark']) ?>" maxlength="64"></td>
-          <td style="white-space:nowrap"><input type="text" class="input" name="<?= $n ?>[emoji]" value="<?= htmlspecialchars((string) ($r['emoji'] ?? '')) ?>" style="width:64px;text-align:center" placeholder="<?= !empty($r['icon_emoji']) ? '✨' : '—' ?>">
+          <td style="white-space:nowrap"><input type="text" class="input" name="<?= $n ?>[emoji]" value="<?= htmlspecialchars((string) ($r['emoji'] ?? '')) ?>" style="width:64px;text-align:center" placeholder="<?= !empty($r['icon_emoji']) ? '✦' : '—' ?>">
             <?php if (!empty($r['emoji']) || !empty($r['icon_emoji'])): ?><label class="lang-chip" style="display:inline-flex;margin-top:4px"><input type="checkbox" name="<?= $n ?>[emoji_del]" value="1"> <?= $t['chnEmojiDel'] ?></label><?php endif; ?></td>
           <td><select class="select" name="<?= $n ?>[pos]"><option value="right"><?= $t['menuPosRight'] ?></option><option value="left"<?= ($r['emoji_pos'] ?? '') === 'left' ? ' selected' : '' ?>><?= $t['menuPosLeft'] ?></option></select></td>
           <td><select class="select" name="<?= $n ?>[style]"><?php foreach ($colors as $v => $label): ?><option value="<?= $v ?>"<?= channel_button_style($r) === $v ? ' selected' : '' ?>><?= htmlspecialchars($label) ?></option><?php endforeach; ?></select></td>

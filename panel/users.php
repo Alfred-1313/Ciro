@@ -149,7 +149,7 @@ echo web_lang_assets();
     <div class="toolbar">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <div class="toolbar-title"><?= $textbotlang['panel']['usersHeading'] ?> <small>(<?= number_format($total) ?>)</small></div>
-            <a href="cleanup.php<?= $lang !== '' ? '?lang=' . htmlspecialchars($lang) : '' ?>" class="btn-link" style="font-size:.78rem">🧹 <?= htmlspecialchars($textbotlang['panel']['clnUsersLink']) ?></a>
+            <a href="cleanup.php<?= $lang !== '' ? '?lang=' . htmlspecialchars($lang) : '' ?>" class="btn-link" style="font-size:.78rem">⟦i:brush-cleaning⟧ <?= htmlspecialchars($textbotlang['panel']['clnUsersLink']) ?></a>
 
             <?php if ($blockedCount > 0): ?>
                 <a href="<?= htmlspecialchars($here(['status' => 'block'])) ?>" class="tag tag-no" style="cursor:pointer"><?= $blockedCount ?> <?= $textbotlang['panel']['usersColId'] ?></a>
@@ -290,7 +290,7 @@ echo web_lang_assets();
                             </td>
                             <td class="cn">
                                 <?= (int) ($u['score'] ?? 0) > 0
-                                    ? '<span style="color:var(--warn)">⭐ ' . number_format((int) ($u['score'] ?? 0)) . '</span>'
+                                    ? '<span style="color:var(--warn)">⟦i:star:warn⟧ ' . number_format((int) ($u['score'] ?? 0)) . '</span>'
                                     : '<span class="cf">—</span>' ?>
                             </td>
                             <td class="cf"><?= safe_date($u['register'] ?? null) ?></td>

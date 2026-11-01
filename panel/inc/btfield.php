@@ -8,13 +8,13 @@ function bt_web_field($key, array $v, $lang, array $t, array $isAlert, array $sw
     ?>
         <div class="field">
             <label style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                <span><?= htmlspecialchars($v['label']) ?> <span class="cm" dir="ltr" style="font-size:.7rem;opacity:.6"><?= $k ?></span></span>
+                <span><?= htmlspecialchars(ui_plain($v['label'])) ?> <span class="cm" dir="ltr" style="font-size:.7rem;opacity:.6"><?= $k ?></span></span>
                 <?php if ($v['changed']): ?>
                     <span class="tag tag-warn"><?= $t['bottextChangedLabel'] ?></span>
                 <?php endif; ?>
             </label>
             <textarea name="texts[<?= $k ?>]" class="textarea" dir="auto" rows="<?= min(8, substr_count($v['current'], "\n") + 1) ?>"><?= htmlspecialchars($v['current']) ?></textarea>
-            <?php if (isset($isAlert[$key])): ?><div class="field-hint">⚠️ <?= $t['btAlertHint'] ?></div><?php endif; ?>
+            <?php if (isset($isAlert[$key])): ?><div class="field-hint">⟦i:triangle-alert:warn⟧ <?= $t['btAlertHint'] ?></div><?php endif; ?>
             <?php if ($v['textChanged']): ?>
                 <div class="field-hint" style="display:flex;align-items:flex-start;gap:8px">
                     <span style="flex:1;white-space:pre-wrap"><?= $t['bottextDefaultLabel'] ?> <?= htmlspecialchars($v['default']) ?></span>
@@ -30,7 +30,7 @@ function bt_web_field($key, array $v, $lang, array $t, array $isAlert, array $sw
                     <label class="lang-chip" title="<?= htmlspecialchars($t['btReactionHint']) ?>"><?= $t['btReaction'] ?> <input type="text" name="react[<?= $k ?>]" value="<?= htmlspecialchars($v['reaction']) ?>" class="input" style="width:64px;padding:4px 8px;text-align:center" placeholder="—"></label>
                 <?php endif; ?>
                 <?php if (!isset($noSticker[$key])): ?>
-                    <label class="lang-chip"><?= $t['btSticker'] ?> <?= $v['sticker'] !== '' ? '✅' : (bt_default_sticker($key) !== '' ? '<span title="' . htmlspecialchars($t['btStickerDefault']) . '">🔹</span>' : '—') ?>
+                    <label class="lang-chip"><?= $t['btSticker'] ?> <?= $v['sticker'] !== '' ? '⟦i:circle-check:ok⟧' : (bt_default_sticker($key) !== '' ? '<span class="tag tag-plain" title="' . htmlspecialchars($t['btStickerDefault']) . '">' . htmlspecialchars($t['btStickerDefaultTag']) . '</span>' : '—') ?>
                         <input type="text" name="sticker[<?= $k ?>]" value="" class="input" dir="ltr" style="width:170px;padding:4px 8px" placeholder="<?= htmlspecialchars($t['btStickerPlaceholder']) ?>"></label>
                     <?php if ($v['sticker'] !== ''): ?>
                         <label class="lang-chip"><input type="checkbox" name="sticker_del[<?= $k ?>]" value="1"> <?= $t['btStickerDelete'] ?></label>

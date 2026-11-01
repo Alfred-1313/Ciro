@@ -156,17 +156,17 @@ $day = payg_stats($lang, time() - 86400, time());
 $open = db_fetchAll($pdo, "SELECT * FROM payg_service WHERE lang = ? AND status IN ('waiting', 'active', 'stopped', 'paused') ORDER BY created_at DESC LIMIT 200", [$lang]);
 
 $switch = function ($name, $on, $label, $hint = '') use ($t) {
-    return '<div class="set-row"><div><div class="set-label">' . htmlspecialchars($label) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . $hint . '</div>' : '') . '</div>'
+    return '<div class="set-row"><div><div class="set-label">' . htmlspecialchars(ui_plain($label)) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . ui_plain($hint) . '</div>' : '') . '</div>'
         . '<div class="set-ctl"><label class="lang-chip" style="justify-content:center"><input type="hidden" name="' . $name . '" value="0"><input type="checkbox" name="' . $name . '" value="1"' . ($on ? ' checked' : '') . '> ' . htmlspecialchars($t['refOn']) . '</label></div></div>';
 };
 $field = function ($label, $ctl, $hint = '') {
-    return '<div class="set-row"><div><div class="set-label">' . htmlspecialchars($label) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . $hint . '</div>' : '') . '</div><div class="set-ctl">' . $ctl . '</div></div>';
+    return '<div class="set-row"><div><div class="set-label">' . htmlspecialchars(ui_plain($label)) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . ui_plain($hint) . '</div>' : '') . '</div><div class="set-ctl">' . $ctl . '</div></div>';
 };
 $input = fn($name, $value, $extra = '') => '<input type="text" class="input" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '" ' . $extra . '>';
 $select = function ($name, $options, $value) {
     $h = '<select class="select" name="' . $name . '">';
     foreach ($options as $v => $label) {
-        $h .= '<option value="' . htmlspecialchars((string) $v) . '"' . ((string) $v === (string) $value ? ' selected' : '') . '>' . htmlspecialchars($label) . '</option>';
+        $h .= '<option value="' . htmlspecialchars((string) $v) . '"' . ((string) $v === (string) $value ? ' selected' : '') . '>' . htmlspecialchars(ui_plain($label)) . '</option>';
     }
     return $h . '</select>';
 };
@@ -186,7 +186,7 @@ $calc = function ($key) use ($cfg, $cur, $t) {
     }
     return sprintf($t['pgCalcVol'], payg_money($v * 10, $cur), payg_money($v * 100, $cur));
 };
-$statusName = ['waiting' => '⏸ ' . $t['pgStatusWaiting'], 'active' => '✅ ' . $t['pgStatusActive'], 'stopped' => '⛔️ ' . $t['pgStatusStopped'], 'paused' => '💤 ' . $t['pgStatusPaused']];
+$statusName = ['waiting' => '⟦i:circle-pause⟧ ' . $t['pgStatusWaiting'], 'active' => '⟦i:circle-check:ok⟧ ' . $t['pgStatusActive'], 'stopped' => '⟦i:ban:no⟧ ' . $t['pgStatusStopped'], 'paused' => '⟦i:moon-star⟧ ' . $t['pgStatusPaused']];
 
 $pageTitle = $t['pgPageTitle'];
 $pageLede = $t['pgPageLede'];
@@ -198,9 +198,9 @@ echo web_lang_assets();
 <?= web_lang_tabs($lang, fn($code) => 'payg.php?' . http_build_query(['lang' => $code])) ?>
 
 <div class="card fade-up" id="status" style="margin-bottom:14px">
-  <?= $cardHead('⏱ ' . $t['pgStatusTitle'], sprintf($t['pgStatusSub'], htmlspecialchars(web_langs()[$lang]))) ?>
+  <?= $cardHead('⟦i:timer⟧ ' . $t['pgStatusTitle'], sprintf($t['pgStatusSub'], htmlspecialchars(web_langs()[$lang]))) ?>
   <?php if ($problems): ?>
-    <div class="notice notice-no" style="margin:12px 16px 0"><?= implode('<br>', $problems) ?></div>
+    <div class="notice notice-no" style="margin:12px 16px 0"><?= ui_plain(implode('<br>', $problems)) ?></div>
   <?php endif; ?>
   <?= $formOpen('status') ?>
   <div class="card-body">
@@ -213,7 +213,7 @@ echo web_lang_assets();
 </div>
 
 <div class="card fade-up<?= $cfg['on'] ? '' : ' set-off' ?>" id="panels" style="margin-bottom:14px">
-  <?= $cardHead('🖥 ' . $t['pgPanelsTitle'], $t['pgPanelsSub']) ?>
+  <?= $cardHead('⟦i:monitor⟧ ' . $t['pgPanelsTitle'], $t['pgPanelsSub']) ?>
   <?= $formOpen('panels') ?>
   <div class="card-body"><div class="lang-chips">
     <?php if (!$panels): ?><span class="cf"><?= htmlspecialchars($t['pgNoPanels']) ?></span><?php endif; ?>
@@ -225,7 +225,7 @@ echo web_lang_assets();
 </div>
 
 <div class="card fade-up<?= $cfg['on'] ? '' : ' set-off' ?>" id="prices" style="margin-bottom:14px">
-  <?= $cardHead('💵 ' . $t['pgPricesTitle'], sprintf($t['pgPricesSub'], htmlspecialchars($curTitle))) ?>
+  <?= $cardHead('⟦i:banknote⟧ ' . $t['pgPricesTitle'], sprintf($t['pgPricesSub'], htmlspecialchars($curTitle))) ?>
   <?= $formOpen('prices') ?>
   <div class="card-body">
     <?php foreach (['t' => sprintf($t['pgTimePriceOf'], $cfg['unit'] === 'minute' ? $t['pgPerMinute'] : $t['pgPerHour']), 'v' => $t['pgVolPrice']] as $dim => $dimLabel): ?>
@@ -241,7 +241,7 @@ echo web_lang_assets();
 </div>
 
 <div class="card fade-up<?= $cfg['on'] ? '' : ' set-off' ?>" id="rules" style="margin-bottom:14px">
-  <?= $cardHead('⚙️ ' . $t['pgRulesTitle'], $t['pgRulesSub']) ?>
+  <?= $cardHead('⟦i:settings⟧ ' . $t['pgRulesTitle'], $t['pgRulesSub']) ?>
   <?= $formOpen('rules') ?>
   <div class="card-body">
     <?= $field(sprintf($t['pgMinbal'], $curTitle), $input('minbal', $cfg['minbal'] > 0 ? rtrim(rtrim(number_format($cfg['minbal'], 6, '.', ''), '0'), '.') : '0', 'inputmode="decimal" dir="ltr"'), $t['pgMinbalHint']) ?>
@@ -256,7 +256,7 @@ echo web_lang_assets();
 </div>
 
 <div class="card fade-up" id="list" style="margin-bottom:14px">
-  <?= $cardHead('📋 ' . $t['pgListTitle'], sprintf($t['pgListSub'], number_format($stats['open']), money($stats['income'], $cur), money($day['income'], $cur))) ?>
+  <?= $cardHead('⟦i:clipboard-list⟧ ' . $t['pgListTitle'], sprintf($t['pgListSub'], number_format($stats['open']), money($stats['income'], $cur), money($day['income'], $cur))) ?>
   <div class="card-body">
     <?php if (!$open): ?><div class="cf"><?= htmlspecialchars($t['pgEmpty']) ?></div><?php endif; ?>
     <?php foreach ($open as $s): ?>
@@ -273,6 +273,6 @@ echo web_lang_assets();
   </div>
 </div>
 
-<div class="card fade-up" style="margin-bottom:14px"><div class="card-body"><div class="set-row"><div class="set-hint">📲 <?= $t['saLinkHint'] ?></div><div class="set-ctl"><a class="btn btn-ghost btn-sm" href="subapps.php?<?= http_build_query(['lang' => web_lang_pick()]) ?>"><?= $t['saLinkText'] ?></a></div></div></div></div>
+<div class="card fade-up" style="margin-bottom:14px"><div class="card-body"><div class="set-row"><div class="set-hint">⟦i:smartphone⟧ <?= $t['saLinkHint'] ?></div><div class="set-ctl"><a class="btn btn-ghost btn-sm" href="subapps.php?<?= http_build_query(['lang' => web_lang_pick()]) ?>"><?= $t['saLinkText'] ?></a></div></div></div></div>
 
 <?php include __DIR__ . '/inc/layout_foot.php'; ?>

@@ -882,4 +882,20 @@ return [
             . "• Web panel, touch scrolling: on a tablet or a phone held sideways, where a table is wider than the screen (products, keyboard, menu, button looks), a finger on the rows would not scroll the page. Fixed; dragging the table sideways works as before.\n"
             . "• Web panel, after adding or editing (a product, a category ...) there is no need to refresh: when a save changes anything outside the form (a list, a counter, a preview) the page loads again where it stands, with the same scroll. Settings forms still save without loading.</blockquote>",
     ],
+    [
+        'n' => 65,
+        'date' => '2026-11-01',
+        'fa' => "<blockquote>🎨 <b>پنل وب: آیکون به‌جای ایموجی، ظاهر و حرکت تازه</b>\n"
+            . "• متن خود سایت دیگر ایموجی ندارد: عنوان‌ها، تب‌ها، برچسب‌ها، راهنماها و پیام‌ها آیکون‌های خطی یک‌دست دارند. متن و دکمه‌های خود ربات، پیش‌نمایش‌ها و نام‌هایی که خودت گذاشته‌ای (محصول، دسته‌بندی، کاربر) همان‌طور با ایموجی می‌مانند.\n"
+            . "• هر بخش منو آیکون خودش را دارد و همان آیکون کنار عنوان صفحه می‌آید. عددهای داشبورد هم آیکون دارند و بار اولِ هر ورود از صفر بالا می‌روند.\n"
+            . "• بعد از ذخیره، دکمه‌ی ذخیره یک لحظه تیک می‌شود. اعلان‌ها تیک یا هشدارشان را می‌کشند، دکمه‌ی بستن دارند و تا وقتی موس رویشان است نمی‌روند.\n"
+            . "• فهرست خالی یک طرح آرام دارد، انتخاب رنگ دکمه رنگ انتخاب‌شده را داخل خودش نشان می‌دهد و فوکوس صفحه‌کلید همیشه پیداست.\n"
+            . "• اگر در تنظیمات گوشی یا سیستم «حرکت کمتر»، «شفافیت کمتر» یا «کنتراست بیشتر» روشن باشد، پنل هم همان را رعایت می‌کند.</blockquote>",
+        'en' => "<blockquote>🎨 <b>Web panel: icons instead of emoji, a fresher look and motion</b>\n"
+            . "• The panel's own text has no emoji any more: headings, tabs, labels, hints and messages use one set of line icons. The bot's own texts and buttons, previews and the names you gave things (products, categories, users) keep their emoji.\n"
+            . "• Every menu item has its own icon, shown beside the page title too. The dashboard figures have icons and count up from zero the first time in a session.\n"
+            . "• After a save the save button turns into a tick for a moment. Notices draw their tick or warning, have a close button, and stay while the pointer is on them.\n"
+            . "• An empty list shows a quiet drawing, a button colour picker shows the chosen colour inside it, and keyboard focus is always visible.\n"
+            . "• With «reduce motion», «reduce transparency» or «increase contrast» on in your phone or system settings, the panel follows them.</blockquote>",
+    ],
 ];

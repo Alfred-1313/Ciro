@@ -128,12 +128,12 @@ if (isset($groups['0'])) {
     unset($groups['0']);
     $groups['0'] = $none;
 }
-$mediaLabels = ['photo' => '🖼 ' . $t['helpMediaPhoto'], 'video' => '🎬 ' . $t['helpMediaVideo'], 'document' => '📄 ' . $t['helpMediaDoc']];
+$mediaLabels = ['photo' => '⟦i:image⟧ ' . $t['helpMediaPhoto'], 'video' => '⟦i:clapperboard⟧ ' . $t['helpMediaVideo'], 'document' => '⟦i:file-text⟧ ' . $t['helpMediaDoc']];
 $catSelect = function ($cur) use ($cats, $t) {
-    $h = '<select class="select" name="cat"><option value="0">🚫 ' . $t['helpNoCat'] . '</option>';
+    $h = '<select class="select" name="cat"><option value="0">⟦i:ban⟧ ' . $t['helpNoCat'] . '</option>';
     foreach (array_keys($cats) as $c) {
         $c = (string) $c;
-        $h .= '<option value="' . htmlspecialchars($c) . '"' . ($c === $cur ? ' selected' : '') . '>🗂 ' . htmlspecialchars($c) . '</option>';
+        $h .= '<option value="' . htmlspecialchars($c) . '"' . ($c === $cur ? ' selected' : '') . '>⟦i:folder-kanban⟧ ' . htmlspecialchars($c) . '</option>';
     }
     return $h . '</select>';
 };
@@ -150,14 +150,14 @@ $on = help_section_on();
 
 <form method="POST" action="help.php?<?= http_build_query(['lang' => $lang]) ?>" class="card fade-up" style="margin-bottom:14px">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>"><input type="hidden" name="a" value="status">
-  <div class="card-body"><div class="set-row"><div><div class="set-label">📚 <?= $t['helpSection'] ?></div><div class="set-hint"><?= $t['helpSectionHint'] ?></div></div>
+  <div class="card-body"><div class="set-row"><div><div class="set-label">⟦i:book-open⟧ <?= $t['helpSection'] ?></div><div class="set-hint"><?= $t['helpSectionHint'] ?></div></div>
     <div class="set-ctl" style="display:flex;gap:8px;align-items:center"><label class="lang-chip"><input type="checkbox" name="on" value="1"<?= $on ? ' checked' : '' ?>> <?= $t['refOn'] ?></label><button type="submit" class="btn btn-primary btn-sm"><?= icon('check', 13) ?></button></div></div></div>
 </form>
 
 <?php if ($isFa): ?>
 <form method="POST" action="help.php?<?= http_build_query(['lang' => $lang]) ?>" class="card fade-up" style="margin-bottom:14px">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>"><input type="hidden" name="a" value="add">
-  <div class="card-head"><div><div class="card-title">➕ <?= $t['helpAdd'] ?></div><div class="card-subtitle"><?= $t['helpAddSub'] ?></div></div></div>
+  <div class="card-head"><div><div class="card-title">⟦i:plus⟧ <?= $t['helpAdd'] ?></div><div class="card-subtitle"><?= $t['helpAddSub'] ?></div></div></div>
   <div class="card-body">
     <div class="lang-chips" style="margin-bottom:8px"><input type="text" class="input" name="name" placeholder="<?= $t['helpName'] ?>" maxlength="149" required style="max-width:260px"><?= $catSelect('0') ?><input type="text" class="input" name="new_cat" placeholder="<?= $t['helpNewCat'] ?>" maxlength="149" style="max-width:200px"></div>
     <textarea class="textarea" name="desc" rows="4" placeholder="<?= $t['helpText'] ?>" required></textarea>
@@ -174,7 +174,7 @@ $on = help_section_on();
 <?php endif; ?>
 
 <?php foreach ($groups as $c => $list): if (!$list) continue; ?>
-  <h3 style="margin:18px 2px 10px;font-size:.95rem"><?= (string) $c === '0' ? '🚫 ' . $t['helpNoCat'] : '🗂 ' . htmlspecialchars((string) $c) ?> <small class="cf">(<?= count($list) ?>)</small></h3>
+  <h3 style="margin:18px 2px 10px;font-size:.95rem"><?= (string) $c === '0' ? '⟦i:ban⟧ ' . $t['helpNoCat'] : '⟦i:folder-kanban⟧ ' . htmlspecialchars((string) $c) ?> <small class="cf">(<?= count($list) ?>)</small></h3>
   <?php foreach ($list as $r):
     $entry = json_decode((string) ($r['translations'] ?? ''), true)[$lang] ?? null;
     $name = $isFa ? (string) $r['name_os'] : (string) ($entry['name'] ?? '');
@@ -187,19 +187,19 @@ $on = help_section_on();
   <div class="card fade-up" id="h-<?= (int) $r['id'] ?>" style="margin-bottom:12px">
     <form method="POST" action="help.php?<?= http_build_query(['lang' => $lang]) ?>">
       <input type="hidden" name="_csrf" value="<?= csrf_token() ?>"><input type="hidden" name="a" value="edit"><input type="hidden" name="id" value="<?= (int) $r['id'] ?>">
-      <div class="card-head"><div><div class="card-title">📘 <?= htmlspecialchars($name !== '' ? $name : (string) $r['name_os']) ?>
+      <div class="card-head"><div><div class="card-title">⟦i:book-text⟧ <?= htmlspecialchars($name !== '' ? $name : (string) $r['name_os']) ?>
         <?php if (!$isFa): ?><span class="tag <?= $entry !== null ? 'tag-ok' : 'tag-plain' ?>"><?= $entry !== null ? $t['helpTranslated'] : $t['helpUsesFa'] ?></span><?php endif; ?></div>
         <div class="card-subtitle"><?= $media !== '' ? htmlspecialchars($mediaLabels[$mediaType] ?? $mediaType) : $t['helpNoMedia'] ?></div></div></div>
       <div class="card-body">
         <div class="lang-chips" style="margin-bottom:8px"><input type="text" class="input" name="name" value="<?= htmlspecialchars($name) ?>" placeholder="<?= htmlspecialchars((string) $r['name_os']) ?>" maxlength="149" style="max-width:260px"<?= $isFa ? ' required' : '' ?>><?= $catSelect($curCat) ?><input type="text" class="input" name="new_cat" placeholder="<?= $t['helpNewCat'] ?>" maxlength="149" style="max-width:200px"></div>
         <textarea class="textarea" name="desc" rows="4" placeholder="<?= htmlspecialchars($isFa ? $t['helpText'] : (string) $r['Description_os']) ?>"><?= htmlspecialchars($desc) ?></textarea>
-        <?php if (!empty($ents)): ?><div class="field-hint">⚠️ <?= $t['helpEntitiesNote'] ?></div><?php endif; ?>
+        <?php if (!empty($ents)): ?><div class="field-hint">⟦i:triangle-alert:warn⟧ <?= $t['helpEntitiesNote'] ?></div><?php endif; ?>
         <div class="field-hint"><?= $isFa ? $t['helpCatShared'] : $t['helpEmptyUsesFa'] ?></div>
       </div>
       <div class="modal-foot" style="border-radius:0 0 10px 10px;display:flex;gap:8px;justify-content:space-between">
         <button type="submit" class="btn btn-primary"><?= icon('check', 13) ?> <?= $t['bottextSaveBtn'] ?></button>
         <span style="display:flex;gap:8px">
-          <?php if (!$isFa && $entry !== null): ?><button type="submit" class="btn btn-ghost btn-sm" name="a" value="reset" onclick="return confirm(<?= htmlspecialchars(json_encode($t['helpResetConfirm'], JSON_UNESCAPED_UNICODE)) ?>)">↩️ <?= $t['helpReset'] ?></button><?php endif; ?>
+          <?php if (!$isFa && $entry !== null): ?><button type="submit" class="btn btn-ghost btn-sm" name="a" value="reset" onclick="return confirm(<?= htmlspecialchars(json_encode($t['helpResetConfirm'], JSON_UNESCAPED_UNICODE)) ?>)">⟦i:undo-2⟧ <?= $t['helpReset'] ?></button><?php endif; ?>
           <button type="submit" class="btn btn-no btn-sm" name="a" value="delete" formnovalidate onclick="return confirm(<?= htmlspecialchars(json_encode($t['helpDeleteConfirm'], JSON_UNESCAPED_UNICODE)) ?>)"><?= icon('trash', 13) ?></button>
         </span>
       </div>

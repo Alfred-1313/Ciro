@@ -14,10 +14,10 @@ require_auth();
 $t = $textbotlang['panel'];
 $lang = web_lang_pick();
 $tx = lang_tab_texts($lang);
-$parts = ['status' => '🔘 ' . $t['svcStatus'], 'buybtn' => '📨 ' . $t['svcMsgBtns'], 'delivery' => '📦 ' . $t['svcDelivery'], 'tiers' => '🔋 ' . $t['svcTiers'], 'close' => '🖼 ' . $t['svcClose']];
+$parts = ['status' => '⟦i:circle-dot⟧ ' . $t['svcStatus'], 'buybtn' => '⟦i:mail⟧ ' . $t['svcMsgBtns'], 'delivery' => '⟦i:package⟧ ' . $t['svcDelivery'], 'tiers' => '⟦i:battery-medium⟧ ' . $t['svcTiers'], 'close' => '⟦i:image⟧ ' . $t['svcClose']];
 $part = (string) ($_GET['part'] ?? $_POST['part'] ?? '');
 $part = isset($parts[$part]) ? $part : 'status';
-$kinds = ['purchase' => '🛒 ' . $t['svcKindBuy'], 'usertest' => '🎁 ' . $t['svcKindTest'], 'affrw' => '👥 ' . $t['svcKindReward']];
+$kinds = ['purchase' => '⟦i:shopping-cart⟧ ' . $t['svcKindBuy'], 'usertest' => '⟦i:gift⟧ ' . $t['svcKindTest'], 'affrw' => '⟦i:users⟧ ' . $t['svcKindReward']];
 $kind = (string) ($_GET['kind'] ?? $_POST['kind'] ?? '');
 $kind = isset($kinds[$kind]) ? $kind : 'purchase';
 // the config-columns store names the purchase kind «buy»
@@ -25,7 +25,7 @@ $cdKind = ['purchase' => 'buy', 'usertest' => 'usertest', 'affrw' => 'affrw'][$k
 // the service buttons are kept per place: the service's own screen ('mine')
 // and each message that delivers a config - a purchase's, a test account's, a
 // 🎁 referral gift's (statusbtn_* kinds buy / test / ref)
-$msgKinds = ['buy' => '🛒 ' . $t['svcKindBuy'], 'test' => '🎁 ' . $t['svcKindTest'], 'ref' => '👥 ' . $t['svcKindReward']];
+$msgKinds = ['buy' => '⟦i:shopping-cart⟧ ' . $t['svcKindBuy'], 'test' => '⟦i:gift⟧ ' . $t['svcKindTest'], 'ref' => '⟦i:users⟧ ' . $t['svcKindReward']];
 $mk = (string) ($_GET['mk'] ?? $_POST['mk'] ?? '');
 $mk = isset($msgKinds[$mk]) ? $mk : 'buy';
 $here = 'svclook.php?' . http_build_query(['lang' => $lang, 'part' => $part, 'kind' => $part === 'delivery' ? $kind : null, 'mk' => $part === 'buybtn' ? $mk : null]);
@@ -34,7 +34,7 @@ $sbKind = $part === 'buybtn' ? $mk : 'mine';
 $sbDefs = array_intersect_key(statusbtn_defs($tx), array_flip(statusbtn_kind_keys($sbKind, $tx)));
 // and the ones whose feature the shop has off in this language
 $sbShopOff = statusbtn_shop_off($lang);
-$colorNames = ['primary' => '🔵 ' . $t['menuColorBlue'], 'success' => '🟢 ' . $t['menuColorGreen'], 'danger' => '🔴 ' . $t['menuColorRed']];
+$colorNames = ['primary' => $t['menuColorBlue'], 'success' => $t['menuColorGreen'], 'danger' => $t['menuColorRed']];
 $emojiOk = fn($e) => $e === '' || (preg_match('/^\X$/u', $e) && !preg_match('/^[0-9a-zA-Z]$/', $e));
 $nameOk = fn($s) => !containsHtmlMarkup($s) && mb_strlen($s) <= 64;
 $closeNames = ['bottext.btnCloseBuy' => $t['svcCloseBuy'], 'bottext.btnCloseTopup' => $t['svcCloseTopup'], 'bottext.btnCloseAccount' => $t['svcCloseAccount'],
@@ -306,7 +306,7 @@ $activeNav = 'svclook';
 include __DIR__ . '/inc/layout_head.php';
 echo web_lang_assets();
 $colorSel = function ($name, $cur, $default) use ($t, $colorNames) {
-    $h = '<select class="select" name="' . $name . '" style="width:auto"><option value="">' . htmlspecialchars(sprintf($t['tlColorDefault'], $colorNames[$default] ?? '⚪️')) . '</option>';
+    $h = '<select class="select" name="' . $name . '" style="width:auto"><option value="">' . htmlspecialchars(sprintf($t['tlColorDefault'], $colorNames[$default] ?? '')) . '</option>';
     foreach ($colorNames as $v => $label) {
         $h .= '<option value="' . $v . '"' . ($cur === $v ? ' selected' : '') . '>' . htmlspecialchars($label) . '</option>';
     }
@@ -314,13 +314,13 @@ $colorSel = function ($name, $cur, $default) use ($t, $colorNames) {
 };
 $posSel = fn($name, $cur) => '<select class="select" name="' . $name . '" style="width:auto"><option value="right">' . $t['menuPosRight'] . '</option><option value="left"' . ($cur === 'left' ? ' selected' : '') . '>' . $t['menuPosLeft'] . '</option></select>';
 $emojiIn = function ($name, array $style) use ($t) {
-    $h = '<input type="text" class="input" name="' . $name . '[emoji]" value="' . htmlspecialchars((string) ($style['emoji'] ?? '')) . '" style="width:64px;text-align:center" placeholder="' . (!empty($style['emojiIcon']) ? '✨' : '—') . '">';
+    $h = '<input type="text" class="input" name="' . $name . '[emoji]" value="' . htmlspecialchars((string) ($style['emoji'] ?? '')) . '" style="width:64px;text-align:center" placeholder="' . (!empty($style['emojiIcon']) ? '✦' : '—') . '">';
     if (!empty($style['emoji']) || !empty($style['emojiIcon'])) {
         $h .= ' <label class="lang-chip" style="display:inline-flex"><input type="checkbox" name="' . $name . '[emoji_del]" value="1"> ' . $t['chnEmojiDel'] . '</label>';
     }
     return $h;
 };
-$chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="hidden" name="' . $name . '" value="0"><input type="checkbox" name="' . $name . '" value="1"' . ($on ? ' checked' : '') . '> ' . htmlspecialchars($label) . '</label>';
+$chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="hidden" name="' . $name . '" value="0"><input type="checkbox" name="' . $name . '" value="1"' . ($on ? ' checked' : '') . '> ' . htmlspecialchars(ui_plain($label)) . '</label>';
 $saveBtn = '<div class="modal-foot" style="border-radius:0 0 10px 10px"><button type="submit" class="btn btn-primary">' . icon('check', 13) . ' ' . $t['bottextSaveBtn'] . '</button></div>';
 ?>
 
@@ -332,7 +332,7 @@ $saveBtn = '<div class="modal-foot" style="border-radius:0 0 10px 10px"><button 
 <form method="POST" action="<?= $here ?>" class="card fade-up">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>"><input type="hidden" name="part" value="<?= $part ?>"><input type="hidden" name="kind" value="<?= $kind ?>"><input type="hidden" name="mk" value="<?= $mk ?>">
 <?php if ($part === 'status' || $part === 'buybtn'): $isMsg = $sbKind !== 'mine'; ?>
-  <div class="card-head"><div><div class="card-title"><?= $isMsg ? '📨 ' . $t['svcMsgBtns'] : '🔘 ' . $t['svcStatus'] ?></div><div class="card-subtitle"><?= $isMsg ? $t['svcMsgBtnsSub'] : $t['svcStatusSub'] ?></div></div></div>
+  <div class="card-head"><div><div class="card-title"><?= $isMsg ? '⟦i:mail⟧ ' . $t['svcMsgBtns'] : '⟦i:circle-dot⟧ ' . $t['svcStatus'] ?></div><div class="card-subtitle"><?= $isMsg ? $t['svcMsgBtnsSub'] : $t['svcStatusSub'] ?></div></div></div>
   <div class="card-body">
     <?php if ($isMsg): ?><div class="lang-tabs"><?php foreach ($msgKinds as $k => $label): ?><a href="svclook.php?<?= http_build_query(['lang' => $lang, 'part' => 'buybtn', 'mk' => $k]) ?>" class="lang-tab<?= $k === $mk ? ' on' : '' ?>"><?= htmlspecialchars($label) ?></a><?php endforeach; ?></div><?php endif; ?>
     <div class="tbl-wrap"><table class="tbl-xl">
@@ -341,7 +341,7 @@ $saveBtn = '<div class="modal-foot" style="border-radius:0 0 10px 10px"><button 
     <?php $sbRows = $isMsg ? array_values(array_filter(statusbtn_ordered_keys($lang, $tx, $sbKind), fn($k) => isset($sbDefs[$k]))) : array_keys($sbDefs);
     foreach ($sbRows as $sbPos => $key): $def = $sbDefs[$key]; $ov = statusbtn_override($lang, $key, $sbKind); $n = 'sb[' . htmlspecialchars($key) . ']'; ?>
       <tr>
-        <td class="cs"><?= htmlspecialchars($def['name']) ?><?php if (in_array($key, $sbShopOff, true)): ?><div class="set-hint">🔒 <?= $t['svcBtnShopOff'] ?></div><?php endif; ?></td>
+        <td class="cs"><?= htmlspecialchars($def['name']) ?><?php if (in_array($key, $sbShopOff, true)): ?><div class="set-hint">⟦i:lock⟧ <?= $t['svcBtnShopOff'] ?></div><?php endif; ?></td>
         <td><input type="text" class="input" name="<?= $n ?>[text]" value="<?= htmlspecialchars((string) ($ov['text'] ?? '')) ?>" placeholder="<?= htmlspecialchars((string) $def['text']) ?>" maxlength="64"></td>
         <td style="white-space:nowrap"><?= $emojiIn($n, $ov) ?></td>
         <td><?= $posSel($n . '[pos]', (string) ($ov['pos'] ?? '')) ?></td>
@@ -353,18 +353,18 @@ $saveBtn = '<div class="modal-foot" style="border-radius:0 0 10px 10px"><button 
     <?php endforeach; ?>
     </tbody></table></div>
     <div class="field-hint"><?= $t['looksHint'] ?></div>
-    <div class="field-hint">🌐 📲 <?= $t['svcBuyBtnsPair'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-gb"><?= $t['svcBuyBtnsPairLink'] ?></a> · <a href="subapps.php?<?= http_build_query(['lang' => $lang]) ?>"><?= $t['svcBuyBtnsGroupLink'] ?></a></div></div>
+    <div class="field-hint">⟦i:globe⟧ ⟦i:smartphone⟧ <?= $t['svcBuyBtnsPair'] ?> <a href="buttons.php?<?= http_build_query(['lang' => $lang]) ?>#g-gb"><?= $t['svcBuyBtnsPairLink'] ?></a> · <a href="subapps.php?<?= http_build_query(['lang' => $lang]) ?>"><?= $t['svcBuyBtnsGroupLink'] ?></a></div></div>
 <?php elseif ($part === 'delivery'): $panels = array_filter((array) select("marzban_panel", "*", null, null, "fetchAll"), 'is_array'); ?>
-  <div class="card-head"><div><div class="card-title">📦 <?= $t['svcDelivery'] ?></div><div class="card-subtitle"><?= $t['svcDeliverySub'] ?></div></div></div>
+  <div class="card-head"><div><div class="card-title">⟦i:package⟧ <?= $t['svcDelivery'] ?></div><div class="card-subtitle"><?= $t['svcDeliverySub'] ?></div></div></div>
   <div class="card-body">
     <div class="lang-tabs"><?php foreach ($kinds as $k => $label): ?><a href="svclook.php?<?= http_build_query(['lang' => $lang, 'part' => 'delivery', 'kind' => $k]) ?>" class="lang-tab<?= $k === $kind ? ' on' : '' ?>"><?= htmlspecialchars($label) ?></a><?php endforeach; ?></div>
     <?php if (!$panels): ?><div class="field-hint"><?= $t['srvEmpty'] ?></div><?php endif; ?>
     <?php foreach ($panels as $panel): $code = (string) $panel['code_panel']; $mode = config_delivery_mode($kind, $code, $lang); $n = 'pn[' . htmlspecialchars($code) . ']'; ?>
-      <div class="set-row"><div><div class="set-label">🖥 <?= htmlspecialchars((string) $panel['name_panel']) ?></div><?php if (($panel['config'] ?? '') !== 'onconfig'): ?><div class="set-hint">⚠️ <?= $t['svcMode2Off'] ?></div><?php endif; ?></div>
+      <div class="set-row"><div><div class="set-label">⟦i:monitor⟧ <?= htmlspecialchars((string) $panel['name_panel']) ?></div><?php if (($panel['config'] ?? '') !== 'onconfig'): ?><div class="set-hint">⟦i:triangle-alert:warn⟧ <?= $t['svcMode2Off'] ?></div><?php endif; ?></div>
         <div class="set-ctl lang-chips"><select class="select" name="<?= $n ?>[mode]"><option value="1"><?= $t['svcMode1'] ?></option><option value="2"<?= $mode === '2' ? ' selected' : '' ?>><?= $t['svcMode2'] ?></option></select>
-          <?= $chk($n . '[qr]', config_delivery_qr_on($kind, $code, $lang), '📷 QR') ?></div></div>
+          <?= $chk($n . '[qr]', config_delivery_qr_on($kind, $code, $lang), '⟦i:qr-code⟧ QR') ?></div></div>
     <?php endforeach; ?>
-    <div class="set-row" style="flex-direction:column;align-items:stretch"><div><div class="set-label">🎨 <?= $t['svcElements'] ?></div><div class="set-hint"><?= $t['svcElementsSub'] ?></div></div>
+    <div class="set-row" style="flex-direction:column;align-items:stretch"><div><div class="set-label">⟦i:palette⟧ <?= $t['svcElements'] ?></div><div class="set-hint"><?= $t['svcElementsSub'] ?></div></div>
       <div class="tbl-wrap"><table class="tbl-xl"><tbody>
       <?php foreach (configdisplay_element_defs($tx) as $idx => $def): $ov = configdisplay_element_override($lang, $idx, $cdKind); ?>
         <tr><td class="cs"><?= htmlspecialchars($def['name']) ?></td>
@@ -377,10 +377,10 @@ $saveBtn = '<div class="modal-foot" style="border-radius:0 0 10px 10px"><button 
       <div class="set-ctl"><select class="select" name="order"><option value="config_first"><?= $t['svcOrderConfig'] ?></option><option value="name_first"<?= config_col_name_first($lang, $cdKind) ? ' selected' : '' ?>><?= $t['svcOrderName'] ?></option></select></div></div>
   </div>
 <?php elseif ($part === 'tiers'): $meta = volumepct_kind_meta(); ?>
-  <div class="card-head"><div><div class="card-title">🔋 <?= $t['svcTiers'] ?></div><div class="card-subtitle"><?= $t['svcTiersSub'] ?></div></div></div>
+  <div class="card-head"><div><div class="card-title">⟦i:battery-medium⟧ <?= $t['svcTiers'] ?></div><div class="card-subtitle"><?= $t['svcTiersSub'] ?></div></div></div>
   <div class="card-body">
     <?php foreach ($meta as $mk => $m): $list = volumepct_tiers_for_kind($mk); ?>
-      <h4 style="margin:14px 0 6px"><?= htmlspecialchars($m['label']) ?></h4>
+      <h4 style="margin:14px 0 6px"><?= htmlspecialchars(ui_plain($m['label'])) ?></h4>
       <?php if ($m['single'] && !$list): ?>
         <div class="set-row" style="flex-direction:column;align-items:stretch">
           <textarea class="textarea" name="single[<?= $mk ?>][text]" rows="3" placeholder="<?= htmlspecialchars(mb_substr(strip_tags((string) volumepct_tier_default_text($tx, $mk)), 0, 300)) ?>"></textarea>
@@ -402,13 +402,13 @@ $saveBtn = '<div class="modal-foot" style="border-radius:0 0 10px 10px"><button 
         </div>
       <?php endforeach; ?>
     <?php endforeach; ?>
-    <div class="set-row"><div><div class="set-label">➕ <?= $t['svcTierAdd'] ?></div><div class="set-hint"><?= $t['svcTierAddHint'] ?></div></div>
-      <div class="set-ctl lang-chips"><select class="select" name="new_kind"><?php foreach ($meta as $mk => $m): if ($m['single']) continue; ?><option value="<?= $mk ?>"><?= htmlspecialchars($m['label']) ?></option><?php endforeach; ?></select>
+    <div class="set-row"><div><div class="set-label">⟦i:plus⟧ <?= $t['svcTierAdd'] ?></div><div class="set-hint"><?= $t['svcTierAddHint'] ?></div></div>
+      <div class="set-ctl lang-chips"><select class="select" name="new_kind"><?php foreach ($meta as $mk => $m): if ($m['single']) continue; ?><option value="<?= $mk ?>"><?= htmlspecialchars(ui_plain($m['label'])) ?></option><?php endforeach; ?></select>
         <input type="text" class="input" name="new_pct" inputmode="numeric" style="width:90px"></div></div>
     <div class="field-hint"><?= $t['svcTiersHint'] ?></div>
   </div>
 <?php else: ?>
-  <div class="card-head"><div><div class="card-title">🖼 <?= $t['svcClose'] ?></div><div class="card-subtitle"><?= $t['svcCloseSub'] ?></div></div></div>
+  <div class="card-head"><div><div class="card-title">⟦i:image⟧ <?= $t['svcClose'] ?></div><div class="card-subtitle"><?= $t['svcCloseSub'] ?></div></div></div>
   <div class="card-body">
     <?php foreach ($closeNames as $key => $name): $cs = close_sticker_settings($key, true, $lang); ?>
       <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($name) ?></div><div class="set-hint"><?= $cs['file_id'] === close_sticker_default_file_id() ? $t['svcCloseDefault'] : $t['svcCloseOwn'] ?></div></div>

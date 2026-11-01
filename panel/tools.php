@@ -62,7 +62,7 @@ $perm = [
 $counts = bt_reset_counts($lang, $textbotlang);
 
 $switch = function ($name, $on, $label, $hint = '') use ($t) {
-    return '<div class="set-row"><div><div class="set-label">' . htmlspecialchars($label) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . $hint . '</div>' : '') . '</div>'
+    return '<div class="set-row"><div><div class="set-label">' . htmlspecialchars(ui_plain($label)) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . ui_plain($hint) . '</div>' : '') . '</div>'
         . '<div class="set-ctl"><label class="lang-chip" style="justify-content:center"><input type="hidden" name="' . $name . '" value="0"><input type="checkbox" name="' . $name . '" value="1"' . ($on ? ' checked' : '') . '> ' . htmlspecialchars($t['refOn']) . '</label></div></div>';
 };
 $cardHead = fn($title, $sub) => '<div class="card-head"><div><div class="card-title">' . $title . '</div><div class="card-subtitle">' . $sub . '</div></div></div>';
@@ -79,7 +79,7 @@ echo web_lang_assets();
 <?= web_lang_tabs($lang, fn($code) => 'tools.php?' . http_build_query(['lang' => $code])) ?>
 
 <div class="card fade-up" id="langsw" style="margin-bottom:14px">
-  <?= $cardHead('🌐 ' . $t['toolsLangTitle'], $t['toolsShared']) ?>
+  <?= $cardHead('⟦i:globe⟧ ' . $t['toolsLangTitle'], $t['toolsShared']) ?>
   <?= $formOpen('langsw') ?>
   <div class="card-body">
     <?= $switch('enabled', $ls['enabled'], $t['toolsLangAuto'], $t['toolsLangAutoHint']) ?>
@@ -97,30 +97,30 @@ echo web_lang_assets();
 </div>
 
 <div class="card fade-up" id="admperm" style="margin-bottom:14px">
-  <?= $cardHead('🛡 ' . $t['toolsPermTitle'], $t['toolsShared'] . ' ' . $t['toolsPermSub']) ?>
+  <?= $cardHead('⟦i:shield⟧ ' . $t['toolsPermTitle'], $t['toolsShared'] . ' ' . $t['toolsPermSub']) ?>
   <?= $formOpen('admperm') ?>
   <div class="card-body">
-    <?= $switch('admin_test_unlimited', $perm['admin_test_unlimited'], '🔑 ' . $t['toolsPermTest'], $t['toolsPermTestHint']) ?>
-    <?= $switch('admin_buy_free', $perm['admin_buy_free'], '🛍 ' . $t['toolsPermBuy'], $t['toolsPermBuyHint']) ?>
-    <?= $switch('admin_affrw_unlimited', $perm['admin_affrw_unlimited'], '🎁 ' . $t['toolsPermAffrw'], $t['toolsPermAffrwHint']) ?>
+    <?= $switch('admin_test_unlimited', $perm['admin_test_unlimited'], '⟦i:key-round⟧ ' . $t['toolsPermTest'], $t['toolsPermTestHint']) ?>
+    <?= $switch('admin_buy_free', $perm['admin_buy_free'], '⟦i:shopping-bag⟧ ' . $t['toolsPermBuy'], $t['toolsPermBuyHint']) ?>
+    <?= $switch('admin_affrw_unlimited', $perm['admin_affrw_unlimited'], '⟦i:gift⟧ ' . $t['toolsPermAffrw'], $t['toolsPermAffrwHint']) ?>
   </div>
   <?= $saveBtn ?></form>
 </div>
 
 <div class="card fade-up" id="reset" style="margin-bottom:14px">
-  <?= $cardHead('🔁 ' . $t['toolsResetTitle'], sprintf($t['toolsResetSub'], htmlspecialchars(web_langs()[$lang] ?? $lang))) ?>
+  <?= $cardHead('⟦i:repeat⟧ ' . $t['toolsResetTitle'], sprintf($t['toolsResetSub'], htmlspecialchars(web_langs()[$lang] ?? $lang))) ?>
   <?= $formOpen('reset') ?>
   <div class="card-body">
-    <?php if (array_sum($counts) === 0): ?><div class="field-hint">✨ <?= $t['toolsResetClean'] ?></div><?php endif; ?>
+    <?php if (array_sum($counts) === 0): ?><div class="field-hint">⟦i:circle-check:ok⟧ <?= $t['toolsResetClean'] ?></div><?php endif; ?>
     <?php foreach ($sections as $name => $s): ?>
-      <?php if ($s['sep'] !== ''): ?><div class="set-row"><div class="set-label" style="color:var(--mute)"><?= htmlspecialchars($s['sep']) ?></div></div><?php endif; ?>
-      <div class="set-row"><div><div class="set-label"><?= htmlspecialchars($s['label']) ?></div><div class="set-hint"><?= sprintf($t['toolsResetCount'], (int) $counts[$name]) ?></div></div>
+      <?php if ($s['sep'] !== ''): ?><div class="set-row"><div class="set-label" style="color:var(--mute)"><?= htmlspecialchars(ui_plain($s['sep'])) ?></div></div><?php endif; ?>
+      <div class="set-row"><div><div class="set-label"><?= htmlspecialchars(ui_plain($s['label'])) ?></div><div class="set-hint"><?= sprintf($t['toolsResetCount'], (int) $counts[$name]) ?></div></div>
         <div class="set-ctl"><label class="lang-chip"><input type="checkbox" name="rst[<?= $name ?>]" value="1"<?= $counts[$name] > 0 ? ' checked' : '' ?>> <?= $t['toolsResetPick'] ?></label></div></div>
     <?php endforeach; ?>
-    <div class="set-row"><div><div class="set-label">⚠️ <?= $t['toolsResetConfirm'] ?></div><div class="set-hint"><?= $t['toolsResetKeeps'] ?></div></div>
+    <div class="set-row"><div><div class="set-label">⟦i:triangle-alert:warn⟧ <?= $t['toolsResetConfirm'] ?></div><div class="set-hint"><?= $t['toolsResetKeeps'] ?></div></div>
       <div class="set-ctl"><label class="lang-chip"><input type="hidden" name="confirm" value="0"><input type="checkbox" name="confirm" value="1"> <?= $t['toolsResetSure'] ?></label></div></div>
   </div>
-  <div class="modal-foot" style="border-radius:0 0 10px 10px"><button type="submit" class="btn btn-no">🗑 <?= $t['toolsResetBtn'] ?></button></div></form>
+  <div class="modal-foot" style="border-radius:0 0 10px 10px"><button type="submit" class="btn btn-no">⟦i:trash-2⟧ <?= $t['toolsResetBtn'] ?></button></div></form>
 </div>
 
 <?php include __DIR__ . '/inc/layout_foot.php'; ?>

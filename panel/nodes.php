@@ -12,7 +12,7 @@ $panels = rbn_panels();
 $pid = (int) ($_GET['p'] ?? $_POST['p'] ?? ($panels[0]['id'] ?? 0));
 $panel = rbn_panel($pid);
 $here = fn($extra = []) => 'nodes.php?' . http_build_query(['p' => $pid] + $extra);
-$plain = fn($html) => html_entity_decode(strip_tags((string) $html), ENT_QUOTES, 'UTF-8');
+$plain = fn($html) => ui_plain(html_entity_decode(strip_tags((string) $html), ENT_QUOTES, 'UTF-8'));
 $rt = panel_texts()['Admin']['RbNodes'];
 
 // a picture: the report, or one node's traffic
@@ -309,7 +309,7 @@ include __DIR__ . '/inc/layout_head.php';
 
 <?php if ($bundle): ?>
   <div class="card fade-up" style="margin-bottom:14px">
-    <div class="card-head"><div><div class="card-title">🔐 <?= htmlspecialchars(sprintf($t['rbnBundleTitle'], $bundle['name'])) ?></div><div class="card-subtitle"><?= htmlspecialchars($t['rbnBundleSub']) ?></div></div></div>
+    <div class="card-head"><div><div class="card-title">⟦i:lock-keyhole⟧ <?= htmlspecialchars(sprintf($t['rbnBundleTitle'], $bundle['name'])) ?></div><div class="card-subtitle"><?= htmlspecialchars($t['rbnBundleSub']) ?></div></div></div>
     <div class="card-body">
       <textarea class="input rbn-pem" readonly onclick="this.select()"><?= htmlspecialchars($bundle['pem']) ?></textarea>
       <div class="field-hint" style="margin-top:10px"><?= htmlspecialchars(sprintf($t['rbnBundleHow'], (int) $bundle['port'], (int) $bundle['api'])) ?></div>
@@ -327,13 +327,13 @@ include __DIR__ . '/inc/layout_head.php';
     <div class="stat ok"><div class="stat-label"><?= htmlspecialchars($t['rbnUp']) ?></div><div class="stat-num"><?= $up ?></div></div>
     <div class="stat <?= count($nodes) - $up - $off > 0 ? 'no' : '' ?>"><div class="stat-label"><?= htmlspecialchars($t['rbnDown']) ?></div><div class="stat-num"><?= count($nodes) - $up - $off ?></div></div>
     <div class="stat"><div class="stat-label"><?= htmlspecialchars($t['rbnOff']) ?></div><div class="stat-num"><?= $off ?></div></div>
-    <div class="stat"><div class="stat-label"><?= htmlspecialchars($t['rbnWatch']) ?></div><div class="stat-num" style="font-size:1rem"><?= rbn_watch_on() ? '🔔 ' . htmlspecialchars($t['rbnOn']) : '🔕 ' . htmlspecialchars($t['rbnOffWord']) ?></div>
+    <div class="stat"><div class="stat-label"><?= htmlspecialchars($t['rbnWatch']) ?></div><div class="stat-num" style="font-size:1rem"><?= rbn_watch_on() ? '⟦i:bell⟧ ' . htmlspecialchars($t['rbnOn']) : '⟦i:bell-off⟧ ' . htmlspecialchars($t['rbnOffWord']) ?></div>
       <div class="stat-meta"><?= $form('watch', 0, rbn_watch_on() ? $t['rbnWatchStop'] : $t['rbnWatchStart']) ?></div></div>
   </div>
 
   <?php $dest = rbn_dest($panel); $others = array_filter(rbn_twins($panel), fn($x) => (int) $x['id'] !== $pid); ?>
   <div class="card fade-up" id="dest" style="margin-bottom:14px">
-    <div class="card-head"><div><div class="card-title">📮 <?= htmlspecialchars($t['rbnDest']) ?> — <?= htmlspecialchars((string) $panel['name_panel']) ?> <span class="rbn-v rbn-mute" style="font-size:.78rem"><?= htmlspecialchars(rbn_host($panel)) ?></span></div>
+    <div class="card-head"><div><div class="card-title">⟦i:send⟧ <?= htmlspecialchars($t['rbnDest']) ?> — <?= htmlspecialchars((string) $panel['name_panel']) ?> <span class="rbn-v rbn-mute" style="font-size:.78rem"><?= htmlspecialchars(rbn_host($panel)) ?></span></div>
       <div class="card-subtitle"><?= htmlspecialchars($t['rbnDestSub']) ?></div></div></div>
     <?php if ($others): ?><div class="notice notice-warn" style="margin:12px 16px 0"><?= htmlspecialchars($plain(strtr($rt['hubTwin'], ['{twins}' => implode('، ', array_map(fn($x) => (string) $x['name_panel'], $others))]))) ?></div><?php endif; ?>
     <form method="POST" action="<?= htmlspecialchars($here()) ?>" data-ajax="off" class="rbn-form" style="padding-top:12px">
@@ -353,19 +353,19 @@ include __DIR__ . '/inc/layout_head.php';
   </div>
 
   <div class="card fade-up" id="repdown" style="margin-bottom:14px">
-    <div class="card-head"><div><div class="card-title">🔁 <?= htmlspecialchars($t['rbnRepTitleDown']) ?> <span class="tag <?= rbn_rep_on('down') ? 'tag-ok' : 'tag-plain' ?>"><?= htmlspecialchars(rbn_rep_on('down') ? $t['rbnOn'] : $t['rbnOffWord']) ?></span></div>
+    <div class="card-head"><div><div class="card-title">⟦i:repeat⟧ <?= htmlspecialchars($t['rbnRepTitleDown']) ?> <span class="tag <?= rbn_rep_on('down') ? 'tag-ok' : 'tag-plain' ?>"><?= htmlspecialchars(rbn_rep_on('down') ? $t['rbnOn'] : $t['rbnOffWord']) ?></span></div>
       <div class="card-subtitle"><?= htmlspecialchars($t['rbnRepSubDown']) ?></div></div></div>
     <?= $repForm('down') ?>
   </div>
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
     <a class="btn btn-primary" href="#add"><?= icon('plus', 13) ?> <?= htmlspecialchars($plain($rt['btnAdd'])) ?></a>
-    <a class="btn" href="#report">📊 <?= htmlspecialchars($t['rbnReportBtn']) ?></a>
+    <a class="btn" href="#report">⟦i:chart-no-axes-column⟧ <?= htmlspecialchars($t['rbnReportBtn']) ?></a>
     <?php if ($nodes): ?><?= $form('sua', 0, $rt['btnUpdateAll'], 'btn', $plain(strtr($rt['ask']['sua'], ['{n}' => count($nodes)]))) ?><?php endif; ?>
   </div>
 
   <div class="card fade-up" id="load" style="margin-bottom:14px">
-    <div class="card-head"><div><div class="card-title">🚨 <?= htmlspecialchars($t['rbnLoadTitle']) ?> <span class="tag <?= rbn_load_on() ? 'tag-ok' : 'tag-plain' ?>"><?= htmlspecialchars(rbn_load_on() ? $t['rbnOn'] : $t['rbnOffWord']) ?></span></div>
+    <div class="card-head"><div><div class="card-title">⟦i:siren:no⟧ <?= htmlspecialchars($t['rbnLoadTitle']) ?> <span class="tag <?= rbn_load_on() ? 'tag-ok' : 'tag-plain' ?>"><?= htmlspecialchars(rbn_load_on() ? $t['rbnOn'] : $t['rbnOffWord']) ?></span></div>
       <div class="card-subtitle"><?= htmlspecialchars($t['rbnLoadSub']) ?></div></div></div>
     <form method="POST" action="<?= htmlspecialchars($here()) ?>#load" data-ajax="off" class="rbn-form" style="padding-top:12px">
       <?= $csrf ?><input type="hidden" name="do" value="load">
@@ -374,7 +374,7 @@ include __DIR__ . '/inc/layout_head.php';
       <label><?= htmlspecialchars($t['rbnLoadRam']) ?><input class="input" type="number" name="ram" min="1" max="100" dir="ltr" value="<?= rbn_load_limit('ram') ?>"></label>
       <label>&nbsp;<button type="submit" class="btn btn-sm btn-primary"><?= icon('check', 13) ?> <?= htmlspecialchars($t['bottextSaveBtn']) ?></button></label>
     </form>
-    <div class="card-subtitle" id="repload" style="padding:6px 16px 0">🔁 <?= htmlspecialchars($t['rbnRepTitleLoad']) ?> <span class="tag <?= rbn_rep_on('load') ? 'tag-ok' : 'tag-plain' ?>"><?= htmlspecialchars(rbn_rep_on('load') ? $t['rbnOn'] : $t['rbnOffWord']) ?></span> — <?= htmlspecialchars($t['rbnRepSubLoad']) ?></div>
+    <div class="card-subtitle" id="repload" style="padding:6px 16px 0">⟦i:repeat⟧ <?= htmlspecialchars($t['rbnRepTitleLoad']) ?> <span class="tag <?= rbn_rep_on('load') ? 'tag-ok' : 'tag-plain' ?>"><?= htmlspecialchars(rbn_rep_on('load') ? $t['rbnOn'] : $t['rbnOffWord']) ?></span> — <?= htmlspecialchars($t['rbnRepSubLoad']) ?></div>
     <?= $repForm('load') ?>
   </div>
 
@@ -384,7 +384,7 @@ include __DIR__ . '/inc/layout_head.php';
   <?php endif; ?>
   <?php foreach ($nodes as $n): $id = (int) $n['id']; $st = (string) ($n['status'] ?? ''); $since = rbn_since($panel, $id); $ask = fn($a) => $plain(strtr($rt['ask'][$a], ['{name}' => (string) $n['name']])); ?>
     <div class="card fade-up rbn-node" id="node<?= $id ?>">
-      <div class="card-head"><div><div class="card-title"><?= rbn_status_icon($st) ?> <?= htmlspecialchars((string) $n['name']) ?> <?= $statusTag($st) ?></div>
+      <div class="card-head"><div><div class="card-title"><?= ui_node_state_icon((string) $st) ?> <?= htmlspecialchars((string) $n['name']) ?> <?= $statusTag($st) ?></div>
         <div class="card-subtitle"><span class="rbn-v"><?= htmlspecialchars((string) ($n['address'] ?? '')) ?> · <?= (int) ($n['port'] ?? 0) ?> / API <?= (int) ($n['api_port'] ?? 0) ?></span><?= $since !== null ? ' · ' . htmlspecialchars(sprintf($t['rbnSince'], rbn_when($since))) : '' ?></div></div></div>
       <div class="card-body">
         <?php if (!empty($n['message']) && $st !== 'connected'): ?><div class="rbn-msg"><?= htmlspecialchars((string) $n['message']) ?></div><?php endif; ?>
@@ -449,20 +449,20 @@ include __DIR__ . '/inc/layout_head.php';
   </div>
 
   <div class="card fade-up" id="report" style="margin-top:14px">
-    <div class="card-head"><div><div class="card-title">📊 <?= htmlspecialchars($t['rbnReportBtn']) ?></div><div class="card-subtitle"><?= htmlspecialchars($t['rbnReportSub']) ?></div></div>
+    <div class="card-head"><div><div class="card-title">⟦i:chart-no-axes-column⟧ <?= htmlspecialchars($t['rbnReportBtn']) ?></div><div class="card-subtitle"><?= htmlspecialchars($t['rbnReportSub']) ?></div></div>
       <a class="btn btn-sm" href="<?= htmlspecialchars($here()) ?>#report"><?= htmlspecialchars($plain($rt['btnRefresh'])) ?></a></div>
     <div class="card-body"><img class="rbn-img" loading="lazy" alt="" src="<?= htmlspecialchars($here(['img' => 'report'])) ?>"></div>
   </div>
 <?php endif; ?>
 
 <div class="card fade-up" id="history" style="margin-top:14px">
-  <div class="card-head"><div><div class="card-title">📜 <?= htmlspecialchars($t['rbnHistory']) ?></div><div class="card-subtitle"><?= htmlspecialchars($t['rbnHistorySub']) ?></div></div></div>
+  <div class="card-head"><div><div class="card-title">⟦i:scroll-text⟧ <?= htmlspecialchars($t['rbnHistory']) ?></div><div class="card-subtitle"><?= htmlspecialchars($t['rbnHistorySub']) ?></div></div></div>
   <div class="tbl-wrap"><table class="tbl-sm"><thead><tr><th><?= htmlspecialchars($t['rbnColWhen']) ?></th><th><?= htmlspecialchars($t['rbnColNode']) ?></th><th><?= htmlspecialchars($t['rbnColChange']) ?></th><th><?= htmlspecialchars($t['rbnColWhy']) ?></th></tr></thead><tbody>
     <?php if (!$events): ?><tr><td colspan="4"><div class="empty" style="padding:18px"><p><?= htmlspecialchars($plain($rt['historyEmpty'])) ?></p></div></td></tr><?php endif; ?>
     <?php foreach ($events as $e): ?>
       <tr><td><?= htmlspecialchars(rbn_when($e['at'])) ?></td>
         <td><?= (int) $e['node_id'] === 0 ? htmlspecialchars($plain($rt['panelItself'])) : htmlspecialchars((string) $e['name']) ?></td>
-        <td><?= rbn_status_icon($e['status_to']) ?> <?= htmlspecialchars(rbn_status_name($e['status_from'])) ?> ← <?= htmlspecialchars(rbn_status_name($e['status_to'])) ?></td>
+        <td><?= ui_node_state_icon((string) $e['status_to']) ?> <?= htmlspecialchars(ui_plain(rbn_status_name($e['status_from']))) ?> ← <?= htmlspecialchars(ui_plain(rbn_status_name($e['status_to']))) ?></td>
         <td class="rbn-v" style="font-size:.78rem"><?= htmlspecialchars(mb_substr((string) $e['message'], 0, 120)) ?></td></tr>
     <?php endforeach; ?>
   </tbody></table></div>

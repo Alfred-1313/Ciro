@@ -112,7 +112,7 @@ $jc = $job ? clean_job_counts($job['id']) : ['wait' => 0, 'ok' => 0, 'fail' => 0
 $cardHead = fn($title, $sub) => '<div class="card-head"><div><div class="card-title">' . $title . '</div><div class="card-subtitle">' . $sub . '</div></div></div>';
 $formOpen = fn($card, $extra = '') => '<form method="POST" data-ajax="off" action="cleanup.php?' . http_build_query(array_filter(['lang' => $lang])) . '"' . $extra . '><input type="hidden" name="_csrf" value="' . csrf_token() . '"><input type="hidden" name="card" value="' . $card . '">';
 $confirmJs = fn($msg) => ' onsubmit="return confirm(' . htmlspecialchars(json_encode($msg, JSON_UNESCAPED_UNICODE)) . ')"';
-$sure = function ($label) use ($t) { return '<div class="set-row"><div><div class="set-label">⚠️ ' . htmlspecialchars($label) . '</div></div><div class="set-ctl"><label class="lang-chip"><input type="hidden" name="sure" value="0"><input type="checkbox" name="sure" value="1"> ' . htmlspecialchars($t['clnSure']) . '</label></div></div>'; };
+$sure = function ($label) use ($t) { return '<div class="set-row"><div><div class="set-label">⟦i:triangle-alert:warn⟧ ' . htmlspecialchars($label) . '</div></div><div class="set-ctl"><label class="lang-chip"><input type="hidden" name="sure" value="0"><input type="checkbox" name="sure" value="1"> ' . htmlspecialchars($t['clnSure']) . '</label></div></div>'; };
 
 $pageTitle = $t['clnPageTitle'];
 $pageLede = $t['clnPageLede'];
@@ -130,7 +130,7 @@ $cnt = um_lang_counts();
     $pct = (int) floor($done * 100 / $total);
     $stateName = ['running' => $t['clnJobRunning'], 'done' => $t['clnJobDone'], 'stopped' => $t['clnJobStoppedState']]; ?>
 <div class="card fade-up" id="job" style="margin-bottom:14px">
-  <?= $cardHead('⏳ ' . htmlspecialchars($t['clnJobTitle']), htmlspecialchars(sprintf($t['clnJobMeta'], $stateName[$job['state']] ?? $job['state'], $job['scope'] === '' ? $t['langAllTab'] : (web_langs()[$job['scope']] ?? $job['scope']), safe_date((int) $job['created_at'], 'Y/m/d H:i')))) ?>
+  <?= $cardHead('⟦i:hourglass⟧ ' . htmlspecialchars($t['clnJobTitle']), htmlspecialchars(sprintf($t['clnJobMeta'], $stateName[$job['state']] ?? $job['state'], $job['scope'] === '' ? $t['langAllTab'] : (web_langs()[$job['scope']] ?? $job['scope']), safe_date((int) $job['created_at'], 'Y/m/d H:i')))) ?>
   <div class="card-body">
     <div class="stats">
       <div class="stat"><div class="stat-label"><?= htmlspecialchars($t['bgProgress']) ?></div><div class="stat-num"><?= $pct ?>٪</div><div class="stat-meta"><?= number_format($done) ?> / <?= number_format((int) $job['total']) ?></div></div>
@@ -152,7 +152,7 @@ $cnt = um_lang_counts();
       <?php if ($running): ?>
         <?= $formOpen('svc', $confirmJs($t['clnJobStopConfirm'])) ?><input type="hidden" name="act" value="stop"><button class="btn btn-no btn-sm" type="submit"><?= icon('close', 13) ?> <?= htmlspecialchars($t['clnJobStop']) ?></button></form>
       <?php elseif ($jc['fail'] > 0 || $jc['wait'] > 0): ?>
-        <?= $formOpen('svc') ?><input type="hidden" name="act" value="retry"><button class="btn btn-primary btn-sm" type="submit">🔁 <?= htmlspecialchars($t['clnJobRetry']) ?></button></form>
+        <?= $formOpen('svc') ?><input type="hidden" name="act" value="retry"><button class="btn btn-primary btn-sm" type="submit">⟦i:repeat⟧ <?= htmlspecialchars($t['clnJobRetry']) ?></button></form>
       <?php endif; ?>
     </div>
   </div>
@@ -171,7 +171,7 @@ $cnt = um_lang_counts();
 <?php endif; ?>
 
 <div class="card fade-up" id="stat" style="margin-bottom:14px">
-  <?= $cardHead('📊 ' . htmlspecialchars($t['clnStatTitle']), htmlspecialchars($t['clnStatSub'])) ?>
+  <?= $cardHead('⟦i:chart-no-axes-column⟧ ' . htmlspecialchars($t['clnStatTitle']), htmlspecialchars($t['clnStatSub'])) ?>
   <div class="card-body">
     <?php foreach ($statNames as $key => $label): $base = clean_stat_base($key); ?>
       <div class="set-row">
@@ -191,12 +191,12 @@ $cnt = um_lang_counts();
 </div>
 
 <div class="card fade-up" id="bal" style="margin-bottom:14px">
-  <?= $cardHead('💰 ' . htmlspecialchars($t['clnBalTitle']), htmlspecialchars(sprintf($t['clnBalSub'], $langName))) ?>
+  <?= $cardHead('⟦i:coins⟧ ' . htmlspecialchars($t['clnBalTitle']), htmlspecialchars(sprintf($t['clnBalSub'], $langName))) ?>
   <?= $formOpen('bal') ?>
   <div class="card-body">
     <div class="field-hint"><?= $bal['users'] > 0
         ? htmlspecialchars(sprintf($t['clnBalCount'], number_format($bal['users']), number_format($bal['positive']), number_format($bal['negative']), number_format($bal['stash'])))
-        : '✨ ' . htmlspecialchars($t['clnBalNone']) ?></div>
+        : '⟦i:circle-check:ok⟧ ' . htmlspecialchars($t['clnBalNone']) ?></div>
     <?php if ($lastBal !== null): ?>
       <div class="notice notice-warn" style="margin-top:10px"><?= htmlspecialchars(sprintf($t['clnBalLast'], safe_date((int) $lastBal['created_at'], 'Y/m/d H:i'), $lastBal['scope'] === '' ? $t['langAllTab'] : (web_langs()[$lastBal['scope']] ?? $lastBal['scope']), number_format((int) $lastBal['users']))) ?></div>
     <?php endif; ?>
@@ -204,38 +204,38 @@ $cnt = um_lang_counts();
   </div>
   <div class="modal-foot" style="border-radius:0 0 10px 10px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
     <?php if ($lastBal !== null): ?>
-      <button type="submit" name="act" value="undo" class="btn" formnovalidate onclick="return confirm(<?= htmlspecialchars(json_encode($t['clnBalUndoConfirm'], JSON_UNESCAPED_UNICODE)) ?>)">↩️ <?= htmlspecialchars($t['clnBalUndo']) ?></button>
+      <button type="submit" name="act" value="undo" class="btn" formnovalidate onclick="return confirm(<?= htmlspecialchars(json_encode($t['clnBalUndoConfirm'], JSON_UNESCAPED_UNICODE)) ?>)">⟦i:undo-2⟧ <?= htmlspecialchars($t['clnBalUndo']) ?></button>
     <?php endif; ?>
-    <button type="submit" class="btn btn-no"<?= $bal['users'] === 0 ? ' disabled' : '' ?>>💰 <?= htmlspecialchars($t['clnBalBtn']) ?></button>
+    <button type="submit" class="btn btn-no"<?= $bal['users'] === 0 ? ' disabled' : '' ?>>⟦i:coins⟧ <?= htmlspecialchars($t['clnBalBtn']) ?></button>
   </div>
   </form>
 </div>
 
 <div class="card fade-up" id="ref" style="margin-bottom:14px">
-  <?= $cardHead('👥 ' . htmlspecialchars($t['clnRefTitle']), htmlspecialchars(sprintf($t['clnRefSub'], $langName))) ?>
+  <?= $cardHead('⟦i:users⟧ ' . htmlspecialchars($t['clnRefTitle']), htmlspecialchars(sprintf($t['clnRefSub'], $langName))) ?>
   <?= $formOpen('ref') ?>
   <div class="card-body">
     <div class="field-hint"><?= $ref['users'] > 0
         ? htmlspecialchars(sprintf($t['clnRefCount'], number_format($ref['invited']), number_format($ref['inviters'])))
-        : '✨ ' . htmlspecialchars($t['clnRefNone']) ?></div>
+        : '⟦i:circle-check:ok⟧ ' . htmlspecialchars($t['clnRefNone']) ?></div>
     <?= $sure($t['clnRefSure']) ?>
   </div>
-  <div class="modal-foot" style="border-radius:0 0 10px 10px"><button type="submit" class="btn btn-no"<?= $ref['users'] === 0 ? ' disabled' : '' ?>>👥 <?= htmlspecialchars($t['clnRefBtn']) ?></button></div>
+  <div class="modal-foot" style="border-radius:0 0 10px 10px"><button type="submit" class="btn btn-no"<?= $ref['users'] === 0 ? ' disabled' : '' ?>>⟦i:users⟧ <?= htmlspecialchars($t['clnRefBtn']) ?></button></div>
   </form>
 </div>
 
 <div class="card fade-up" id="svc" style="margin-bottom:14px">
-  <?= $cardHead('🗑 ' . htmlspecialchars($t['clnSvcTitle']), htmlspecialchars(sprintf($t['clnSvcSub'], $langName))) ?>
+  <?= $cardHead('⟦i:trash-2⟧ ' . htmlspecialchars($t['clnSvcTitle']), htmlspecialchars(sprintf($t['clnSvcSub'], $langName))) ?>
   <?= $formOpen('svc') ?>
   <div class="card-body">
     <div class="field-hint"><?= $svc['services'] > 0
         ? htmlspecialchars(sprintf($t['clnSvcCount'], number_format($svc['services']), number_format($svc['users']), number_format($svc['panels'])))
-        : '✨ ' . htmlspecialchars($t['clnSvcNone']) ?></div>
+        : '⟦i:circle-check:ok⟧ ' . htmlspecialchars($t['clnSvcNone']) ?></div>
     <?php if ($svc['nopanel'] > 0): ?><div class="notice notice-warn" style="margin-top:10px"><?= htmlspecialchars(sprintf($t['clnSvcNoPanel'], number_format($svc['nopanel']))) ?></div><?php endif; ?>
-    <div class="set-row"><div><div class="set-label">⚠️ <?= htmlspecialchars(sprintf($t['clnSvcType'], $t['clnSvcWord'])) ?></div><div class="set-hint"><?= htmlspecialchars($t['clnSvcKeeps']) ?></div></div>
+    <div class="set-row"><div><div class="set-label">⟦i:triangle-alert:warn⟧ <?= htmlspecialchars(sprintf($t['clnSvcType'], $t['clnSvcWord'])) ?></div><div class="set-hint"><?= htmlspecialchars($t['clnSvcKeeps']) ?></div></div>
       <div class="set-ctl"><input type="text" class="input" name="word" value="" autocomplete="off" <?= $running ? 'disabled' : '' ?>></div></div>
   </div>
-  <div class="modal-foot" style="border-radius:0 0 10px 10px"><button type="submit" class="btn btn-no"<?= ($svc['services'] === 0 || $running) ? ' disabled' : '' ?>>🗑 <?= htmlspecialchars($t['clnSvcBtn']) ?></button></div>
+  <div class="modal-foot" style="border-radius:0 0 10px 10px"><button type="submit" class="btn btn-no"<?= ($svc['services'] === 0 || $running) ? ' disabled' : '' ?>>⟦i:trash-2⟧ <?= htmlspecialchars($t['clnSvcBtn']) ?></button></div>
   </form>
 </div>
 

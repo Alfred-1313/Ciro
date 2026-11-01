@@ -172,17 +172,17 @@ $rules = [
 ];
 
 $switch = function ($name, $on, $label, $hint = '') use ($t) {
-    return '<div class="set-row"><div><div class="set-label">' . htmlspecialchars($label) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . $hint . '</div>' : '') . '</div>'
+    return '<div class="set-row"><div><div class="set-label">' . htmlspecialchars(ui_plain($label)) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . ui_plain($hint) . '</div>' : '') . '</div>'
         . '<div class="set-ctl"><label class="lang-chip" style="justify-content:center"><input type="hidden" name="' . $name . '" value="0"><input type="checkbox" name="' . $name . '" value="1"' . ($on ? ' checked' : '') . '> ' . htmlspecialchars($t['refOn']) . '</label></div></div>';
 };
 $field = function ($label, $ctl, $hint = '') {
-    return '<div class="set-row"><div><div class="set-label">' . htmlspecialchars($label) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . $hint . '</div>' : '') . '</div><div class="set-ctl">' . $ctl . '</div></div>';
+    return '<div class="set-row"><div><div class="set-label">' . htmlspecialchars(ui_plain($label)) . '</div>' . ($hint !== '' ? '<div class="set-hint">' . ui_plain($hint) . '</div>' : '') . '</div><div class="set-ctl">' . $ctl . '</div></div>';
 };
 $input = fn($name, $value, $extra = '') => '<input type="text" class="input" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '" ' . $extra . '>';
 $select = function ($name, $options, $value) {
     $h = '<select class="select" name="' . $name . '">';
     foreach ($options as $v => $label) {
-        $h .= '<option value="' . htmlspecialchars((string) $v) . '"' . ((string) $v === (string) $value ? ' selected' : '') . '>' . htmlspecialchars($label) . '</option>';
+        $h .= '<option value="' . htmlspecialchars((string) $v) . '"' . ((string) $v === (string) $value ? ' selected' : '') . '>' . htmlspecialchars(ui_plain($label)) . '</option>';
     }
     return $h . '</select>';
 };
@@ -204,14 +204,14 @@ echo web_lang_assets();
 <?= web_lang_tabs($lang, fn($code) => 'referral.php?' . http_build_query(['lang' => $code])) ?>
 
 <div class="card fade-up" id="status" style="margin-bottom:14px">
-  <?= $cardHead('👥 ' . $t['refStatusTitle'], sprintf($t['refStatusSub'], htmlspecialchars(web_langs()[$lang]))) ?>
+  <?= $cardHead('⟦i:users⟧ ' . $t['refStatusTitle'], sprintf($t['refStatusSub'], htmlspecialchars(web_langs()[$lang]))) ?>
   <?= $formOpen('status') ?>
   <div class="card-body"><?= $switch('affiliatesstatus', $affOn, $t['refStatusLabel'], $t['refStatusHint']) ?></div>
   <?= $saveBtn ?></form>
 </div>
 
 <div class="card fade-up<?= $affOn ? '' : ' set-off' ?>" id="classic" style="margin-bottom:14px">
-  <?= $cardHead('💼 ' . $t['refClassicTitle'], $t['refClassicSub']) ?>
+  <?= $cardHead('⟦i:briefcase⟧ ' . $t['refClassicTitle'], $t['refClassicSub']) ?>
   <?= $formOpen('classic') ?>
   <div class="card-body">
     <?= $switch('aff_classic', $c['on'], $t['refClassicOn']) ?>
@@ -229,7 +229,7 @@ echo web_lang_assets();
 </div>
 
 <div class="card fade-up<?= $affOn ? '' : ' set-off' ?>" id="reward" style="margin-bottom:14px">
-  <?= $cardHead('🎁 ' . $t['refRewardTitle'], $t['refRewardSub']) ?>
+  <?= $cardHead('⟦i:gift⟧ ' . $t['refRewardTitle'], $t['refRewardSub']) ?>
   <?= $formOpen('reward') ?>
   <div class="card-body">
     <?= $switch('affrw_on', $rw['on'], $t['refRewardOn'], $t['refRewardOnHint']) ?>
@@ -263,27 +263,27 @@ echo web_lang_assets();
 </div>
 
 <div class="card fade-up<?= $affOn ? '' : ' set-off' ?>" id="rwreset" style="margin-bottom:14px">
-  <?= $cardHead('🔄 ' . $t['refResetTitle'], $t['refResetSub']) ?>
+  <?= $cardHead('⟦i:refresh-cw⟧ ' . $t['refResetTitle'], $t['refResetSub']) ?>
   <?= $formOpen('rwreset') ?>
   <div class="card-body">
     <?= $field($t['refResetWho'], $input('who', '', 'dir="ltr" placeholder="123456789 · @username"'), $t['refResetHint']) ?>
   </div>
-  <div class="modal-foot" style="border-radius:0 0 10px 10px"><button type="submit" class="btn btn-primary">🔄 <?= $t['refResetBtn'] ?></button></div></form>
+  <div class="modal-foot" style="border-radius:0 0 10px 10px"><button type="submit" class="btn btn-primary">⟦i:refresh-cw⟧ <?= $t['refResetBtn'] ?></button></div></form>
 </div>
 
-<?php foreach (['c' => '💼 ' . $t['refClassicTitle'], 'r' => '🎁 ' . $t['refRewardTitle']] as $plan => $planName):
+<?php foreach (['c' => '⟦i:briefcase⟧ ' . $t['refClassicTitle'], 'r' => '⟦i:gift⟧ ' . $t['refRewardTitle']] as $plan => $planName):
   $rv = refv_cfg($lang, $plan);
   $vipIds = $rv['vip'];
   $vipText = implode("\n", $vipIds);
 ?>
 <div class="card fade-up<?= $affOn ? '' : ' set-off' ?>" id="refv_<?= $plan ?>" style="margin-bottom:14px">
-  <?= $cardHead('🛡 ' . $t['refVerifyTitle'] . ' — ' . $planName, $t['refVerifySub']) ?>
+  <?= $cardHead('⟦i:shield⟧ ' . $t['refVerifyTitle'] . ' — ' . $planName, $t['refVerifySub']) ?>
   <?= $formOpen('refv_' . $plan) ?>
   <div class="card-body">
     <?= $switch('phone', $rv['phone'], $t['refVerifyPhone'], $t['refVerifyPhoneHint']) ?>
     <?= $switch('channel', $rv['channel'], $t['refVerifyChannel']) ?>
     <div class="set-row"><div><div class="set-label"><?= $t['refVerifyChannels'] ?></div></div><div class="set-ctl"><div class="lang-chips">
-      <?php if (!$channels): ?><span class="cf"><?= htmlspecialchars(strip_tags($fs['refvNoChannels'])) ?></span><?php endif; ?>
+      <?php if (!$channels): ?><span class="cf"><?= htmlspecialchars(ui_plain(strip_tags($fs['refvNoChannels']))) ?></span><?php endif; ?>
       <?php foreach ($channels as $ch): ?>
         <label class="lang-chip"><input type="checkbox" name="channels[]" value="<?= (int) $ch['id'] ?>"<?= in_array((int) $ch['id'], $rv['channels'], true) ? ' checked' : '' ?>> <?= htmlspecialchars((string) (($ch['remark'] ?? '') ?: ($ch['link'] ?? $ch['id']))) ?></label>
       <?php endforeach; ?>
@@ -294,6 +294,6 @@ echo web_lang_assets();
 </div>
 <?php endforeach; ?>
 
-<div class="card fade-up" style="margin-bottom:14px"><div class="card-body"><div class="set-row"><div class="set-hint">📲 <?= $t['saLinkHint'] ?></div><div class="set-ctl"><a class="btn btn-ghost btn-sm" href="subapps.php?<?= http_build_query(['lang' => web_lang_pick()]) ?>"><?= $t['saLinkText'] ?></a></div></div></div></div>
+<div class="card fade-up" style="margin-bottom:14px"><div class="card-body"><div class="set-row"><div class="set-hint">⟦i:smartphone⟧ <?= $t['saLinkHint'] ?></div><div class="set-ctl"><a class="btn btn-ghost btn-sm" href="subapps.php?<?= http_build_query(['lang' => web_lang_pick()]) ?>"><?= $t['saLinkText'] ?></a></div></div></div></div>
 
 <?php include __DIR__ . '/inc/layout_foot.php'; ?>

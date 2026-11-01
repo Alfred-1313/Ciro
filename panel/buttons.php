@@ -12,7 +12,7 @@ require_auth();
 $t = $textbotlang['panel'];
 $lang = web_lang_pick();
 $tx = lang_tab_texts($lang);
-$colors = ['' => $t['menuColorDefault'], 'primary' => '🔵 ' . $t['menuColorBlue'], 'success' => '🟢 ' . $t['menuColorGreen'], 'danger' => '🔴 ' . $t['menuColorRed']];
+$colors = ['' => $t['menuColorDefault'], 'primary' => $t['menuColorBlue'], 'success' => $t['menuColorGreen'], 'danger' => $t['menuColorRed']];
 $itemLabels = [];
 foreach ($textbotlang['bottext']['items'] as $it) {
     if (!empty($it['key'])) {

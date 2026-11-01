@@ -111,7 +111,7 @@ foreach ($bt['items'] as $it) {
 
 $curLook = subapp_look($lang);
 $curTheme = subapp_theme($lang);
-$colors = ['' => $t['menuColorDefault'], 'primary' => '🔵 ' . $t['menuColorBlue'], 'success' => '🟢 ' . $t['menuColorGreen'], 'danger' => '🔴 ' . $t['menuColorRed']];
+$colors = ['' => $t['menuColorDefault'], 'primary' => $t['menuColorBlue'], 'success' => $t['menuColorGreen'], 'danger' => $t['menuColorRed']];
 $itemLabels = [];
 foreach ($bt['items'] as $it) {
     if (!empty($it['key'])) {
@@ -122,7 +122,7 @@ $cards = [];
 foreach (['gb', 'kb'] as $alias) {
     $cards[$alias] = [genbtn_alias_to_key($alias), genbtn_defs($alias, $tx)];
 }
-$sectionTitle = fn($sec) => $bt['msSections'][$sec] ?? bt_section_meta($sec)['label'];
+$sectionTitle = fn($sec) => ui_plain((string) ($bt['msSections'][$sec] ?? bt_section_meta($sec)['label']));
 $stateLinks = ['' => $t['saPreviewOpening'], 'missing' => $t['saPreviewMissing'], 'opened' => $t['saPreviewOpened'], 'downloading' => $t['saPreviewDownloading']];
 
 $pageTitle = $t['saPageTitle'];
@@ -135,30 +135,30 @@ echo web_lang_assets();
 <?= web_lang_tabs($lang, fn($code) => 'subapps.php?' . http_build_query(['lang' => $code])) ?>
 
 <div class="card fade-up" style="margin-bottom:14px"><div class="card-body"><div class="set-row">
-  <div><div class="set-label">✏️ <?= $t['seOpenEditor'] ?></div><div class="set-hint"><?= $t['seOpenEditorHint'] ?></div></div>
+  <div><div class="set-label">⟦i:pencil⟧ <?= $t['seOpenEditor'] ?></div><div class="set-hint"><?= $t['seOpenEditorHint'] ?></div></div>
   <div class="set-ctl"><a class="btn btn-primary btn-sm" href="subapp_edit.php?<?= http_build_query(['lang' => $lang]) ?>"><?= $t['seOpenEditor'] ?></a></div>
 </div></div></div>
 
 <form method="POST" action="subapps.php?<?= http_build_query(['lang' => $lang]) ?>" class="card fade-up" id="look" data-autosave data-ajax="quiet" style="margin-bottom:14px">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
   <input type="hidden" name="action" value="look">
-  <div class="card-head"><div><div class="card-title">🖼 <?= $t['saLookLabel'] ?></div><div class="card-subtitle"><?= $t['saLookHint'] ?></div></div></div>
+  <div class="card-head"><div><div class="card-title">⟦i:image⟧ <?= $t['saLookLabel'] ?></div><div class="card-subtitle"><?= $t['saLookHint'] ?></div></div></div>
   <div class="card-body">
     <?php foreach (subapp_looks() as $lk => $ln): ?>
       <div class="set-row" style="flex-wrap:wrap">
-        <label class="lang-chip" style="min-width:200px"><input type="radio" name="subapp_look" value="<?= htmlspecialchars($lk) ?>"<?= $curLook === $lk ? ' checked' : '' ?>> <?= htmlspecialchars($ln) ?></label>
+        <label class="lang-chip" style="min-width:200px"><input type="radio" name="subapp_look" value="<?= htmlspecialchars($lk) ?>"<?= $curLook === $lk ? ' checked' : '' ?>> <?= htmlspecialchars(ui_plain($ln)) ?></label>
         <div class="lang-chips" style="flex:1;justify-content:flex-end">
           <?php foreach ($stateLinks as $st => $label): ?>
-            <a class="btn btn-ghost btn-sm" href="<?= htmlspecialchars(subapp_preview_link($lk, $lang, 'karing', $st)) ?>" target="_blank" rel="noopener noreferrer">👁 <?= htmlspecialchars($label) ?></a>
+            <a class="btn btn-ghost btn-sm" href="<?= htmlspecialchars(subapp_preview_link($lk, $lang, 'karing', $st)) ?>" target="_blank" rel="noopener noreferrer">⟦i:eye⟧ <?= htmlspecialchars($label) ?></a>
           <?php endforeach; ?>
         </div>
       </div>
     <?php endforeach; ?>
     <div class="set-row" style="flex-wrap:wrap">
-      <div style="min-width:200px"><div class="set-label">🌓 <?= $t['saThemeLabel'] ?></div><div class="set-hint"><?= $t['saThemeHint'] ?></div></div>
+      <div style="min-width:200px"><div class="set-label">⟦i:sun-moon⟧ <?= $t['saThemeLabel'] ?></div><div class="set-hint"><?= $t['saThemeHint'] ?></div></div>
       <div class="lang-chips" style="flex:1;justify-content:flex-end">
         <?php foreach (subapp_themes() as $tk => $tn): ?>
-          <label class="lang-chip"><input type="radio" name="subapp_theme" value="<?= htmlspecialchars($tk) ?>"<?= $curTheme === $tk ? ' checked' : '' ?>> <?= htmlspecialchars($tn) ?></label>
+          <label class="lang-chip"><input type="radio" name="subapp_theme" value="<?= htmlspecialchars($tk) ?>"<?= $curTheme === $tk ? ' checked' : '' ?>> <?= htmlspecialchars(ui_plain($tn)) ?></label>
         <?php endforeach; ?>
       </div>
     </div>
@@ -169,7 +169,7 @@ echo web_lang_assets();
 <form method="POST" action="subapps.php?<?= http_build_query(['lang' => $lang]) ?>" class="card fade-up" id="links" style="margin-bottom:14px">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
   <input type="hidden" name="action" value="links">
-  <div class="card-head"><div><div class="card-title">🔗 <?= $t['seLinksTitle'] ?></div><div class="card-subtitle"><?= $t['seLinksHint'] ?></div></div></div>
+  <div class="card-head"><div><div class="card-title">⟦i:link⟧ <?= $t['seLinksTitle'] ?></div><div class="card-subtitle"><?= $t['seLinksHint'] ?></div></div></div>
   <div class="card-body" style="display:flex;flex-direction:column;gap:16px">
     <?php $myLinks = subapp_links($lang); foreach (subapp_apps() as $app): ?>
       <div class="field">
@@ -196,7 +196,7 @@ echo web_lang_assets();
       onsubmit="this.querySelectorAll('textarea').forEach(function (x) { x.disabled = x.value === x.defaultValue; })" class="card fade-up" id="texts" style="overflow:visible;margin-bottom:14px">
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
   <input type="hidden" name="return" value="subapps">
-  <div class="card-head"><div><div class="card-title">📝 <?= $t['saTextsTitle'] ?> <small>(<?= $changedCount ?> <?= $t['bottextChangedLabel'] ?>)</small></div><div class="card-subtitle"><?= $t['saTextsHint'] ?></div></div></div>
+  <div class="card-head"><div><div class="card-title">⟦i:square-pen⟧ <?= $t['saTextsTitle'] ?> <small>(<?= $changedCount ?> <?= $t['bottextChangedLabel'] ?>)</small></div><div class="card-subtitle"><?= $t['saTextsHint'] ?></div></div></div>
   <div class="card-body" style="display:flex;flex-direction:column;gap:18px">
     <?php foreach ($bySection as $sec => $items): ?>
       <h3 style="margin:6px 2px -6px;font-size:.95rem"><?= htmlspecialchars($sectionTitle($sec)) ?></h3>
@@ -214,7 +214,7 @@ echo web_lang_assets();
   <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
   <input type="hidden" name="action" value="reset">
   <div class="card-body"><div class="set-row">
-    <div><div class="set-label">🔁 <?= $t['saResetTitle'] ?></div><div class="set-hint"><?= $t['saResetHint'] ?></div></div>
+    <div><div class="set-label">⟦i:repeat⟧ <?= $t['saResetTitle'] ?></div><div class="set-hint"><?= $t['saResetHint'] ?></div></div>
     <div class="set-ctl"><button type="submit" class="btn btn-ghost btn-sm"><?= $t['saResetBtn'] ?></button></div>
   </div></div>
 </form>

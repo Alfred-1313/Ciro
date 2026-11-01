@@ -1,0 +1,266 @@
+/* The panel's last layer, after shab.css: line icons where emoji used to be,
+   a few small motions that answer what the admin just did, and the system's
+   accessibility settings (less motion, less transparency, more contrast). */
+
+/* ── icons in text: the ⟦i:…⟧ tokens of inc/icons.php ── */
+.ic {
+  flex: none;
+}
+.ic-t {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.2em;
+}
+.ic-ok { color: var(--ok); }
+.ic-no { color: var(--no); }
+.ic-warn { color: var(--warn); }
+.ic-muted { color: var(--mute); }
+.ic-accent { color: var(--ach); }
+/* the icon that opens a heading or a label is the accent, set a little apart */
+:where(.card-title, h3, h4, summary, .set-label, .stat-label, .toolbar-title) > .ic-t:first-child {
+  margin-inline-end: 0.4em;
+}
+:where(.card-title, h3, h4, summary, .set-label, .stat-label, .toolbar-title) > .ic-t:first-child:not(.ic-ok, .ic-no, .ic-warn, .ic-muted) {
+  color: var(--ach);
+}
+.card-title > .ic-t:first-child {
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: -0.24em;
+}
+.lang-tab .ic-t,
+.btn .ic-t {
+  margin-inline-end: 0.3em;
+}
+.lang-tab:not(.on) .ic-t:not(.ic-muted) {
+  opacity: 0.8;
+}
+.ic-spin {
+  animation: ic-spin 0.9s linear infinite;
+}
+@keyframes ic-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── the page says what it is: its menu icon beside its title ── */
+.topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.page-ico {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: var(--ach);
+  background: var(--acs);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ach) 26%, transparent);
+}
+.page-ico .ic {
+  width: 20px;
+  height: 20px;
+}
+@media (max-width: 768px) {
+  .page-ico {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+  .page-ico .ic {
+    width: 17px;
+    height: 17px;
+  }
+}
+
+/* ── the dashboard's figures: each with the mark of what it counts ── */
+.stat-label > .ic-t:first-child,
+.stat-label > a > .ic-t:first-child {
+  box-sizing: content-box;
+  width: 1.05em;
+  height: 1.05em;
+  padding: 0.32em;
+  margin-inline-end: 0.45em;
+  border-radius: 8px;
+  vertical-align: -0.52em;
+  background: var(--acs);
+  color: var(--ach);
+}
+.stat-label > .ic-warn:first-child {
+  background: var(--warns);
+  color: var(--warn);
+}
+
+/* ── small answers to the pointer (only where there is one) ── */
+@media (hover: hover) and (pointer: fine) {
+  .nav-icon .ic,
+  .btn .ic {
+    transition: transform 200ms var(--ease-out);
+  }
+  .nav-item:hover .nav-icon .ic {
+    transform: scale(1.08);
+  }
+  .nav-item:hover .nav-icon .ic-settings,
+  .btn:hover .ic-settings {
+    transform: rotate(45deg);
+  }
+  .btn:hover .ic-plus {
+    transform: rotate(90deg);
+  }
+  .btn:hover .ic-refresh-cw,
+  .btn:hover .ic-rotate-ccw {
+    transform: rotate(-60deg);
+  }
+  .btn:hover .ic-trash-2 {
+    transform: translateY(-1px) rotate(-8deg);
+  }
+}
+
+/* ── saved: the button that did it turns into a tick for a moment ── */
+.btn.is-saved {
+  position: relative;
+  color: transparent !important;
+}
+.btn.is-saved > .ic {
+  opacity: 0;
+}
+.btn-done {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--btn-ac-text, #fff);
+  pointer-events: none;
+}
+.btn:not(.btn-primary) .btn-done {
+  color: var(--ok);
+}
+.btn-done svg {
+  width: 18px;
+  height: 18px;
+}
+.btn-done path,
+.toast-icon svg > * {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: ic-draw 320ms var(--ease-out) 60ms forwards;
+}
+@keyframes ic-draw {
+  to { stroke-dashoffset: 0; }
+}
+.toast-close {
+  display: inline-grid;
+  place-items: center;
+}
+
+/* ── an empty list: a quiet drawing above the words that say what to do ── */
+.empty-art {
+  display: block;
+  width: 104px;
+  height: 104px;
+  margin: 0 auto 12px;
+  color: var(--ach);
+  overflow: visible;
+}
+.empty-art .ea-orbit {
+  transform-origin: 52px 52px;
+  animation: ea-orbit 24s linear infinite;
+}
+.empty-art .ea-glyph > * {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: ic-draw 700ms var(--ease-out) 120ms forwards;
+}
+@keyframes ea-orbit {
+  to { transform: rotate(360deg); }
+}
+
+/* ── a colour picker shows the colour it holds ── */
+.sw-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.sw-wrap.sw-wide {
+  display: block;
+}
+.sw-wrap .sw-sel {
+  padding-inline-start: 32px;
+}
+.sw-wrap.sw-wide .sw-sel {
+  width: 100%;
+}
+.sw-dot {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 12px;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: var(--sw, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--sw-ring, var(--bds));
+  transition: background-color 160ms ease;
+}
+.sw-dot[data-c="primary"] { --sw: #3390ec; --sw-ring: #3390ec; }
+.sw-dot[data-c="success"] { --sw: #31b545; --sw-ring: #31b545; }
+.sw-dot[data-c="danger"] { --sw: #e53935; --sw-ring: #e53935; }
+
+/* ── keyboard focus is always visible ── */
+:where(a, button, summary, select, textarea, input:not([type="hidden"]), [tabindex]):focus-visible {
+  outline: 2px solid var(--ach);
+  outline-offset: 2px;
+}
+
+/* ── the system's own settings ── */
+@media (prefers-reduced-transparency: reduce) {
+  .sidebar,
+  .topbar,
+  .modal,
+  .confirm-box,
+  .toast,
+  .mtb {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  .modal-veil,
+  .confirm-veil {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: rgba(0, 0, 0, 0.72) !important;
+  }
+}
+@media (prefers-contrast: more) {
+  :root,
+  [data-theme] {
+    --bd: var(--bds);
+    --card-bd: var(--bds);
+    --mute: var(--text);
+    --dim: var(--text);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ic-spin,
+  .empty-art .ea-orbit {
+    animation: none !important;
+  }
+  .btn-done path,
+  .toast-icon svg > *,
+  .empty-art .ea-glyph > * {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+  .ic,
+  .sw-dot {
+    transition: none !important;
+  }
+}
+
+/* the figures keep their width while they count */
+.stat-num {
+  font-variant-numeric: tabular-nums;
+}
