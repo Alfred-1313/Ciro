@@ -992,4 +992,18 @@ return [
             . "📍 Path: ✏️ Panel management → a Rebecca panel → ⚙️ Set protocol and inbound\n"
             . "🌐 Web panel: «Panels (servers)» → the «Rebecca panels' service» card</blockquote>",
     ],
+    [
+        'n' => 70,
+        'date' => '2026-11-01',
+        'fa' => "<blockquote>🧩 <b>حجم دلخواه: حذف گام ➖/➕ و توضیح روشن‌تر «حجم ثابت»</b>\n"
+            . "• «👣 گام ➖/➕» حجم حالا قابل حذف است: عدد <b>0</b> بفرست (در پنل وب هم بنویس 0) تا دکمه‌های ➖/➕ از صفحهٔ مشتری برداشته شوند؛ مشتری حجم را از دکمه‌های آماده یا با «✏️ وارد کردن عدد» انتخاب می‌کند. اگر نه گامی بماند نه دکمهٔ آماده‌ای، دکمهٔ تایپ عدد همیشه نشان داده می‌شود (حتی اگر در 🎨 پنهانش کرده باشی) تا مشتری بن‌بست نخورد.\n"
+            . "• «حجم ثابت» فقط برای حالت «📅 فقط مدت» است: همهٔ سرویس‌ها همان حجم را می‌گیرند و مشتری فقط تعداد روز را انتخاب می‌کند (مثلاً «۱۰۰ گیگ برای هر چند روز»). «مدت ثابت» هم همین‌طور برای «📦 فقط حجم». در حالت «هر دو» این دو عدد اثری ندارند، برای همین حالا فقط وقتی دیده می‌شوند که کاربرد دارند؛ در «🎛 حالت انتخاب» هم دکمهٔ تنظیم عدد ثابتِ همان حالت زیر دکمه‌ها آمده و توضیح هر حالت با مثال نوشته شده.\n"
+            . "📍 مسیر: ✏️ مدیریت پنل ← انتخاب پنل ← 💰 قیمت‌گذاری ← 🧩 تنظیمات حجم دلخواه ← 📦 تنظیم حجم / 🎛 حالت انتخاب\n"
+            . "🌐 پنل وب: «حجم دلخواه» ← کارت «حجم»</blockquote>",
+        'en' => "<blockquote>🧩 <b>Custom plans: the ➖/➕ step can be removed, and «fixed volume» is explained</b>\n"
+            . "• The volume's «👣 ➖/➕ step» can now be removed: send <b>0</b> (type 0 in the web panel too) and the ➖/➕ buttons leave the customer's screen; the customer picks the volume from the ready buttons or with «✏️ Type a number». When neither a step nor a ready button is left, the type-a-number button is always shown (even if you hid it in 🎨) so the customer is never stuck.\n"
+            . "• «Fixed volume» belongs to the «📅 Days only» mode alone: every service gets that volume and the customer picks only the number of days (e.g. «100 GB for as many days as you like»). «Fixed days» is the same for «📦 Volume only». In «Both» mode these two numbers do nothing, so they now show only when they apply; the «🎛 Choice mode» screen also has a button for the fixed number of the current mode, and each mode is explained with an example.\n"
+            . "📍 Path: ✏️ Panel management → the panel → 💰 Pricing → 🧩 Custom plan settings → 📦 Volume / 🎛 Choice mode\n"
+            . "🌐 Web panel: «Custom plan» → the «Volume» card</blockquote>",
+    ],
 ];

@@ -86,7 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 : ['min' => $t['cvDaysMin'], 'max' => $t['cvDaysMax'], 'step' => $t['cvDaysStep'], 'start' => $t['cvDaysStart'], 'fixed' => $t['cvDaysFixed']];
             foreach ($fields as $k => $label) {
                 $v = $number($_POST[$k] ?? '');
-                if (!ctype_digit($v) || (int) $v < 1) {
+                // 0 is the volume step's way of saying «no −/+ buttons»
+                if (!ctype_digit($v) || (int) $v < ($card === 'vol' && $k === 'step' ? 0 : 1)) {
                     $err = sprintf($t['cvErrBad'], $label);
                     break;
                 }
@@ -305,7 +306,7 @@ echo web_lang_assets();
     <?= $switch('on', $c['on'], $t['cvOn'], $t['cvOnHint']) ?>
     <?php ob_start(); ?><div class="cv-levels"><?php foreach (cvol_levels() as $lv): ?><label class="lang-chip"><input type="checkbox" name="levels[]" value="<?= $lv ?>"<?= $c['levels'][$lv] ? ' checked' : '' ?>> <?= icon($lvIcon[$lv], 14) ?> <?= htmlspecialchars($lvName[$lv]) ?></label><?php endforeach; ?></div><?php $levelsCtl = ob_get_clean(); ?>
     <?= $field($t['cvLevels'], $levelsCtl, $t['cvLevelsHint']) ?>
-    <?= $field($t['cvMode'], $select('mode', $modeName, $c['mode'])) ?>
+    <?= $field($t['cvMode'], $select('mode', $modeName, $c['mode']), $t['cvModeHint']) ?>
     <?= $switch('nudge', $c['nudge'], $t['cvNudge'], $t['cvNudgeHint']) ?>
   </div>
   <?= $saveBtn ?></form>
@@ -366,7 +367,7 @@ echo web_lang_assets();
     <?php else: ?>
       <?= $field($t['cvVolMin'], $num('min', $c['vol']['min'])) ?>
       <?= $field($t['cvVolMax'], $num('max', $c['vol']['max'])) ?>
-      <?= $field($t['cvVolStep'], $num('step', $c['vol']['step'])) ?>
+      <?= $field($t['cvVolStep'], $num('step', $c['vol']['step']), $t['cvVolStepHint']) ?>
       <?= $field($t['cvVolStart'], $num('start', $c['vol']['start']), $t['cvVolStartHint']) ?>
       <?= $field($t['cvVolChips'], $input('list', implode(' ', $c['vol']['chips']), 'dir="ltr" autocomplete="off" placeholder="10 20 50 100"'), $t['cvVolChipsHint']) ?>
       <?= $hidden('fixed', $c['vol']['fixed']) ?>

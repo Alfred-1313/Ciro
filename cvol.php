@@ -88,7 +88,8 @@ if (!function_exists('cvol_cfg')) {
         $o['vol'] = [
             'min' => $vmin,
             'max' => $vmax,
-            'step' => $abs($int($v['step'] ?? null, $d['vol']['step']), 100000),
+            // 0 = no ➖/➕ buttons: the volume is picked from the ready buttons or typed
+            'step' => max(0, min(100000, $int($v['step'] ?? null, $d['vol']['step']))),
             'start' => $abs($int($v['start'] ?? null, $d['vol']['start']), 100000),
             'fixed' => $abs($int($v['fixed'] ?? null, $d['vol']['fixed']), 100000),
             'chips' => array_slice(array_values($chips), 0, 6),
@@ -780,7 +781,7 @@ if (!function_exists('cvol_state_all')) {
         return bt_button($lang, 'users.cvol.entryBtn', cvol_tx($lang)['entryBtn'], $callback, 'primary');
     }
     // one of the screen's own buttons (🎨 alias 'cv'), or null when hidden
-    function cvol_btn($lang, $idx, $callback, array $vars = [])
+    function cvol_btn($lang, $idx, $callback, array $vars = [], $force = false)
     {
         $defs = genbtn_defs('cv', lang_tab_texts($lang));
         $def = $defs[$idx] ?? null;
@@ -788,7 +789,7 @@ if (!function_exists('cvol_state_all')) {
             return null;
         }
         $ov = genbtn_override($lang, 'users.cvol.caption', $idx);
-        if (genbtn_hideable('cv', $idx) && genbtn_is_hidden($def, $ov)) {
+        if (!$force && genbtn_hideable('cv', $idx) && genbtn_is_hidden($def, $ov)) {
             return null;
         }
         $b = genbtn_render($def, $ov, $callback);
@@ -969,8 +970,11 @@ if (!function_exists('cvol_state_all')) {
                 ['text' => '+' . cvol_num($big), 'callback_data' => $cb($val + $big)],
             ];
         };
+        $chipsInRange = false;
         if ($free['vol']) {
-            $rows[] = $stepper('v', $g, $c['vol']['min'], $c['vol']['max'], $c['vol']['step'], '📦 ' . $unitG($g));
+            if ($c['vol']['step'] > 0) {
+                $rows[] = $stepper('v', $g, $c['vol']['min'], $c['vol']['max'], $c['vol']['step'], '📦 ' . $unitG($g));
+            }
             $chips = [];
             foreach ($c['vol']['chips'] as $x) {
                 if ($x >= $c['vol']['min'] && $x <= $c['vol']['max']) {
@@ -979,6 +983,7 @@ if (!function_exists('cvol_state_all')) {
             }
             if ($chips) {
                 $rows[] = $chips;
+                $chipsInRange = true;
             }
         }
         if ($free['days']) {
@@ -999,7 +1004,10 @@ if (!function_exists('cvol_state_all')) {
             }
         }
         if ($free['vol'] || ($free['days'] && $c['days']['pick'] === 'step')) {
-            if ($b = cvol_btn($lang, 1, 'cvb|t')) {
+            // with no ➖/➕ and no ready number to tap, typing is the only way to
+            // choose the volume - so its button stays even if 🎨 hid it
+            $onlyTyping = $free['vol'] && $c['vol']['step'] <= 0 && !$chipsInRange;
+            if ($b = cvol_btn($lang, 1, 'cvb|t', [], $onlyTyping)) {
                 $rows[] = [$b];
             }
         }
@@ -1352,7 +1360,7 @@ if (!function_exists('cvol_hub')) {
         }
         $mode = $c['mode'] === 'vol' ? strtr($t['modeVol'], ['{days}' => $c['days']['fixed']]) : ($c['mode'] === 'days' ? strtr($t['modeDays'], ['{gb}' => $c['vol']['fixed']]) : $t['modeBoth']);
         $vol = $c['mode'] === 'days' ? strtr($t['volFixed'], ['{gb}' => $c['vol']['fixed']])
-            : strtr($t['volFree'], ['{min}' => $c['vol']['min'], '{max}' => $c['vol']['max'], '{step}' => $c['vol']['step'], '{start}' => $c['vol']['start']])
+            : strtr($c['vol']['step'] > 0 ? $t['volFree'] : $t['volFreeNoStep'], ['{min}' => $c['vol']['min'], '{max}' => $c['vol']['max'], '{step}' => $c['vol']['step'], '{start}' => $c['vol']['start']])
             . ($c['vol']['chips'] ? strtr($t['volChips'], ['{list}' => implode('، ', $c['vol']['chips'])]) : '');
         $days = $c['mode'] === 'vol' ? strtr($t['daysFixed'], ['{days}' => $c['days']['fixed']])
             : ($c['days']['pick'] === 'list' ? strtr($t['daysList'], ['{list}' => implode('، ', $c['days']['list'])])
@@ -1465,30 +1473,49 @@ if (!function_exists('cvol_hub')) {
         $out = null;
         switch ($act) {
             case 'mo':
+                // the number a mode keeps the same for everyone, one tap away
+                $fixedRow = $c['mode'] === 'days' ? [cvol_b(strtr($t['modeFixedVolBtn'], ['{v}' => $c['vol']['fixed']]), $h . 'in|vfixed')]
+                    : ($c['mode'] === 'vol' ? [cvol_b(strtr($t['modeFixedDaysBtn'], ['{v}' => $c['days']['fixed']]), $h . 'in|dfixed')] : null);
                 $out = [strtr($t['mode'], ['{panel}' => $name, '{days}' => $c['days']['fixed'], '{gb}' => $c['vol']['fixed']]), cvol_kb([
                     [cvol_b($mark($c['mode'] === 'both') . $t['modeBothBtn'], $h . 'ms|both', $c['mode'] === 'both' ? 'success' : 'primary')],
                     [cvol_b($mark($c['mode'] === 'vol') . $t['modeVolBtn'], $h . 'ms|vol', $c['mode'] === 'vol' ? 'success' : 'primary'), cvol_b($mark($c['mode'] === 'days') . $t['modeDaysBtn'], $h . 'ms|days', $c['mode'] === 'days' ? 'success' : 'primary')],
+                    $fixedRow,
                     $back,
                 ])];
                 break;
             case 'vo':
                 $v = $c['vol'];
-                $out = [strtr($t['vol'], ['{panel}' => $name, '{min}' => $v['min'], '{max}' => $v['max'], '{step}' => $v['step'], '{big}' => $v['step'] * 5, '{start}' => $v['start'], '{fixed}' => $v['fixed'], '{chips}' => $v['chips'] ? implode('، ', $v['chips']) : $t['none']]), cvol_kb([
+                if ($c['mode'] === 'days') {
+                    // «فقط مدت»: the volume is the same for everyone - that one number is all there is to set
+                    $out = [strtr($t['volFixedOnly'], ['{panel}' => $name, '{fixed}' => $v['fixed']]), cvol_kb([
+                        [cvol_b(strtr($t['volFixedBtn'], ['{v}' => $v['fixed']]), $h . 'in|vfixed')],
+                        $back,
+                    ])];
+                    break;
+                }
+                $stepLine = $v['step'] > 0 ? strtr($t['volStepLine'], ['{step}' => $v['step'], '{big}' => $v['step'] * 5]) : $t['volStepOff'];
+                $out = [strtr($t['vol'], ['{panel}' => $name, '{min}' => $v['min'], '{max}' => $v['max'], '{step_line}' => $stepLine, '{start}' => $v['start'], '{chips}' => $v['chips'] ? implode('، ', $v['chips']) : $t['none']]), cvol_kb([
                     [cvol_b(strtr($t['volMinBtn'], ['{v}' => $v['min']]), $h . 'in|vmin'), cvol_b(strtr($t['volMaxBtn'], ['{v}' => $v['max']]), $h . 'in|vmax')],
-                    [cvol_b(strtr($t['volStepBtn'], ['{v}' => $v['step']]), $h . 'in|vstep'), cvol_b(strtr($t['volStartBtn'], ['{v}' => $v['start']]), $h . 'in|vstart')],
-                    [cvol_b(strtr($t['volFixedBtn'], ['{v}' => $v['fixed']]), $h . 'in|vfixed')],
+                    [cvol_b($v['step'] > 0 ? strtr($t['volStepBtn'], ['{v}' => $v['step']]) : $t['volStepBtnOff'], $h . 'in|vstep'), cvol_b(strtr($t['volStartBtn'], ['{v}' => $v['start']]), $h . 'in|vstart')],
                     [cvol_b($t['volChipsBtn'], $h . 'in|vchips')],
                     $back,
                 ])];
                 break;
             case 'dy':
                 $d = $c['days'];
-                $out = [strtr($t['days'], ['{panel}' => $name, '{pick}' => $d['pick'] === 'list' ? $t['pickList'] : $t['pickStep'], '{list}' => $d['list'] ? implode('، ', $d['list']) : $t['none'], '{min}' => $d['min'], '{max}' => $d['max'], '{step}' => $d['step'], '{start}' => $d['start'], '{fixed}' => $d['fixed']]), cvol_kb([
+                if ($c['mode'] === 'vol') {
+                    // «فقط حجم»: the days are the same for everyone
+                    $out = [strtr($t['daysFixedOnly'], ['{panel}' => $name, '{fixed}' => $d['fixed']]), cvol_kb([
+                        [cvol_b(strtr($t['daysFixedBtn'], ['{v}' => $d['fixed']]), $h . 'in|dfixed')],
+                        $back,
+                    ])];
+                    break;
+                }
+                $out = [strtr($t['days'], ['{panel}' => $name, '{pick}' => $d['pick'] === 'list' ? $t['pickList'] : $t['pickStep'], '{list}' => $d['list'] ? implode('، ', $d['list']) : $t['none'], '{min}' => $d['min'], '{max}' => $d['max'], '{step}' => $d['step'], '{start}' => $d['start']]), cvol_kb([
                     [cvol_b($mark($d['pick'] === 'list') . $t['pickListBtn'], $h . 'dp|list', $d['pick'] === 'list' ? 'success' : 'primary'), cvol_b($mark($d['pick'] === 'step') . $t['pickStepBtn'], $h . 'dp|step', $d['pick'] === 'step' ? 'success' : 'primary')],
                     [cvol_b(strtr($t['daysListBtn'], ['{v}' => $d['list'] ? implode(', ', $d['list']) : '—']), $h . 'in|dlist')],
                     [cvol_b(strtr($t['daysMinBtn'], ['{v}' => $d['min']]), $h . 'in|dmin'), cvol_b(strtr($t['daysMaxBtn'], ['{v}' => $d['max']]), $h . 'in|dmax')],
                     [cvol_b(strtr($t['daysStepBtn'], ['{v}' => $d['step']]), $h . 'in|dstep'), cvol_b(strtr($t['daysStartBtn'], ['{v}' => $d['start']]), $h . 'in|dstart')],
-                    [cvol_b(strtr($t['daysFixedBtn'], ['{v}' => $d['fixed']]), $h . 'in|dfixed')],
                     $back,
                 ])];
                 break;
@@ -1597,7 +1624,7 @@ if (!function_exists('cvol_hub')) {
             'dmin' => $c['days']['min'], 'dmax' => $c['days']['max'], 'dstep' => $c['days']['step'], 'dstart' => $c['days']['start'], 'dfixed' => $c['days']['fixed']];
         if (isset($now[$f])) {
             $what = $t['f_' . $f];
-            $hint = strtr($t['hintNumber'], ['{now}' => $now[$f]]);
+            $hint = strtr($f === 'vstep' ? $t['hintStepVol'] : $t['hintNumber'], ['{now}' => $now[$f]]);
         } elseif ($f === 'vchips' || $f === 'dlist') {
             $what = $t['f_' . $f];
             $hint = strtr($t['hintList'], ['{example}' => $f === 'vchips' ? '10 20 50 100' : '30 60 90']);
@@ -1628,7 +1655,8 @@ if (!function_exists('cvol_hub')) {
         $map = ['vmin' => ['vol', 'min'], 'vmax' => ['vol', 'max'], 'vstep' => ['vol', 'step'], 'vstart' => ['vol', 'start'], 'vfixed' => ['vol', 'fixed'],
             'dmin' => ['days', 'min'], 'dmax' => ['days', 'max'], 'dstep' => ['days', 'step'], 'dstart' => ['days', 'start'], 'dfixed' => ['days', 'fixed']];
         if (isset($map[$f])) {
-            if ($one === null || $one < 1) {
+            // 0 is allowed for the volume's step only: it takes the ➖/➕ buttons away
+            if ($one === null || $one < ($f === 'vstep' ? 0 : 1)) {
                 return $t['bad'];
             }
             [$sec, $k] = $map[$f];
