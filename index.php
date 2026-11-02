@@ -116,7 +116,7 @@ if ($from_id != 0) {
         }
     }
     $randomString = bin2hex(random_bytes(6));
-    $stmt = $pdo->prepare("INSERT IGNORE INTO user (id , step,limit_usertest,User_Status,number,Balance,pagenumber,username,agent,message_count,last_message_time,affiliates,affiliatescount,cardpayment,number_username,namecustom,register,verify,codeInvitation,pricediscount,maxbuyagent,joinchannel,score,status_cron) VALUES (:from_id, 'none',:limit_usertest_all,'Active','none','0','1',:username,'f','0','0','0','0',:showcard,'100','none',:date,:verifycode,:codeInvitation,'0','0','0','0','1')");
+    $stmt = $pdo->prepare("INSERT IGNORE INTO user (id , step,limit_usertest,User_Status,number,Balance,pagenumber,username,agent,message_count,last_message_time,affiliates,affiliatescount,cardpayment,number_username,namecustom,register,verify,codeInvitation,pricediscount,maxbuyagent,joinchannel,score,status_cron,lang) VALUES (:from_id, 'none',:limit_usertest_all,'Active','none','0','1',:username,'f','0','0','0','0',:showcard,'100','none',:date,:verifycode,:codeInvitation,'0','0','0','0','1','en')");
     $stmt->bindParam(':from_id', $from_id);
     $stmt->bindParam(':limit_usertest_all', $setting['limit_usertest_all']);
     $stmt->bindParam(':username', $username);
@@ -4067,6 +4067,16 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         // same story as the category caption above: users.selectoption is shared
         // with a dozen unrelated screens, so the tutorial list gets its own key
         $help_list_caption = $textbotlang['users']['help']['listCaption'] ?? $textbotlang['users']['selectoption'];
+        // Telegram calls this a callback alert: it appears on top of the
+        // current screen instead of adding another chat message.
+        if ($datain === 'helpbtns' && $callback_query_id) {
+            telegram('answerCallbackQuery', [
+                'callback_query_id' => $callback_query_id,
+                'text' => strip_tags($help_list_caption),
+                'show_alert' => true,
+                'cache_time' => 1,
+            ]);
+        }
         if ($datain == "helpbtns") {
             Editmessagetext($from_id, $message_id, $help_list_caption, $json_list_help, 'HTML');
         } else {

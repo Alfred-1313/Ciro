@@ -1,54 +1,87 @@
-<div align="center">
-
 # Ciro
 
-**A Telegram bot that sells and manages VPN subscriptions, with a separate shop for Persian and English customers.**
+**A Telegram VPN subscription shop and management bot for PHP 8.2+.**
 
-**English** | [Persian](README.fa.md)
+[English](README.md) · [فارسی](README.fa.md)
 
-<p>
-  <img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP 8.2"/>
-  <img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="AGPL-3.0"/>
-  <img src="https://img.shields.io/badge/Ubuntu%20%7C%20Debian-supported-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt="Ubuntu / Debian"/>
-</p>
+## What is Ciro?
 
-</div>
+Ciro is a Telegram bot for selling, delivering, renewing and managing VPN subscriptions. It includes a web admin panel, multi-language customer messages, payment gateways and adapters for several VPN panels.
 
-## Install
-
-On a clean Ubuntu 20.04+ or Debian 11+ server, as root:
-
-```bash
-bash <(curl -Ls https://raw.githubusercontent.com/Alfred-1313/Ciro/master/install.sh)
-```
-
-Have ready: a domain already pointed at the server, a bot token from [@BotFather](https://t.me/BotFather) and your numeric id from [@userinfobot](https://t.me/userinfobot).
-
-After installing, manage it with the `Ciro` command (capital C — Linux commands are case-sensitive):
-
-| Command | What it does |
-| --- | --- |
-| `Ciro` | Open the menu |
-| `Ciro update` | Get the newest version; your data and `config.php` are kept |
-| `Ciro version` | Show the bot's version and the newest one on GitHub |
-| `Ciro backup` | Send a database backup to Telegram |
-| `Ciro renew` | Reissue the SSL certificate |
-| `Ciro --help` | Every command and option |
-
-Already running a bot of the original project, or an older version of this one? Run the same install command and choose **Update** or **Migrate** — nothing is reinstalled and no data is lost.
+The customer interface supports Persian and English. New users start in English and can change their language from the bot menu. Admin-only controls are shown only to administrators; the admin panel entry uses Telegram's reply keyboard.
 
 ## Features
 
-- Separate settings, texts, prices and currency for each language (fa / en)
-- Every message and button can be reworded from the bot's 🎨 menu or the web panel, with premium emoji and stickers
+- Sell, renew, disable and delete subscriptions
+- Marzban, Marzneshin, X-UI, Hiddify, S-UI, WGDashboard, Mikrotik, IBSng and other panel adapters
+- Persian and English texts, buttons, prices and currency settings
 - Web admin panel
-- **Panels:** Marzban, Marzneshin, X-UI, Hiddify, S-UI, WGDashboard, Mikrotik, IBSng, Alireza, Rebecca, Remnawave
-- **Payments:** card-to-card, Zarinpal, AqayePardakht, IranPay, Plisio, NOWPayments, TRX, TON, USDT (BEP20), Telegram Stars
+- Card-to-card, Zarinpal, AqayePardakht, IranPay, Plisio, NOWPayments, TRX, TON, USDT and Telegram Stars support
+- Help/tutorial screens with Telegram callback alerts
+- Agent and reseller bot support
+- Database backup and self-update commands
 
----
+## Requirements
 
-### About this project
+- Ubuntu 20.04+ or Debian 11+
+- Root access
+- A domain pointed to the server
+- A Telegram bot token from [@BotFather](https://t.me/BotFather)
+- Your numeric Telegram user ID
 
-Ciro is a fork of the **[Mirza bot](https://github.com/mahdiMGF2/mirzabot)**. We accept no responsibility for any sale of this bot; it is available free of charge on this page. Thanks to the original creator of Mirza, [@mahdiMGF2](https://github.com/mahdiMGF2).
+## One-command installation
 
-Licensed under **GNU AGPL-3.0**, like the original project.
+Run this command as `root` on a clean server:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Alfred-1313/Ciro/master/install.sh)
+```
+
+The installer installs the web stack, PHP, MySQL/MariaDB, Composer dependencies, SSL, the database schema and the Telegram webhook. It also creates the `Ciro` management command.
+
+If `curl` is unavailable:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/Alfred-1313/Ciro/master/install.sh | bash
+```
+
+## Management commands
+
+```bash
+Ciro              # Open the management menu
+Ciro update       # Update the application and keep config/database data
+Ciro version      # Show installed and available versions
+Ciro backup       # Create/send a database backup
+Ciro renew        # Renew the SSL certificate
+Ciro --help       # Show all available options
+```
+
+## Update an existing installation
+
+Use the same installer command and select **Update** when prompted:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Alfred-1313/Ciro/master/install.sh)
+```
+
+The updater preserves `config.php`, uploaded assets and the database. Always make a backup before a major update:
+
+```bash
+Ciro backup
+```
+
+## Configuration
+
+For a manual deployment, copy `config.example.php` to `config.php` and set the database, Telegram token, admin ID and domain values. The installer creates this file automatically.
+
+## Troubleshooting
+
+- Installer log: `/tmp/ciro_install.log`
+- Confirm the domain resolves to the server and ports `80` and `443` are open.
+- Confirm the bot token and numeric admin ID are correct.
+- Run `Ciro renew` if the certificate has expired.
+- Check the PHP and web-server error logs before changing database data.
+
+## License
+
+Ciro is released under the GNU AGPL-3.0 license and is based on the Mirza project.

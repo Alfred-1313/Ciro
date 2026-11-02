@@ -123,7 +123,10 @@ if (!function_exists('build_main_keyboard')) {
             'text_extend' => $textbotlang['textbot']['extend'],
             'text_change_language' => $textbotlang['language']['changeButton']
         ];
-        if (glass_on($mm_lang, $setting) && !empty($keyboardRows)) {
+        // Admin controls must remain a real Telegram reply keyboard.  Inline
+        // ("glass") controls are fine for customer flows, but they make the
+        // admin entry point easy to miss and disappear with the message.
+        if (glass_on($mm_lang, $setting) && !empty($keyboardRows) && $admin_idss == 0) {
             $trace_keyboard = $keyboardRows;
             foreach ($trace_keyboard as $key => $callback_set) {
                 foreach ($callback_set as $keyboard_key => $keyboard) {
