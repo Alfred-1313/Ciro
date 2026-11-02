@@ -49,7 +49,7 @@ try {
             status_cron VARCHAR(20)  NULL DEFAULT '1',
             expire VARCHAR(100) NULL ,
             token VARCHAR(100) NULL,
-            lang VARCHAR(5) NULL  DEFAULT 'en'
+            lang VARCHAR(5) NULL  DEFAULT 'fa'
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci");
         $stmt->execute();
     } else {
