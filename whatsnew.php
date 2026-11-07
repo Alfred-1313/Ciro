@@ -1248,4 +1248,30 @@ return [
             . "4️⃣ Go back and tap the ❌ on the HooshPay row so it turns ✅.\n"
             . "🌐 Web panel: «Gateways» → the HooshPay card.</blockquote>",
     ],
+    [
+        'n' => 83,
+        'date' => '2026-11-08',
+        'fa' => "<blockquote>🛡 <b>کارت‌به‌کارت فقط برای مشتری‌های قدیمی</b>\n"
+            . "اگه روشنش کنی، فقط مشتری‌ای که بیشتر از ۳ خرید یا تمدید پرداخت‌شده داشته دکمه‌ی کارت‌به‌کارت رو می‌بینه؛ بقیه نمی‌بینن. به محض اینکه مشتری به این تعداد برسه، کارت‌به‌کارت خودکار براش روشن می‌شه. عدد ۳ قابل تغییره.\n"
+            . "مثال: مشتری‌ای که ۲ تا سرویس خریده و ۱ بار تمدید کرده هنوز کارت‌به‌کارت نمی‌بینه؛ با خرید یا تمدید بعدی می‌بینه.\n"
+            . "🔴 پیش‌فرض: <b>خاموش</b>\n"
+            . "📍 1️⃣ 🏬 تنظیمات فروشگاه ← 💎 مالی ← «⚙️ تنظیمات» ردیف کارت به کارت\n"
+            . "2️⃣ 🔧 تنظیمات فنی درگاه (این زبان) ← «🛡 فقط برای مشتری‌های قدیمی» رو بزن تا ✅ بشه\n"
+            . "3️⃣ برای عوض کردن عدد: «✏️ تغییر تعداد خرید/تمدید لازم»\n"
+            . "🌐 پنل وب: «درگاه‌ها» ← کارت «کارت به کارت».</blockquote>\n\n"
+            . "<blockquote>⚡ <b>حداقل مبلغ ترونادو: ۱۵۰ هزار تومان</b>\n"
+            . "ترونادو کمتر از ۱۵۰٬۰۰۰ تومان قبول نمی‌کنه، پس ربات هم برای مبلغ‌های کمتر ترونادو رو نشون نمی‌ده (تمدید، پرداخت مستقیم، کسری موجودی) و توی شارژ دلخواه حداقل رو ۱۵۰٬۰۰۰ می‌گه.\n"
+            . "📍 اگه ترونادو عددش رو عوض کرد: 💎 مالی ← 💱 درگاه‌های ارزی ریالی ← «تنظیمات» ترونادو ← «⬇️ کمترین مبلغی که ترونادو قبول می‌کنه».</blockquote>",
+        'en' => "<blockquote>🛡 <b>Card to card only for returning customers</b>\n"
+            . "Turned on, only a customer with more than 3 paid purchases or renewals sees the card-to-card button; the others do not. The moment a customer gets there, card to card is switched on for them. The 3 can be changed.\n"
+            . "Example: a customer who bought 2 services and renewed once does not see card to card yet; after the next purchase or renewal they do.\n"
+            . "🔴 Default: <b>off</b>\n"
+            . "📍 1️⃣ 🏬 Store settings → 💎 Financial → «⚙️ Settings» on the card-to-card row\n"
+            . "2️⃣ 🔧 Gateway technical settings (this language) → tap «🛡 فقط برای مشتری‌های قدیمی» so it turns ✅\n"
+            . "3️⃣ To change the number: «✏️ تغییر تعداد خرید/تمدید لازم»\n"
+            . "🌐 Web panel: «Gateways» → the card-to-card card.</blockquote>\n\n"
+            . "<blockquote>⚡ <b>Tronado minimum: 150,000 toman</b>\n"
+            . "Tronado takes nothing under 150,000 toman, so the bot no longer offers Tronado for smaller amounts (renewals, direct payments, what a purchase lacks) and quotes 150,000 as the minimum of a typed top-up.\n"
+            . "📍 If Tronado changes it: 💎 Financial → 💱 Rial-to-crypto gateways → Tronado «Settings» → «⬇️ کمترین مبلغی که ترونادو قبول می‌کنه».</blockquote>",
+    ],
 ];

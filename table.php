@@ -868,6 +868,8 @@ try {
         ['tronado_wallet', '0'],
         ['tronado_ipn_key', '0'],
         ['tronado_wage_percent', '0'],
+        // the smallest invoice Tronado's own page accepts (0 = none)
+        ['tronado_min_amount', '150000'],
         ['chashbacktronado', '0'],
         ['tronado_disputes_seen', '[]'],
         // درگاه ارزی ریالی هوش‌پی (HooshPay) - off until set up

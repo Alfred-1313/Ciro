@@ -3138,7 +3138,7 @@ if (!function_exists('topup_minmax_payload')) {
         $floor = topup_usd_floor_toman($lang, $key);
         $curTitle = currency_get($cur)['title'] ?? $cur;
         if ($floor !== null && ($min === null || (float) $min <= $floor)) {
-            $minText = strtr($t['minUsdFloorText'], ['{price}' => number_format($floor), '{currency}' => $curTitle]);
+            $minText = strtr($t[topup_floor_text_key($key, 'floorText')], ['{price}' => number_format($floor), '{currency}' => $curTitle]);
         } else {
             // same as the ceiling below: a gateway has a floor whether or not
             // this screen was ever used, so "no limit" would be a lie
@@ -3544,6 +3544,17 @@ if (!function_exists('card_legacy_settings_payload')) {
         if ($autoMin > 0 && !$smsFwdOn) {
             $kb['inline_keyboard'][] = [['text' => '✏️ تغییر زمان تایید خودکار', 'callback_data' => "cardlegacytime:{$lang}", 'style' => 'primary']];
         }
+        // 🛡 only for customers with more than N paid purchases/renewals - one
+        // switch (state shown, flips at once) and, while on, its number
+        $trustOn = card_trust_on($lang);
+        $kb['inline_keyboard'][] = [[
+            'text' => $fields['cardtrust']['label'] . ': ' . ($trustOn ? '✅ بیش از ' . card_trust_min($lang) . ' خرید/تمدید' : '❌'),
+            'callback_data' => "cardlegacytoggle:{$lang}:cardtrust",
+            'style' => 'primary',
+        ]];
+        if ($trustOn) {
+            $kb['inline_keyboard'][] = [['text' => '✏️ تغییر تعداد خرید/تمدید لازم', 'callback_data' => "cardtrustmin:{$lang}", 'style' => 'primary']];
+        }
         $kb['inline_keyboard'][] = [['text' => '📚 آموزش کارت‌به‌کارت: ' . (pay_value('helpcart', $lang, '2') != '2' ? '✅ تنظیم شده' : '❌ تنظیم نشده'), 'callback_data' => "cardlegacyhelp:{$lang}", 'style' => 'primary']];
         if (gw_pay_override_has('helpcart', $lang)) {
             $kb['inline_keyboard'][] = [['text' => '↩️ برگشت به آموزش پیش‌فرض', 'callback_data' => "cardlegacyhelpclear:{$lang}", 'style' => 'danger']];
@@ -3572,11 +3583,15 @@ if (!function_exists('card_legacy_settings_caption')) {
             . '<blockquote><b>' . $fields['Cartstatuspv']['label'] . ':</b> ' . $state('Cartstatuspv') . "\n"
             . '<b>' . $fields['checkpaycartfirst']['label'] . ':</b> ' . $state('checkpaycartfirst') . "\n"
             . '<b>🤖 تایید خودکار رسید:</b> ' . ($autoMin > 0 ? "✅ بعد از <b>{$autoMin}</b> دقیقه" : '❌') . "\n"
+            . '<b>' . $fields['cardtrust']['label'] . ':</b> ' . (card_trust_on($lang) ? '✅ بیش از <b>' . card_trust_min($lang) . '</b> خرید/تمدید موفق' : '❌') . "\n"
             . '<b>📚 آموزش کارت‌به‌کارت:</b> ' . (pay_value('helpcart', $lang, '2') != '2' ? '✅ تنظیم شده' : '❌ تنظیم نشده') . "\n"
             . "<b>👥 کارت‌به‌کارت کاربرها:</b> ✅ <b>{$accOn}</b> · ❌ <b>{$accOff}</b>\n"
             . '<b>🚫 استثنا از تایید خودکار:</b> <b>' . count(card_exc_members($lang)) . "</b> نفر</blockquote>\n";
         if (card_sms_forward_on()) {
             $cap .= "🔒 <i>چون SMS Forward روشنه، تایید خودکار رسید قفله.</i>\n";
+        }
+        if (card_trust_on($lang)) {
+            $cap .= '<blockquote>🛡 فقط مشتری‌ای که <b>بیش از ' . card_trust_min($lang) . "</b> خرید یا تمدید پرداخت‌شده داشته، دکمه‌ی کارت‌به‌کارت رو می‌بینه؛ بقیه نمی‌بینن. به محض رسیدن به این عدد، کارت‌به‌کارت خودکار براش روشن می‌شه. اگه بعدش برای یه مشتری خاموشش کنید، خاموش می‌مونه.</blockquote>\n";
         }
         return $cap . '<i>همه‌ی این تنظیمات فقط برای کاربرهای همین زبانه.</i>';
     }
@@ -4407,7 +4422,7 @@ if (!function_exists('gateway_effective_report')) {
             $floor = topup_usd_floor_toman($lang, $key);
             $note = '';
             if ($floor !== null && $min !== null && (int) $min === (int) $floor) {
-                $note = topup_has_usd_floor($key) ? ' — کف ۱ دلار' : ' — کف ۱ استار';
+                $note = $key === 'tronado' ? ' — کف خود ترونادو' : (topup_has_usd_floor($key) ? ' — کف ۱ دلار' : ' — کف ۱ استار');
             }
             $lines[] = "• حداقل مبلغ: <b>" . ($min === null ? '—' : number_format((float) $min)) . " {$cur}</b> ({$rangeSrc}{$note})";
             $lines[] = "• حداکثر مبلغ: <b>" . ($max === null ? '—' : number_format((float) $max)) . " {$cur}</b>";
@@ -13381,6 +13396,31 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     deletemessage($from_id, $message_id);
     deletemessage($from_id, (int) $cl_m[3]);
     Editmessagetext($from_id, (int) $cl_m[2], card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
+} elseif (preg_match('/^cardtrustmin:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
+    // 🛡 how many paid purchases/renewals a customer needs MORE than
+    $cl_prompt = sendmessage($from_id, "🛡 <b>تعداد خرید/تمدید لازم برای کارت‌به‌کارت</b>\n\n<blockquote>مشتری باید <b>بیشتر از</b> این تعداد خرید یا تمدید پرداخت‌شده داشته باشه تا دکمه‌ی کارت‌به‌کارت رو ببینه. فقط عدد بفرست، مثلاً <code>3</code> یعنی از خرید/تمدید چهارم به بعد.</blockquote>\nالان: <b>" . card_trust_min($cl_m[1]) . "</b>", json_encode(['inline_keyboard' => [
+        [['text' => '❌ انصراف', 'callback_data' => "cardtrustmincancel:{$cl_m[1]}:{$message_id}", 'style' => 'danger']],
+    ]]), 'HTML');
+    $cl_promptId = (int) ($cl_prompt['result']['message_id'] ?? 0);
+    step("cardtrustmin:{$cl_m[1]}:{$message_id}:{$cl_promptId}", $from_id);
+} elseif (preg_match('/^cardtrustmincancel:([a-z]{2}):([0-9]+)$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
+    step('home', $from_id);
+    deletemessage($from_id, $message_id);
+    Editmessagetext($from_id, (int) $cl_m[2], card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
+} elseif (preg_match('/^cardtrustmin:([a-z]{2}):([0-9]+):([0-9]+)$/', (string) $user['step'], $cl_m) && $datain == '') {
+    $cl_n = money_normalize(trim((string) $text));
+    deletemessage($from_id, $message_id);
+    if ($cl_n === null || (int) $cl_n < 1 || (int) $cl_n > 1000 || (string) (int) $cl_n !== (string) $cl_n) {
+        // the prompt stays and says what went wrong - no second message
+        Editmessagetext($from_id, (int) $cl_m[3], "⛔️ فقط یه عدد بین ۱ تا ۱۰۰۰ بفرست، مثلاً <code>3</code>.", json_encode(['inline_keyboard' => [
+            [['text' => '❌ انصراف', 'callback_data' => "cardtrustmincancel:{$cl_m[1]}:{$cl_m[2]}", 'style' => 'danger']],
+        ]]), 'HTML');
+        return;
+    }
+    gw_pay_override_set('cardtrustmin', $cl_m[1], (string) (int) $cl_n);
+    step('home', $from_id);
+    deletemessage($from_id, (int) $cl_m[3]);
+    Editmessagetext($from_id, (int) $cl_m[2], card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
 } elseif (preg_match('/^cardlegacyhelp:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
     $cl_prompt = sendmessage($from_id, $textbotlang['Admin']['Help']['askTutorialMedia'], null, 'HTML');
     $cl_promptId = (int) ($cl_prompt['result']['message_id'] ?? 0);
@@ -13488,7 +13528,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
 } elseif (preg_match('/^cardlegacyreset:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
     // this language's settings only - card numbers, the users' card access
     // and the 🚫 list stay as they are
-    foreach (['Cartstatuspv', 'checkpaycartfirst', 'autoconfirmcart', 'timeauto_not_verify', 'helpcart', 'showcard'] as $cl_f) {
+    foreach (['Cartstatuspv', 'checkpaycartfirst', 'autoconfirmcart', 'timeauto_not_verify', 'helpcart', 'showcard', 'cardtrust', 'cardtrustmin'] as $cl_f) {
         gw_pay_override_set($cl_f, $cl_m[1], '');
     }
     telegram('answerCallbackQuery', [
@@ -14492,7 +14532,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
         [['text' => $textbotlang['Admin']['TopupPkg']['closePromptBtn'], 'callback_data' => "topupminmaxcancel:{$tp_m[1]}:{$tp_m[2]}:{$message_id}", 'style' => 'danger']],
     ]]);
     $tp_floor = topup_usd_floor_toman($tp_m[1], $tp_m[2]);
-    $tp_askMin = strtr($textbotlang['Admin']['TopupPkg'][$tp_floor !== null ? 'askMinOnline' : 'askMin'], [
+    $tp_askMin = strtr($textbotlang['Admin']['TopupPkg'][$tp_floor !== null ? topup_floor_text_key($tp_m[2], 'askMin') : 'askMin'], [
         '{currency}' => currency_get(currency_for_lang($tp_m[1]))['title'] ?? currency_for_lang($tp_m[1]),
         '{minprice}' => $tp_floor !== null ? number_format($tp_floor) : '—',
     ]);
@@ -14515,7 +14555,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
             [['text' => $tp_t['closePromptBtn'], 'callback_data' => "topupminmaxcancel:{$tp_m[1]}:{$tp_m[2]}:{$tp_m[3]}", 'style' => 'danger']],
         ]]);
         // re-asked with the same wording as the first time, dollar floor included
-        Editmessagetext($from_id, (int) $tp_m[4], $tp_t['invalidAmount'] . "\n\n" . strtr($tp_t[$tp_floor !== null ? 'askMinOnline' : 'askMin'], [
+        Editmessagetext($from_id, (int) $tp_m[4], $tp_t['invalidAmount'] . "\n\n" . strtr($tp_t[$tp_floor !== null ? topup_floor_text_key($tp_m[2], 'askMin') : 'askMin'], [
             '{currency}' => currency_get(currency_for_lang($tp_m[1]))['title'] ?? currency_for_lang($tp_m[1]),
             '{minprice}' => $tp_floor !== null ? number_format($tp_floor) : '—',
         ]), $tp_minmaxCancelKb, 'HTML');
@@ -14527,7 +14567,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
         $tp_minmaxCancelKb = json_encode(['inline_keyboard' => [
             [['text' => $tp_t['closePromptBtn'], 'callback_data' => "topupminmaxcancel:{$tp_m[1]}:{$tp_m[2]}:{$tp_m[3]}", 'style' => 'danger']],
         ]]);
-        Editmessagetext($from_id, (int) $tp_m[4], strtr($tp_t['minBelowFloor'], ['{price}' => number_format($tp_floor), '{currency}' => $tp_curTitle]), $tp_minmaxCancelKb, 'HTML');
+        Editmessagetext($from_id, (int) $tp_m[4], strtr($tp_t[topup_floor_text_key($tp_m[2], 'below')], ['{price}' => number_format($tp_floor), '{currency}' => $tp_curTitle]), $tp_minmaxCancelKb, 'HTML');
         return;
     }
     // a minimum above the maximum in force would refuse every amount

@@ -2280,7 +2280,8 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     // every other call site of that shared picker keeps its own unmodified
     // copy. Drop the shared close ("❌ بستن") row and add our own red
     // back-to-invoice button instead.
-    $extendPaymentKb = json_decode($step_payment, true);
+    // a gateway whose own floor is above this renewal's amount is left out
+    $extendPaymentKb = json_decode(step_payment_for_amount($step_payment, $Balance_prim, $user['lang'] ?? 'fa'), true);
     if (is_array($extendPaymentKb) && isset($extendPaymentKb['inline_keyboard'])) {
         $extendPaymentKb['inline_keyboard'] = array_values(array_filter($extendPaymentKb['inline_keyboard'], function ($row) {
             foreach ($row as $btn) {
@@ -2295,7 +2296,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         $extendPaymentKb['inline_keyboard'][] = [genbtn_render($rnBackDef, $rnBackOv, "rn_reshow_" . $id_invoice)];
         $extendPaymentKbJson = json_encode($extendPaymentKb);
     } else {
-        $extendPaymentKbJson = $step_payment;
+        $extendPaymentKbJson = step_payment_for_amount($step_payment, $Balance_prim, $user['lang'] ?? 'fa');
     }
     if ($rn_direct) {
         Editmessagetext($from_id, $message_id, dpay_methods_view($user, $Balance_prim, 'rn_reshow_' . $id_invoice)[0], $extendPaymentKbJson, 'HTML');
@@ -2519,7 +2520,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             }
             $Balance_prim = $volume - $user['Balance'];
             update("user", "Processing_value", $Balance_prim, "id", $from_id);
-            Editmessagetext($from_id, $message_id, $noCreditText, $step_payment);
+            Editmessagetext($from_id, $message_id, $noCreditText, step_payment_for_amount($step_payment, $Balance_prim, $user['lang'] ?? 'fa'));
             step('get_step_payment', $from_id);
             update("user", "Processing_value_one", "{$nameloc['username']}%{$valuevolume}", "id", $from_id);
             update("user", "Processing_value_tow", "getextravolumeuser", "id", $from_id);
@@ -2739,7 +2740,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             if (intval($Pricechange) != 0) {
                 $Balance_prim = $Pricechange - $user['Balance'];
                 update("user", "Processing_value", $Balance_prim, "id", $from_id);
-                Editmessagetext($from_id, $message_id, $noCreditText, $step_payment);
+                Editmessagetext($from_id, $message_id, $noCreditText, step_payment_for_amount($step_payment, $Balance_prim, $user['lang'] ?? 'fa'));
                 step('get_step_payment', $from_id);
                 return;
             }
@@ -3111,7 +3112,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             if (intval($pricelasttime) != 0) {
                 $Balance_prim = $pricelasttime - $user['Balance'];
                 update("user", "Processing_value", $Balance_prim, "id", $from_id);
-                Editmessagetext($from_id, $message_id, $noCreditText, $step_payment);
+                Editmessagetext($from_id, $message_id, $noCreditText, step_payment_for_amount($step_payment, $Balance_prim, $user['lang'] ?? 'fa'));
                 step('get_step_payment', $from_id);
                 update("user", "Processing_value_one", "{$nameloc['username']}%{$valuetime}", "id", $from_id);
                 update("user", "Processing_value_tow", "getextratimeuser", "id", $from_id);

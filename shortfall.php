@@ -190,10 +190,11 @@ if (!function_exists('sf_ctx_get')) {
 
     // The payment-method list a pending purchase is paid from: the same list
     // the renewal uses, its ❌ close row replaced by a way back to the message.
-    function sf_payment_keyboard($backCallback, $lang, $textbotlang)
+    function sf_payment_keyboard($backCallback, $lang, $textbotlang, $amount = null)
     {
         global $step_payment;
-        $kb = json_decode((string) $step_payment, true);
+        // a gateway whose own floor is above the amount is left out
+        $kb = json_decode((string) ($amount !== null ? step_payment_for_amount($step_payment, $amount, $lang) : $step_payment), true);
         $rows = [];
         foreach ((array) ($kb['inline_keyboard'] ?? []) as $row) {
             $close = false;
@@ -251,7 +252,7 @@ if (!function_exists('sf_ctx_get')) {
         update("user", "Processing_value_one", (string) $inv['username'], "id", $from_id);
         update("user", "Processing_value_tow", "getconfigafterpay", "id", $from_id);
         step('get_step_payment', $from_id);
-        Editmessagetext($from_id, $message_id, topup_disc_method_caption($from_id, $lang, $textbotlang), sf_payment_keyboard("sfb|{$m[2]}", $lang, $textbotlang), 'HTML');
+        Editmessagetext($from_id, $message_id, topup_disc_method_caption($from_id, $lang, $textbotlang), sf_payment_keyboard("sfb|{$m[2]}", $lang, $textbotlang, $need), 'HTML');
         return true;
     }
 

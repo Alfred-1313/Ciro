@@ -719,6 +719,12 @@ return array (
         'group' => 'topup',
         'section' => 'topup_flow',
       ),
+      array (
+        'label' => '⛔️ «کارت‌به‌کارت برای حساب شما فعال نیست»',
+        'key' => 'users.Balance.cardNotAvailable',
+        'group' => 'topup',
+        'section' => 'topup_flow',
+      ),
       // ---- 🎁 پیام‌های تخفیف ----
       // Their own submenu rather than nine more rows in 💰: none of them is
       // per-gateway (the same sentence is produced for every gateway - see
@@ -1911,6 +1917,7 @@ return array (
 «ساخت فاکتور جدید» یک لینک و شمارهٔ فاکتور تازه نشان می‌دهد.',
       'cardRetrieveError' => '❌ خطای داخلی در بازیابی کارت بانکی رخ داد. لطفاً بعداً تلاش کنید.',
       'noActiveCard' => '❌ کارت بانکی فعالی برای این روش پرداخت یافت نشد. لطفاً بعداً تلاش کنید یا با پشتیبانی تماس بگیرید.',
+      'cardNotAvailable' => '⛔️ پرداخت کارت‌به‌کارت فعلاً برای حساب شما فعال نیست. لطفاً از یکی از روش‌های پرداخت دیگه استفاده کنید.',
       'cardInvoiceExpiredCaption' => '<b>فاکتور منقضی شد</b>
 
 مهلت واریز به شمارهٔ کارت این فاکتور تمام شده است.
@@ -9384,6 +9391,7 @@ nowpayments.io
       'tronadoWalletLabel' => '⚡ آدرس ولت TRX مقصد',
       'tronadoIpnKeyLabel' => '🔐 کلید امضای IPN (IpnSigningKey)',
       'tronadoWageLabel' => '💸 سهم فروشگاه از کارمزد (۰ تا ۱۰۰ درصد)',
+      'tronadoMinLabel' => '⬇️ کمترین مبلغی که ترونادو قبول می‌کنه (تومان، ۰ یعنی بدون محدودیت)',
       'hooshpaySecretLabel' => '🔐 کلید Secret (امضای کال‌بک)',
       'hooshpayFeeModeLabel' => '💸 کارمزد با کی باشه (buyer / seller / split)',
       'inheritedAs' => 'پیش‌فرض (%s)',
@@ -9806,6 +9814,12 @@ nowpayments.io
 حداقل مبلغ باید 1 دلار معادل با {minprice} {currency} باشد.',
       'minUsdFloorText' => '1 دلار معادل {price} {currency}',
       'minBelowFloor' => '⚠️ حداقل نمی‌تونه کمتر از ۱ دلار (معادل {price} {currency}) باشه.',
+      // Tronado's floor is its own toman minimum, not a dollar
+      'tronadoFloorText' => 'کف خود ترونادو: {price} {currency}',
+      'askMinTronado' => '⬇️ حداقل مبلغ رو به <b>{currency}</b> بفرست.
+
+ترونادو خودش کمتر از {minprice} {currency} قبول نمی‌کنه، پس حداقل نمی‌تونه از این کمتر باشه.',
+      'minBelowTronadoFloor' => '⚠️ حداقل نمی‌تونه کمتر از کف خود ترونادو ({price} {currency}) باشه.',
       'minAboveMax' => '⚠️ حداقل نمی‌تونه از حداکثرِ فعلی ({max} {currency}) بیشتر باشه - وگرنه هیچ مبلغی قبول نمی‌شه. اول حداکثر رو بیشتر کن، یا عدد کمتری بفرست.',
       'maxBelowMin' => '⚠️ حداکثر نمی‌تونه از حداقلِ فعلی ({min} {currency}) کمتر باشه - وگرنه هیچ مبلغی قبول نمی‌شه. عدد بیشتری بفرست.',
       'editNotNumberBtn' => '✏️ ویرایش خطای «فقط عدد»',
@@ -11063,6 +11077,9 @@ nowpayments.io
     'gwCardLegacyHint' => 'پرداخت در پیوی، نمایش کارت بعد از اولین پرداخت، تأیید خودکار رسید',
     'gwCardTime' => 'تأیید خودکار رسید بعد از (دقیقه)',
     'gwCardTimeHint' => 'وقتی «تایید خودکار رسید» روشن است؛ خالی یا ۰ یعنی ۲۰ دقیقه. تا SMS Forward روشن است روشن نمی‌شود.',
+    'gwCardTrustMin' => '🛡 تعداد خرید/تمدید لازم برای کارت‌به‌کارت',
+    'gwCardTrustMinHint' => 'وقتی «🛡 فقط برای مشتری‌های قدیمی» روشن است: فقط مشتری‌ای که بیشتر از این تعداد خرید یا تمدید پرداخت‌شده داشته کارت‌به‌کارت را می‌بیند. خالی یعنی ۳.',
+    'gwCardTrustMinInvalid' => 'تعداد خرید/تمدید لازم باید یک عدد بین ۱ تا ۱۰۰۰ باشد.',
     'gwCardHelp' => 'آموزش کارت‌به‌کارت',
     'gwCardHelpHint' => 'خالی = آموزش مشترک همه‌ی زبان‌ها. عکس یا ویدیو از داخل ربات گذاشته می‌شود.',
     'gwCardHelpMedia' => 'این آموزش %s دارد و می‌ماند؛ اینجا فقط متنش عوض می‌شود.',

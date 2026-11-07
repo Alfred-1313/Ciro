@@ -136,7 +136,7 @@ if (!function_exists('dpay_cfg')) {
                 $caption .= "\n\n" . trim(substr($full, strlen($base)));
             }
         }
-        return [$caption, sf_payment_keyboard($backCallback, $lang, $textbotlang)];
+        return [$caption, sf_payment_keyboard($backCallback, $lang, $textbotlang, $price)];
     }
     // A purchase confirmed with 💳 پرداخت مستقیم: the unpaid invoice it made is what
     // the payment will complete, for its whole price. true when it went on to the

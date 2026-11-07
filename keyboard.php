@@ -488,7 +488,9 @@ $payment_status_nowpayment = getPaySettingValue("statusnowpayment");
 $step_payment = [
     'inline_keyboard' => []
 ];
-if ($PaySettingcard == "oncard" && intval($users['cardpayment']) == 1) {
+// the customer's own switch, and with 🛡 «فقط برای مشتری‌های قدیمی» on, more
+// than N paid purchases/renewals (card_visible_for())
+if ($PaySettingcard == "oncard" && card_visible_for($users, $users['lang'] ?? 'fa')) {
     if ($PaySettingpv == "oncardpv") {
         $step_payment['inline_keyboard'][] = [
             ['text' => $customer_texts['textbot']['cartToCart'], 'url' => "https://t.me/$usernamecart"],

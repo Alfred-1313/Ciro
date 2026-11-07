@@ -3406,7 +3406,7 @@ if (!function_exists('gw_field_scope')) {
     }
     function gw_field_is_numeric($field)
     {
-        return in_array($field['label'] ?? '', ['cashbackLabel', 'feeLabel', 'dailyLimitLabel', 'tronadoWageLabel'], true);
+        return in_array($field['label'] ?? '', ['cashbackLabel', 'feeLabel', 'dailyLimitLabel', 'tronadoWageLabel', 'tronadoMinLabel'], true);
     }
 }
 if (!function_exists('pay_global_set')) {
@@ -3500,6 +3500,7 @@ if (!function_exists('gw_field_registry')) {
                 ['field' => 'tronado_wallet', 'type' => 'text', 'label' => 'tronadoWalletLabel', 'scope' => 'global'],
                 ['field' => 'tronado_ipn_key', 'type' => 'text', 'label' => 'tronadoIpnKeyLabel', 'scope' => 'global'],
                 ['field' => 'tronado_wage_percent', 'type' => 'text', 'label' => 'tronadoWageLabel', 'scope' => 'global'],
+                ['field' => 'tronado_min_amount', 'type' => 'text', 'label' => 'tronadoMinLabel', 'scope' => 'global'],
                 ['field' => 'chashbacktronado', 'type' => 'text', 'label' => 'cashbackLabel', 'scope' => 'global'],
                 ['field' => 'tronadoInvoiceExpireMinutes', 'type' => 'number', 'label' => 'invoiceExpireLabel'],
             ],
@@ -3580,6 +3581,9 @@ if (!function_exists('card_legacy_toggle_fields')) {
             'Cartstatuspv' => ['on' => 'oncardpv', 'off' => 'offcardpv', 'label' => '💳 پرداخت مستقیم در پیوی'],
             'checkpaycartfirst' => ['on' => 'onpayverify', 'off' => 'offpayverify', 'label' => '🔒 نمایش کارت پس از اولین پرداخت'],
             'autoconfirmcart' => ['on' => 'onauto', 'off' => 'offauto', 'label' => '🤖 تایید خودکار رسید'],
+            // 🛡 card-to-card only for customers with more than N paid
+            // purchases/renewals (N = «cardtrustmin», card_trust_min())
+            'cardtrust' => ['on' => 'ontrust', 'off' => 'offtrust', 'label' => '🛡 فقط برای مشتری‌های قدیمی'],
         ];
     }
 }
@@ -3592,6 +3596,85 @@ if (!function_exists('card_new_default')) {
     {
         $global = (string) (select("setting", "showcard", null, null, "select")['showcard'] ?? '1');
         return (string) pay_value('showcard', $lang, $global) === '1' ? '1' : '0';
+    }
+}
+if (!function_exists('card_trust_on')) {
+    // 🛡 کارت‌به‌کارت فقط برای مشتری‌های قدیمی, per language. On: card-to-card
+    // is offered only to a customer with MORE than N paid purchases or
+    // renewals - N is «cardtrustmin», 3 unless the admin changed it.
+    function card_trust_on($lang)
+    {
+        return pay_value('cardtrust', $lang, 'offtrust') === 'ontrust';
+    }
+    function card_trust_min($lang)
+    {
+        $n = (int) pay_value('cardtrustmin', $lang, '3');
+        return $n > 0 ? $n : 3;
+    }
+    // services bought and renewals done that were really paid for: an invoice
+    // that is not Unpaid, not a test account and not free, plus a paid renewal
+    // (service_other extend_user) - the rows 📊 آمار counts as sales. Wallet or
+    // gateway makes no difference. Counted once per request.
+    function card_trust_count($userId)
+    {
+        global $pdo;
+        static $cache = [];
+        $userId = (string) $userId;
+        if (isset($cache[$userId])) {
+            return $cache[$userId];
+        }
+        $tests = [];
+        foreach (panel_langs() as $l) {
+            $name = (string) (lang_tab_texts($l)['common']['labels']['testServiceName'] ?? '');
+            if ($name !== '') {
+                $tests[$name] = true;
+            }
+        }
+        $tests = array_keys($tests) ?: [''];
+        $in = implode(',', array_fill(0, count($tests), '?'));
+        $st = $pdo->prepare("SELECT COUNT(*) FROM invoice WHERE id_user = ? AND LOWER(Status) <> 'unpaid' AND name_product NOT IN ({$in}) AND CAST(price_product AS DECIMAL(20,2)) > 0");
+        $st->execute(array_merge([$userId], $tests));
+        $bought = (int) $st->fetchColumn();
+        $st = $pdo->prepare("SELECT COUNT(*) FROM service_other WHERE id_user = ? AND type = 'extend_user' AND LOWER(status) <> 'unpaid' AND CAST(price AS DECIMAL(20,2)) > 0");
+        $st->execute([$userId]);
+        return $cache[$userId] = $bought + (int) $st->fetchColumn();
+    }
+    function card_trust_ensure_schema()
+    {
+        static $done = false;
+        if (!$done) {
+            $done = true;
+            // when 🛡 first found this customer past N - see card_visible_for()
+            addFieldToTable('user', 'card_trust_auto', null, 'VARCHAR(20) NULL');
+        }
+    }
+    // Does this customer get the card-to-card button right now? Their own
+    // switch (user.cardpayment - 👥 کارت‌به‌کارت کاربرها, the user's page) as
+    // before; with 🛡 on, also more than N paid purchases/renewals. The first
+    // time a customer is found past N, card-to-card is switched on for them -
+    // once: card_trust_auto remembers it, so an admin who turns it off for that
+    // customer afterwards is not overruled on the next message.
+    function card_visible_for($userRow, $lang)
+    {
+        if (!is_array($userRow) || empty($userRow['id'])) {
+            return false;
+        }
+        $on = (string) ($userRow['cardpayment'] ?? '') === '1';
+        if (!card_trust_on($lang)) {
+            return $on;
+        }
+        if (card_trust_count($userRow['id']) <= card_trust_min($lang)) {
+            return false;
+        }
+        if (trim((string) ($userRow['card_trust_auto'] ?? '')) === '') {
+            card_trust_ensure_schema();
+            update("user", "card_trust_auto", (string) time(), "id", $userRow['id']);
+            if (!$on) {
+                update("user", "cardpayment", "1", "id", $userRow['id']);
+                $on = true;
+            }
+        }
+        return $on;
     }
 }
 if (!function_exists('card_access_counts')) {
@@ -3687,7 +3770,8 @@ if (!function_exists('card_legacy_has_any_override')) {
                 return true;
             }
         }
-        return gw_pay_override_has('timeauto_not_verify', $lang) || gw_pay_override_has('helpcart', $lang) || gw_pay_override_has('showcard', $lang);
+        return gw_pay_override_has('timeauto_not_verify', $lang) || gw_pay_override_has('helpcart', $lang) || gw_pay_override_has('showcard', $lang)
+            || gw_pay_override_has('cardtrustmin', $lang);
     }
 }
 if (!function_exists('gw_lang_has_any_override')) {
@@ -5413,6 +5497,13 @@ if (!function_exists('topup_card_invoice_generate')) {
     function topup_card_invoice_generate($from_id, array $user, $message_id, $textbotlang, array $setting)
     {
         global $pdo;
+        // the button is not offered to this customer (their switch, or 🛡
+        // only for customers with more than N purchases) - a tap from an old
+        // message, or a typed amount on the way, must not get round that
+        if (!card_visible_for($user, $user['lang'] ?? 'fa')) {
+            sendmessage($from_id, $textbotlang['users']['Balance']['cardNotAvailable'], null, 'HTML');
+            return;
+        }
         $checkpay = $pdo->prepare("SELECT * FROM Payment_report WHERE id = :user_id AND payment_Status = 'Unpaid'");
         $checkpay->bindValue(':user_id', $from_id, PDO::PARAM_STR);
         $checkpay->execute();
@@ -6841,6 +6932,45 @@ if (!function_exists('topup_usd_rate')) {
     {
         return $key === 'plisio' || $key === 'nowpayment' || $key === 'usdtbep';
     }
+    // The admin texts that name a gateway's floor say «1 دلار»; Tronado's floor
+    // is a toman figure of its own, so it has its own words. $kind: floorText,
+    // askMin, below - the keys of Admin.TopupPkg to use.
+    function topup_floor_text_key($key, $kind)
+    {
+        $tronado = ['floorText' => 'tronadoFloorText', 'askMin' => 'askMinTronado', 'below' => 'minBelowTronadoFloor'];
+        $usd = ['floorText' => 'minUsdFloorText', 'askMin' => 'askMinOnline', 'below' => 'minBelowFloor'];
+        return ($key === 'tronado' ? $tronado : $usd)[$kind];
+    }
+    // A method list for an amount that is already known - a renewal, a direct
+    // payment, what a purchase lacks: a gateway with a floor of its own above
+    // that amount would only refuse it on the next tap, so it is not offered.
+    // Only Tronado's toman floor is applied here; the dollar-floored ones keep
+    // their old behaviour (the rate behind them is a network call).
+    function step_payment_for_amount($stepPaymentJson, $amount, $lang)
+    {
+        $kb = json_decode((string) $stepPaymentJson, true);
+        if (!is_array($kb['inline_keyboard'] ?? null) || !is_numeric($amount)) {
+            return $stepPaymentJson;
+        }
+        $rows = [];
+        foreach ($kb['inline_keyboard'] as $row) {
+            $keep = [];
+            foreach ((array) $row as $btn) {
+                if (($btn['callback_data'] ?? null) === 'tronado') {
+                    $floor = topup_usd_floor_toman($lang, 'tronado');
+                    if ($floor !== null && (float) $amount < $floor) {
+                        continue;
+                    }
+                }
+                $keep[] = $btn;
+            }
+            if (!empty($keep)) {
+                $rows[] = $keep;
+            }
+        }
+        $kb['inline_keyboard'] = $rows;
+        return json_encode($kb);
+    }
     // The smallest amount this gateway can actually put on an invoice, in
     // toman, or null when it has none - and null too when the rate cannot be
     // fetched, in which case nothing new is enforced and the old limits stand.
@@ -6850,6 +6980,15 @@ if (!function_exists('topup_usd_rate')) {
     // same number or the customer is refused twice with two different figures.
     function topup_usd_floor_toman($lang, $key)
     {
+        // Tronado refuses anything under its own minimum on its payment page
+        // (150,000 toman when this was written, «tronado_min_amount»). It is a
+        // floor like the dollar one: in toman, no rate needed - and with it in
+        // here every place a floor is honoured (the amount prompt, packages,
+        // direct payments, the admin's own minimum) holds to it.
+        if ($key === 'tronado') {
+            $f = function_exists('tronado_min_toman') ? tronado_min_toman() : 0;
+            return $f > 0 ? $f : null;
+        }
         $rate = topup_usd_rate();
         if ($rate <= 0) {
             return null;
@@ -23568,6 +23707,14 @@ if (!function_exists('tronado_callback_url')) {
     {
         global $domainhosts;
         return "https://{$domainhosts}/payment/tronado_ipn.php";
+    }
+    // the smallest invoice Tronado itself accepts, in toman; 0 = none. An
+    // empty or unreadable value is Tronado's own 150,000.
+    function tronado_min_toman()
+    {
+        $raw = trim((string) getPaySettingValue('tronado_min_amount', ''));
+        $v = money_normalize($raw);
+        return $raw === '' || $v === null ? 150000 : max(0, (int) round((float) $v));
     }
     // a setting the admin never filled reads back as the row's default '0'
     function tronado_setting($name)
