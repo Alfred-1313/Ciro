@@ -23411,13 +23411,47 @@ if (!function_exists('frenzyex_callback_url')) {
         global $domainhosts;
         return "https://{$domainhosts}/payment/frenzyex.php";
     }
+    // FrenzyEx's public address. config.php can name another one if FrenzyEx
+    // ever moves - the same way RBN_GITHUB_API names a mirror for rbnodes.php.
+    // config.php is read more than once per request (function.php requires
+    // it again), so it has to be written guarded:
+    //   defined('FRENZYEX_API_BASE') || define('FRENZYEX_API_BASE', 'https://...');
+    function frenzyex_api_base()
+    {
+        return defined('FRENZYEX_API_BASE') ? rtrim((string) FRENZYEX_API_BASE, '/') : 'https://frenzy.fastsnap.info';
+    }
+    // Since guide v4 the callback address can travel with each payment
+    // request, so the admin does not have to get it registered with FrenzyEx
+    // first. FrenzyEx refuses an address it cannot use (HTTP 400, nothing
+    // created); when that happens the request is made again without it and
+    // the account-level address is used. The refusal is remembered for a day,
+    // so every invoice does not cost two requests out of FrenzyEx's ten a
+    // minute, and the admin is told once to register the address instead.
+    function frenzyex_callback_flag_file()
+    {
+        return __DIR__ . '/storage/frenzyex_callback_refused';
+    }
+    function frenzyex_callback_refused_recently()
+    {
+        $at = (int) @file_get_contents(frenzyex_callback_flag_file());
+        return $at > 0 && time() - $at < 86400;
+    }
+    function frenzyex_callback_mark_refused()
+    {
+        $file = frenzyex_callback_flag_file();
+        if (!is_dir(dirname($file))) {
+            @mkdir(dirname($file), 0775, true);
+        }
+        @file_put_contents($file, (string) time(), LOCK_EX);
+    }
 }
-function createPayFrenzyEx($price, $order_id)
+// One POST to FrenzyEx's v1 create endpoint: the real HTTP status and the
+// decoded body. Never retried here - see createPayFrenzyEx().
+function frenzyex_create_request($apiKey, array $body)
 {
-    $apiKey = select("PaySetting", "ValuePay", "NamePay", "frenzyex_api_key", "select")['ValuePay'];
     $curl = curl_init();
     curl_setopt_array($curl, array(
-        CURLOPT_URL => 'https://frenzy.fastsnap.info/api/v1/payment-requests',
+        CURLOPT_URL => frenzyex_api_base() . '/api/v1/payment-requests',
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_ENCODING => '',
         CURLOPT_MAXREDIRS => 10,
@@ -23435,13 +23469,7 @@ function createPayFrenzyEx($price, $order_id)
             'Authorization: Bearer ' . $apiKey,
         ),
     ));
-    curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode([
-        'amount' => $price,
-        'amount_ccy' => 'TMN',
-        'payment_method' => 'auto',
-        'order_ref' => $order_id,
-        'description' => 'TopUp - ' . $order_id,
-    ]));
+    curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($body));
     $response = curl_exec($curl);
     $httpCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
     curl_close($curl);
@@ -23450,6 +23478,50 @@ function createPayFrenzyEx($price, $order_id)
         'http_code' => $httpCode,
         'body' => is_array($decoded) ? $decoded : [],
     ];
+}
+function createPayFrenzyEx($price, $order_id)
+{
+    $apiKey = select("PaySetting", "ValuePay", "NamePay", "frenzyex_api_key", "select")['ValuePay'];
+    $body = [
+        'amount' => $price,
+        'amount_ccy' => 'TMN',
+        'payment_method' => 'auto',
+        'order_ref' => $order_id,
+        'description' => 'TopUp - ' . $order_id,
+    ];
+    if (frenzyex_callback_refused_recently()) {
+        return frenzyex_create_request($apiKey, $body);
+    }
+    $pay = frenzyex_create_request($apiKey, $body + ['callback_url' => frenzyex_callback_url()]);
+    // Only a 400 is asked again: the guide says a refused callback_url
+    // returns 400 and creates nothing, so the second request cannot make a
+    // second checkout. Any other failure (a timeout above all) is returned
+    // as it is - a POST is never repeated after an uncertain result.
+    if ($pay['http_code'] !== 400) {
+        return $pay;
+    }
+    $retry = frenzyex_create_request($apiKey, $body);
+    if ($retry['http_code'] >= 200 && $retry['http_code'] < 300) {
+        // the address was the reason: remembered, logged, and the admin told
+        frenzyex_callback_mark_refused();
+        error_log('frenzyex: the per-request callback_url was refused (HTTP 400: ' . mb_substr(json_encode($pay['body']), 0, 200)
+            . ') - invoices are made without it for a day; the address registered with FrenzyEx is used');
+        $setting = select("setting", "Channel_Report", null, null, "select");
+        if (strlen((string) ($setting['Channel_Report'] ?? '')) > 0) {
+            telegram('sendmessage', [
+                'chat_id' => $setting['Channel_Report'],
+                'message_thread_id' => select("topicid", "idreport", "report", "errorreport", "select")['idreport'] ?? null,
+                'text' => sprintf(
+                    "⚠️ FrenzyEx آدرس کال‌بک ربات رو همراه فاکتور قبول نکرد، پس فاکتورها بدون اون ساخته می‌شن.\n\n"
+                    . "برای اینکه پرداخت‌ها خودکار تایید بشن، این آدرس رو توی پنل FrenzyEx (بخش وبهوک) ثبت کن یا به پشتیبانی FrenzyEx بده:\n<code>%s</code>\n\n"
+                    . "تا وقتی ثبت نشه، ربات هر ۳ دقیقه خودش وضعیت پرداخت‌ها رو از FrenzyEx می‌پرسه.",
+                    htmlspecialchars(frenzyex_callback_url())
+                ),
+                'parse_mode' => "HTML",
+            ]);
+        }
+    }
+    return $retry;
 }
 function createPayaqayepardakht($price, $order_id)
 {

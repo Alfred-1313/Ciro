@@ -1156,4 +1156,18 @@ return [
             . "• <b>Service details:</b> some panel versions leave out a few fields (last online, last subscription update); no more warnings, and the service page shows correctly.\n"
             . "ℹ️ Nothing to set up; it all applies by itself.</blockquote>",
     ],
+    [
+        'n' => 78,
+        'date' => '2026-11-07',
+        'fa' => "<blockquote>💱 <b>درگاه FrenzyEx طبق راهنمای جدیدش (نسخه ۴)</b>\n"
+            . "📍 💎 مالی ← 💱 درگاه‌های ارزی ریالی ← 📂 باز کردن ← FrenzyEx ← تنظیمات\n"
+            . "• <b>آدرس کال‌بک خودکار:</b> ربات آدرس کال‌بک رو همراه هر فاکتور به FrenzyEx می‌فرسته، پس دیگه لازم نیست اول از پشتیبانی FrenzyEx بخوای ثبتش کنه. اگه FrenzyEx قبولش نکنه، فاکتور بدون اون ساخته می‌شه و ربات توی گروه گزارش‌ها خبرت می‌کنه که آدرس رو دستی ثبت کنی.\n"
+            . "• <b>جواب فوری به FrenzyEx:</b> FrenzyEx فقط ۵ ثانیه منتظر جواب می‌مونه. توی خرید مستقیم، ربات اول سرویس رو روی پنل می‌ساخت و بعد جواب می‌داد، و اگه طول می‌کشید توی پنل FrenzyEx «تحویل ناموفق» ثبت می‌شد. الان ربات همون لحظه جواب می‌ده و سرویس رو بعدش می‌سازه؛ هیچ پرداختی دوبار شارژ نمی‌شه.\n"
+            . "ℹ️ چیزی برای تنظیم نیست؛ فقط کلید API و رمز کال‌بک FrenzyEx باید وارد شده باشن.</blockquote>",
+        'en' => "<blockquote>💱 <b>The FrenzyEx gateway follows its new guide (version 4)</b>\n"
+            . "📍 💎 Financial → 💱 Rial-to-crypto gateways → 📂 Open → FrenzyEx → Settings\n"
+            . "• <b>Callback address sent by itself:</b> the bot sends its callback address with every invoice, so FrenzyEx support no longer has to register it first. If FrenzyEx does not accept it, the invoice is made without it and the bot tells you in the report group to register the address by hand.\n"
+            . "• <b>FrenzyEx answered at once:</b> FrenzyEx waits only 5 seconds for an answer. On a direct purchase the bot used to build the service on the panel first and answer afterwards, and when that took long FrenzyEx logged a failed delivery. Now the bot answers right away and builds the service after; no payment is ever credited twice.\n"
+            . "ℹ️ Nothing to set up; only the FrenzyEx API key and callback secret have to be entered.</blockquote>",
+    ],
 ];
