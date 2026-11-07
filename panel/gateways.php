@@ -322,6 +322,11 @@ $chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="hidden" 
       <div class="set-row"><div><div class="set-label"><?= $t['gwCardExc'] ?></div><div class="set-hint"><?= $t['gwCardExcHint'] ?></div></div>
         <div class="set-ctl"><textarea class="textarea" name="cl_exc" rows="3" dir="ltr" placeholder="123456789"><?= htmlspecialchars(implode("\n", array_keys(card_exc_members($lang)))) ?></textarea></div></div>
     <?php endif; ?>
+    <?php $cbUrl = ['frenzyex' => 'frenzyex_callback_url', 'variza' => 'variza_webhook_url', 'tronado' => 'tronado_callback_url'][$key] ?? null; ?>
+    <?php if ($cbUrl !== null && function_exists($cbUrl)): ?>
+      <div class="set-row"><div><div class="set-label">⟦i:link⟧ <?= $t['gwCallbackUrl'] ?></div><div class="set-hint"><?= $t['gwCallbackUrlHint'] ?></div></div>
+        <div class="set-ctl"><input type="text" class="input" value="<?= htmlspecialchars($cbUrl()) ?>" dir="ltr" readonly onclick="this.select()"></div></div>
+    <?php endif; ?>
     <?php if ($key === 'ton'): $memo = topup_memo_config($lang, 'ton'); ?>
       <div class="set-row"><div><div class="set-label">⟦i:tag⟧ <?= $t['gwTonPrefix'] ?></div><div class="set-hint"><?= $t['gwTonPrefixHint'] ?></div></div>
         <div class="set-ctl"><input type="text" class="input" name="memo_prefix" value="<?= htmlspecialchars($memo['prefix']) ?>" dir="ltr" maxlength="12"></div></div>

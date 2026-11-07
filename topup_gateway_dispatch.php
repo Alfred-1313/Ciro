@@ -185,6 +185,62 @@ if (function_exists('sf_guard') && sf_guard()) {
         ]) . topup_disc_caption_block($from_id, $fx_lang, 'frenzyex', $textbotlang, $user['Processing_value'], true);
         topup_linkmsg_help($from_id, 'helpfrenzyex');
         topup_track_invoice_message($randomString, topup_linkmsg_finish($from_id, $textnowpayments, $paymentkeyboard));
+    } elseif ($datain == "tronado") {
+        // درگاه ارزی ریالی ترونادو (API v5): the range is the admin's own
+        // (minbalancetronado/maxbalancetronado), like the rest of its family
+        $tr_lang = $user['lang'] ?? 'fa';
+        [$mainbalance, $maxbalance] = topup_checkout_limits($tr_lang, 'tronado');
+        if (topup_amount_out_of_range($user['Processing_value'], $mainbalance, $maxbalance)) {
+            topup_range_notice($from_id, $tr_lang, 'tronado', $mainbalance, $maxbalance, $textbotlang);
+            return;
+        }
+        deletemessage($from_id, $message_id);
+        topup_linkmsg_show($from_id, $tr_lang, 'tronado', $textbotlang['users']['Balance']['linkpayments']);
+        $randomString = bin2hex(random_bytes(5));
+        $pay = createPayTronado($user['Processing_value'], $randomString);
+        if (empty($pay['ok'])) {
+            topup_linkmsg_drop($from_id);
+            sendmessage($from_id, $textbotlang['users']['Balance']['errorLinkPayment'], $keyboard, 'HTML');
+            step('home', $from_id);
+            $text_error = htmlspecialchars((string) ($pay['error'] ?? '') . (isset($pay['raw']) && $pay['raw'] !== '' ? ' — ' . $pay['raw'] : ''));
+            $ErrorsLinkPayment = sprintf($textbotlang['Admin']['reportgroup']['errorTronadoLink'], $text_error, $from_id, $username);
+            if (strlen($setting['Channel_Report']) > 0) {
+                telegram('sendmessage', [
+                    'chat_id' => $setting['Channel_Report'],
+                    'message_thread_id' => $errorreport,
+                    'text' => $ErrorsLinkPayment,
+                    'parse_mode' => "HTML"
+                ]);
+            }
+            return;
+        }
+        // written only once Tronado has the order: PaymentID is this id_order,
+        // and an IPN for an order the bot never stored is acknowledged and
+        // ignored (payment/tronado_ipn.php)
+        $invoice = "{$user['Processing_value_tow']}|{$user['Processing_value_one']}";
+        $dateacc = date('Y/m/d H:i:s');
+        $stmt = $pdo->prepare("INSERT INTO Payment_report (id_user,id_order,time,price,payment_Status,Payment_Method,id_invoice,dec_not_confirmed) VALUES (?,?,?,?,?,?,?,?)");
+        $stmt->execute([$from_id, $randomString, $dateacc, $user['Processing_value'], "Unpaid", "tronado", $invoice, tronado_order_note($pay['tron'], $pay['wage'])]);
+        // through the styling helper like every other invoice button, so
+        // 🎨 شخصی‌سازی can rename/recolour it; blue unless the admin says otherwise
+        $tr_payBtn = topup_styled_button(
+            $textbotlang['users']['Balance']['payments'],
+            topup_invoice_btnstyle_for($tr_lang, 'tronado', 'pay'),
+            '',
+            topup_invoice_btnstyle_default_color('pay', 'tronado')
+        );
+        $tr_payBtn['url'] = $pay['url'];
+        $paymentkeyboard = json_encode(['inline_keyboard' => [[$tr_payBtn]]]);
+        $textnowpayments = strtr($textbotlang['users']['Balance']['tronadoInvoiceCreated'], [
+            '{invoice}' => $randomString,
+            '{price}' => number_format($user['Processing_value'], 0),
+            // what the customer will see on Tronado's page, fee included -
+            // Tronado's own estimate; '—' when it did not send one
+            '{payable}' => $pay['estimated'] !== null ? number_format($pay['estimated']) : '—',
+            '{minutes}' => topup_expire_minutes($tr_lang, 'tronado'),
+        ]) . topup_disc_caption_block($from_id, $tr_lang, 'tronado', $textbotlang, $user['Processing_value'], true);
+        topup_linkmsg_help($from_id, 'helptronado');
+        topup_track_invoice_message($randomString, topup_linkmsg_finish($from_id, $textnowpayments, $paymentkeyboard));
     } elseif ($datain == "cubepay") {
         [$mainbalance, $maxbalance] = topup_checkout_limits($user['lang'] ?? 'fa', 'cubepay');
         if (topup_amount_out_of_range($user['Processing_value'], $mainbalance, $maxbalance)) {

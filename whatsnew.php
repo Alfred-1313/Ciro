@@ -1156,4 +1156,30 @@ return [
             . "• <b>Service details:</b> some panel versions leave out a few fields (last online, last subscription update); no more warnings, and the service page shows correctly.\n"
             . "ℹ️ Nothing to set up; it all applies by itself.</blockquote>",
     ],
+    [
+        'n' => 78,
+        'date' => '2026-11-07',
+        'fa' => "<blockquote>⚡ <b>درگاه جدید: ترونادو (ارزی ریالی)</b>\n"
+            . "یه درگاه پشتیبان دیگه کنار FrenzyEx: مشتری فاکتور رو به تومان می‌سازه، توی خودِ تلگرام از صفحه‌ی ترونادو پرداخت می‌کنه و تو ترون (TRX) می‌گیری. کیف پول مشتری بعد از تایید ترونادو خودکار شارژ می‌شه.\n"
+            . "مثال: مشتری ۲۰۰٬۰۰۰ تومان شارژ می‌خواد، ربات به قیمت خودِ ترونادو حساب می‌کنه چند ترون می‌شه و لینک پرداخت می‌ده.\n"
+            . "🔴 پیش‌فرض: <b>خاموش</b>\n"
+            . "📍 راه‌اندازی:\n"
+            . "1️⃣ کلید API و کلید امضای IPN رو از پشتیبانی ترونادو (@TronadoSupp) بگیر و دامنه‌ی رباتت رو پیششون ثبت کن.\n"
+            . "2️⃣ 🏬 تنظیمات فروشگاه ← 💎 مالی ← 💱 درگاه‌های ارزی ریالی (📂 باز کردن) ← «تنظیمات» ردیف ترونادو\n"
+            . "3️⃣ کلید API، آدرس ولت TRX و کلید امضای IPN رو بزن (آدرس کال‌بک همون‌جا با دکمه‌ی کپی هست).\n"
+            . "4️⃣ برگرد و ❌ ردیف ترونادو رو بزن تا ✅ بشه.\n"
+            . "🌐 پنل وب: «درگاه‌ها» ← کارت ترونادو.\n"
+            . "ℹ️ این درگاه از ترونادوی قدیمی ربات (توی 🏧 درگاه‌های ریالی با اسم «درگاه پرداخت ریالی سوم») جداست و به تنظیماتش دست نمی‌زنه.</blockquote>",
+        'en' => "<blockquote>⚡ <b>New gateway: Tronado (rial-to-crypto)</b>\n"
+            . "Another backup gateway next to FrenzyEx: the customer makes a toman invoice, pays on Tronado's page right inside Telegram, and you receive TRX. The customer's wallet is topped up automatically once Tronado confirms.\n"
+            . "Example: a customer wants a 200,000 toman top-up; the bot works out how much TRX that is at Tronado's own price and gives a payment link.\n"
+            . "🔴 Default: <b>off</b>\n"
+            . "📍 Setting it up:\n"
+            . "1️⃣ Get an API key and an IPN signing key from Tronado's support (@TronadoSupp) and have them register your bot's domain.\n"
+            . "2️⃣ 🏬 Store settings → 💎 Financial → 💱 Rial-to-crypto gateways (📂 open) → «Settings» on the Tronado row\n"
+            . "3️⃣ Enter the API key, the TRX wallet address and the IPN signing key (the callback address is there with a copy button).\n"
+            . "4️⃣ Go back and tap the ❌ on the Tronado row so it turns ✅.\n"
+            . "🌐 Web panel: «Gateways» → the Tronado card.\n"
+            . "ℹ️ This gateway is separate from the bot's old Tronado one (under 🏧 Rial gateways, named «Third rial payment gateway») and does not touch its settings.</blockquote>",
+    ],
 ];

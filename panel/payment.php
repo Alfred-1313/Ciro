@@ -108,6 +108,8 @@ $methodMap = [
   'cubepay' => 'CubePay',
   'AbanGateway' => 'AbanGateway',
   'variza' => $textbotlang['panel']['paymentMethodVariza'],
+  'frenzyex' => $textbotlang['panel']['paymentMethodFrenzyEx'],
+  'tronado' => $textbotlang['panel']['paymentMethodTronado'],
 ];
 
 // the page's own address for an order, keeping the filters

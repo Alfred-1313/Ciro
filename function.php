@@ -3420,6 +3420,21 @@ if (!function_exists('gw_field_scope')) {
     {
         return (($field['scope'] ?? 'lang') === 'global') ? 'global' : 'lang';
     }
+    // A global credential (API key, wallet, secret) the admin never filled
+    // still holds the installer's '0' - that is "not set", not a key called 0.
+    // Percentages and limits are different: there 0 is a real choice.
+    function gw_field_unset_value($field, $raw)
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return true;
+        }
+        return $raw === '0' && !gw_field_is_numeric($field);
+    }
+    function gw_field_is_numeric($field)
+    {
+        return in_array($field['label'] ?? '', ['cashbackLabel', 'feeLabel', 'dailyLimitLabel', 'tronadoWageLabel'], true);
+    }
 }
 if (!function_exists('pay_global_set')) {
     // Upsert a PaySetting row. A plain UPDATE silently no-ops when the row was
@@ -3509,6 +3524,16 @@ if (!function_exists('gw_field_registry')) {
                 ['field' => 'frenzyex_api_key', 'type' => 'text', 'label' => 'apiKeyLabel', 'scope' => 'global'],
                 ['field' => 'frenzyex_callback_secret', 'type' => 'text', 'label' => 'callbackSecretLabel', 'scope' => 'global'],
                 ['field' => 'frenzyexInvoiceExpireMinutes', 'type' => 'number', 'label' => 'invoiceExpireLabel'],
+            ],
+            // everything here is read with getPaySettingValue() by
+            // createPayTronado()/tronado_settle(), hence global
+            'tronado' => [
+                ['field' => 'tronado_api_key', 'type' => 'text', 'label' => 'apiKeyLabel', 'scope' => 'global'],
+                ['field' => 'tronado_wallet', 'type' => 'text', 'label' => 'tronadoWalletLabel', 'scope' => 'global'],
+                ['field' => 'tronado_ipn_key', 'type' => 'text', 'label' => 'tronadoIpnKeyLabel', 'scope' => 'global'],
+                ['field' => 'tronado_wage_percent', 'type' => 'text', 'label' => 'tronadoWageLabel', 'scope' => 'global'],
+                ['field' => 'chashbacktronado', 'type' => 'text', 'label' => 'cashbackLabel', 'scope' => 'global'],
+                ['field' => 'tronadoInvoiceExpireMinutes', 'type' => 'number', 'label' => 'invoiceExpireLabel'],
             ],
             'cubepay' => [
                 ['field' => 'cubepay_api_token', 'type' => 'text', 'label' => 'apiKeyLabel', 'scope' => 'global'],
@@ -3746,6 +3771,7 @@ if (!function_exists('gateway_registry')) {
             'aqayepardakht' => $textbotlang['textbot']['aqayePardakht'],
             'zarinpal' => $textbotlang['textbot']['zarinPal'],
             'frenzyex' => $textbotlang['textbot']['frenzyEx'],
+            'tronado' => $textbotlang['textbot']['tronadoPay'],
             'cubepay' => $textbotlang['textbot']['cubePay'],
             'abangateway' => $textbotlang['textbot']['abanGateway'],
             'variza' => $textbotlang['textbot']['varizaPay'],
@@ -3779,7 +3805,9 @@ if (!function_exists('gateway_groups')) {
             // than a rial PSP - its own family, directly under the rial one,
             // so it is configured from its own button instead of being mixed
             // in with the plain rial gateways
-            'rialforex' => ['frenzyex'],
+            // Tronado belongs here for the same reason: the invoice is in toman,
+            // the shop is paid in TRX
+            'rialforex' => ['frenzyex', 'tronado'],
         ];
     }
 }
@@ -3914,7 +3942,7 @@ if (!function_exists('gateway_all_keys')) {
     function gateway_all_keys()
     {
         return ['card', 'plisio', 'nowpayment', 'ton', 'trx', 'usdtbep', 'digitaltron', 'iranpay1', 'iranpay2',
-            'iranpay3', 'aqayepardakht', 'zarinpal', 'frenzyex', 'cubepay', 'abangateway', 'variza', 'paymentnotverify', 'startelegrams'];
+            'iranpay3', 'aqayepardakht', 'zarinpal', 'frenzyex', 'tronado', 'cubepay', 'abangateway', 'variza', 'paymentnotverify', 'startelegrams'];
     }
 }
 if (!function_exists('gateway_lang_map')) {
@@ -6874,6 +6902,7 @@ if (!function_exists('topup_usd_rate')) {
             'digitaltron' => 'digitaltron',
             'zarinpal' => 'zarinpal',
             'frenzyex' => 'frenzyex',
+            'tronado' => 'tronado',
             'cubepay' => 'cubepay',
             'abangateway' => 'abangateway',
             'variza' => 'variza',
@@ -7854,7 +7883,7 @@ if (!function_exists('topup_invoice_btnstyle_items')) {
                 'paid' => $b['paidInvoiceBtn'],
             ];
         }
-        if ($key === 'frenzyex') {
+        if ($key === 'frenzyex' || $key === 'tronado') {
             // no 'reissue': an expired FrenzyEx invoice is removed rather than
             // turned into a "ساخت فاکتور جدید" button, because there is no
             // frenzyex_invoice_build() for index.php's gwreissue: handler to
@@ -7971,6 +8000,7 @@ if (!function_exists('topup_expire_minutes')) {
             'usdtbep' => 'usdtbepInvoiceExpireMinutes',
             'digitaltron' => 'digitaltronInvoiceExpireMinutes',
             'frenzyex' => 'frenzyexInvoiceExpireMinutes',
+            'tronado' => 'tronadoInvoiceExpireMinutes',
         ][$key] ?? null;
     }
     // How long this gateway's invoice stays payable, set per language on the
@@ -7990,7 +8020,9 @@ if (!function_exists('topup_expire_minutes')) {
         // hour. This is the ONLY number in play: the caption quotes it and
         // cronbot/payment_expire.php enforces the very same call, so the two
         // cannot promise different things.
-        $default = ['frenzyex' => 60][$key] ?? 30;
+        // Tronado is the same story: the customer pays a card, sends the
+        // receipt and waits for Tronado to accept it before TRX moves.
+        $default = ['frenzyex' => 60, 'tronado' => 60][$key] ?? 30;
         $field = topup_expire_field($key);
         $m = $field === null ? $default : (int) pay_value($field, $lang, $default);
         return $m > 0 ? $m : $default;
@@ -8120,6 +8152,7 @@ if (!function_exists('topup_gateway_key_by_method')) {
             'arze digital offline' => 'digitaltron',
             'zarinpal' => 'zarinpal',
             'frenzyex' => 'frenzyex',
+            'tronado' => 'tronado',
             'cubepay' => 'cubepay',
             'AbanGateway' => 'abangateway',
             'variza' => 'variza',
@@ -8468,7 +8501,7 @@ if (!function_exists('topup_gw_customizables')) {
         // its family, but unlike them it renders its own payment button, so it
         // gets the button-styling screen the online family has - without the
         // invoice/expired captions, which it does not build in the chat.
-        if ($key === 'frenzyex') {
+        if ($key === 'frenzyex' || $key === 'tronado') {
             return ['custom', 'linkmsg', 'range', 'notnumber', 'paidalert', 'btnstyle'];
         }
         return ['custom', 'linkmsg', 'range', 'notnumber', 'paidalert'];
@@ -9131,7 +9164,7 @@ if (!function_exists('gateway_fa_only_keys')) {
     // where it actually protects the real checkout flow.
     function gateway_fa_only_keys()
     {
-        return ['zarinpal', 'frenzyex', 'cubepay', 'abangateway', 'variza', 'aqayepardakht', 'iranpay1', 'iranpay2', 'iranpay3', 'paymentnotverify'];
+        return ['zarinpal', 'frenzyex', 'tronado', 'cubepay', 'abangateway', 'variza', 'aqayepardakht', 'iranpay1', 'iranpay2', 'iranpay3', 'paymentnotverify'];
     }
 }
 // read and written by the bot's 💳 hub and by the web panel alike
@@ -9161,6 +9194,8 @@ if (!function_exists('gateway_globally_on')) {
                 return getPaySettingValue('zarinpalstatus') === 'onzarinpal';
             case 'frenzyex':
                 return getPaySettingValue('frenzyexstatus') === 'onfrenzyex';
+            case 'tronado':
+                return getPaySettingValue('statustronado') === 'ontronado';
             case 'cubepay':
                 return getPaySettingValue('statuscubepay') === 'oncubepay';
             case 'abangateway':
@@ -9197,6 +9232,7 @@ if (!function_exists('gateway_globally_set')) {
             'aqayepardakht' => ['statusaqayepardakht', 'onaqayepardakht', 'offaqayepardakht'],
             'zarinpal' => ['zarinpalstatus', 'onzarinpal', 'offzarinpal'],
             'frenzyex' => ['frenzyexstatus', 'onfrenzyex', 'offfrenzyex'],
+            'tronado' => ['statustronado', 'ontronado', 'offtronado'],
             'cubepay' => ['statuscubepay', 'oncubepay', 'offcubepay'],
             'abangateway' => ['statusabangateway', 'onabangateway', 'offabangateway'],
             'variza' => ['statusvariza', 'onvariza', 'offvariza'],
@@ -10218,6 +10254,9 @@ function bot_cron_commands()
         // (payment/frenzyex.php) - this is only the recovery path for a
         // delayed/dropped one, so it can run at plisio's own relaxed cadence
         "*/3 * * * * flock -n /tmp/mz_frenzyex.lock curl -s --max-time 170 https://$domainhosts/cronbot/frenzyex.php > /dev/null 2>&1",
+        // Tronado: same shape - its signed IPN (payment/tronado_ipn.php) is the
+        // main path, this asks Tronado about the ones whose IPN never came
+        "*/3 * * * * flock -n /tmp/mz_tronado.lock curl -s --max-time 170 https://$domainhosts/cronbot/tronado.php > /dev/null 2>&1",
         "*/5 * * * * flock -n /tmp/mz_payment_expire.lock curl -s --max-time 280 https://$domainhosts/cronbot/payment_expire.php > /dev/null 2>&1",
         // --- stretched: these were the load ---
         "*/5 * * * * flock -n /tmp/mz_notifications.lock curl -s --max-time 280 https://$domainhosts/cronbot/NoticationsService.php > /dev/null 2>&1",
@@ -16282,6 +16321,7 @@ if (!function_exists('topup_disc_method_to_gateway')) {
             // stored by topup_gateway_dispatch.php; missing here, FrenzyEx's
             // invoice promised its 🎁 discount and the wallet never got it
             'frenzyex' => 'frenzyex',
+            'tronado' => 'tronado',
         ];
         return $map[(string) $method] ?? null;
     }
@@ -16381,7 +16421,7 @@ if (!function_exists('topup_disc_user_has_any_paid_topup')) {
     // gateway) - backs the "فقط کاربران جدید" (new-users-only) restriction on
     // both the auto discount and discount codes. Called from inside
     // topup_disc_award(), itself called from DirectPayment(). $exceptOrder is
-    // the row being credited: FrenzyEx, TON, TRX and USDT-BEP20 flip it to
+    // the row being credited: FrenzyEx, Tronado, TON, TRX and USDT-BEP20 flip it to
     // 'paid' BEFORE DirectPayment() (their double-credit guard), so without it
     // a user's very first top-up counted as an earlier one and lost a
     // new-users-only discount.
@@ -23450,6 +23490,315 @@ function createPayFrenzyEx($price, $order_id)
         'http_code' => $httpCode,
         'body' => is_array($decoded) ? $decoded : [],
     ];
+}
+// ---- درگاه ارزی ریالی ترونادو (Tronado, API v5) ----
+// The invoice is in toman; Tronado's own page (inside Telegram) takes the
+// customer's payment and sends the shop TRX for it. The steps, from Tronado's
+// own guide (miniapp.tronado.cloud/assets/api-docs.md):
+//   1. /Tron/GetPriceToToman  - Tronado's own TRX price, not an exchange's
+//   2. /api/v5/GetOrderToken  - PaymentID is this bot's id_order
+//   3. the customer pays on t.me/tronado_robot/customerpayment?startapp=TOKEN
+//   4. Tronado POSTs a signed IPN on every status change of the order
+//      (payment/tronado_ipn.php); cronbot/tronado.php asks about the orders
+//      whose IPN never came. Both credit through tronado_settle() only.
+// This is a gateway of its own, separate from the original bot's iranpay2
+// (statustarnado/apiternado - «درگاه پرداخت ریالی سوم» to the customer), which
+// talks to an older Tronado endpoint with its own settings - the two never
+// share a row.
+if (!function_exists('tronado_callback_url')) {
+    // where Tronado sends the IPN. Its domain has to be registered with
+    // Tronado's support first, or no IPN is sent at all - so the settings
+    // screen shows it with a copy button.
+    function tronado_callback_url()
+    {
+        global $domainhosts;
+        return "https://{$domainhosts}/payment/tronado_ipn.php";
+    }
+    // a setting the admin never filled reads back as the row's default '0'
+    function tronado_setting($name)
+    {
+        $v = trim((string) getPaySettingValue($name, ''));
+        return $v === '0' ? '' : $v;
+    }
+    // how much of Tronado's fee the shop takes on (wageFromBusinessPercentage):
+    // 0 = the customer pays all of it on top of the invoice (Tronado's own
+    // default), 100 = the shop pays all of it. Anything unreadable is 0.
+    function tronado_wage_percent()
+    {
+        $v = money_normalize(str_replace(['%', '٪'], '', tronado_setting('tronado_wage_percent')));
+        return $v === null ? 0 : max(0, min(100, (int) round((float) $v)));
+    }
+    // One POST to Tronado. Always with a body ({} at the least): the guide
+    // warns that a body-less POST is refused with 411, which looks like a 404.
+    // TRONADO_API_BASE only exists for a test rig that stands in for Tronado.
+    function tronado_request($path, array $body = [], $withKey = true)
+    {
+        $base = defined('TRONADO_API_BASE') ? rtrim((string) TRONADO_API_BASE, '/') : 'https://bot.tronado.cloud';
+        $headers = ['Content-Type: application/json', 'Accept: application/json'];
+        if ($withKey) {
+            $headers[] = 'x-api-key: ' . tronado_setting('tronado_api_key');
+        }
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $base . $path,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            // bounded: a customer is waiting on this tap
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_POSTFIELDS => empty($body) ? '{}' : json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ]);
+        $response = curl_exec($curl);
+        $error = $response === false ? curl_error($curl) : '';
+        $httpCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        curl_close($curl);
+        $decoded = is_string($response) ? json_decode($response, true) : null;
+        return [
+            'http_code' => $httpCode,
+            'body' => is_array($decoded) ? $decoded : null,
+            'raw' => is_string($response) ? mb_substr($response, 0, 300) : '',
+            'error' => $error,
+        ];
+    }
+    // Tronado's price of one TRX in toman, or null when it cannot be read
+    function tronado_price_toman()
+    {
+        $r = tronado_request('/Tron/GetPriceToToman', [], false);
+        $price = (int) ($r['body']['TronPriceToman'] ?? 0);
+        return $price > 0 ? $price : null;
+    }
+    // What the checkout asked Tronado for, kept in Payment_report's
+    // dec_not_confirmed: "12.345678 TRX", plus ", wage 50%" when the shop took
+    // on part of the fee. It is also the «توضیحات» line of the admin's payment
+    // report, so it stays readable rather than JSON.
+    function tronado_order_note($tron, $wage)
+    {
+        return number_format((float) $tron, 6, '.', '') . ' TRX' . ((int) $wage > 0 ? ', wage ' . (int) $wage . '%' : '');
+    }
+    function tronado_order_note_parse($note)
+    {
+        if (preg_match('/^\s*([0-9]+(?:\.[0-9]+)?)\s*TRX(?:,\s*wage\s*([0-9]{1,3})%)?/', (string) $note, $m)) {
+            return ['tron' => (float) $m[1], 'wage' => isset($m[2]) ? (int) $m[2] : 0];
+        }
+        return null;
+    }
+    // Creates one Tronado order for a top-up of $price toman. Never retried:
+    // a second GetOrderToken with the same PaymentID is not something the
+    // guide promises to be safe.
+    function createPayTronado($price, $order_id)
+    {
+        if (tronado_setting('tronado_api_key') === '' || tronado_setting('tronado_wallet') === '') {
+            return ['ok' => false, 'error' => 'tronado: the API key or the TRX wallet is not set'];
+        }
+        $rate = tronado_price_toman();
+        if ($rate === null) {
+            return ['ok' => false, 'error' => 'tronado: could not read the TRX price (/Tron/GetPriceToToman)'];
+        }
+        // rounded UP to the sun (6 decimals): the TRX asked for is never worth
+        // less than the toman the wallet is going to be credited with
+        $tron = ceil(round((float) $price / $rate, 9) * 1000000) / 1000000;
+        $wage = tronado_wage_percent();
+        $r = tronado_request('/api/v5/GetOrderToken?wageFromBusinessPercentage=' . $wage, [
+            'PaymentID' => (string) $order_id,
+            'WalletAddress' => tronado_setting('tronado_wallet'),
+            'TronAmount' => $tron,
+            'CallbackUrl' => tronado_callback_url(),
+        ]);
+        $b = is_array($r['body']) ? $r['body'] : [];
+        // the documented shape is flat; an older one wrapped it in Data
+        $token = trim((string) ($b['Token'] ?? ($b['Data']['Token'] ?? '')));
+        $errMsg = trim((string) ($b['ErrorMessage'] ?? ($b['Data']['ErrorMessage'] ?? '')));
+        if ($r['http_code'] < 200 || $r['http_code'] >= 300 || $token === '' || $errMsg !== '') {
+            if ($errMsg !== '') {
+                // Tronado said why in its own words - that is the whole story
+                return ['ok' => false, 'error' => 'tronado: ' . $errMsg];
+            }
+            return ['ok' => false, 'error' => 'tronado: ' . ($r['error'] !== '' ? $r['error'] : 'HTTP ' . $r['http_code']), 'raw' => $r['raw']];
+        }
+        $estimated = money_normalize((string) ($b['EstimatedTomanAmount'] ?? ($b['Data']['EstimatedTomanAmount'] ?? '')));
+        return [
+            'ok' => true,
+            'token' => $token,
+            // the link the guide says to put on the bot's own button
+            'url' => 'https://t.me/tronado_robot/customerpayment?startapp=' . rawurlencode($token),
+            'tron' => $tron,
+            'wage' => $wage,
+            'estimated' => $estimated === null ? null : (int) round((float) $estimated),
+        ];
+    }
+    // Tronado's own word on an order, asked by this bot's PaymentID; null when
+    // it could not be asked right now
+    function tronado_order_status($paymentId)
+    {
+        $r = tronado_request('/Order/GetStatusByPaymentID', ['Id' => (string) $paymentId]);
+        if ($r['http_code'] < 200 || $r['http_code'] >= 300 || !is_array($r['body'])) {
+            return null;
+        }
+        return $r['body'];
+    }
+    // the guide's own test for a finished payment; a rejected (40) or
+    // cancelled (200) order never counts, whatever else it says
+    function tronado_is_paid(array $st)
+    {
+        $status = (int) ($st['OrderStatusID'] ?? 0);
+        if ($status === 40 || $status === 200) {
+            return false;
+        }
+        return ($st['IsPaid'] ?? false) === true || $status === 30;
+    }
+    function tronado_admin_alert($text, $topic = 'errorreport')
+    {
+        $setting = select("setting", "*", null, null, "select");
+        if (strlen((string) ($setting['Channel_Report'] ?? '')) === 0) {
+            return;
+        }
+        telegram('sendmessage', [
+            'chat_id' => $setting['Channel_Report'],
+            'message_thread_id' => select("topicid", "idreport", "report", $topic, "select")['idreport'] ?? null,
+            'text' => $text,
+            'parse_mode' => "HTML",
+        ]);
+    }
+    // The one place a Tronado payment is credited, for the IPN and the cron
+    // alike. $st is what Tronado's own API says about the order (never only
+    // the IPN body); $ipn is the IPN body when there is one, for the toman
+    // figures only it carries. Returns what happened, for the caller's log:
+    // credited | already | unpaid | short | mismatch | failed
+    function tronado_settle(array $row, array $st, array $ipn = [])
+    {
+        global $pdo;
+        $textbotlang = lang_tab_texts('fa');
+        $orderId = (string) $row['id_order'];
+        $stPid = (string) ($st['PaymentID'] ?? ($st['PaymentId'] ?? ''));
+        if ($stPid !== '' && $stPid !== $orderId) {
+            error_log("tronado: status answer is for PaymentID={$stPid}, not order={$orderId}");
+            return 'mismatch';
+        }
+        if (!tronado_is_paid($st)) {
+            return 'unpaid';
+        }
+        // paid less than asked: an order Tronado adjusted down (TronAmount under
+        // ActualTronAmount), or - when the customer carries the whole fee - less
+        // TRX than the invoice asked for. Never credited as the full invoice:
+        // the admin is told, once, and decides.
+        $asked = tronado_order_note_parse($row['dec_not_confirmed'] ?? '');
+        $got = (float) ($st['TronAmount'] ?? 0);
+        $actual = (float) ($st['ActualTronAmount'] ?? 0);
+        $short = $got <= 0
+            || ($actual > 0 && $got < $actual * 0.99)
+            || ($asked !== null && $asked['wage'] === 0 && $asked['tron'] > 0 && $got < $asked['tron'] * 0.99);
+        if ($short) {
+            $note = (string) ($row['dec_not_confirmed'] ?? '');
+            // an ASCII marker in the row, so a repeated IPN or the next cron
+            // run knows the admin has already been told (and the log, too)
+            if (strpos($note, '| SHORT') === false) {
+                error_log(sprintf('tronado: paid less than asked - order=%s asked=%s got=%s actual=%s', $orderId, $asked === null ? '?' : $asked['tron'], $got, $actual));
+                update("Payment_report", "dec_not_confirmed", trim($note . ' | SHORT'), "id_order", $orderId);
+                $user = select("user", "*", "id", $row['id_user'], "select");
+                tronado_admin_alert(sprintf(
+                    $textbotlang['hardcoded']['tronadoShortPayment'],
+                    $orderId,
+                    $row['id_user'],
+                    $user['username'] ?? '-',
+                    number_format((float) $row['price']),
+                    $asked === null ? '—' : $asked['tron'],
+                    $got,
+                    htmlspecialchars((string) ($st['Hash'] ?? '-'))
+                ));
+            }
+            return 'short';
+        }
+        // claim before crediting: only the call that flips the row goes on to
+        // DirectPayment(), so a repeated IPN, the cron and an IPN at the same
+        // moment can never credit twice. 'expire' counts too - the customer may
+        // finish on Tronado's page after the bot closed the invoice, and a paid
+        // order must not be left uncredited for it.
+        $claim = $pdo->prepare("UPDATE Payment_report SET payment_Status = 'paid' WHERE id_order = ? AND payment_Status IN ('Unpaid', 'expire')");
+        $claim->execute([$orderId]);
+        if ($claim->rowCount() !== 1) {
+            $now = (string) (select("Payment_report", "payment_Status", "id_order", $orderId, "select")['payment_Status'] ?? '');
+            if ($now !== 'paid') {
+                // rejected by an admin, or anything else that is not a repeat
+                error_log("tronado: paid on Tronado but order={$orderId} is \"{$now}\" here");
+                tronado_admin_alert(sprintf($textbotlang['hardcoded']['tronadoNotCredited'], $orderId, htmlspecialchars($now)));
+            }
+            return 'already';
+        }
+        $hash = trim((string) ($st['Hash'] ?? ($ipn['Hash'] ?? '')));
+        if ($hash !== '') {
+            // the hash is what Tronado's support asks for - it goes into the
+            // admin's payment report («توضیحات») through DirectPayment()
+            update("Payment_report", "dec_not_confirmed", trim((string) ($row['dec_not_confirmed'] ?? '')) . ' | ' . $hash, "id_order", $orderId);
+        }
+        try {
+            DirectPayment($orderId, "../images.jpg");
+        } catch (\Throwable $e) {
+            // already 'paid': a later IPN or cron run cannot credit it twice -
+            // nor finish it, so the admin is told exactly which order
+            error_log("tronado: DirectPayment failed - order={$orderId}: " . $e->getMessage());
+            tronado_admin_alert(sprintf($textbotlang['hardcoded']['tronadoCreditFailed'], $orderId, htmlspecialchars($e->getMessage())));
+            return 'failed';
+        }
+        $user = select("user", "*", "id", $row['id_user'], "select");
+        $cashback = (float) money_normalize(tronado_setting('chashbacktronado'));
+        if ($cashback > 0 && is_array($user)) {
+            $gift = ((float) $row['price'] * $cashback) / 100;
+            // into the wallet the payment was made in, worded in the payer's language
+            wallet_credit($user['id'], $gift, payment_currency($row));
+            sendmessage($user['id'], sprintf(payer_texts($user['id'])['paymentGateway']['giftReport'], $gift), null, 'HTML');
+        }
+        $paidToman = (int) ($ipn['UserPaidTomanAmount'] ?? 0);
+        tronado_admin_alert(sprintf(
+            $textbotlang['hardcoded']['tronadoPaymentLog'],
+            $row['id_user'],
+            $user['username'] ?? '-',
+            number_format((float) $row['price']),
+            $paidToman > 0 ? number_format($paidToman) : '—',
+            $got,
+            $orderId,
+            htmlspecialchars($hash !== '' ? $hash : '-')
+        ), 'paymentreport');
+        return 'credited';
+    }
+    // Tronado's optional Dispute Callback (a card holder's complaint that
+    // Tronado accepted after the order was paid). The bot never takes money
+    // back from a wallet by itself - it tells the admin what changed, once per
+    // DisputeId (Tronado delivers at least once, so repeats are expected).
+    function tronado_dispute_report(array $d)
+    {
+        $id = (string) ($d['DisputeId'] ?? '');
+        if ($id === '') {
+            return;
+        }
+        $seen = json_decode((string) getPaySettingValue('tronado_disputes_seen', '[]'), true);
+        $seen = is_array($seen) ? $seen : [];
+        if (in_array($id, $seen, true)) {
+            return;
+        }
+        $seen[] = $id;
+        pay_global_set('tronado_disputes_seen', json_encode(array_slice($seen, -300)));
+        $textbotlang = lang_tab_texts('fa');
+        $t = $textbotlang['hardcoded'];
+        $orderId = (string) ($d['PaymentId'] ?? ($d['PaymentID'] ?? ''));
+        $row = $orderId !== '' ? select("Payment_report", "*", "id_order", $orderId, "select") : null;
+        $user = is_array($row) ? select("user", "*", "id", $row['id_user'], "select") : null;
+        $outcome = (string) ($d['Outcome'] ?? '');
+        $outcomeText = $t['tronadoDisputeOutcomes'][$outcome] ?? htmlspecialchars($outcome);
+        tronado_admin_alert(sprintf(
+            $t['tronadoDispute'],
+            htmlspecialchars($orderId !== '' ? $orderId : '-'),
+            is_array($row) ? $row['id_user'] : '-',
+            htmlspecialchars((string) ($user['username'] ?? '-')),
+            htmlspecialchars((string) ($d['DisputeTypeTitle'] ?? ($d['DisputeType'] ?? '-'))),
+            $outcomeText,
+            number_format((int) ($d['OriginalUserMustPayToman'] ?? 0)),
+            (float) ($d['OriginalTronAmount'] ?? 0),
+            number_format((int) ($d['UserMustPayToman'] ?? 0)),
+            (float) ($d['TronAmount'] ?? 0),
+            is_array($row) ? htmlspecialchars((string) $row['payment_Status']) : '-'
+        ));
+    }
 }
 function createPayaqayepardakht($price, $order_id)
 {

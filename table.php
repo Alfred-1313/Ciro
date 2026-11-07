@@ -866,6 +866,15 @@ try {
         ['variza_api_token', '0'],
         ['variza_webhook_secret', '0'],
         ['chashbackvariza', '0'],
+        // درگاه ارزی ریالی ترونادو (API v5) - its own rows, separate from the
+        // original bot's iranpay2 (statustarnado/apiternado), off until set up
+        ['statustronado', 'offtronado'],
+        ['tronado_api_key', '0'],
+        ['tronado_wallet', '0'],
+        ['tronado_ipn_key', '0'],
+        ['tronado_wage_percent', '0'],
+        ['chashbacktronado', '0'],
+        ['tronado_disputes_seen', '[]'],
         ['minbalancecart', $main],
         ['maxbalancecart', $max],
         ['minbalancestar', $main],
@@ -894,6 +903,10 @@ try {
         ['maxbalanceabangateway', $max],
         ['minbalancevariza', $main],
         ['maxbalancevariza', $max],
+        // Tronado itself caps one payer at 500,000 toman a day, so a larger
+        // invoice would only be refused on its own page
+        ['minbalancetronado', $main],
+        ['maxbalancetronado', 500000],
         ['minbalanceiranpay', $main],
         ['maxbalanceiranpay', $max],
         ['minbalancenowpayment', $main],
@@ -914,6 +927,7 @@ try {
         ['helpcubepay', '2'],
         ['helpabangateway', '2'],
         ['helpvariza', '2'],
+        ['helptronado', '2'],
         ['helpnowpayment', '2'],
         ['helpofflinearze', '2'],
         ['autoconfirmcart', 'offauto'],
