@@ -4770,6 +4770,14 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     }
     $username_ac = strtolower($user['Processing_value_tow']);
     $DataUserOut = $ManagePanel->DataUser($marzban_list_get['name_panel'], $username_ac);
+    // this customer's own earlier try with the same name, never paid for (a
+    // «افزایش موجودی» or a direct payment left halfway): it gives way to this one.
+    // It held the name for good before - every new try was told to start over.
+    if (!isset($DataUserOut['username']) && in_array($username_ac, $usernameinvoice)) {
+        $stale = $pdo->prepare("DELETE FROM invoice WHERE username = ? AND id_user = ? AND LOWER(Status) = 'unpaid'");
+        $stale->execute([$username_ac, $from_id]);
+        $usernameinvoice = select("invoice", "username", null, null, "FETCH_COLUMN");
+    }
     if (isset($DataUserOut['username']) || in_array($username_ac, $usernameinvoice)) {
         sendmessage($from_id, $textbotlang['users']['sell']['restartProcess'], null, 'HTML');
         return;
@@ -4801,6 +4809,13 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         'volume' => false,
         'time' => false,
     ));
+    // one tap, one purchase: a second tap on the same page (or Telegram sending
+    // the tap again while the panel was slow) finds the step already taken
+    $buy_claim = $pdo->prepare("UPDATE user SET step = 'buying' WHERE id = ? AND step = 'payment'");
+    $buy_claim->execute([$from_id]);
+    if ($buy_claim->rowCount() === 0) {
+        return;
+    }
     $stmt = $pdo->prepare("INSERT IGNORE INTO invoice (id_user, id_invoice, username,time_sell, Service_location, name_product, price_product, Volume, Service_time,Status,note,refral,notifctions) VALUES (?,  ?, ?, ?, ?, ?, ?,?,?,?,?,?,?)");
     $Status = "unpaid";
     $stmt->execute([$from_id, $randomString, $username_ac, $date, $marzban_list_get['name_panel'], $info_product['name_product'], $priceproduct, $info_product['Volume_constraint'], $info_product['Service_time'], $Status, $userdate['nameconfig'], $user['affiliates'], $notifctions]);
@@ -4824,6 +4839,7 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     if (intval($user['maxbuyagent']) != 0 and $user['agent'] == "n2") {
         if (intval($user['Balance'] - $priceproduct) < intval("-" . $user['maxbuyagent'])) {
             sendmessage($from_id, $textbotlang['users']['Balance']['maxpurchasereached'], null, 'HTML');
+            step('home', $from_id);
             return;
         }
     }
@@ -4864,7 +4880,13 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         step('home', $from_id);
         return;
     }
-    update("invoice", "Status", "active", "username", $username_ac);
+    // the service exists: the invoice and the wallet follow at once, before any
+    // message - a failure further down can no longer leave one without the other
+    update("invoice", "Status", "active", "id_invoice", $randomString);
+    if (intval($priceproduct) != 0) {
+        $Balance_prim = $user['Balance'] - $priceproduct;
+        balance_add($from_id, -$priceproduct);
+    }
     $output_config_link = "";
     $config = "";
     $output_config_link = $marzban_list_get['sublink'] == "onsublink" ? $dataoutput['subscription_url'] : "";
@@ -4898,10 +4920,6 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         update("invoice", "user_info", $dataoutput['subscription_url'], "id_invoice", $randomString);
     }
     sendMessageService($marzban_list_get, $dataoutput['configs'], $output_config_link, $dataoutput['username'], $Shoppinginfo, $textcreatuser, $randomString);
-    if (intval($priceproduct) != 0) {
-        $Balance_prim = $user['Balance'] - $priceproduct;
-        balance_add($from_id, -$priceproduct);
-    }
     if (username_method_is($marzban_list_get['MethodUsername'], 'keyboard.customTextSequential') || username_method_is($marzban_list_get['MethodUsername'], 'keyboard.usernameSequential') || username_method_is($marzban_list_get['MethodUsername'], 'keyboard.numericIdSequential') || username_method_is($marzban_list_get['MethodUsername'], 'keyboard.agentCustomTextSequential')) {
         $value = intval($user['number_username']) + 1;
         update("user", "number_username", $value, "id", $from_id);

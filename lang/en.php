@@ -462,6 +462,8 @@ Pick one of the options below or «Custom amount». If you are still short after
 Pay <b>{price}</b> with one of the methods below; once it is paid, your request is done automatically.
 💛 Your wallet balance is not touched.',
                         'directPayGone' => '⛔️ Paying directly is not available for this step right now.',
+                        'paidInvoiceTaken' => '💰 The service for this purchase had already been made for you, so the <b>{amount}</b> you paid was added to your wallet.
+💳 Balance now: <b>{balance}</b>',
                         'topupDiscHaveCodeBtn' => '🎁 I have a discount code',
                         'topupDiscBackBtn' => '🔙 Back to previous menu',
                         'topupDiscPrompt' => '🎁 Send your discount code:',

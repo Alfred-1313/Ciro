@@ -942,6 +942,73 @@ function direct_pay_refund($paymentReport, $userRow)
     $balance = (select("user", "Balance", "id", $paymentReport['id_user'], "select", ['cache' => false]) ?: [])['Balance'] ?? $back;
     sendmessage($paymentReport['id_user'], sprintf($texts['hardcoded']['extraFailedRefundFn'], money($paymentReport['price'], $cur, false), money($balance, $cur)), null, 'HTML');
 }
+// ---- a purchase paid at a gateway or by card (getconfigafterpay) ----
+function afterpay_schema()
+{
+    static $done = false;
+    if (!$done) {
+        $done = true;
+        try {
+            addFieldToTable('invoice', 'paid_order', null, 'VARCHAR(200) NULL');
+        } catch (\Throwable $e) {
+            error_log('afterpay_schema: ' . $e->getMessage());
+        }
+    }
+}
+// The invoice a payment of «getconfigafterpay|username» is for: this customer's,
+// the unpaid one first and the newest of them - not merely the first row that
+// carries the name.
+function afterpay_invoice_for($username, $userId)
+{
+    global $pdo;
+    $st = $pdo->prepare("SELECT * FROM invoice WHERE username = ? AND id_user = ? ORDER BY (LOWER(Status) = 'unpaid') DESC, CAST(time_sell AS UNSIGNED) DESC LIMIT 1");
+    $st->execute([$username, $userId]);
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+    return $row ?: select("invoice", "*", "username", $username, "select");
+}
+// Takes an unpaid invoice for one payment, in one statement: 'ok' (it is this
+// payment's to deliver now), 'same' (this very payment already took it - a
+// second approval or the cron after the admin) or 'taken' (it was bought
+// another way before this payment came).
+function afterpay_claim_invoice($invoiceId, $orderId)
+{
+    global $pdo;
+    afterpay_schema();
+    $st = $pdo->prepare("UPDATE invoice SET Status = 'active', paid_order = ? WHERE id_invoice = ? AND LOWER(Status) = 'unpaid'");
+    $st->execute([(string) $orderId, $invoiceId]);
+    if ($st->rowCount() > 0) {
+        return 'ok';
+    }
+    $st = $pdo->prepare("SELECT paid_order FROM invoice WHERE id_invoice = ? LIMIT 1");
+    $st->execute([$invoiceId]);
+    $by = $st->fetchColumn();
+    return ((string) $by !== '' && (string) $by === (string) $orderId) ? 'same' : 'taken';
+}
+// the panel refused: the invoice waits again, as it did before the payment
+function afterpay_release_invoice($invoiceId, $orderId)
+{
+    global $pdo;
+    $st = $pdo->prepare("UPDATE invoice SET Status = 'unpaid', paid_order = NULL WHERE id_invoice = ? AND paid_order = ?");
+    $st->execute([$invoiceId, (string) $orderId]);
+}
+// A payment for an invoice that was already bought: nothing is built a second
+// time, the money goes to the wallet and the customer is told.
+function afterpay_credit_instead($paymentReport, $userRow)
+{
+    update("Payment_report", "payment_Status", "paid", "id_order", $paymentReport['id_order']);
+    balance_add($paymentReport['id_user'], round((float) $paymentReport['price'], 2));
+    $lang = $userRow['lang'] ?? 'fa';
+    $cur = currency_for_user($userRow);
+    $balance = (select("user", "Balance", "id", $paymentReport['id_user'], "select", ['cache' => false]) ?: [])['Balance'] ?? 0;
+    $text = function_exists('bottext_resolve_key') ? bottext_resolve_key('users.Balance.paidInvoiceTaken', $lang) : '';
+    if ($text === '') {
+        $text = lang_tab_texts($lang)['users']['Balance']['paidInvoiceTaken'] ?? '';
+    }
+    sendmessage($paymentReport['id_user'], strtr($text, [
+        '{amount}' => money((float) $paymentReport['price'], $cur),
+        '{balance}' => money((float) $balance, $cur),
+    ]), main_keyboard_for_user($userRow), 'HTML');
+}
 // A payment is settled in the wallet it was asked in. When its payer has
 // switched language since, that wallet is brought into Balance for the
 // settlement and put back after, so every branch of DirectPayment_settle()
@@ -1013,7 +1080,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         step('home', $Balance_id['id']);
     }
     if ($steppay[0] == "getconfigafterpay") {
-        $get_invoice = select("invoice", "*", "username", $steppay[1], "select");
+        $get_invoice = afterpay_invoice_for($steppay[1], $Balance_id['id']);
         // 💰 paid, but not yet enough for what it was paid for: it is a top-up and
         // the purchase waits (shortfall.php)
         // 💳 paid directly: the wallet is left alone, whatever it holds
@@ -1021,6 +1088,23 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         if (is_array($get_invoice) && !$dp_direct && !sf_covers($Balance_id, $Payment_report['price'], $get_invoice['price_product'])) {
             sf_settle_short($order_id, $Payment_report, $Balance_id, (float) $get_invoice['price_product'], "sfg|{$get_invoice['id_invoice']}");
             return;
+        }
+        // The invoice is taken for this payment before the panel is called, so the
+        // service is in «سرویس‌های من» the moment it exists on the panel. It was
+        // marked active only at the very end, after the messages, the commission
+        // and the reports: anything that broke on the way left a service on the
+        // panel and an invoice still «unpaid» in the bot, the price already
+        // taken. Taking it first also stops a second approval of the same
+        // receipt (or the auto-approve cron right after the admin) building it twice.
+        if (is_array($get_invoice)) {
+            $ap_claim = afterpay_claim_invoice($get_invoice['id_invoice'], $order_id);
+            if ($ap_claim === 'same') {
+                return;
+            }
+            if ($ap_claim === 'taken') {
+                afterpay_credit_instead($Payment_report, $Balance_id);
+                return;
+            }
         }
         $stmt = $pdo->prepare("SELECT * FROM product WHERE name_product = :name_product AND (Location = :Service_location  or Location = '/all')");
         $stmt->bindParam(':name_product', $get_invoice['name_product'], PDO::PARAM_STR);
@@ -1060,6 +1144,10 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
         );
         $dataoutput = $ManagePanel->createUser($marzban_list_get['name_panel'], $info_product['code_product'], $username_ac, $datac);
         if ($dataoutput['username'] == null) {
+            if (is_array($get_invoice)) {
+                afterpay_release_invoice($get_invoice['id_invoice'], $order_id);
+            }
+            update("Payment_report", "payment_Status", "paid", "id_order", $Payment_report['id_order']);
             $dataoutput['msg'] = json_encode($dataoutput['msg']);
             $balance = $Balance_id['Balance'] + $Payment_report['price'];
             update("user", "Balance", $balance, "id", $Balance_id['id']);
@@ -1075,6 +1163,18 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
                 ]);
             }
             return;
+        }
+        // the service exists: the payment and the wallet are settled right now,
+        // before any message is sent - what is left over can never fail them
+        update("Payment_report", "payment_Status", "paid", "id_order", $Payment_report['id_order']);
+        // what was paid came on top of what the customer had; the price comes off
+        // both and what is left stays (paying exactly what was lacking leaves 0)
+        $Balance_prims = (float) $Balance_id['Balance'] + (float) $Payment_report['price'] - (float) $get_invoice['price_product'];
+        if ($Balance_prims <= 0)
+            $Balance_prims = 0;
+        $Balance_prims = round($Balance_prims, 2);
+        if (!$dp_direct) {
+            update("user", "Balance", $Balance_prims, "id", $Balance_id['id']);
         }
         $Shoppinginfo = afterpay_help_kb($Balance_id['lang'] ?? 'fa', $ct);
         $output_config_link = "";
@@ -1160,15 +1260,6 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
                 update("setting", "numbercount", $value);
             }
         }
-        // what was paid came on top of what the customer had; the price comes off
-        // both and what is left stays (paying exactly what was lacking leaves 0)
-        $Balance_prims = (float) $Balance_id['Balance'] + (float) $Payment_report['price'] - (float) $get_invoice['price_product'];
-        if ($Balance_prims <= 0)
-            $Balance_prims = 0;
-        $Balance_prims = round($Balance_prims, 2);
-        if (!$dp_direct) {
-            update("user", "Balance", $Balance_prims, "id", $Balance_id['id']);
-        }
         $balanceformatsell = select("user", "Balance", "id", $get_invoice['id_user'], "select")['Balance'];
         $balanceformatsell = money($balanceformatsell, currency_for_user($Balance_id), false);
         $balancebefore = wallet_amount_text($Balance_id);
@@ -1199,9 +1290,7 @@ function DirectPayment_settle($order_id, $image = 'images.jpg')
             $scorenew = $Balance_id['score'] + 1;
             update("user", "score", $scorenew, "id", $Balance_id['id']);
         }
-        update("invoice", "Status", "active", "username", $get_invoice['username']);
         if ($Payment_report['Payment_Method'] == "cart to cart" or $Payment_report['Payment_Method'] == "arze digital offline") {
-            update("invoice", "Status", "active", "id_invoice", $get_invoice['id_invoice']);
             $textconfrom = sprintf($textbotlang['hardcoded']['paymentConfirmedNewService'], $username_ac, $get_invoice['Service_location'], $Balance_id['id'], $Payment_report['id_order'], $Balance_id['username'], wallet_amount_text($Balance_id), $format_price_cart, $Payment_report['dec_not_confirmed']);
             Editmessagetext($from_id, $message_id, $textconfrom, $Confirm_pay);
         }
@@ -6930,6 +7019,11 @@ if (!function_exists('topup_checkout_limits')) {
             return [topup_usd_floor_toman($lang, $key), null];
         }
         if (strpos($origin, 'topup_custom:') === 0) {
+            return topup_effective_limits($lang, $key);
+        }
+        // 💰 what a purchase or renewal lacks (shortfall.php) is an amount the
+        // bot worked out for the customer: held to the same range as a typed one
+        if (function_exists('sf_active') && sf_active($GLOBALS['user'] ?? null)) {
             return topup_effective_limits($lang, $key);
         }
         return [topup_gateway_min($lang, $key), topup_gateway_max($lang, $key)];

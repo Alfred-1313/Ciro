@@ -1531,6 +1531,8 @@ addFieldToTable("invoice", "cvol", null, "VARCHAR(4) NULL");
 addFieldToTable("user", "cvol_state", null, "TEXT NULL");
 // 💳 پرداخت مستقیم (directpay.php): the invoice of a purchase paid directly, so the payment leaves the wallet alone
 addFieldToTable("invoice", "pay_direct", "0", "VARCHAR(2)");
+// the payment an invoice bought after paying was settled by (DirectPayment_settle)
+addFieldToTable("invoice", "paid_order", null, "VARCHAR(200) NULL");
 // ⚙️ a Rebecca panel's own service for test accounts (rbsvc.php); empty = the purchase one
 addFieldToTable("marzban_panel", "rb_test_service", null, "VARCHAR(20) NULL");
 addFieldToTable("setting", "wallet_migrated", "0", "VARCHAR(5)");

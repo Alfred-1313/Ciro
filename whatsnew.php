@@ -1108,4 +1108,32 @@ return [
             . "ℹ️ The gifts themselves (percent, minimum amount, codes) are set as before in each gateway's top-up gift. «Top up exactly what is lacking» (when the balance is short) already earned the gift and is unchanged.\n"
             . "🌐 Web panel: «Features» → the «Pay directly» card → «Top-up gift on paying directly»</blockquote>",
     ],
+    [
+        'n' => 76,
+        'date' => '2026-11-07',
+        'fa' => "<blockquote>🛠 <b>رفع دو مشکل در خرید سرویس</b>\n"
+            . "<b>۱. سرویس روی پنل ساخته می‌شد ولی توی ربات نبود (یا unpaid می‌موند)</b>\n"
+            . "وقتی مشتری با کارت‌به‌کارت، درگاه یا «پرداخت مستقیم» سرویس می‌خرید، ربات اول سرویس رو روی پنل می‌ساخت، پیام‌ها و گزارش‌ها رو می‌فرستاد، پول رو از کیف پول کم می‌کرد و تازه آخر کار فاکتور رو «فعال» می‌کرد. اگه وسط این کارها چیزی گیر می‌کرد، سرویس روی پنل بود، پول کم شده بود ولی فاکتور «unpaid» می‌موند و در «🛍 سرویس‌های من» دیده نمی‌شد.\n"
+            . "الان همون لحظه‌ای که سرویس روی پنل ساخته می‌شه، فاکتور فعال می‌شه و حساب کیف پول و پرداخت بسته می‌شه؛ بعد پیام‌ها فرستاده می‌شن. اگه پنل خطا بده، فاکتور مثل قبل منتظر می‌مونه و مبلغ به کیف پول برمی‌گرده.\n"
+            . "<b>چیزهای دیگه‌ای که درست شد:</b>\n"
+            . "• تایید دوبارهٔ همون رسید (دو بار زدن ✅، دو ادمین با هم، یا تایید خودکار بعد از تایید دستی) دیگه سرویس رو دو بار نمی‌سازه و پول رو دو بار برنمی‌گردونه.\n"
+            . "• اگه برای خریدی که قبلاً تحویل شده یه پرداخت دیگه برسه، سرویس دوباره ساخته نمی‌شه و مبلغ به کیف پول مشتری اضافه می‌شه (با پیام؛ متنش در 🎨 ← 💰 پیام‌ها و ظاهر افزایش موجودی).\n"
+            . "• دو بار زدن پشت‌سرهم «✅ تایید و پرداخت از کیف پول» فقط یه سرویس می‌خره.\n"
+            . "• خریدی که مشتری نیمه‌کاره ول کرده بود (مثلاً رفت پرداخت کنه و برگشت) دیگه همون نام کاربری رو قفل نمی‌کنه و پیام «مراحل رو از اول شروع کن» تکرار نمی‌شه.\n"
+            . "<b>۲. حداقل و حداکثر «🏦 بسته‌های شارژ» روی «پرداخت مستقیم» اعمال نمی‌شد</b>\n"
+            . "با کلید «🔎 رعایت حداقل و حداکثر شارژ درگاه» روشن، ربات به‌جای بازه‌ای که در 🏦 بسته‌های شارژ ← حداقل و حداکثر مبلغ دلخواه گذاشتی، فقط عدد 💎 مالی رو نگاه می‌کرد. الان همون بازهٔ بسته‌های شارژ اعمال می‌شه (اگه اونجا خالی باشه، عدد 💎 مالی). «افزایش موجودی به اندازهٔ کمبود» هم از همین بازه پیروی می‌کنه.\n"
+            . "⚠️ این کلید پیش‌فرض خاموشه؛ وقتی خاموشه حداقل و حداکثر روی پرداخت مستقیم اعمال نمی‌شه. مسیر: 🏬 تنظیمات فروشگاه ← 🛒 وضعیت قابلیت‌های فروشگاه ← ⚙️ تنظیمات پرداخت مستقیم ← «🔎 رعایت حداقل و حداکثر شارژ درگاه» (پنل وب: «قابلیت‌ها» ← کارت «پرداخت مستقیم»).</blockquote>",
+        'en' => "<blockquote>🛠 <b>Two purchase problems fixed</b>\n"
+            . "<b>1. A service made on the panel but missing in the bot (or left «unpaid»)</b>\n"
+            . "When a customer bought by card to card, a gateway or «Pay directly», the bot made the service on the panel, sent the messages and reports, took the money from the wallet, and only at the very end marked the invoice active. If anything stuck on the way, the service was on the panel and the money taken, but the invoice stayed «unpaid» and did not show in «🛍 My services».\n"
+            . "Now the invoice turns active and the wallet and the payment are settled the moment the service exists on the panel; the messages come after. If the panel refuses, the invoice waits as before and the amount goes back to the wallet.\n"
+            . "<b>Also fixed:</b>\n"
+            . "• Approving the same receipt again (✅ twice, two admins at once, or the auto-approve after a manual one) no longer builds the service twice or refunds twice.\n"
+            . "• A second payment for a purchase already delivered builds nothing again; the amount goes to the customer's wallet (with a message, editable in 🎨 → 💰 top-up messages and looks).\n"
+            . "• Tapping «✅ Confirm and pay from wallet» twice quickly buys one service.\n"
+            . "• A purchase the customer left halfway (went to pay and came back) no longer locks that username, so «start over» is not repeated.\n"
+            . "<b>2. The «🏦 Top-up packages» min and max did not apply to «Pay directly»</b>\n"
+            . "With «🔎 Keep the gateway's top-up min and max» on, the bot looked only at the 💎 Finance number instead of the range set in 🏦 Top-up packages → custom amount min and max. Now that range applies (the 💎 Finance number when it is empty). «Top up exactly what is lacking» follows the same range.\n"
+            . "⚠️ The switch is off by default, and then no min or max applies to paying directly. Path: 🏬 Shop settings → 🛒 Shop feature status → ⚙️ Pay directly settings → «🔎 Keep the gateway's top-up min and max» (web panel: «Features» → the «Pay directly» card).</blockquote>",
+    ],
 ];

@@ -191,8 +191,8 @@ if (!function_exists('dpay_cfg')) {
     }
     // what the checkout holds the amount of a direct payment to: with
     // «رعایت حداقل و حداکثر» off, only the gateway's own floor (the way a ready
-    // amount is held); on, the gateway's range as for any top-up. null: not a
-    // direct payment, the caller's own rule.
+    // amount is held); on, the gateway's range as for a typed top-up. null: not
+    // a direct payment, the caller's own rule.
     function dpay_checkout_limits($lang, $key)
     {
         global $user;
@@ -203,8 +203,12 @@ if (!function_exists('dpay_cfg')) {
         if (!is_array($ctx) || ($ctx['t'] ?? '') !== 'direct') {
             return null;
         }
+        // on: the range the admin set for this gateway in 🏦 بسته‌های شارژ (حداقل و
+        // حداکثر مبلغ دلخواه), falling back to 💎 مالی - the same numbers a typed
+        // top-up is held to. It used to fall through to the 💎 مالی value alone,
+        // so a range set in 🏦 بسته‌های شارژ never applied to a direct payment.
         if (dpay_cfg($user['lang'] ?? 'fa')['limits']) {
-            return null;
+            return topup_effective_limits($lang, $key);
         }
         return [topup_usd_floor_toman($lang, $key), null];
     }

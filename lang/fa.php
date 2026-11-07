@@ -1475,6 +1475,7 @@ return array (
       // 💳 پرداخت مستقیم (directpay.php)
       'dp_1' => array ('label' => '💳 متن مرحلهٔ «پرداخت مستقیم» (بالای لیست روش‌های پرداخت)', 'key' => 'users.Balance.directPayCaption', 'group' => 'buyflow', 'section' => 'confirm'),
       'dp_2' => array ('label' => '⛔️ پرداخت مستقیم الان در دسترس نیست', 'key' => 'users.Balance.directPayGone', 'group' => 'buyflow', 'section' => 'confirm'),
+      'dp_3' => array ('label' => '💰 سرویس این پرداخت قبلاً تحویل شده (مبلغ به کیف پول رفت)', 'key' => 'users.Balance.paidInvoiceTaken', 'group' => 'topup', 'section' => 'topup_done'),
       'sf_1' => array ('label' => '💡 جملهٔ «کمبود موجودی برای این خرید» (زیر پیام موجودی ناکافی)', 'key' => 'users.Balance.shortLine', 'group' => 'buyflow', 'section' => 'balance'),
       'sf_2' => array ('label' => '💡 نقل‌قول «کمبود کمتر از حداقل شارژ است»', 'key' => 'users.Balance.shortUnderMin', 'group' => 'topup', 'section' => 'topup_flow'),
       'sf_3' => array ('label' => '💡 نقل‌قول «کمبود بیشتر از حداکثر شارژ است»', 'key' => 'users.Balance.shortOverMax', 'group' => 'topup', 'section' => 'topup_flow'),
@@ -2168,6 +2169,8 @@ return array (
 مبلغ <b>{price}</b> رو با یکی از روش‌های زیر بپرداز؛ بعد از پرداخت، درخواستت خودکار انجام می‌شه.
 💛 به موجودی کیف پولت دست نمی‌زنیم.',
       'directPayGone' => '⛔️ پرداخت مستقیم الان برای این مرحله در دسترس نیست.',
+      'paidInvoiceTaken' => '💰 سرویسِ این خرید قبلاً برات ساخته شده بود، برای همین مبلغ <b>{amount}</b> که پرداخت کردی به کیف پولت اضافه شد.
+💳 موجودی فعلی: <b>{balance}</b>',
     ),
     'Discount' => 
     array (
