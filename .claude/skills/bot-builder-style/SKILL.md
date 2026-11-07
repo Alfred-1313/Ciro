@@ -35,6 +35,9 @@ who sees menus, not code.
 - **New features are off by default**, each with its own switch (per language), and with
   sub-switches for the risky parts (for example "keep the gateway's min/max" or "gift on
   direct payment" - both off until the admin turns them on).
+- **Every path on its own.** When a bot has several paths (platforms in a downloader, features
+  in a shop), each path's captions and buttons are customized separately in 🎨; what is
+  really shared is labelled as shared. Details in the `telegram-bot-customization` skill.
 - **Three places for every feature:** the bot's admin menu, the web panel, and 🎨. A feature only
   in one of them is not finished.
 - **Admin texts are Persian only.** Customer texts exist in every supported language (Persian

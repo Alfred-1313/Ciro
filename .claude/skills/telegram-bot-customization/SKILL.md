@@ -1,6 +1,6 @@
 ---
 name: telegram-bot-customization
-description: Build a complete admin-editable customization system (the "🎨 شخصی‌سازی" menu) into a Telegram bot, so the bot owner can change every customer-facing message, button, sticker, reaction, emoji (including premium emoji), colour, order and on/off switch per language, from inside the bot and from a web admin panel. Use this whenever you build or extend any Telegram bot (in any language or framework - PHP, Python, Node, Go), add a new customer-facing message, button, screen or feature to a bot, design an admin panel or settings menu for a bot, add a self-update / «🔄 آپدیت ربات» / rollback / what's-new feature to a bot, make a bot multilingual, or the user mentions 🎨, شخصی‌سازی, customization, editable texts, button colours, stickers, premium emoji, "per language", or a web panel for a bot - even if they do not say "customization".
+description: Build a complete admin-editable customization system (the "🎨 شخصی‌سازی" menu) into a Telegram bot, so the bot owner can change every customer-facing message, button, sticker, reaction, emoji (including premium emoji), colour, order and on/off switch per language, from inside the bot and from a web admin panel. Use this whenever you build or extend any Telegram bot (in any language or framework - PHP, Python, Node, Go), add a new customer-facing message, button, screen or feature to a bot, design an admin panel or settings menu for a bot, add a self-update / «🔄 آپدیت ربات» / rollback / what's-new feature to a bot, give each path, platform, route or feature of a bot its own captions and buttons (a downloader with Instagram / TikTok / X paths, a shop with buy / renew / top-up / my-services paths), make a bot multilingual, or the user mentions 🎨, شخصی‌سازی, customization, editable texts, button colours, stickers, premium emoji, "per language", or a web panel for a bot - even if they do not say "customization".
 ---
 
 # Telegram bot customization (🎨)
@@ -99,6 +99,40 @@ must appear in the layout automatically, at a sensible default position, and mus
 
 More detail, including every screen and callback naming, in `references/admin-screens.md`.
 
+## Paths: every path customizable on its own
+
+Most bots have several **paths**: branches that each send their own messages and buttons. A
+downloader has one per platform (Instagram, TikTok, X, YouTube…); a shop has one per feature
+(buy, renew, top-up, my services, test account, hourly account, referral…); a support bot has
+one per department. These are examples, not the list: a path is whatever the owner thinks of
+as "a part of my bot". The admin must be able to customize each path's captions and buttons
+**separately**: the TikTok result can say something different, with different buttons, from
+the Instagram one.
+
+- **A path registry.** One list of paths: `id`, admin label with an emoji, per-language
+  on/off switch, and the texts and button groups it owns. Adding a path means adding a row; it
+  then shows up by itself in 🎨, the web panel, 📐 layout and the feature switches. No path is
+  wired into the menus by hand.
+- **Keys carry the path.** `dl.instagram.caption`, `dl.tiktok.caption`, `dl.x.caption`; button
+  groups too (`dl.tiktok.result_buttons`). Do not reuse one key for several paths just
+  because today the text is the same: tomorrow the owner wants it different.
+- **Lookup order:** this path's override → the override saved for *all paths* → this path's
+  default → the shared default. Every path can be changed alone, and something meant to be
+  the same everywhere is still changed once.
+- **Know the path at the start of the flow** (from the link, the button, the command) and pass
+  it to every text and button lookup of that flow, including messages sent later (a cron, a
+  payment callback). Store it with the job or the order when the flow is asynchronous.
+- **Say what is shared.** When an item really is one for several paths (the channel link, a
+  payment button that appears in five places), the editor says so on screen: "🔗 مشترک بین ۳
+  مسیر: اینستاگرام، تیک‌تاک، توییتر". Otherwise it says "📍 فقط برای مسیر تیک‌تاک". The admin
+  never has to guess where a change will show.
+- **Two shortcuts** on every path item: `📋 کپی از مسیر دیگه` (take another path's text and
+  buttons as a start) and `🔗 اعمال روی همهٔ مسیرها` (save as the all-paths override).
+- **Default: separate.** Shared only when the thing is genuinely one (and then labelled).
+
+Screens and storage for this: `references/admin-screens.md` (path picker, path group) and
+`references/data-model.md` (registry, keys, resolver).
+
 ## Feature switches
 
 - A features screen per scope: "global" (whole bot) and "per language" (this tab only). Each row
@@ -143,6 +177,6 @@ admin in their own language.
 ## Before you say it is done
 
 Run through `references/checklist.md`. In short: texts in every language, registry entry, 🎨
-item opens and edits, buttons through the shared renderer, switch defaults off, web panel shows
+item opens and edits, each path customizable on its own, buttons through the shared renderer, switch defaults off, web panel shows
 it, receiver-language checked, test on a rig with a fake Telegram API, and a "what's new" note
 for the admin that says where to find it (menu path, step by step).
