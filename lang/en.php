@@ -761,6 +761,7 @@ To continue, tap the button below.',
                         'confirmContinueBtn' => '✅ Continue with %s',
                         'topupPaidAlert' => '✅ Your payment was successful and your wallet has been charged.',
                         'paidInvoiceBtn' => '✅ Paid',
+                        'methodRemoved' => '⛔️ This payment method no longer exists. Pick another one from «💰 Increase balance».',
                         'reissueInvoiceBtn' => 'Create a new invoice',
                         'topupInvoiceExpiredCaption' => '<b>Invoice expired</b>
 
@@ -2580,9 +2581,6 @@ To show premium emoji, the bot owner needs Telegram Premium or the bot needs a u
                         'askFallbackName' => '📌 What name should be registered if the user has no username?',
                 ],
                 'api' => [
-                        'askAddress' => '📌 Send the API address.
-
-Current address: %s',
                         'token' => 'Your api token: <code>%s</code>',
                         'docsLink' => '📘 Full API reference:
 %s
@@ -2714,8 +2712,6 @@ Current time: ',
                         'deleted' => '📌 The selected section was deleted.',
                 ],
                 'gateway' => [
-                        'tronadoStatus' => 'Tornado gateway status',
-                        'tronadoDesc' => 'In this section you can turn the Tornado gateway off or on',
                         'off' => 'Turned off',
                         'on' => 'Turned on',
                         'intro' => '📌 From the list below you can manage the gateways.
@@ -2740,9 +2736,6 @@ nowpayments.io
         
 Your current merchant code: %s',
                         'askZarinpalMerchant' => '💳 Obtain your merchant code from ZarinPal and enter it in this section
-        
-Your current merchant code: %s',
-                        'askMerchant' => '💳 Obtain your merchant code and enter it in this section
         
 Your current merchant code: %s',
                         'askTronWallet' => '💳 Send your Tron trc20 wallet address
@@ -4769,7 +4762,6 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'cashbackAqayePardakht' => '💰 Aghaye Pardakht cashback',
                 'cashbackCartToCart' => '💰 Card-to-card cashback',
                 'cashbackIranPay1' => '💰 Rial currency cashback',
-                'cashbackIranPay2' => '💰 Second Rial currency cashback',
                 'cashbackIranPay3' => '💰 Third Rial currency cashback',
                 'cashbackNowPayment' => '💰 nowpayment cashback',
                 'cashbackPlisio' => '💰 plisio cashback',
@@ -4907,7 +4899,6 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'infoRefreshed' => '♻️ Service information updated successfully',
                 'infoUpdated' => 'Information was updated',
                 'iranPay1Label' => '📌 First Rial currency',
-                'iranPay2Label' => '📌 Second Rial currency',
                 'iranPay3Label' => '📌Third Rial currency',
                 'lastHourStats' => '⏱️ Last hour',
                 'lastMonth' => '⛅️ Previous month',
@@ -4927,7 +4918,6 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'maxAmountCartToCart' => '⬆️ Maximum card-to-card amount',
                 'maxAmountCryptoOffline' => '⬆️ Maximum offline crypto amount',
                 'maxAmountIranPay1' => '⬆️ Maximum Rial currency amount',
-                'maxAmountIranPay2' => '⬆️ Maximum second Rial currency amount',
                 'maxAmountIranPay3' => '⬆️ Maximum third Rial currency amount',
                 'maxAmountNowPayment' => '⬆️ Maximum nowpayment amount',
                 'maxAmountPlisio' => '⬆️ Maximum plisio amount',
@@ -4940,7 +4930,6 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'minAmountCartToCart' => '⬇️ Minimum card-to-card amount',
                 'minAmountCryptoOffline' => '⬇️ Minimum offline crypto amount',
                 'minAmountIranPay1' => '⬇️ Minimum Rial currency amount',
-                'minAmountIranPay2' => '⬇️ Minimum second Rial currency amount',
                 'minAmountIranPay3' => '⬇️ Minimum third Rial currency amount',
                 'minAmountNowPayment' => '⬇️ Minimum nowpayment amount',
                 'minAmountPlisio' => '⬇️ Minimum plisio amount',
@@ -5032,14 +5021,12 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'setAffiliateBanner' => '🏞 Set referral banner',
                 'setAffiliatePercent' => '🧮 Set referral percentage',
                 'setApi' => 'Set api',
-                'setApiAddress' => 'Set api address',
                 'setAqayePardakhtMerchant' => 'Set Aghaye Pardakht merchant',
                 'setCardNumber' => '💳 Set card number',
                 'setEducationAqayePardakht' => '📚 Set Aghaye Pardakht gateway tutorial',
                 'setEducationCartToCart' => '📚 Set card-to-card tutorial',
                 'setEducationCryptoOffline' => '📚 Set offline currency tutorial ',
                 'setEducationIranPay1' => '📚 Set first Rial currency tutorial',
-                'setEducationIranPay2' => '📚 Set second Rial currency tutorial',
                 'setEducationIranPay3' => '📚 Set third Rial currency tutorial',
                 'setEducationNowPayment' => '📚 Set nowpayment tutorial',
                 'setEducationPlisio' => '📚 Set plisio tutorial',
@@ -6860,7 +6847,6 @@ Its progress shows here and in the bot; the final report, with the exact number,
                 'resultOrderLabel' => 'Order id',
                 'resultAmountLabel' => 'Amount',
                 'resultBackToBot' => 'Back to the bot',
-                'lowAmount' => '❌ The user deposited less than the specified amount.',
                 'reportZarinpal' => '💵 New payment
         
 User numeric ID : %s
@@ -6889,14 +6875,6 @@ Information :
 👤 User username : @%s 
 User balance : %s Dollar
 Payment tracking code : %s',
-                'reportTronado' => '💵 New payment
-%s
-- 👤 User username : @%s
-- 🆔User numeric ID : %s
-- 💸 Transaction amount %s
-- 🔗 <a href = "https://tronscan.org/#/transaction/%s">Payment link </a>
-- 📥 Deposited Tron amount. : %s
-- 💳 Payment method :  Tronado',
                 'reportNowpayment' => '💵 New payment
 - 👤 User username : @%s
 - 🆔User numeric ID : %s

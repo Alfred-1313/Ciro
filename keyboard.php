@@ -391,13 +391,6 @@ $CartManage = json_encode([
     ],
     'resize_keyboard' => true
 ]);
-$trnado = json_encode([
-    'keyboard' => [
-        [['text' => $textbotlang['keyboard']['setEducationIranPay2']]],
-        [['text' => $textbotlang['Admin']['backAdminBtn']], ['text' => $textbotlang['Admin']['backMenuBtn']]]
-    ],
-    'resize_keyboard' => true
-]);
 $keyboardzarinpal = json_encode([
     'keyboard' => [
         [['text' => $textbotlang['keyboard']['setEducationZarinPal']]],
@@ -480,7 +473,6 @@ $PaySettingaqayepardakht = getPaySettingValue("statusaqayepardakht");
 $PaySettingpv = pay_value("Cartstatuspv", $users['lang'] ?? null, 'offcardpv');
 $usernamecart = getPaySettingValue("CartDirect");
 $Swapino = getPaySettingValue("statusSwapWallet");
-$trnadoo = getPaySettingValue("statustarnado");
 $paymentverify = pay_value("checkpaycartfirst", $users['lang'] ?? null, 'offpayverify');
 $stmt = $pdo->prepare("SELECT * FROM Payment_report WHERE id_user = :user_id AND payment_Status = 'paid' ");
 $stmt->bindValue(':user_id', $from_id);
@@ -527,11 +519,6 @@ if ($affilnecurrency == "ondigi") {
 if ($Swapino == "onSwapinoBot") {
     $step_payment['inline_keyboard'][] = [
         ['text' => $customer_texts['textbot']['iranPay2'], 'callback_data' => "iranpay1"]
-    ];
-}
-if ($trnadoo == "onternado") {
-    $step_payment['inline_keyboard'][] = [
-        ['text' => $customer_texts['textbot']['iranPay3'], 'callback_data' => "iranpay2"]
     ];
 }
 if ($arzireyali3 == "oniranpay3" && $paymentexits >= 2) {

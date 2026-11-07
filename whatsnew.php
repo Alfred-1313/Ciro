@@ -1168,8 +1168,7 @@ return [
             . "2️⃣ 🏬 تنظیمات فروشگاه ← 💎 مالی ← 💱 درگاه‌های ارزی ریالی (📂 باز کردن) ← «تنظیمات» ردیف ترونادو\n"
             . "3️⃣ کلید API، آدرس ولت TRX و کلید امضای IPN رو بزن (آدرس کال‌بک همون‌جا با دکمه‌ی کپی هست).\n"
             . "4️⃣ برگرد و ❌ ردیف ترونادو رو بزن تا ✅ بشه.\n"
-            . "🌐 پنل وب: «درگاه‌ها» ← کارت ترونادو.\n"
-            . "ℹ️ این درگاه از ترونادوی قدیمی ربات (توی 🏧 درگاه‌های ریالی با اسم «درگاه پرداخت ریالی سوم») جداست و به تنظیماتش دست نمی‌زنه.</blockquote>",
+            . "🌐 پنل وب: «درگاه‌ها» ← کارت ترونادو.</blockquote>",
         'en' => "<blockquote>⚡ <b>New gateway: Tronado (rial-to-crypto)</b>\n"
             . "Another backup gateway next to FrenzyEx: the customer makes a toman invoice, pays on Tronado's page right inside Telegram, and you receive TRX. The customer's wallet is topped up automatically once Tronado confirms.\n"
             . "Example: a customer wants a 200,000 toman top-up; the bot works out how much TRX that is at Tronado's own price and gives a payment link.\n"
@@ -1179,8 +1178,7 @@ return [
             . "2️⃣ 🏬 Store settings → 💎 Financial → 💱 Rial-to-crypto gateways (📂 open) → «Settings» on the Tronado row\n"
             . "3️⃣ Enter the API key, the TRX wallet address and the IPN signing key (the callback address is there with a copy button).\n"
             . "4️⃣ Go back and tap the ❌ on the Tronado row so it turns ✅.\n"
-            . "🌐 Web panel: «Gateways» → the Tronado card.\n"
-            . "ℹ️ This gateway is separate from the bot's old Tronado one (under 🏧 Rial gateways, named «Third rial payment gateway») and does not touch its settings.</blockquote>",
+            . "🌐 Web panel: «Gateways» → the Tronado card.</blockquote>",
     ],
     [
         'n' => 79,
@@ -1195,5 +1193,17 @@ return [
             . "• <b>Callback address sent by itself:</b> the bot sends its callback address with every invoice, so FrenzyEx support no longer has to register it first. If FrenzyEx does not accept it, the invoice is made without it and the bot tells you in the report group to register the address by hand.\n"
             . "• <b>FrenzyEx answered at once:</b> FrenzyEx waits only 5 seconds for an answer. On a direct purchase the bot used to build the service on the panel first and answer afterwards, and when that took long FrenzyEx logged a failed delivery. Now the bot answers right away and builds the service after; no payment is ever credited twice.\n"
             . "ℹ️ Nothing to set up; only the FrenzyEx API key and callback secret have to be entered.</blockquote>",
+    ],
+    [
+        'n' => 79,
+        'date' => '2026-11-07',
+        'fa' => "<blockquote>🗑 <b>ترونادوی قدیمی حذف شد</b>\n"
+            . "درگاه «درگاه پرداخت ریالی سوم» (ترونادوی قدیمی ربات توی 🏧 درگاه‌های ریالی) کامل از ربات و پنل وب برداشته شد، همراه با تنظیماتش. از این به بعد برای ترونادو فقط درگاه جدید رو داری.\n"
+            . "📍 🏬 تنظیمات فروشگاه ← 💎 مالی ← 💱 درگاه‌های ارزی ریالی ← ترونادو\n"
+            . "ℹ️ پرداخت‌های قبلی که با اون درگاه انجام شده بود توی گزارش‌ها می‌مونن.</blockquote>",
+        'en' => "<blockquote>🗑 <b>The old Tronado gateway is gone</b>\n"
+            . "«Third rial payment gateway» (the bot's old Tronado one, under 🏧 Rial gateways) has been removed from the bot and the web panel, settings included. For Tronado there is now only the new gateway.\n"
+            . "📍 🏬 Store settings → 💎 Financial → 💱 Rial-to-crypto gateways → Tronado\n"
+            . "ℹ️ Payments made through it before stay in the reports.</blockquote>",
     ],
 ];

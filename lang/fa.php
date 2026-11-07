@@ -1893,6 +1893,7 @@ return array (
     کمترین مبلغ برای  پرداخت در این درگاه 1 دلار معادل {price} تومان می باشد.',
       'topupPaidAlert' => '✅ پرداخت شما با موفقیت انجام شد و کیف پول شما شارژ شد.',
       'paidInvoiceBtn' => '✅ پرداخت شد',
+      'methodRemoved' => '⛔️ این روش پرداخت دیگه وجود نداره. از «💰 افزایش موجودی» یه روش دیگه انتخاب کن.',
       'topupInvoiceExpiredCaption' => '<b>فاکتور منقضی شد</b>
 
 مهلت پرداخت این فاکتور به پایان رسیده است.
@@ -4085,9 +4086,6 @@ n2',
     ),
     'api' => 
     array (
-      'askAddress' => '📌 آدرس api را ارسال نمایید.
-
-آدرس فعلی: %s',
       'token' => 'توکن api شما : <code>%s</code>',
       'docsLink' => '📘 مستندات کامل API:
 %s
@@ -4239,8 +4237,6 @@ trojan://xyz',
     ),
     'gateway' => 
     array (
-      'tronadoStatus' => 'وضعیت  درگاه ترونادو',
-      'tronadoDesc' => 'در این بخش می توانید درگاه ترنادو را خاموش یا روشن کنید',
       'off' => 'خاموش گردید',
       'on' => 'روشن گردید',
       'intro' => '📌 از لیست زیر میتوانید درگاه ها را مدیریت کنید.
@@ -4297,9 +4293,6 @@ nowpayments.io
       'tronadoWageNow' => '💸 الان <b>%s درصد</b> کارمزد ترونادو رو فروشگاه می‌ده و بقیه‌اش روی مبلغی که مشتری می‌پردازه اضافه می‌شه.
 <blockquote>۰ (پیش‌فرض): کل کارمزد با مشتریه و کیف پولش دقیقاً به اندازه‌ی فاکتور شارژ می‌شه.
 ۱۰۰: مشتری تقریباً همون مبلغ فاکتور رو می‌پردازه و کارمزد از ترونی که به ولت شما می‌رسه کم می‌شه.</blockquote>',
-      'askMerchant' => '💳 مرچنت کد خود را دریافت و در این قسمت وارد کنید
-        
-مرچنت کد فعلی شما : %s',
       'askTronWallet' => '💳 آدرس ولت ترون trc20 خود را ارسال کنید
         
         ولت فعلی شما : %s',
@@ -9408,7 +9401,6 @@ nowpayments.io
       'webhookSecretLabel' => '🔐 کلید امضای وب‌هوک',
       'feeLabel' => '💸 کارمزد مشتری (تا ۱۰۰ درصد، بیشتر از ۱۰۰ مبلغ ثابت تومان)',
       'dailyLimitLabel' => '📅 سقف پرداخت روزانه (تومان، ۰ یعنی بی‌سقف)',
-      'payUrlLabel' => '🔗 آدرس درگاه',
       'cashbackLabel' => '🎁 درصد بازگشت وجه',
       'globalFieldPrefix' => '🌐 ',
       'globalFieldHint' => '🌐 یعنی این مقدار بین همهٔ زبان‌ها مشترکه (یک حساب پردازشگر برای کل ربات).',
@@ -10122,7 +10114,6 @@ nowpayments.io
     'cashbackAqayePardakht' => '💰 کش بک آقای پرداخت',
     'cashbackCartToCart' => '💰 کش بک کارت به کارت',
     'cashbackIranPay1' => '💰 کش بک ارزی ریالی',
-    'cashbackIranPay2' => '💰 کش بک ارزی ریالی دوم',
     'cashbackIranPay3' => '💰 کش بک ارزی ریالی سوم',
     'cashbackNowPayment' => '💰 کش بک nowpayment',
     'cashbackPlisio' => '💰 کش بک plisio',
@@ -10314,7 +10305,6 @@ nowpayments.io
     'infoRefreshed' => '♻️ اطلاعات سرویس با موفقیت بروزرسانی شد',
     'infoUpdated' => 'اطلاعات بروزرسانی گردید',
     'iranPay1Label' => '📌 ارزی ریالی اول',
-    'iranPay2Label' => '📌 ارزی ریالی دوم',
     'iranPay3Label' => '📌ارزی ریالی سوم',
     'lastHourStats' => '⏱️ یک ساعت اخیر',
     'lastMonth' => '⛅️ ماه قبل',
@@ -10334,7 +10324,6 @@ nowpayments.io
     'maxAmountCartToCart' => '⬆️ حداکثر مبلغ کارت به کارت',
     'maxAmountCryptoOffline' => '⬆️ حداکثر مبلغ رمزارز آفلاین',
     'maxAmountIranPay1' => '⬆️ حداکثر مبلغ ارزی ریالی',
-    'maxAmountIranPay2' => '⬆️ حداکثر مبلغ ارزی ریالی دوم',
     'maxAmountIranPay3' => '⬆️ حداکثر مبلغ ارزی ریالی سوم',
     'maxAmountNowPayment' => '⬆️ حداکثر مبلغ nowpayment',
     'maxAmountPlisio' => '⬆️ حداکثر مبلغ plisio',
@@ -10348,7 +10337,6 @@ nowpayments.io
     'minAmountCartToCart' => '⬇️ حداقل مبلغ کارت به کارت',
     'minAmountCryptoOffline' => '⬇️ حداقل مبلغ رمزارز آفلاین',
     'minAmountIranPay1' => '⬇️ حداقل مبلغ ارزی ریالی',
-    'minAmountIranPay2' => '⬇️ حداقل مبلغ ارزی ریالی دوم',
     'minAmountIranPay3' => '⬇️ حداقل مبلغ ارزی ریالی سوم',
     'minAmountNowPayment' => '⬇️ حداقل مبلغ nowpayment',
     'minAmountPlisio' => '⬇️ حداقل مبلغ plisio',
@@ -10439,14 +10427,12 @@ nowpayments.io
     'setAffiliateBanner' => '🏞 تنظیم بنر زیرمجموعه گیری',
     'setAffiliatePercent' => '🧮 تنظیم درصد زیرمجموعه',
     'setApi' => 'تنظیم api',
-    'setApiAddress' => 'تنظیم آدرس api',
     'setAqayePardakhtMerchant' => 'تنظیم مرچنت آقای پرداخت',
     'setCardNumber' => '💳 تنظیم شماره کارت',
     'setEducationAqayePardakht' => '📚 تنظیم آموزش درگاه اقای پرداخت',
     'setEducationCartToCart' => '📚 تنظیم آموزش کارت به کارت',
     'setEducationCryptoOffline' => '📚 تنظیم آموزش  ارزی افلاین',
     'setEducationIranPay1' => '📚 تنظیم آموزش ارزی ریالی اول',
-    'setEducationIranPay2' => '📚 تنظیم آموزش ارزی ریالی  دوم',
     'setEducationIranPay3' => '📚 تنظیم آموزش ارزی ریالی سوم',
     'setEducationNowPayment' => '📚 تنظیم آموزش nowpayment',
     'setEducationPlisio' => '📚 تنظیم آموزش plisio',
@@ -12282,7 +12268,6 @@ nowpayments.io
     'resultOrderLabel' => 'شناسه سفارش',
     'resultAmountLabel' => 'مبلغ',
     'resultBackToBot' => 'بازگشت به ربات',
-    'lowAmount' => '❌ کاربر کمتر از مبلغ تعیین شده واریز کرده است.',
     'reportZarinpal' => '💵 پرداخت جدید
         
 آیدی عددی کاربر : %s
@@ -12311,14 +12296,6 @@ nowpayments.io
 👤 نام کاربری کاربر : @%s 
 موجودی کاربر : %s تومان
 کد پیگیری پرداخت : %s',
-    'reportTronado' => '💵 پرداخت جدید
-%s
-- 👤 نام کاربری کاربر : @%s
-- 🆔آیدی عددی کاربر : %s
-- 💸 مبلغ تراکنش %s
-- 🔗 <a href = "https://tronscan.org/#/transaction/%s">لینک پرداخت </a>
-- 📥 مبلغ واریز شده ترون. : %s
-- 💳 روش پرداخت :  ترونادو',
     'reportNowpayment' => '💵 پرداخت جدید
 - 👤 نام کاربری کاربر : @%s
 - ‏🆔آیدی عددی کاربر : %s

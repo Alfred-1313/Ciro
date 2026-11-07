@@ -739,41 +739,6 @@ function isValidDate($date)
 {
     return (strtotime($date) != false);
 }
-function trnado($order_id, $price)
-{
-    global $domainhosts;
-    $apitronseller = select("PaySetting", "*", "NamePay", "apiternado", "select")['ValuePay'];
-    $walletaddress = select("PaySetting", "*", "NamePay", "walletaddress", "select")['ValuePay'];
-    $urlpay = select("PaySetting", "*", "NamePay", "urlpaymenttron", "select")['ValuePay'];
-    $curl = curl_init();
-    $data = array(
-        "PaymentID" => $order_id,
-        "WalletAddress" => $walletaddress,
-        "TronAmount" => $price,
-        "CallbackUrl" => "https://" . $domainhosts . "/payment/tronado.php"
-    );
-    $datasend = json_encode($data);
-    curl_setopt_array($curl, array(
-        CURLOPT_URL => "$urlpay",
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => '',
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 0,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => 'POST',
-        CURLOPT_HTTPHEADER => array(
-            'x-api-key:' . $apitronseller,
-            'Content-Type: application/json',
-            'Cookie: ASP.NET_SessionId=spou2s5lo4nnxkjtavscrrlo'
-        ),
-    ));
-    curl_setopt($curl, CURLOPT_POSTFIELDS, $datasend);
-
-    $response = curl_exec($curl);
-
-    return json_decode($response, true);
-}
 function formatBytes($bytes, $precision = 2): string
 {
     global $textbotlang;
@@ -3506,11 +3471,6 @@ if (!function_exists('gw_field_registry')) {
             'iranpay1' => [
                 ['field' => 'marchent_floypay', 'type' => 'text', 'label' => 'merchantLabel', 'scope' => 'global'],
             ],
-            'iranpay2' => [
-                ['field' => 'apiternado', 'type' => 'text', 'label' => 'apiKeyLabel', 'scope' => 'global'],
-                ['field' => 'walletaddress', 'type' => 'text', 'label' => 'walletLabel'],
-                ['field' => 'urlpaymenttron', 'type' => 'text', 'label' => 'payUrlLabel', 'scope' => 'global'],
-            ],
             'iranpay3' => [
                 ['field' => 'apiiranpay', 'type' => 'text', 'label' => 'apiKeyLabel', 'scope' => 'global'],
             ],
@@ -3766,7 +3726,6 @@ if (!function_exists('gateway_registry')) {
             'usdtbep' => $textbotlang['textbot']['usdtbepPayment'],
             'digitaltron' => $textbotlang['textbot']['nowPaymentTron'],
             'iranpay1' => $textbotlang['textbot']['iranPay2'],
-            'iranpay2' => $textbotlang['textbot']['iranPay3'],
             'iranpay3' => $textbotlang['textbot']['iranPay1'],
             'aqayepardakht' => $textbotlang['textbot']['aqayePardakht'],
             'zarinpal' => $textbotlang['textbot']['zarinPal'],
@@ -3800,7 +3759,7 @@ if (!function_exists('gateway_groups')) {
             // rial processors - every one of these is fa-only (see
             // gateway_fa_only_keys), so the group simply never appears on the
             // other language tabs
-            'rial' => ['iranpay1', 'iranpay2', 'iranpay3', 'aqayepardakht', 'zarinpal', 'cubepay', 'abangateway', 'variza', 'paymentnotverify'],
+            'rial' => ['iranpay1', 'iranpay3', 'aqayepardakht', 'zarinpal', 'cubepay', 'abangateway', 'variza', 'paymentnotverify'],
             // rial-priced, but settled through a forex/crypto processor rather
             // than a rial PSP - its own family, directly under the rial one,
             // so it is configured from its own button instead of being mixed
@@ -3941,7 +3900,7 @@ if (!function_exists('gateway_all_keys')) {
     // (card-to-card is keyed by name because it can render as a url button).
     function gateway_all_keys()
     {
-        return ['card', 'plisio', 'nowpayment', 'ton', 'trx', 'usdtbep', 'digitaltron', 'iranpay1', 'iranpay2',
+        return ['card', 'plisio', 'nowpayment', 'ton', 'trx', 'usdtbep', 'digitaltron', 'iranpay1',
             'iranpay3', 'aqayepardakht', 'zarinpal', 'frenzyex', 'tronado', 'cubepay', 'abangateway', 'variza', 'paymentnotverify', 'startelegrams'];
     }
 }
@@ -6908,7 +6867,6 @@ if (!function_exists('topup_usd_rate')) {
             'variza' => 'variza',
             'aqayepardakht' => 'aqayepardakht',
             'iranpay1' => 'iranpay1',
-            'iranpay2' => 'iranpay2',
             'iranpay3' => 'iranpay',
         ][$key] ?? null;
     }
@@ -8158,7 +8116,6 @@ if (!function_exists('topup_gateway_key_by_method')) {
             'variza' => 'variza',
             'aqayepardakht' => 'aqayepardakht',
             'Currency Rial 1' => 'iranpay1',
-            'Currency Rial 2' => 'iranpay2',
             'Currency Rial 3' => 'iranpay3',
             'paymentnotverify' => 'paymentnotverify',
         ];
@@ -9164,7 +9121,7 @@ if (!function_exists('gateway_fa_only_keys')) {
     // where it actually protects the real checkout flow.
     function gateway_fa_only_keys()
     {
-        return ['zarinpal', 'frenzyex', 'tronado', 'cubepay', 'abangateway', 'variza', 'aqayepardakht', 'iranpay1', 'iranpay2', 'iranpay3', 'paymentnotverify'];
+        return ['zarinpal', 'frenzyex', 'tronado', 'cubepay', 'abangateway', 'variza', 'aqayepardakht', 'iranpay1', 'iranpay3', 'paymentnotverify'];
     }
 }
 // read and written by the bot's 💳 hub and by the web panel alike
@@ -9184,8 +9141,6 @@ if (!function_exists('gateway_globally_on')) {
                 return getPaySettingValue('digistatus') === 'ondigi';
             case 'iranpay1':
                 return getPaySettingValue('statusSwapWallet') === 'onSwapinoBot';
-            case 'iranpay2':
-                return getPaySettingValue('statustarnado') === 'onternado';
             case 'iranpay3':
                 return getPaySettingValue('statusiranpay3') === 'oniranpay3';
             case 'aqayepardakht':
@@ -9227,7 +9182,6 @@ if (!function_exists('gateway_globally_set')) {
             'nowpayment' => ['statusnowpayment', '1', '0'],
             'digitaltron' => ['digistatus', 'ondigi', 'offdigi'],
             'iranpay1' => ['statusSwapWallet', 'onSwapinoBot', 'offSwapinoBot'],
-            'iranpay2' => ['statustarnado', 'onternado', 'offternado'],
             'iranpay3' => ['statusiranpay3', 'oniranpay3', 'offiranpay3'],
             'aqayepardakht' => ['statusaqayepardakht', 'onaqayepardakht', 'offaqayepardakht'],
             'zarinpal' => ['zarinpalstatus', 'onzarinpal', 'offzarinpal'],
@@ -9879,7 +9833,6 @@ if (!function_exists('money_input_steps')) {
             'getmainplisio', 'getmaxplisio',
             'getmaindigitaltron', 'getmaxdigitaltron',
             'getmainiranpay1', 'getmaaxiranpay1',
-            'getmainiranpay2', 'getmaaxiranpay2',
             'getmainaqayepardakht', 'getmaaxaqayepardakht',
             'getmainaqzarinpal', 'getmaaxzarinpal',
             'minbalanceiranpay', 'maxbalanceiranpay',
@@ -16308,6 +16261,9 @@ if (!function_exists('topup_disc_method_to_gateway')) {
             'AbanGateway' => 'abangateway',
             'variza' => 'variza',
             'Currency Rial 1' => 'iranpay1',
+            // the original bot's Tronado gateway, removed - kept only so a
+            // customer's old payments through it still count as top-ups
+            // (the «new users only» discount rule asks exactly that)
             'Currency Rial 2' => 'iranpay2',
             'Currency Rial 3' => 'iranpay3',
             'arze digital offline' => 'digitaltron',
@@ -23573,10 +23529,8 @@ function createPayFrenzyEx($price, $order_id)
 //   4. Tronado POSTs a signed IPN on every status change of the order
 //      (payment/tronado_ipn.php); cronbot/tronado.php asks about the orders
 //      whose IPN never came. Both credit through tronado_settle() only.
-// This is a gateway of its own, separate from the original bot's iranpay2
-// (statustarnado/apiternado - «درگاه پرداخت ریالی سوم» to the customer), which
-// talks to an older Tronado endpoint with its own settings - the two never
-// share a row.
+// It replaced the original bot's own Tronado gateway (iranpay2, an older
+// endpoint without signed callbacks), which has been removed.
 if (!function_exists('tronado_callback_url')) {
     // where Tronado sends the IPN. Its domain has to be registered with
     // Tronado's support first, or no IPN is sent at all - so the settings

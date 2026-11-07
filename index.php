@@ -5461,6 +5461,16 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         sendmessage($from_id, $tp_okCap, $tp_okKb, 'HTML');
     }
     return;
+} elseif ($datain === 'iranpay2') {
+    // the original bot's own Tronado gateway was removed - a method list sent
+    // before the update can still carry its button, and a tap must say so
+    // instead of spinning and doing nothing
+    telegram('answerCallbackQuery', [
+        'callback_query_id' => $callback_query_id,
+        'text' => $textbotlang['users']['Balance']['methodRemoved'],
+        'show_alert' => true,
+        'cache_time' => 5,
+    ]);
 } elseif ($user['step'] == "topup_pick_method" && gateway_button_key(['callback_data' => $datain], $textbotlang['textbot']['cartToCart'] ?? null) !== null) {
     $tp_lang = $user['lang'] ?? 'fa';
     $tp_key = gateway_button_key(['callback_data' => $datain], $textbotlang['textbot']['cartToCart'] ?? null);
@@ -5675,7 +5685,9 @@ if (preg_match('/Confirmpay_user_(\w+)_(\w+)/', $datain, $dataget)) {
         $Balance_id = $__q10->fetch(PDO::FETCH_ASSOC);
         $Payment_report['price'] = number_format($Payment_report['price'], 0);
         $text_report = sprintf($textbotlang['Admin']['reportgroup']['newPayment'], $from_id, $Payment_report['price']);
-        $pricecashback = select("PaySetting", "ValuePay", "NamePay", "chashbackiranpay2", "select")['ValuePay'];
+        // NowPayment's own cashback (payment/nowpayment.php reads the same row) - this
+        // used to borrow the removed legacy Tronado gateway's
+        $pricecashback = select("PaySetting", "ValuePay", "NamePay", "cashbacknowpayment", "select")['ValuePay'] ?? '0';
         if ($pricecashback != "0") {
             $result = ($Payment_report['price'] * $pricecashback) / 100;
             // into the wallet the payment was made in
