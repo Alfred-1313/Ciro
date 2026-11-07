@@ -3175,7 +3175,7 @@ if (!function_exists('gw_field_value_text')) {
             // itself reads (pay_value would invent a per-language layer the
             // gateway integrations do not honour)
             $raw = (string) getPaySettingValue($field['field']);
-            if ($raw === '') {
+            if (gw_field_unset_value($field, $raw)) {
                 return [false, $t['notSet']];
             }
             return [false, mb_strlen($raw) > 22 ? mb_substr($raw, 0, 10) . '…' . mb_substr($raw, -6) : $raw];
@@ -3292,6 +3292,14 @@ if (!function_exists('gateway_settings_payload')) {
             $kb['inline_keyboard'][] = [[
                 'text' => '📋 کپی آدرس وب‌هوک',
                 'copy_text' => ['text' => variza_webhook_url()],
+            ]];
+        }
+        if ($key === 'tronado') {
+            // its domain goes to Tronado's support (and, for disputes, into the
+            // miniapp's business settings) - copied, never opened here
+            $kb['inline_keyboard'][] = [[
+                'text' => $textbotlang['Admin']['gateway']['tronadoCopyCallbackBtn'],
+                'copy_text' => ['text' => tronado_callback_url()],
             ]];
         }
         $legacy = gw_legacy_settings_datain($key);
@@ -4313,6 +4321,13 @@ if (!function_exists('gateway_settings_caption')) {
         if ($key === 'variza') {
             $cap .= "\n\n" . sprintf($textbotlang['Admin']['gateway']['varizaWebhookUrl'], variza_webhook_url());
         }
+        if ($key === 'tronado') {
+            // nothing works until Tronado's support has this domain on file,
+            // and the fee split decides what the customer pays - both belong
+            // on the screen where the admin sets the gateway up
+            $cap .= "\n\n" . sprintf($textbotlang['Admin']['gateway']['tronadoCallbackUrl'], tronado_callback_url());
+            $cap .= "\n\n" . sprintf($textbotlang['Admin']['gateway']['tronadoWageNow'], tronado_wage_percent());
+        }
         // every gateway, card included: the numbers that are actually in force
         $cap .= gateway_effective_report($lang, $key, $textbotlang);
         return $cap;
@@ -4352,9 +4367,15 @@ if (!function_exists('gateway_effective_report')) {
                 $lines[] = "• {$t[$f['label']]}: <b>" . topup_expire_minutes($lang, $key) . " دقیقه</b> ({$src($f['field'])})";
                 continue;
             }
+            // a percentage or a limit is a number to read, not a secret
+            if (gw_field_scope($f) === 'global' && gw_field_is_numeric($f)) {
+                $num = trim((string) getPaySettingValue($f['field']));
+                $lines[] = "• {$t[$f['label']]}: <b>" . htmlspecialchars($num === '' ? '0' : $num) . '</b>';
+                continue;
+            }
             // credentials and wallets: whether it is set, never the value itself
             if (gw_field_scope($f) === 'global') {
-                $set = trim((string) getPaySettingValue($f['field'])) !== '';
+                $set = !gw_field_unset_value($f, getPaySettingValue($f['field']));
             } else {
                 $set = trim((string) pay_value($f['field'], $lang, '')) !== '';
             }
@@ -13023,12 +13044,19 @@ elseif ($datain == "systemsms") {
         return;
     }
     $gw_keys = gateway_current_keys($gw_lang);
-    if (in_array($gw_key, $gw_keys, true)) {
+    // flip what the row SHOWS (allowed here AND switched on globally). Testing
+    // only the per-language list made the first tap on a ❌ gateway that was
+    // merely switched off globally (every new gateway on a shop that never
+    // restricted a language) take it off the list instead - still ❌, and
+    // only a second tap turned it on.
+    if (in_array($gw_key, $gw_keys, true) && gateway_globally_on($gw_key)) {
         // off for this language only - other languages may still be selling it
         $gw_keys = array_values(array_diff($gw_keys, [$gw_key]));
         gateway_set_for_lang($gw_lang, $gw_keys);
     } else {
-        $gw_keys[] = $gw_key;
+        if (!in_array($gw_key, $gw_keys, true)) {
+            $gw_keys[] = $gw_key;
+        }
         gateway_set_for_lang($gw_lang, $gw_keys);
         // turning it on here has to turn on the separate global switch too,
         // otherwise the row shows ✅ while real users still see nothing and

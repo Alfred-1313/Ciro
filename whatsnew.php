@@ -1159,13 +1159,39 @@ return [
     [
         'n' => 78,
         'date' => '2026-11-07',
+        'fa' => "<blockquote>⚡ <b>درگاه جدید: ترونادو (ارزی ریالی)</b>\n"
+            . "یه درگاه پشتیبان دیگه کنار FrenzyEx: مشتری فاکتور رو به تومان می‌سازه، توی خودِ تلگرام از صفحه‌ی ترونادو پرداخت می‌کنه و تو ترون (TRX) می‌گیری. کیف پول مشتری بعد از تایید ترونادو خودکار شارژ می‌شه.\n"
+            . "مثال: مشتری ۲۰۰٬۰۰۰ تومان شارژ می‌خواد، ربات به قیمت خودِ ترونادو حساب می‌کنه چند ترون می‌شه و لینک پرداخت می‌ده.\n"
+            . "🔴 پیش‌فرض: <b>خاموش</b>\n"
+            . "📍 راه‌اندازی:\n"
+            . "1️⃣ کلید API و کلید امضای IPN رو از پشتیبانی ترونادو (@TronadoSupp) بگیر و دامنه‌ی رباتت رو پیششون ثبت کن.\n"
+            . "2️⃣ 🏬 تنظیمات فروشگاه ← 💎 مالی ← 💱 درگاه‌های ارزی ریالی (📂 باز کردن) ← «تنظیمات» ردیف ترونادو\n"
+            . "3️⃣ کلید API، آدرس ولت TRX و کلید امضای IPN رو بزن (آدرس کال‌بک همون‌جا با دکمه‌ی کپی هست).\n"
+            . "4️⃣ برگرد و ❌ ردیف ترونادو رو بزن تا ✅ بشه.\n"
+            . "🌐 پنل وب: «درگاه‌ها» ← کارت ترونادو.\n"
+            . "ℹ️ این درگاه از ترونادوی قدیمی ربات (توی 🏧 درگاه‌های ریالی با اسم «درگاه پرداخت ریالی سوم») جداست و به تنظیماتش دست نمی‌زنه.</blockquote>",
+        'en' => "<blockquote>⚡ <b>New gateway: Tronado (rial-to-crypto)</b>\n"
+            . "Another backup gateway next to FrenzyEx: the customer makes a toman invoice, pays on Tronado's page right inside Telegram, and you receive TRX. The customer's wallet is topped up automatically once Tronado confirms.\n"
+            . "Example: a customer wants a 200,000 toman top-up; the bot works out how much TRX that is at Tronado's own price and gives a payment link.\n"
+            . "🔴 Default: <b>off</b>\n"
+            . "📍 Setting it up:\n"
+            . "1️⃣ Get an API key and an IPN signing key from Tronado's support (@TronadoSupp) and have them register your bot's domain.\n"
+            . "2️⃣ 🏬 Store settings → 💎 Financial → 💱 Rial-to-crypto gateways (📂 open) → «Settings» on the Tronado row\n"
+            . "3️⃣ Enter the API key, the TRX wallet address and the IPN signing key (the callback address is there with a copy button).\n"
+            . "4️⃣ Go back and tap the ❌ on the Tronado row so it turns ✅.\n"
+            . "🌐 Web panel: «Gateways» → the Tronado card.\n"
+            . "ℹ️ This gateway is separate from the bot's old Tronado one (under 🏧 Rial gateways, named «Third rial payment gateway») and does not touch its settings.</blockquote>",
+    ],
+    [
+        'n' => 79,
+        'date' => '2026-11-07',
         'fa' => "<blockquote>💱 <b>درگاه FrenzyEx طبق راهنمای جدیدش (نسخه ۴)</b>\n"
-            . "📍 💎 مالی ← 💱 درگاه‌های ارزی ریالی ← 📂 باز کردن ← FrenzyEx ← تنظیمات\n"
+            . "📍 🏬 تنظیمات فروشگاه ← 💎 مالی ← 💱 درگاه‌های ارزی ریالی ← 📂 باز کردن ← FrenzyEx ← تنظیمات\n"
             . "• <b>آدرس کال‌بک خودکار:</b> ربات آدرس کال‌بک رو همراه هر فاکتور به FrenzyEx می‌فرسته، پس دیگه لازم نیست اول از پشتیبانی FrenzyEx بخوای ثبتش کنه. اگه FrenzyEx قبولش نکنه، فاکتور بدون اون ساخته می‌شه و ربات توی گروه گزارش‌ها خبرت می‌کنه که آدرس رو دستی ثبت کنی.\n"
             . "• <b>جواب فوری به FrenzyEx:</b> FrenzyEx فقط ۵ ثانیه منتظر جواب می‌مونه. توی خرید مستقیم، ربات اول سرویس رو روی پنل می‌ساخت و بعد جواب می‌داد، و اگه طول می‌کشید توی پنل FrenzyEx «تحویل ناموفق» ثبت می‌شد. الان ربات همون لحظه جواب می‌ده و سرویس رو بعدش می‌سازه؛ هیچ پرداختی دوبار شارژ نمی‌شه.\n"
             . "ℹ️ چیزی برای تنظیم نیست؛ فقط کلید API و رمز کال‌بک FrenzyEx باید وارد شده باشن.</blockquote>",
         'en' => "<blockquote>💱 <b>The FrenzyEx gateway follows its new guide (version 4)</b>\n"
-            . "📍 💎 Financial → 💱 Rial-to-crypto gateways → 📂 Open → FrenzyEx → Settings\n"
+            . "📍 🏬 Store settings → 💎 Financial → 💱 Rial-to-crypto gateways → 📂 Open → FrenzyEx → Settings\n"
             . "• <b>Callback address sent by itself:</b> the bot sends its callback address with every invoice, so FrenzyEx support no longer has to register it first. If FrenzyEx does not accept it, the invoice is made without it and the bot tells you in the report group to register the address by hand.\n"
             . "• <b>FrenzyEx answered at once:</b> FrenzyEx waits only 5 seconds for an answer. On a direct purchase the bot used to build the service on the panel first and answer afterwards, and when that took long FrenzyEx logged a failed delivery. Now the bot answers right away and builds the service after; no payment is ever credited twice.\n"
             . "ℹ️ Nothing to set up; only the FrenzyEx API key and callback secret have to be entered.</blockquote>",
