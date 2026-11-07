@@ -124,6 +124,14 @@ function ciro_schema_selfheal($setting)
     if (is_array($setting) && ($setting['schema_mark'] ?? '') === ciro_schema_mark()) {
         return false;
     }
+    // an update started from the bot is running: it runs table.php itself in a
+    // moment, with the what's-new notes held back for its closing message. A
+    // run started from here in between (the new files are in, the database is
+    // not yet) would announce the notes on its own and mark them told - and
+    // the closing message would then have nothing under it.
+    if (function_exists('bot_update_busy') && bot_update_busy()) {
+        return false;
+    }
     $flag = __DIR__ . '/.schema_heal';
     if (@filemtime($flag) > time() - 600) {
         return false;
