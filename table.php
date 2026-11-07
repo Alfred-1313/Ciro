@@ -968,6 +968,13 @@ try {
 } catch (Exception $e) {
     error_log('legacy tronado cleanup: ' . $e->getMessage());
 }
+// An update lays the new files over the old ones and deletes nothing, so its
+// callback file would stay behind - removed here, but only the old one (it
+// reads apiternado), never a file someone else put at that path.
+$legacyTronado = __DIR__ . '/payment/tronado.php';
+if (is_file($legacyTronado) && strpos((string) @file_get_contents($legacyTronado), 'apiternado') !== false) {
+    @unlink($legacyTronado);
+}
 //----------------------- [ Discount ] --------------------- //
 try {
     $result = $pdo->query("SHOW TABLES LIKE 'DiscountSell'");
