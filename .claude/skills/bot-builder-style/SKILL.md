@@ -55,6 +55,10 @@ who sees menus, not code.
   approval or a webhook retry never charges, credits or builds twice; failures refund to the
   wallet and say so; min/max limits and gifts follow the admin's settings; every money event is
   reported to the admin group in its topic.
+- **Updates like Ciro:** when a project needs an update feature, build it the way Ciro does it
+  (button in the bot, snapshot first, config and database kept, automatic rollback, progress
+  bar in the same message, back to the previous version from the bot, admins told what is
+  new). The full design is in the `telegram-bot-customization` skill, `references/self-update.md`.
 - **Beginner admins:** after every change set, a "what's new" entry the admin sees in the bot:
   what it is, a concrete example, on/off by default, and the step-by-step path (1️⃣ 2️⃣ 3️⃣),
   plus the web panel path.

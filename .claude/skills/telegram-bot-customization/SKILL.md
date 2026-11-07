@@ -1,6 +1,6 @@
 ---
 name: telegram-bot-customization
-description: Build a complete admin-editable customization system (the "🎨 شخصی‌سازی" menu) into a Telegram bot, so the bot owner can change every customer-facing message, button, sticker, reaction, emoji (including premium emoji), colour, order and on/off switch per language, from inside the bot and from a web admin panel. Use this whenever you build or extend any Telegram bot (in any language or framework - PHP, Python, Node, Go), add a new customer-facing message, button, screen or feature to a bot, design an admin panel or settings menu for a bot, make a bot multilingual, or the user mentions 🎨, شخصی‌سازی, customization, editable texts, button colours, stickers, premium emoji, "per language", or a web panel for a bot - even if they do not say "customization".
+description: Build a complete admin-editable customization system (the "🎨 شخصی‌سازی" menu) into a Telegram bot, so the bot owner can change every customer-facing message, button, sticker, reaction, emoji (including premium emoji), colour, order and on/off switch per language, from inside the bot and from a web admin panel. Use this whenever you build or extend any Telegram bot (in any language or framework - PHP, Python, Node, Go), add a new customer-facing message, button, screen or feature to a bot, design an admin panel or settings menu for a bot, add a self-update / «🔄 آپدیت ربات» / rollback / what's-new feature to a bot, make a bot multilingual, or the user mentions 🎨, شخصی‌سازی, customization, editable texts, button colours, stickers, premium emoji, "per language", or a web panel for a bot - even if they do not say "customization".
 ---
 
 # Telegram bot customization (🎨)
@@ -130,6 +130,15 @@ switches). Save without reloading the page (fetch + toast), show the new state i
 - Errors and refusals: `answerCallbackQuery` with `show_alert` for short ones; a short message
   with the fix for longer ones. Never "unknown error".
 - Every list that can grow: paging, and search when long.
+
+## Self-update
+
+If the bot needs an update feature (an admin button that updates the bot, keeps config and
+data, snapshots first, rolls back on failure, and announces what is new), build it exactly as
+described in `references/self-update.md`: the `version` file, the "🔄 آپدیت ربات" screen,
+request files picked up by root's cron watcher, the ten update steps shared with the server's
+management command, rollback to a snapshot from the bot, and `whatsnew.php` announced to every
+admin in their own language.
 
 ## Before you say it is done
 
