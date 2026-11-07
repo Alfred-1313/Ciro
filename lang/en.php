@@ -834,6 +834,17 @@ After this time the invoice is void and you need to create a new one.
 📌 After a successful payment, wait a few moments for the confirmation message; otherwise your account will not be charged.
 
 Use the button below to pay 👇🏻',
+                        'hooshpayInvoiceCreated' => '✅ Payment invoice was created.
+
+🔢 Invoice number: <code>{invoice}</code>
+💰 Wallet top-up: <b>{price}</b> Toman
+💳 Amount to pay: <code>{payable}</code> Toman
+
+🕐 <b>Payment deadline:</b> <b>{minutes} minutes</b>
+
+<blockquote>⚠️ Transfer exactly this «amount to pay» card to card; its last digits are on purpose and the automatic confirmation relies on them. The card number is on the payment page. Once it is confirmed, your wallet is topped up automatically and you get a message.</blockquote>
+
+Use the button below to pay 👇🏻',
                         'tronadoInvoiceCreated' => '✅ Payment invoice was created.
 
 🔢 Invoice number: <code>{invoice}</code>
@@ -2534,6 +2545,7 @@ To show premium emoji, the bot owner needs Telegram Premium or the bot needs a u
                                 'plisio' => 'Plisio payments',
                                 'frenzyex' => 'FrenzyEx payments',
                                 'tronado' => 'Tronado payments',
+                                'hooshpay' => 'HooshPay payments',
                                 'payment_expire' => 'Invoice expiry',
                                 'NoticationsService' => 'Service volume/time warnings',
                                 'activeconfig' => 'Bulk service activation',
@@ -4543,6 +4555,7 @@ Connection link:
                 'usdtbepPayment' => '💵 Pay with Tether (BEP20)',
                 'frenzyEx' => 'FrenzyEx rial crypto gateway',
                 'tronadoPay' => 'Tronado rial crypto gateway',
+                'hooshPay' => 'HooshPay rial crypto gateway',
                 'cubePay' => 'CubePay',
                 'abanGateway' => 'AbanGateway',
                 'varizaPay' => 'Variza (automatic card to card)',
@@ -5156,6 +5169,7 @@ We hope you had a good experience with the ease and speed of your service. If yo
                 'paymentMethodVariza' => 'Variza',
                 'paymentMethodFrenzyEx' => 'FrenzyEx',
                 'paymentMethodTronado' => 'Tronado',
+                'paymentMethodHooshpay' => 'HooshPay',
                 'svcPageTitle' => 'Service messages and buttons',
                 'svcPageLede' => 'After buying: service status and delivery-message buttons, config delivery, usage warnings and the sticker of the close buttons — per language',
                 'svcStatus' => 'Service status buttons',

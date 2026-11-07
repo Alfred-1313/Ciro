@@ -713,6 +713,12 @@ return array (
         'group' => 'topup',
         'section' => 'topup_flow',
       ),
+      array (
+        'label' => '🧠 فاکتور هوش‌پی',
+        'key' => 'users.Balance.hooshpayInvoiceCreated',
+        'group' => 'topup',
+        'section' => 'topup_flow',
+      ),
       // ---- 🎁 پیام‌های تخفیف ----
       // Their own submenu rather than nine more rows in 💰: none of them is
       // per-gateway (the same sentence is produced for every gateway - see
@@ -2040,6 +2046,20 @@ return array (
 🕐 <b>مهلت پرداخت:</b> <b>{minutes} دقیقه</b>
 
 <blockquote>پرداخت توی همین تلگرام و از صفحه‌ی پرداخت ترونادو انجام می‌شه. بعد از اینکه ترونادو پرداختت رو تایید کرد، کیف پولت خودکار شارژ می‌شه و پیامش برات میاد.</blockquote>
+
+جهت پرداخت از دکمه زیر استفاده کنید👇🏻',
+      // HooshPay's own: it tells payments apart by the last digits of the
+      // amount, so the caption gives the exact figure to transfer, copyable.
+      // Filled by strtr, like Tronado's.
+      'hooshpayInvoiceCreated' => '✅ فاکتور پرداخت ایجاد شد.
+
+🔢 شماره فاکتور : <code>{invoice}</code>
+💰 مبلغ شارژ کیف پول : <b>{price}</b> تومان
+💳 مبلغ قابل پرداخت : <code>{payable}</code> تومان
+
+🕐 <b>مهلت پرداخت:</b> <b>{minutes} دقیقه</b>
+
+<blockquote>⚠️ دقیقاً همین «مبلغ قابل پرداخت» رو کارت‌به‌کارت کن؛ رقم‌های آخرش عمدیه و تایید خودکار با همونه. شماره‌ی کارت توی صفحه‌ی پرداخت هست. بعد از تایید، کیف پولت خودکار شارژ می‌شه و پیامش برات میاد.</blockquote>
 
 جهت پرداخت از دکمه زیر استفاده کنید👇🏻',
       'queueBusy' => 'تعداد افراد در صف درخواست درگاه پرداخت بشدت زیاد است 📊
@@ -4035,6 +4055,7 @@ n2',
         'plisio' => 'پرداخت Plisio',
         'frenzyex' => 'پرداخت FrenzyEx',
         'tronado' => 'پرداخت ترونادو',
+        'hooshpay' => 'پرداخت هوش‌پی',
         'payment_expire' => 'انقضای فاکتورها',
         'NoticationsService' => 'هشدار حجم و زمان سرویس‌ها',
         'activeconfig' => 'فعال‌سازی گروهی سرویس‌ها',
@@ -4290,6 +4311,25 @@ nowpayments.io
 2️⃣ کلید API، آدرس ولت TRX و کلید امضای IPN رو از دکمه‌های بالا وارد کنید.
 3️⃣ اگه «Dispute Callback» رو توی مینی‌اپ ترونادو (کسب‌وکار ← تنظیمات) روشن کنید، همین آدرس رو اونجا هم بذارید؛ اعتراض‌های پذیرفته‌شده براتون گزارش می‌شه.</blockquote>
 اگه خبر پرداختی نرسه، ربات هر ۳ دقیقه خودش وضعیت سفارش‌های باز رو از ترونادو می‌پرسه.',
+      'hooshpaySetup' => '🔗 آدرس کال‌بک (خودکار همراه هر فاکتور فرستاده می‌شه، لازم نیست جایی ثبتش کنید):
+<code>%s</code>
+
+<blockquote>1️⃣ توی اپلیکیشن هوش‌پی، بخش «توسعه»، کلید API (با hp_live_ شروع می‌شه) و کلید Secret رو بردارید.
+2️⃣ هر دو رو از دکمه‌های بالا وارد کنید. کلید Secret برای اینه که ربات مطمئن بشه خبر پرداخت واقعاً از هوش‌پی اومده.</blockquote>
+اگه خبر پرداختی نرسه، ربات هر ۳ دقیقه خودش وضعیت فاکتورهای باز رو از هوش‌پی می‌پرسه.
+
+💸 <b>کارمزد الان:</b> %s
+<blockquote>buyer: کارمزد روی مبلغ مشتری اضافه می‌شه و کل مبلغ به شما می‌رسه.
+seller: مشتری دقیقاً مبلغ فاکتور رو می‌پردازه و کارمزد از سهم شما کم می‌شه.
+split: کارمزد نصف‌نصف.
+خالی یا ۰: همون تنظیم حساب هوش‌پی‌تون.
+در هر حالت، کیف پول مشتری دقیقاً به اندازه‌ی فاکتور شارژ می‌شه.</blockquote>',
+      'hooshpayFeeModes' => array (
+        'buyer' => 'با مشتری (buyer)',
+        'seller' => 'با فروشگاه (seller)',
+        'split' => 'نصف‌نصف (split)',
+        'account' => 'طبق تنظیم حساب هوش‌پی',
+      ),
       'tronadoWageNow' => '💸 الان <b>%s درصد</b> کارمزد ترونادو رو فروشگاه می‌ده و بقیه‌اش روی مبلغی که مشتری می‌پردازه اضافه می‌شه.
 <blockquote>۰ (پیش‌فرض): کل کارمزد با مشتریه و کیف پولش دقیقاً به اندازه‌ی فاکتور شارژ می‌شه.
 ۱۰۰: مشتری تقریباً همون مبلغ فاکتور رو می‌پردازه و کارمزد از ترونی که به ولت شما می‌رسه کم می‌شه.</blockquote>',
@@ -6565,6 +6605,11 @@ f,n.n2',
 ✍️ دلیل خطا : %s
 
 آیدی کابر : %s
+نام کاربری کاربر : @%s',
+      'errorHooshpayLink' => '⭕️ خطا در ساخت لینک هوش‌پی
+✍️ دلیل خطا : %s
+
+آیدی کاربر : %s
 نام کاربری کاربر : @%s',
       'errorTronadoLink' => '⭕️ خطا در ساخت لینک ترونادو
 ✍️ دلیل خطا : %s
@@ -9339,6 +9384,8 @@ nowpayments.io
       'tronadoWalletLabel' => '⚡ آدرس ولت TRX مقصد',
       'tronadoIpnKeyLabel' => '🔐 کلید امضای IPN (IpnSigningKey)',
       'tronadoWageLabel' => '💸 سهم فروشگاه از کارمزد (۰ تا ۱۰۰ درصد)',
+      'hooshpaySecretLabel' => '🔐 کلید Secret (امضای کال‌بک)',
+      'hooshpayFeeModeLabel' => '💸 کارمزد با کی باشه (buyer / seller / split)',
       'inheritedAs' => 'پیش‌فرض (%s)',
       'notSet' => 'تنظیم نشده',
       'resetBtn' => '🗑 حذف سفارشی‌سازی‌های این زبان',
@@ -10024,6 +10071,7 @@ nowpayments.io
     'zarinPal' => 'زرین پال',
     'frenzyEx' => 'درگاه ارزی ریالی FrenzyEx',
     'tronadoPay' => 'درگاه ارزی ریالی ترونادو',
+    'hooshPay' => 'درگاه ارزی ریالی هوش‌پی',
     'cubePay' => 'CubePay',
     'abanGateway' => 'آبان گیت‌وی',
     'varizaPay' => 'واریزا (کارت به کارت خودکار)',
@@ -10574,6 +10622,7 @@ nowpayments.io
     'paymentMethodVariza' => 'واریزا',
     'paymentMethodFrenzyEx' => 'FrenzyEx',
     'paymentMethodTronado' => 'ترونادو',
+    'paymentMethodHooshpay' => 'هوش‌پی',
     'svcPageTitle' => 'پیام‌ها و دکمه‌های سرویس',
     'svcPageLede' => 'بعد از خرید: دکمه‌های وضعیت سرویس و پیام‌های دریافت، نحوه‌ی تحویل کانفیگ، هشدارهای اتمام حجم و زمان و استیکر دکمه‌های بستن — برای هر زبان',
     'svcStatus' => 'دکمه‌های وضعیت سرویس',
@@ -13442,6 +13491,29 @@ nowpayments.io
 ⚡ ترون دریافتی: <b>%s TRX</b>
 🧾 فاکتور: <code>%s</code>
 🔗 هش: <code>%s</code>',
+    'hooshpayPaymentLog' => '💵 <b>پرداخت هوش‌پی دریافت شد</b>
+
+👤 آیدی کاربر: <code>%s</code>
+👤 یوزرنیم: %s
+💰 مبلغ شارژ: %s تومان
+💳 پرداختی مشتری: %s تومان
+🧾 فاکتور: <code>%s</code>
+🆔 فاکتور هوش‌پی: <code>%s</code>
+🔖 کد پیگیری: <code>%s</code>',
+    'hooshpayMismatch' => '⚠️ <b>هوش‌پی: پرداخت تایید شد ولی با فاکتور جور درنمیاد</b>
+
+🧾 فاکتور: <code>%s</code>
+🆔 فاکتور هوش‌پی: <code>%s</code>
+✍️ اختلاف: %s
+<blockquote>ربات این پرداخت رو خودکار شارژ نکرد. اگه درسته، از «مدیریت کاربر» کیف پول مشتری رو دستی شارژ کنید.</blockquote>',
+    'hooshpayNotCredited' => '⚠️ <b>هوش‌پی: پرداخت تایید شد ولی سفارش شارژ نشد</b>
+
+🧾 فاکتور: <code>%s</code>
+📌 وضعیت سفارش در ربات: %s',
+    'hooshpayCreditFailed' => '❌ <b>هوش‌پی: پرداخت تایید شد ولی شارژ با خطا روبه‌رو شد</b>
+
+🧾 فاکتور: <code>%s</code>
+✍️ خطا: %s',
     'tronadoShortPayment' => '⚠️ <b>ترونادو: مبلغ پرداخت‌شده کمتر از فاکتوره</b>
 
 🧾 فاکتور: <code>%s</code>

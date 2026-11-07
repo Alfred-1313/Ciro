@@ -1224,4 +1224,28 @@ return [
             . "• <b>\"Last link update\" is right again:</b> the bot reading the configs no longer counts on the panel as the customer's own link update, and no longer uses up one of the customer's devices (HWID).\n"
             . "• <b>Fixes:</b> a service delete that succeeded but showed as failed, the per-node usage report that stayed empty, services with unlimited time, and \"set product inbound\" answering \"not found\" for a PasarGuard sample user.</blockquote>",
     ],
+    [
+        'n' => 82,
+        'date' => '2026-11-08',
+        'fa' => "<blockquote>🧠 <b>درگاه جدید: هوش‌پی (ارزی ریالی)</b>\n"
+            . "یه درگاه پشتیبان دیگه کنار FrenzyEx و ترونادو: مشتری کارت‌به‌کارت پرداخت می‌کنه، هوش‌پی با پیامک بانک همون لحظه تاییدش می‌کنه و کیف پول مشتری خودکار شارژ می‌شه. تسویه‌ی شما با تتره.\n"
+            . "مثال: مشتری ۱۰۰٬۰۰۰ تومان شارژ می‌خواد، ربات یه مبلغ دقیق مثل ۱۲۰٬۰۱۷ تومان (با کارمزد) بهش می‌ده که باید دقیقاً همون رو واریز کنه.\n"
+            . "🔴 پیش‌فرض: <b>خاموش</b>\n"
+            . "📍 راه‌اندازی:\n"
+            . "1️⃣ توی اپلیکیشن هوش‌پی، بخش «توسعه»، کلید API و کلید Secret رو بردار.\n"
+            . "2️⃣ 🏬 تنظیمات فروشگاه ← 💎 مالی ← 💱 درگاه‌های ارزی ریالی (📂 باز کردن) ← «تنظیمات» ردیف هوش‌پی\n"
+            . "3️⃣ کلید API و کلید Secret رو بزن. اگه خواستی بگو کارمزد با کی باشه (buyer / seller / split).\n"
+            . "4️⃣ برگرد و ❌ ردیف هوش‌پی رو بزن تا ✅ بشه.\n"
+            . "🌐 پنل وب: «درگاه‌ها» ← کارت هوش‌پی.</blockquote>",
+        'en' => "<blockquote>🧠 <b>New gateway: HooshPay (rial-to-crypto)</b>\n"
+            . "Another backup gateway next to FrenzyEx and Tronado: the customer pays card to card, HooshPay confirms it from the bank's SMS on the spot, and the customer's wallet is topped up automatically. You are settled in USDT.\n"
+            . "Example: a customer wants a 100,000 toman top-up; the bot gives an exact figure such as 120,017 toman (fee included) to transfer.\n"
+            . "🔴 Default: <b>off</b>\n"
+            . "📍 Setting it up:\n"
+            . "1️⃣ In the HooshPay app, under «Development», take the API key and the Secret.\n"
+            . "2️⃣ 🏬 Store settings → 💎 Financial → 💱 Rial-to-crypto gateways (📂 open) → «Settings» on the HooshPay row\n"
+            . "3️⃣ Enter the API key and the Secret, and if you like, who carries the fee (buyer / seller / split).\n"
+            . "4️⃣ Go back and tap the ❌ on the HooshPay row so it turns ✅.\n"
+            . "🌐 Web panel: «Gateways» → the HooshPay card.</blockquote>",
+    ],
 ];

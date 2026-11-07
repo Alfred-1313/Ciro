@@ -546,6 +546,11 @@ if (getPaySettingValue("statustronado") == "ontronado") {
         ['text' => $customer_texts['textbot']['tronadoPay'], 'callback_data' => "tronado"]
     ];
 }
+if (getPaySettingValue("statushooshpay") == "onhooshpay") {
+    $step_payment['inline_keyboard'][] = [
+        ['text' => $customer_texts['textbot']['hooshPay'], 'callback_data' => "hooshpay"]
+    ];
+}
 if (getPaySettingValue("statuscubepay") == "oncubepay") {
     $step_payment['inline_keyboard'][] = [
         ['text' => $customer_texts['textbot']['cubePay'], 'callback_data' => "cubepay"]

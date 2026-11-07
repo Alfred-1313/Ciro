@@ -241,6 +241,62 @@ if (function_exists('sf_guard') && sf_guard()) {
         ]) . topup_disc_caption_block($from_id, $tr_lang, 'tronado', $textbotlang, $user['Processing_value'], true);
         topup_linkmsg_help($from_id, 'helptronado');
         topup_track_invoice_message($randomString, topup_linkmsg_finish($from_id, $textnowpayments, $paymentkeyboard));
+    } elseif ($datain == "hooshpay") {
+        // درگاه ارزی ریالی هوش‌پی: the range is the admin's own
+        // (minbalancehooshpay/maxbalancehooshpay), like the rest of its family;
+        // HooshPay itself takes nothing under 1,000 toman
+        $hp_lang = $user['lang'] ?? 'fa';
+        [$mainbalance, $maxbalance] = topup_checkout_limits($hp_lang, 'hooshpay');
+        if (topup_amount_out_of_range($user['Processing_value'], $mainbalance, $maxbalance)) {
+            topup_range_notice($from_id, $hp_lang, 'hooshpay', $mainbalance, $maxbalance, $textbotlang);
+            return;
+        }
+        deletemessage($from_id, $message_id);
+        topup_linkmsg_show($from_id, $hp_lang, 'hooshpay', $textbotlang['users']['Balance']['linkpayments']);
+        $randomString = bin2hex(random_bytes(5));
+        $pay = createPayHooshPay($user['Processing_value'], $randomString);
+        if (empty($pay['ok'])) {
+            topup_linkmsg_drop($from_id);
+            sendmessage($from_id, $textbotlang['users']['Balance']['errorLinkPayment'], $keyboard, 'HTML');
+            step('home', $from_id);
+            $ErrorsLinkPayment = sprintf($textbotlang['Admin']['reportgroup']['errorHooshpayLink'], htmlspecialchars((string) ($pay['error'] ?? '')), $from_id, $username);
+            if (strlen($setting['Channel_Report']) > 0) {
+                telegram('sendmessage', [
+                    'chat_id' => $setting['Channel_Report'],
+                    'message_thread_id' => $errorreport,
+                    'text' => $ErrorsLinkPayment,
+                    'parse_mode' => "HTML"
+                ]);
+            }
+            return;
+        }
+        // the invoice's uid is kept with the order: the callback and the cron
+        // check it against HooshPay's answer, and it is the «توضیحات» line of
+        // the admin's payment report
+        $invoice = "{$user['Processing_value_tow']}|{$user['Processing_value_one']}";
+        $dateacc = date('Y/m/d H:i:s');
+        $stmt = $pdo->prepare("INSERT INTO Payment_report (id_user,id_order,time,price,payment_Status,Payment_Method,id_invoice,dec_not_confirmed) VALUES (?,?,?,?,?,?,?,?)");
+        $stmt->execute([$from_id, $randomString, $dateacc, $user['Processing_value'], "Unpaid", "hooshpay", $invoice, $pay['uid']]);
+        // through the styling helper like every other invoice button, so
+        // 🎨 شخصی‌سازی can rename/recolour it; blue unless the admin says otherwise
+        $hp_payBtn = topup_styled_button(
+            $textbotlang['users']['Balance']['payments'],
+            topup_invoice_btnstyle_for($hp_lang, 'hooshpay', 'pay'),
+            '',
+            topup_invoice_btnstyle_default_color('pay', 'hooshpay')
+        );
+        $hp_payBtn['url'] = $pay['url'];
+        $paymentkeyboard = json_encode(['inline_keyboard' => [[$hp_payBtn]]]);
+        $textnowpayments = strtr($textbotlang['users']['Balance']['hooshpayInvoiceCreated'], [
+            '{invoice}' => $randomString,
+            '{price}' => number_format($user['Processing_value'], 0),
+            // the EXACT figure to transfer - HooshPay tells payments apart by
+            // its last digits; the invoice amount when it did not send one
+            '{payable}' => number_format($pay['payable'] ?? $user['Processing_value'], 0),
+            '{minutes}' => topup_expire_minutes($hp_lang, 'hooshpay'),
+        ]) . topup_disc_caption_block($from_id, $hp_lang, 'hooshpay', $textbotlang, $user['Processing_value'], true);
+        topup_linkmsg_help($from_id, 'helphooshpay');
+        topup_track_invoice_message($randomString, topup_linkmsg_finish($from_id, $textnowpayments, $paymentkeyboard));
     } elseif ($datain == "cubepay") {
         [$mainbalance, $maxbalance] = topup_checkout_limits($user['lang'] ?? 'fa', 'cubepay');
         if (topup_amount_out_of_range($user['Processing_value'], $mainbalance, $maxbalance)) {

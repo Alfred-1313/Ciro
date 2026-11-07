@@ -4327,6 +4327,17 @@ if (!function_exists('gateway_settings_caption')) {
             $cap .= "\n\n" . sprintf($textbotlang['Admin']['gateway']['tronadoCallbackUrl'], tronado_callback_url());
             $cap .= "\n\n" . sprintf($textbotlang['Admin']['gateway']['tronadoWageNow'], tronado_wage_percent());
         }
+        if ($key === 'hooshpay') {
+            // the callback address travels with every invoice, so there is
+            // nothing to register - shown for reference only; and who pays the
+            // fee decides what the customer sees, so it is said here
+            $hpModes = $textbotlang['Admin']['gateway']['hooshpayFeeModes'];
+            $cap .= "\n\n" . sprintf(
+                $textbotlang['Admin']['gateway']['hooshpaySetup'],
+                hooshpay_callback_url(),
+                $hpModes[hooshpay_fee_mode() ?? 'account'] ?? ''
+            );
+        }
         // every gateway, card included: the numbers that are actually in force
         $cap .= gateway_effective_report($lang, $key, $textbotlang);
         return $cap;
