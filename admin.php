@@ -18491,6 +18491,13 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
 } elseif ($datain == "affilnecurrencysetting") {
     sendmessage($from_id, $textbotlang['users']['selectoption'], $tronnowpayments, 'HTML');
 } elseif ($text == $textbotlang['keyboard']['inboundDeactivate'] && $adminrulecheck['rule'] == "administrator") {
+    // PasarGuard has no per-protocol inbound list (/api/inbounds is a list of
+    // tags; users get inbounds through groups) - the old screen read it as
+    // Marzban's map and failed with PHP warnings
+    if (pasarguard_panel(select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select"))) {
+        sendmessage($from_id, $textbotlang['Admin']['managepanel']['Inbound']['pasarguardUnsupported'], null, 'HTML');
+        return;
+    }
     sendmessage($from_id, $textbotlang['Admin']['managepanel']['Inbound']['getProtocol'], $keyboardprotocol, 'HTML');
     step('getprotocoldisable', $from_id);
 } elseif ($user['step'] == "getprotocoldisable") {
@@ -18724,7 +18731,11 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
         return;
     }
     $nodes = json_decode($nodes['body'], true);
-    if (count($nodes) == 0) {
+    // PasarGuard answers {"nodes":[...],"total":n}, Marzban a bare list
+    if (is_array($nodes) && isset($nodes['nodes']) && is_array($nodes['nodes'])) {
+        $nodes = $nodes['nodes'];
+    }
+    if (!is_array($nodes) || count($nodes) == 0) {
         sendmessage($from_id, $textbotlang['Admin']['node']['settingsUnavailable'], null, 'HTML');
         return;
     }
@@ -20302,33 +20313,24 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
                 sendmessage($from_id, panelErrorText($DataUserOut['error']), null, 'HTML');
                 return;
             }
+            if ((int) ($DataUserOut['status'] ?? 0) === 404) {
+                sendmessage($from_id, $textbotlang['users']['status']['userNotFound'], null, 'html');
+                return;
+            }
             if (!empty($DataUserOut['status']) && $DataUserOut['status'] != 200) {
                 sendmessage($from_id, sprintf($textbotlang['Admin']['errorCode4'], $DataUserOut['status']), null, 'HTML');
                 return;
             }
             $DataUserOut = json_decode($DataUserOut['body'], true);
-            if ((isset($DataUserOut['msg']) && $DataUserOut['msg'] == "User not found") or !isset($DataUserOut['proxy_settings'])) {
+            if (!is_array($DataUserOut) || !isset($DataUserOut['proxy_settings'])) {
                 sendmessage($from_id, $textbotlang['users']['status']['userNotFound'], null, 'html');
                 return;
             }
-            foreach ($DataUserOut['proxy_settings'] as $key => &$value) {
-                if ($key == "shadowsocks") {
-                    unset($DataUserOut['proxy_settings'][$key]['password']);
-                } elseif ($key == "trojan") {
-                    unset($DataUserOut['proxy_settings'][$key]['password']);
-                }elseif ($key == "wireguard") {
-                    unset($DataUserOut['proxy_settings'][$key]['private_key']);
-                    unset($DataUserOut['proxy_settings'][$key]['public_key']);
-                    unset($DataUserOut['proxy_settings'][$key]['peer_ips']);
-                }  else {
-                    unset($DataUserOut['proxy_settings'][$key]['id']);
-                }
-                if (count($DataUserOut['proxy_settings'][$key]) == 0) {
-                    $DataUserOut['proxy_settings'][$key] = new stdClass();
-                }
-            }
-            update("marzban_panel", "inbounds", json_encode($DataUserOut['group_ids']), "name_panel", $user['Processing_value']);
-            update("marzban_panel", "proxies", json_encode($DataUserOut['proxy_settings'], true), "name_panel", $user['Processing_value']);
+            // only the choices are kept (vless flow, shadowsocks method): every
+            // password/uuid/key - also Hysteria's and Masque's - is made fresh
+            // by the panel for each new user
+            update("marzban_panel", "inbounds", json_encode($DataUserOut['group_ids'] ?? []), "name_panel", $user['Processing_value']);
+            update("marzban_panel", "proxies", json_encode(pasarguard_template_proxies($DataUserOut['proxy_settings'])), "name_panel", $user['Processing_value']);
         } else {
             $DataUserOut = getuser($text, $user['Processing_value']);
             if (!empty($DataUserOut['error'])) {
@@ -20622,16 +20624,29 @@ elseif ($text == $textbotlang['keyboard']['hidePanelForUser'] && $adminrulecheck
             sendmessage($from_id, panelErrorText($DataUserOut['error']), null, 'HTML');
             return;
         }
+        if ((int) ($DataUserOut['status'] ?? 0) === 404) {
+            sendmessage($from_id, $textbotlang['users']['status']['userNotFound'], null, 'html');
+            return;
+        }
         if (!empty($DataUserOut['status']) && $DataUserOut['status'] != 200) {
             sendmessage($from_id, sprintf($textbotlang['Admin']['errorCode6'], $DataUserOut['status']), null, 'HTML');
             return;
         }
         $DataUserOut = json_decode($DataUserOut['body'], true);
-        if ((isset($DataUserOut['msg']) && $DataUserOut['msg'] == "User not found") or !isset($DataUserOut['proxies'])) {
+        // PasarGuard names them proxy_settings / group_ids (Marzban: proxies /
+        // inbounds); a PasarGuard sample user used to be answered "not found"
+        if (pasarguard_panel($marzban_list_get) && is_array($DataUserOut) && isset($DataUserOut['proxy_settings'])) {
+            $DataUserOut['proxies'] = (array) pasarguard_template_proxies($DataUserOut['proxy_settings']);
+            $DataUserOut['inbounds'] = $DataUserOut['group_ids'] ?? [];
+        }
+        if (!is_array($DataUserOut) || (isset($DataUserOut['msg']) && $DataUserOut['msg'] == "User not found") or !isset($DataUserOut['proxies'])) {
             sendmessage($from_id, $textbotlang['users']['status']['userNotFound'], null, 'html');
             return;
         }
         foreach ($DataUserOut['proxies'] as $key => &$value) {
+            if (is_object($value)) {
+                continue; // already cleaned above
+            }
             if ($key == "shadowsocks") {
                 unset($DataUserOut['proxies'][$key]['password']);
             } elseif ($key == "trojan") {

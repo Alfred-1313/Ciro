@@ -338,8 +338,10 @@ function panel_set_inbounds(array $data, string $method): void
         $DataUserOut = getuser($data['input'], $panel['name_panel']);
         if (!empty($DataUserOut['error']))
             sendJsonResponse(false, $DataUserOut['error'], [], 200);
+        if ((int) ($DataUserOut['status'] ?? 0) === 404)
+            sendJsonResponse(false, "User Not Found", [], 200);
         if (!empty($DataUserOut['status']) && $DataUserOut['status'] != 200)
-            sendJsonResponse(false, $DataUserOut['msg'], [], 200);
+            sendJsonResponse(false, "error code : " . $DataUserOut['status'], [], 200);
         $DataUserOut = json_decode($DataUserOut['body'] ?? '', true);
         if (!is_array($DataUserOut))
             sendJsonResponse(false, "User Not Found", [], 200);
@@ -351,7 +353,15 @@ function panel_set_inbounds(array $data, string $method): void
         if ((isset($DataUserOut['msg']) && $DataUserOut['msg'] == "User not found") or !isset($DataUserOut[$proxyKey]))
             sendJsonResponse(false, "User Not Found", [], 200);
 
+        if ($isNewMarzban) {
+            // PasarGuard: keep only the choices; every credential (Hysteria's
+            // and Masque's too) is made fresh by the panel for each user
+            $DataUserOut[$proxyKey] = (array) pasarguard_template_proxies($DataUserOut[$proxyKey]);
+        }
         foreach ($DataUserOut[$proxyKey] as $key => $value) {
+            if (is_object($value)) {
+                continue;
+            }
             if ($key == "shadowsocks" || $key == "trojan") {
                 unset($DataUserOut[$proxyKey][$key]['password']);
             } elseif ($key == "wireguard") {

@@ -1206,4 +1206,22 @@ return [
             . "📍 🏬 Store settings → 💎 Financial → 💱 Rial-to-crypto gateways → Tronado\n"
             . "ℹ️ Payments made through it before stay in the reports.</blockquote>",
     ],
+    [
+        'n' => 80,
+        'date' => '2026-11-07',
+        'fa' => "<blockquote>🛡 <b>پنل پاسارگارد طبق آخرین نسخه‌اش (v5.6.0)</b>\n"
+            . "📍 برای همهٔ لوکیشن‌هایی که نوع پنلشون «پاسارگارد» هست؛ چیزی برای تنظیم نیست.\n"
+            . "• <b>بدون هشدار توی لاگ پنل:</b> ربات برای ساخت، تمدید، ویرایش، ریست، تغییر لینک و حذف سرویس از مسیرهای قدیمی «با نام کاربری» استفاده می‌کرد. پاسارگارد این مسیرها رو منسوخ کرده، با هر بار استفاده یه هشدار توی لاگش می‌نویسه و از نسخهٔ ۶ کلاً حذفشون می‌کنه. الان ربات با شناسهٔ کاربر کار می‌کنه.\n"
+            . "• <b>پیام «ورود ادمین» کمتر:</b> ربات هر ساعت یه بار دوباره وارد پنل می‌شد و هر ورود یه گزارش ورود توی پنل ثبت می‌کرد. الان تا وقتی ورود قبلی معتبره (پیش‌فرض ۲۴ ساعت) دوباره وارد نمی‌شه.\n"
+            . "• <b>امنیت پروتکل‌ها:</b> «⚙️ تنظیم پروتکل و اینباند» از روی کاربر نمونه، رمز Hysteria و Masque اون کاربر رو هم برمی‌داشت و به همهٔ مشتری‌ها می‌داد. الان فقط تنظیمات (مثل flow) برداشته می‌شه و پنل برای هر مشتری رمز جدا می‌سازه.\n"
+            . "• <b>«آخرین آپدیت لینک» درست شد:</b> خواندن کانفیگ‌ها توسط خود ربات دیگه توی پنل به‌عنوان آپدیت لینک مشتری ثبت نمی‌شه و از سهمیهٔ دستگاه (HWID) مشتری هم کم نمی‌کنه.\n"
+            . "• <b>رفع خطاها:</b> حذف سرویس که با موفقیت انجام می‌شد ولی ربات «ناموفق» نشون می‌داد، گزارش مصرف به تفکیک نود که خالی می‌موند، سرویس با زمان نامحدود، و «تنظیم اینباند محصول» که کاربر نمونهٔ پاسارگارد رو «پیدا نشد» جواب می‌داد.</blockquote>",
+        'en' => "<blockquote>🛡 <b>PasarGuard panels, following its latest version (v5.6.0)</b>\n"
+            . "📍 Every location whose panel type is PasarGuard; nothing to set up.\n"
+            . "• <b>No more warnings in the panel's log:</b> to create, renew, edit, reset, re-link and delete services the bot used the old by-username routes. PasarGuard has deprecated them, writes a warning to its log on every use and removes them in version 6. The bot now works with the user's id.\n"
+            . "• <b>Fewer \"admin login\" notices:</b> the bot logged in to the panel again every hour, and every login was recorded by the panel. It now logs in again only when the previous login runs out (24 hours by default).\n"
+            . "• <b>Protocol security:</b> \"⚙️ Set protocol and inbound\" from a sample user also copied that user's Hysteria and Masque password to every customer. Now only the settings (such as flow) are taken, and the panel makes a separate password for each customer.\n"
+            . "• <b>\"Last link update\" is right again:</b> the bot reading the configs no longer counts on the panel as the customer's own link update, and no longer uses up one of the customer's devices (HWID).\n"
+            . "• <b>Fixes:</b> a service delete that succeeded but showed as failed, the per-node usage report that stayed empty, services with unlimited time, and \"set product inbound\" answering \"not found\" for a PasarGuard sample user.</blockquote>",
+    ],
 ];

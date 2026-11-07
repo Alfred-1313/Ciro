@@ -2893,6 +2893,8 @@ The support access level has access to user services and support message reply s
                                 'getPanelType' => '📌 Select your panel type',
                                 'getProtocol' => '🔱 Select your protocol',
                                 'invalidProtocol' => '⛔️ The protocol is invalid. The protocol must be one of the options below',
+                                'pasarguardUnsupported' => '⚠️ This section is for Marzban panels and does not work on a PasarGuard panel.
+<blockquote>PasarGuard gives users their inbounds through groups, not a per-protocol inbound list; the panel itself disables a finished service.</blockquote>',
                         ],
                         'addPanelName' => 'Send the panel name
        
