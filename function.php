@@ -4601,7 +4601,7 @@ if (!function_exists('bot_update_request_path')) {
         if (time() - (int) ($c['at'] ?? 0) < 600) {
             return !empty($c['v']) ? (string) $c['v'] : null;
         }
-        $ch = curl_init('https://raw.githubusercontent.com/Alfred-1313/Ciro/master/version');
+        $ch = curl_init('https://raw.githubusercontent.com/DenTeeR/Ciro/master/version');
         curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 4, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_FOLLOWLOCATION => true]);
         $body = curl_exec($ch);
         $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);

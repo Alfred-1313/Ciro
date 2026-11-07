@@ -3,7 +3,7 @@
     "description": "Ciro - Telegram VPN sales and management bot",
     "type": "project",
     "license": "AGPL-3.0-or-later",
-    "homepage": "https://github.com/Alfred-1313/Ciro",
+    "homepage": "https://github.com/DenTeeR/Ciro",
     "require": {
         "php": ">=8.2",
         "endroid/qr-code": "^6.0",

@@ -225,6 +225,12 @@ _link_ciro() {
     chmod +x "$link" 2>/dev/null
 }
 
+# ── GitHub source ────────────────────────────────────────────
+# The one place the project's GitHub repository is named: the script's own
+# self-update, the version check and every download of the bot (install,
+# `Ciro update` and the bot's 🔄 /update) all read it from here.
+GIT_REPO="DenTeeR/Ciro"
+
 # Self-update: every run, fetch the latest script from GitHub, validate it,
 # install it to /root/install.sh, link it into /usr/local/bin, and re-exec.
 function self_update_script() {
@@ -239,7 +245,7 @@ function self_update_script() {
     done
     local MASTER_PATH="/root/install.sh"
     local BIN_LINK="/usr/local/bin/Ciro"
-    local URL="https://raw.githubusercontent.com/Alfred-1313/Ciro/master/install.sh"
+    local URL="https://raw.githubusercontent.com/${GIT_REPO}/master/install.sh"
     local TEMP_FILE="/tmp/ciro_update.sh"
 
     # Make sure DNS works before reaching GitHub
@@ -334,7 +340,7 @@ ensure_prerequisites "$@"
 # ── Repo / paths ─────────────────────────────────────────────
 BOT_DIR_DEFAULT="/var/www/html/Ciro"
 CONFIG_FILE_DEFAULT="$BOT_DIR_DEFAULT/config.php"
-GIT_REPO="Alfred-1313/Ciro"
+# GIT_REPO is set at the top of the script (GitHub source)
 IP_CACHE="/tmp/.ciro_server_ip"
 
 # ── Resumable-install state engine ───────────────────────────

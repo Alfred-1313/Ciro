@@ -632,13 +632,13 @@ return [
             . "• روی سرورهایی که از قبل نصب بودن، فایل‌های ربات خودشون اسم Ciro می‌گیرن: پوشه ربات (<code>/var/www/html/ciro</code>)، تنظیمات اسکریپت (<code>/root/ciro</code>)، نسخه‌های پشتیبان (<code>/root/ciro-backups</code>)، کرون آپدیت و دستور. وبهوک، دیتابیس و تنظیمات دست نمی‌خورن؛ اگه Apache تغییر رو قبول نکنه، همه‌چیز همون‌طور که بود می‌مونه.\n"
             . "• دستور مدیریت فقط <code>ciro</code> است؛ دستور قبلی برداشته شد.\n"
             . "• نوع پنل «نمایندگی» حالا «نمایندگی Ciro» است و پنل‌هایی که قبلاً ساخته بودی خودکار منتقل می‌شن.\n"
-            . "• آدرس گیت‌هاب پروژه: <code>github.com/Alfred-1313/Ciro</code></blockquote>",
+            . "• آدرس گیت‌هاب پروژه: <code>github.com/DenTeeR/Ciro</code></blockquote>",
         'en' => "<blockquote>🏷 <b>Ciro everywhere</b>\n"
             . "The previous name is gone from the code, the install script and the GitHub page.\n"
             . "• On servers installed earlier, the bot's own files take the Ciro name: the bot folder (<code>/var/www/html/ciro</code>), the script's settings (<code>/root/ciro</code>), the backups (<code>/root/ciro-backups</code>), the update cron and the command. The webhook, the database and the settings are not touched; if Apache does not accept the change, everything stays as it was.\n"
             . "• The management command is <code>ciro</code> only; the previous one was removed.\n"
             . "• The «agent» panel type is now «Ciro agent», and panels you already added move over by themselves.\n"
-            . "• The project's GitHub address: <code>github.com/Alfred-1313/Ciro</code></blockquote>",
+            . "• The project's GitHub address: <code>github.com/DenTeeR/Ciro</code></blockquote>",
     ],
     [
         'n' => 48,
