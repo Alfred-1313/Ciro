@@ -708,10 +708,10 @@ class ManagePanel
                     'used_traffic' => $UsernameData['used_traffic'],
                     'links' => $UsernameData['links'],
                     'subscription_url' => $UsernameData['subscription_url'],
-                    'sub_updated_at' => $UsernameData['sub_updated_at'],
-                    'sub_last_user_agent' => $UsernameData['sub_last_user_agent'],
+                    'sub_updated_at' => ($UsernameData['sub_updated_at'] ?? null),
+                    'sub_last_user_agent' => ($UsernameData['sub_last_user_agent'] ?? null),
                     'uuid' => $UsernameData['proxies'],
-                    'data_limit_reset' => $UsernameData['data_limit_reset_strategy']
+                    'data_limit_reset' => ($UsernameData['data_limit_reset_strategy'] ?? null)
                 );
             }
         } elseif ($Get_Data_Panel['type'] == "marzneshin") {
@@ -780,8 +780,8 @@ class ManagePanel
                         'used_traffic' => $UsernameData['used_traffic'],
                         'links' => $links_user,
                         'subscription_url' => $UsernameData['subscription_url'],
-                        'sub_updated_at' => $UsernameData['sub_updated_at'],
-                        'sub_last_user_agent' => $UsernameData['sub_last_user_agent'],
+                        'sub_updated_at' => ($UsernameData['sub_updated_at'] ?? null),
+                        'sub_last_user_agent' => ($UsernameData['sub_last_user_agent'] ?? null),
                         'uuid' => null
                     );
                 }
@@ -1189,8 +1189,8 @@ class ManagePanel
                     'used_traffic' => $UsernameData['used_traffic'],
                     'links' => $UsernameData['links'],
                     'subscription_url' => $UsernameData['subscription_url'],
-                    'sub_updated_at' => $UsernameData['sub_updated_at'],
-                    'sub_last_user_agent' => $UsernameData['sub_last_user_agent'],
+                    'sub_updated_at' => ($UsernameData['sub_updated_at'] ?? null),
+                    'sub_last_user_agent' => ($UsernameData['sub_last_user_agent'] ?? null),
                     'uuid' => $UsernameData['uuid'],
                     'data_limit_reset' => $UsernameData['data_limit_reset']
                 );
@@ -1223,7 +1223,7 @@ class ManagePanel
                     if ($invoice != false) {
                         $sub_url = "https://$domainhosts/sub/" . $invoice['id_invoice'];
                     }
-                    if ($UsernameData['online_at']) {
+                    if (!empty($UsernameData['online_at'])) {
                         $dateTime = new DateTime($UsernameData['online_at'], new DateTimeZone('UTC'));
                         $dateTime->setTimezone(new DateTimeZone('Asia/Tehran'));
                         $online_at = date('Y/m/d H:i:s', $dateTime->getTimestamp());
@@ -1239,10 +1239,10 @@ class ManagePanel
                         'used_traffic' => $UsernameData['used_traffic'],
                         'links' => $UsernameData['links'],
                         'subscription_url' => $sub_url,
-                        'sub_updated_at' => $UsernameData['sub_updated_at'],
-                        'sub_last_user_agent' => $UsernameData['sub_last_user_agent'],
+                        'sub_updated_at' => ($UsernameData['sub_updated_at'] ?? null),
+                        'sub_last_user_agent' => ($UsernameData['sub_last_user_agent'] ?? null),
                         'uuid' => null,
-                        'data_limit_reset' => $UsernameData['data_limit_reset_strategy']
+                        'data_limit_reset' => ($UsernameData['data_limit_reset_strategy'] ?? null)
                     );
                 }
             }

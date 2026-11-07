@@ -1659,7 +1659,6 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     if ($nameloc == false)
         return;
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $nameloc['Service_location'], "select");
-    $Check_token = token_panel($marzban_list_get['url_panel'], $marzban_list_get['username_panel'], $marzban_list_get['password_panel']);
     $DataUserOut = $ManagePanel->DataUser($nameloc['Service_location'], $nameloc['username']);
     if ($DataUserOut['status'] == "Unsuccessful") {
         sendmessage($from_id, $textbotlang['users']['status']['error'], null, 'html');
@@ -4548,6 +4547,12 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     $categorynames = $dataget[1];
     $categorynames = select("category", "remark", "id", $categorynames, "select")['remark'];
     $userdate = json_decode($user['Processing_value'], true);
+    if (!is_array($userdate) || empty($userdate['name_panel'])) {
+        // a category / duration button from an old message, after the purchase was left
+        sendmessage($from_id, $textbotlang['users']['sell']['restartProcess'], null, 'HTML');
+        step("home", $from_id);
+        return;
+    }
     if (isset($userdate['monthproduct'])) {
         $query = "SELECT * FROM product WHERE (Location = '{$userdate['name_panel']}' OR Location = '/all') AND agent= '{$user['agent']}' AND category = '$categorynames' AND Service_time = '{$userdate['monthproduct']}' AND (FIND_IN_SET('{$user['lang']}', lang) OR lang = 'all' OR lang IS NULL OR lang = '')";
     } else {
@@ -4566,6 +4571,12 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
 } elseif (preg_match('/^productmonth_(\w+)/', $datain, $dataget)) {
     $monthenumber = $dataget[1];
     $userdate = json_decode($user['Processing_value'], true);
+    if (!is_array($userdate) || empty($userdate['name_panel'])) {
+        // a category / duration button from an old message, after the purchase was left
+        sendmessage($from_id, $textbotlang['users']['sell']['restartProcess'], null, 'HTML');
+        step("home", $from_id);
+        return;
+    }
     $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel']);
     if (shop_feature_value('categroygenral', $user['lang'] ?? 'fa', $setting['statuscategorygenral']) == "oncategorys") {
         savedata("save", "monthproduct", $monthenumber);
@@ -4627,7 +4638,17 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     } else {
         $prodcut = $dataget[1];
     }
-    $marzban_list_get = select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select");
+    // a plan button from an old message, after the purchase was left: there is no
+    // panel to buy from any more, so the customer starts over instead of reaching
+    // an invoice made of empty fields
+    $marzban_list_get = is_array($userdate) && !empty($userdate['name_panel'])
+        ? select("marzban_panel", "*", "name_panel", $userdate['name_panel'], "select")
+        : false;
+    if (!is_array($marzban_list_get)) {
+        sendmessage($from_id, $textbotlang['users']['sell']['restartProcess'], null, 'HTML');
+        step("home", $from_id);
+        return;
+    }
     if ($marzban_list_get['status'] == "disable") {
         sendmessage($from_id, $textbotlang['users']['sell']['panelUnavailable'], $backuser, 'html');
         step("home", $from_id);

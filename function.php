@@ -20248,7 +20248,19 @@ if (!function_exists('help_send_content')) {
                 // a tutorial is never a dead end.
             }
         }
-        return sendmessage($chat_id, $resolved['description'], $keyboard, 'HTML', null, $resolved['entities']);
+        // with entities (premium emoji, formatting saved from Telegram) the text is
+        // sent with them and without parse_mode; sendmessage() takes no entities,
+        // so they were dropped and the text was read as HTML instead
+        if (!empty($resolved['entities'])) {
+            bottext_send_extras($chat_id, $resolved['description']);
+            return telegram('sendmessage', [
+                'chat_id' => $chat_id,
+                'text' => $resolved['description'],
+                'reply_markup' => $keyboard,
+                'entities' => json_encode($resolved['entities']),
+            ]);
+        }
+        return sendmessage($chat_id, $resolved['description'], $keyboard, 'HTML');
     }
 }
 if (!function_exists('help_lang_has_content')) {

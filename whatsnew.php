@@ -1136,4 +1136,24 @@ return [
             . "With «🔎 Keep the gateway's top-up min and max» on, the bot looked only at the 💎 Finance number instead of the range set in 🏦 Top-up packages → custom amount min and max. Now that range applies (the 💎 Finance number when it is empty). «Top up exactly what is lacking» follows the same range.\n"
             . "⚠️ The switch is off by default, and then no min or max applies to paying directly. Path: 🏬 Shop settings → 🛒 Shop feature status → ⚙️ Pay directly settings → «🔎 Keep the gateway's top-up min and max» (web panel: «Features» → the «Pay directly» card).</blockquote>",
     ],
+    [
+        'n' => 77,
+        'date' => '2026-11-07',
+        'fa' => "<blockquote>🔍 <b>دیباگ کامل ربات</b>\n"
+            . "کل ربات یک دور کامل بررسی شد: کد همهٔ فایل‌ها، همهٔ کرون‌ها، همهٔ صفحه‌های پنل وب (فارسی و انگلیسی) و حدود ۲۷۰۰ ضربه روی منوهای ادمین و مشتری. این‌ها درست شد:\n"
+            . "• <b>آموزش‌ها:</b> متن آموزشی که عکس یا ویدیو نداشت، ایموجی پریمیوم و فرمت‌هاش رو از دست می‌داد. الان همون‌طور که ذخیره کردی فرستاده می‌شه.\n"
+            . "• <b>دکمه‌های قدیمی خرید:</b> اگه مشتری روی دکمهٔ پلن، دسته‌بندی یا مدت زمان یه پیام قدیمی می‌زد (بعد از اینکه خرید رو ول کرده بود)، به یه فاکتور خالی و خراب می‌رسید. الان پیام «مراحل خرید را مجددا انجام دهید» می‌گیره و از اول شروع می‌کنه.\n"
+            . "• <b>لینک اشتراک:</b> موقع گرفتن لینک اشتراک، ربات بی‌دلیل یه ورود اشتباه به پنل می‌زد؛ حذف شد و سریع‌تر شد.\n"
+            . "• <b>کرون on_hold:</b> وقتی یه پنل مرزبان جواب نمی‌داد، هر بار خطا توی لاگ می‌نوشت. الان اون پنل رد می‌شه و بقیه بررسی می‌شن.\n"
+            . "• <b>اطلاعات سرویس:</b> بعضی نسخه‌های پنل چند فیلد (آخرین اتصال، آخرین به‌روزرسانی ساب) رو نمی‌فرستن؛ دیگه هشدار نمی‌ده و صفحهٔ سرویس درست نشون داده می‌شه.\n"
+            . "ℹ️ نیازی به تنظیم نیست؛ همه‌چیز خودکار اعمال می‌شه.</blockquote>",
+        'en' => "<blockquote>🔍 <b>A full debugging pass</b>\n"
+            . "The whole bot was checked once over: the code of every file, every cron, every web panel page (Persian and English) and about 2,700 taps through the admin and customer menus. Fixed:\n"
+            . "• <b>Tutorials:</b> a tutorial text without a photo or video lost its premium emoji and formatting. It is now sent exactly as saved.\n"
+            . "• <b>Old purchase buttons:</b> a plan, category or duration button on an old message (after the customer left the purchase) led to an empty, broken invoice. Now the customer is told to start the purchase again.\n"
+            . "• <b>Subscription link:</b> getting the subscription link made a needless, wrong login to the panel; it is gone, and the link comes faster.\n"
+            . "• <b>on_hold cron:</b> a Marzban panel that did not answer wrote an error to the log on every run. That panel is now skipped and the others are checked.\n"
+            . "• <b>Service details:</b> some panel versions leave out a few fields (last online, last subscription update); no more warnings, and the service page shows correctly.\n"
+            . "ℹ️ Nothing to set up; it all applies by itself.</blockquote>",
+    ],
 ];

@@ -473,7 +473,7 @@ echo web_lang_assets();
     sel.form.querySelectorAll('[data-pick]').forEach(function (row) { row.hidden = row.getAttribute('data-pick') !== sel.value; });
   });
 
-  // ⟦calculator⟧ the same sum as the bot's (cvol_quote): volume × GB price
+  // calculator: the same sum as the bot's (cvol_quote): volume × GB price
   // less the volume discount, plus days × day price, less the sale, rounded
   var L = <?= json_encode(['hidden' => $t['cvCalcHidden'], 'noPrice' => $t['cvCalcNoPrice'], 'bad' => $t['cvCalcBad']], JSON_UNESCAPED_UNICODE) ?>;
   function cfg() {

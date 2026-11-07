@@ -13,7 +13,9 @@ $setting = select("setting", "*");
 $stmt = $pdo->prepare("SELECT * FROM marzban_panel WHERE type = 'marzban'  ORDER BY RAND() LIMIT 25");
 $stmt->execute();
         while ($panel = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $users = getusers($panel['name_panel'],"on_hold")['users'];
+        // a panel that does not answer has no list: it is skipped, not a warning per run
+        $users = getusers($panel['name_panel'],"on_hold")['users'] ?? [];
+        if (!is_array($users)) continue;
         foreach($users as $user){
         $invoice = select("invoice","*","username",$user['username'],"select");
         if($invoice == false )continue;
