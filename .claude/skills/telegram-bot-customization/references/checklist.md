@@ -17,6 +17,8 @@ Copy this into your notes and tick it honestly.
 - [ ] Items that are really shared say so on screen ("🔗 مشترک بین …"), the rest say
       "📍 فقط برای …"; copy-from-path and apply-to-all work.
 - [ ] Each path has its own per-language on/off switch.
+- [ ] A new feature that sells or is used shows up in 📊 آمار ربات (count and sum, per
+      language, per period) and on the web panel's dashboard.
 - [ ] A new feature has a switch, per language unless truly global, **off by default**.
 - [ ] The web panel can see and change everything the bot can for this feature.
 - [ ] Stale buttons from old messages answer with a clear alert, never a PHP/Python error.

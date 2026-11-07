@@ -58,6 +58,9 @@ who sees menus, not code.
   approval or a webhook retry never charges, credits or builds twice; failures refund to the
   wallet and say so; min/max limits and gifts follow the admin's settings; every money event is
   reported to the admin group in its topic.
+- **📊 Statistics like Ciro:** every bot has «📊 آمار ربات» as the first admin button and the
+  same numbers on the web dashboard (details in `telegram-bot-customization`,
+  `references/bot-stats.md`); every new paid feature adds its lines there.
 - **Updates like Ciro:** when a project needs an update feature, build it the way Ciro does it
   (button in the bot, snapshot first, config and database kept, automatic rollback, progress
   bar in the same message, back to the previous version from the bot, admins told what is

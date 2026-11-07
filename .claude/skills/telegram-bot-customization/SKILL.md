@@ -1,6 +1,6 @@
 ---
 name: telegram-bot-customization
-description: Build a complete admin-editable customization system (the "🎨 شخصی‌سازی" menu) into a Telegram bot, so the bot owner can change every customer-facing message, button, sticker, reaction, emoji (including premium emoji), colour, order and on/off switch per language, from inside the bot and from a web admin panel. Use this whenever you build or extend any Telegram bot (in any language or framework - PHP, Python, Node, Go), add a new customer-facing message, button, screen or feature to a bot, design an admin panel or settings menu for a bot, add a self-update / «🔄 آپدیت ربات» / rollback / what's-new feature to a bot, give each path, platform, route or feature of a bot its own captions and buttons (a downloader with Instagram / TikTok / X paths, a shop with buy / renew / top-up / my-services paths), make a bot multilingual, or the user mentions 🎨, شخصی‌سازی, customization, editable texts, button colours, stickers, premium emoji, "per language", or a web panel for a bot - even if they do not say "customization".
+description: Build a complete admin-editable customization system (the "🎨 شخصی‌سازی" menu) into any Telegram bot, so the owner can change every customer-facing message, button, sticker, reaction, premium emoji, colour, order and on/off switch per language, from the bot and a web admin panel. Use this whenever you build or extend a Telegram bot in any language or framework, add a customer-facing message, button, screen or feature, design an admin panel or settings menu, give each path or feature its own captions and buttons (a downloader with Instagram / TikTok / X paths, a shop with buy / renew / top-up paths), add a self-update («🔄 آپدیت ربات», rollback, what's new) or a statistics screen («📊 آمار ربات», web dashboard), make a bot multilingual, or the user mentions 🎨, شخصی‌سازی, customization, editable texts, button colours, stickers, premium emoji, "per language", آمار or a bot web panel - even if they do not say "customization".
 ---
 
 # Telegram bot customization (🎨)
@@ -164,6 +164,17 @@ switches). Save without reloading the page (fetch + toast), show the new state i
 - Errors and refusals: `answerCallbackQuery` with `show_alert` for short ones; a short message
   with the fix for longer ones. Never "unknown error".
 - Every list that can grow: paging, and search when long.
+
+## 📊 Bot statistics
+
+Every bot gets "📊 آمار ربات" as the first admin button, built like Ciro's: language tabs
+(each language counted on its own, in its currency), an overall view (users, buyers, tests,
+wallets, sales, active sales, renewals, conversion, average per customer, monthly forecast,
+renewal share, agents, panels, sales per gateway), period buttons (last hour, today,
+yesterday, this month, last month, chosen dates) with count and sum for every paid action,
+per-path and per-server numbers, and the same figures on the web panel's dashboard, whose
+counters reset to a baseline without deleting anything. Full design and counting rules:
+`references/bot-stats.md`.
 
 ## Self-update
 
