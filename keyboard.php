@@ -391,13 +391,6 @@ $CartManage = json_encode([
     ],
     'resize_keyboard' => true
 ]);
-$trnado = json_encode([
-    'keyboard' => [
-        [['text' => $textbotlang['keyboard']['setEducationIranPay2']]],
-        [['text' => $textbotlang['Admin']['backAdminBtn']], ['text' => $textbotlang['Admin']['backMenuBtn']]]
-    ],
-    'resize_keyboard' => true
-]);
 $keyboardzarinpal = json_encode([
     'keyboard' => [
         [['text' => $textbotlang['keyboard']['setEducationZarinPal']]],
@@ -480,7 +473,6 @@ $PaySettingaqayepardakht = getPaySettingValue("statusaqayepardakht");
 $PaySettingpv = pay_value("Cartstatuspv", $users['lang'] ?? null, 'offcardpv');
 $usernamecart = getPaySettingValue("CartDirect");
 $Swapino = getPaySettingValue("statusSwapWallet");
-$trnadoo = getPaySettingValue("statustarnado");
 $paymentverify = pay_value("checkpaycartfirst", $users['lang'] ?? null, 'offpayverify');
 $stmt = $pdo->prepare("SELECT * FROM Payment_report WHERE id_user = :user_id AND payment_Status = 'paid' ");
 $stmt->bindValue(':user_id', $from_id);
@@ -496,7 +488,9 @@ $payment_status_nowpayment = getPaySettingValue("statusnowpayment");
 $step_payment = [
     'inline_keyboard' => []
 ];
-if ($PaySettingcard == "oncard" && intval($users['cardpayment']) == 1) {
+// the customer's own switch, and with 🛡 «فقط برای مشتری‌های قدیمی» on, more
+// than N paid purchases/renewals (card_visible_for())
+if ($PaySettingcard == "oncard" && card_visible_for($users, $users['lang'] ?? 'fa')) {
     if ($PaySettingpv == "oncardpv") {
         $step_payment['inline_keyboard'][] = [
             ['text' => $customer_texts['textbot']['cartToCart'], 'url' => "https://t.me/$usernamecart"],
@@ -529,11 +523,6 @@ if ($Swapino == "onSwapinoBot") {
         ['text' => $customer_texts['textbot']['iranPay2'], 'callback_data' => "iranpay1"]
     ];
 }
-if ($trnadoo == "onternado") {
-    $step_payment['inline_keyboard'][] = [
-        ['text' => $customer_texts['textbot']['iranPay3'], 'callback_data' => "iranpay2"]
-    ];
-}
 if ($arzireyali3 == "oniranpay3" && $paymentexits >= 2) {
     $step_payment['inline_keyboard'][] = [
         ['text' => $customer_texts['textbot']['iranPay1'], 'callback_data' => "iranpay3"]
@@ -552,6 +541,16 @@ if ($zarinpal == "onzarinpal") {
 if ($frenzyex == "onfrenzyex") {
     $step_payment['inline_keyboard'][] = [
         ['text' => $customer_texts['textbot']['frenzyEx'], 'callback_data' => "frenzyex"]
+    ];
+}
+if (getPaySettingValue("statustronado") == "ontronado") {
+    $step_payment['inline_keyboard'][] = [
+        ['text' => $customer_texts['textbot']['tronadoPay'], 'callback_data' => "tronado"]
+    ];
+}
+if (getPaySettingValue("statushooshpay") == "onhooshpay") {
+    $step_payment['inline_keyboard'][] = [
+        ['text' => $customer_texts['textbot']['hooshPay'], 'callback_data' => "hooshpay"]
     ];
 }
 if (getPaySettingValue("statuscubepay") == "oncubepay") {

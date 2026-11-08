@@ -1180,4 +1180,122 @@ return [
             . "After the previous update only the progress bar (100%) appeared, without the separate «✅ Bot updated» message and its «what's new» list. The server script loaded the Persian-calendar file a second time and that stopped it. The file can now be loaded any number of times.\n"
             . "ℹ️ Nothing to do. This update sends you the notes of every update you missed, all at once.</blockquote>",
     ],
+    [
+        'n' => 80,
+        'date' => '2026-11-07',
+        'fa' => "<blockquote>⚡ <b>درگاه جدید: ترونادو (ارزی ریالی)</b>\n"
+            . "یه درگاه پشتیبان دیگه کنار FrenzyEx: مشتری فاکتور رو به تومان می‌سازه، توی خودِ تلگرام از صفحه‌ی ترونادو پرداخت می‌کنه و تو ترون (TRX) می‌گیری. کیف پول مشتری بعد از تایید ترونادو خودکار شارژ می‌شه.\n"
+            . "مثال: مشتری ۲۰۰٬۰۰۰ تومان شارژ می‌خواد، ربات به قیمت خودِ ترونادو حساب می‌کنه چند ترون می‌شه و لینک پرداخت می‌ده.\n"
+            . "🔴 پیش‌فرض: <b>خاموش</b>\n"
+            . "📍 راه‌اندازی:\n"
+            . "1️⃣ کلید API و کلید امضای IPN رو از پشتیبانی ترونادو (@TronadoSupp) بگیر و دامنه‌ی رباتت رو پیششون ثبت کن.\n"
+            . "2️⃣ 🏬 تنظیمات فروشگاه ← 💎 مالی ← 💱 درگاه‌های ارزی ریالی (📂 باز کردن) ← «تنظیمات» ردیف ترونادو\n"
+            . "3️⃣ کلید API، آدرس ولت TRX و کلید امضای IPN رو بزن (آدرس کال‌بک همون‌جا با دکمه‌ی کپی هست).\n"
+            . "4️⃣ برگرد و ❌ ردیف ترونادو رو بزن تا ✅ بشه.\n"
+            . "🌐 پنل وب: «درگاه‌ها» ← کارت ترونادو.</blockquote>",
+        'en' => "<blockquote>⚡ <b>New gateway: Tronado (rial-to-crypto)</b>\n"
+            . "Another backup gateway next to FrenzyEx: the customer makes a toman invoice, pays on Tronado's page right inside Telegram, and you receive TRX. The customer's wallet is topped up automatically once Tronado confirms.\n"
+            . "Example: a customer wants a 200,000 toman top-up; the bot works out how much TRX that is at Tronado's own price and gives a payment link.\n"
+            . "🔴 Default: <b>off</b>\n"
+            . "📍 Setting it up:\n"
+            . "1️⃣ Get an API key and an IPN signing key from Tronado's support (@TronadoSupp) and have them register your bot's domain.\n"
+            . "2️⃣ 🏬 Store settings → 💎 Financial → 💱 Rial-to-crypto gateways (📂 open) → «Settings» on the Tronado row\n"
+            . "3️⃣ Enter the API key, the TRX wallet address and the IPN signing key (the callback address is there with a copy button).\n"
+            . "4️⃣ Go back and tap the ❌ on the Tronado row so it turns ✅.\n"
+            . "🌐 Web panel: «Gateways» → the Tronado card.</blockquote>",
+    ],
+    [
+        'n' => 81,
+        'date' => '2026-11-07',
+        'fa' => "<blockquote>💱 <b>درگاه FrenzyEx طبق راهنمای جدیدش (نسخه ۴)</b>\n"
+            . "📍 🏬 تنظیمات فروشگاه ← 💎 مالی ← 💱 درگاه‌های ارزی ریالی ← 📂 باز کردن ← FrenzyEx ← تنظیمات\n"
+            . "• <b>آدرس کال‌بک خودکار:</b> ربات آدرس کال‌بک رو همراه هر فاکتور به FrenzyEx می‌فرسته، پس دیگه لازم نیست اول از پشتیبانی FrenzyEx بخوای ثبتش کنه. اگه FrenzyEx قبولش نکنه، فاکتور بدون اون ساخته می‌شه و ربات توی گروه گزارش‌ها خبرت می‌کنه که آدرس رو دستی ثبت کنی.\n"
+            . "• <b>جواب فوری به FrenzyEx:</b> FrenzyEx فقط ۵ ثانیه منتظر جواب می‌مونه. توی خرید مستقیم، ربات اول سرویس رو روی پنل می‌ساخت و بعد جواب می‌داد، و اگه طول می‌کشید توی پنل FrenzyEx «تحویل ناموفق» ثبت می‌شد. الان ربات همون لحظه جواب می‌ده و سرویس رو بعدش می‌سازه؛ هیچ پرداختی دوبار شارژ نمی‌شه.\n"
+            . "ℹ️ چیزی برای تنظیم نیست؛ فقط کلید API و رمز کال‌بک FrenzyEx باید وارد شده باشن.</blockquote>",
+        'en' => "<blockquote>💱 <b>The FrenzyEx gateway follows its new guide (version 4)</b>\n"
+            . "📍 🏬 Store settings → 💎 Financial → 💱 Rial-to-crypto gateways → 📂 Open → FrenzyEx → Settings\n"
+            . "• <b>Callback address sent by itself:</b> the bot sends its callback address with every invoice, so FrenzyEx support no longer has to register it first. If FrenzyEx does not accept it, the invoice is made without it and the bot tells you in the report group to register the address by hand.\n"
+            . "• <b>FrenzyEx answered at once:</b> FrenzyEx waits only 5 seconds for an answer. On a direct purchase the bot used to build the service on the panel first and answer afterwards, and when that took long FrenzyEx logged a failed delivery. Now the bot answers right away and builds the service after; no payment is ever credited twice.\n"
+            . "ℹ️ Nothing to set up; only the FrenzyEx API key and callback secret have to be entered.</blockquote>",
+    ],
+    [
+        'n' => 82,
+        'date' => '2026-11-07',
+        'fa' => "<blockquote>🗑 <b>ترونادوی قدیمی حذف شد</b>\n"
+            . "درگاه «درگاه پرداخت ریالی سوم» (ترونادوی قدیمی ربات توی 🏧 درگاه‌های ریالی) کامل از ربات و پنل وب برداشته شد، همراه با تنظیماتش. از این به بعد برای ترونادو فقط درگاه جدید رو داری.\n"
+            . "📍 🏬 تنظیمات فروشگاه ← 💎 مالی ← 💱 درگاه‌های ارزی ریالی ← ترونادو\n"
+            . "ℹ️ پرداخت‌های قبلی که با اون درگاه انجام شده بود توی گزارش‌ها می‌مونن.</blockquote>",
+        'en' => "<blockquote>🗑 <b>The old Tronado gateway is gone</b>\n"
+            . "«Third rial payment gateway» (the bot's old Tronado one, under 🏧 Rial gateways) has been removed from the bot and the web panel, settings included. For Tronado there is now only the new gateway.\n"
+            . "📍 🏬 Store settings → 💎 Financial → 💱 Rial-to-crypto gateways → Tronado\n"
+            . "ℹ️ Payments made through it before stay in the reports.</blockquote>",
+    ],
+    [
+        'n' => 83,
+        'date' => '2026-11-08',
+        'fa' => "<blockquote>🛡 <b>پنل پاسارگارد طبق آخرین نسخه‌اش (v5.6.0)</b>\n"
+            . "📍 برای همهٔ لوکیشن‌هایی که نوع پنلشون «پاسارگارد» هست؛ چیزی برای تنظیم نیست.\n"
+            . "• <b>بدون هشدار توی لاگ پنل:</b> ربات برای ساخت، تمدید، ویرایش، ریست، تغییر لینک و حذف سرویس از مسیرهای قدیمی «با نام کاربری» استفاده می‌کرد. پاسارگارد این مسیرها رو منسوخ کرده، با هر بار استفاده یه هشدار توی لاگش می‌نویسه و از نسخهٔ ۶ کلاً حذفشون می‌کنه. الان ربات با شناسهٔ کاربر کار می‌کنه.\n"
+            . "• <b>پیام «ورود ادمین» کمتر:</b> ربات هر ساعت یه بار دوباره وارد پنل می‌شد و هر ورود یه گزارش ورود توی پنل ثبت می‌کرد. الان تا وقتی ورود قبلی معتبره (پیش‌فرض ۲۴ ساعت) دوباره وارد نمی‌شه.\n"
+            . "• <b>امنیت پروتکل‌ها:</b> «⚙️ تنظیم پروتکل و اینباند» از روی کاربر نمونه، رمز Hysteria و Masque اون کاربر رو هم برمی‌داشت و به همهٔ مشتری‌ها می‌داد. الان فقط تنظیمات (مثل flow) برداشته می‌شه و پنل برای هر مشتری رمز جدا می‌سازه.\n"
+            . "• <b>«آخرین آپدیت لینک» درست شد:</b> خواندن کانفیگ‌ها توسط خود ربات دیگه توی پنل به‌عنوان آپدیت لینک مشتری ثبت نمی‌شه و از سهمیهٔ دستگاه (HWID) مشتری هم کم نمی‌کنه.\n"
+            . "• <b>رفع خطاها:</b> حذف سرویس که با موفقیت انجام می‌شد ولی ربات «ناموفق» نشون می‌داد، گزارش مصرف به تفکیک نود که خالی می‌موند، سرویس با زمان نامحدود، و «تنظیم اینباند محصول» که کاربر نمونهٔ پاسارگارد رو «پیدا نشد» جواب می‌داد.</blockquote>",
+        'en' => "<blockquote>🛡 <b>PasarGuard panels, following its latest version (v5.6.0)</b>\n"
+            . "📍 Every location whose panel type is PasarGuard; nothing to set up.\n"
+            . "• <b>No more warnings in the panel's log:</b> to create, renew, edit, reset, re-link and delete services the bot used the old by-username routes. PasarGuard has deprecated them, writes a warning to its log on every use and removes them in version 6. The bot now works with the user's id.\n"
+            . "• <b>Fewer \"admin login\" notices:</b> the bot logged in to the panel again every hour, and every login was recorded by the panel. It now logs in again only when the previous login runs out (24 hours by default).\n"
+            . "• <b>Protocol security:</b> \"⚙️ Set protocol and inbound\" from a sample user also copied that user's Hysteria and Masque password to every customer. Now only the settings (such as flow) are taken, and the panel makes a separate password for each customer.\n"
+            . "• <b>\"Last link update\" is right again:</b> the bot reading the configs no longer counts on the panel as the customer's own link update, and no longer uses up one of the customer's devices (HWID).\n"
+            . "• <b>Fixes:</b> a service delete that succeeded but showed as failed, the per-node usage report that stayed empty, services with unlimited time, and \"set product inbound\" answering \"not found\" for a PasarGuard sample user.</blockquote>",
+    ],
+    [
+        'n' => 84,
+        'date' => '2026-11-08',
+        'fa' => "<blockquote>🧠 <b>درگاه جدید: هوش‌پی (ارزی ریالی)</b>\n"
+            . "یه درگاه پشتیبان دیگه کنار FrenzyEx و ترونادو: مشتری کارت‌به‌کارت پرداخت می‌کنه، هوش‌پی با پیامک بانک همون لحظه تاییدش می‌کنه و کیف پول مشتری خودکار شارژ می‌شه. تسویه‌ی شما با تتره.\n"
+            . "مثال: مشتری ۱۰۰٬۰۰۰ تومان شارژ می‌خواد، ربات یه مبلغ دقیق مثل ۱۲۰٬۰۱۷ تومان (با کارمزد) بهش می‌ده که باید دقیقاً همون رو واریز کنه.\n"
+            . "🔴 پیش‌فرض: <b>خاموش</b>\n"
+            . "📍 راه‌اندازی:\n"
+            . "1️⃣ توی اپلیکیشن هوش‌پی، بخش «توسعه»، کلید API و کلید Secret رو بردار.\n"
+            . "2️⃣ 🏬 تنظیمات فروشگاه ← 💎 مالی ← 💱 درگاه‌های ارزی ریالی (📂 باز کردن) ← «تنظیمات» ردیف هوش‌پی\n"
+            . "3️⃣ کلید API و کلید Secret رو بزن. اگه خواستی بگو کارمزد با کی باشه (buyer / seller / split).\n"
+            . "4️⃣ برگرد و ❌ ردیف هوش‌پی رو بزن تا ✅ بشه.\n"
+            . "🌐 پنل وب: «درگاه‌ها» ← کارت هوش‌پی.</blockquote>",
+        'en' => "<blockquote>🧠 <b>New gateway: HooshPay (rial-to-crypto)</b>\n"
+            . "Another backup gateway next to FrenzyEx and Tronado: the customer pays card to card, HooshPay confirms it from the bank's SMS on the spot, and the customer's wallet is topped up automatically. You are settled in USDT.\n"
+            . "Example: a customer wants a 100,000 toman top-up; the bot gives an exact figure such as 120,017 toman (fee included) to transfer.\n"
+            . "🔴 Default: <b>off</b>\n"
+            . "📍 Setting it up:\n"
+            . "1️⃣ In the HooshPay app, under «Development», take the API key and the Secret.\n"
+            . "2️⃣ 🏬 Store settings → 💎 Financial → 💱 Rial-to-crypto gateways (📂 open) → «Settings» on the HooshPay row\n"
+            . "3️⃣ Enter the API key and the Secret, and if you like, who carries the fee (buyer / seller / split).\n"
+            . "4️⃣ Go back and tap the ❌ on the HooshPay row so it turns ✅.\n"
+            . "🌐 Web panel: «Gateways» → the HooshPay card.</blockquote>",
+    ],
+    [
+        'n' => 85,
+        'date' => '2026-11-08',
+        'fa' => "<blockquote>🛡 <b>کارت‌به‌کارت فقط برای مشتری‌های قدیمی</b>\n"
+            . "اگه روشنش کنی، فقط مشتری‌ای که بیشتر از ۳ خرید یا تمدید پرداخت‌شده داشته دکمه‌ی کارت‌به‌کارت رو می‌بینه؛ بقیه نمی‌بینن. به محض اینکه مشتری به این تعداد برسه، کارت‌به‌کارت خودکار براش روشن می‌شه. عدد ۳ قابل تغییره.\n"
+            . "مثال: مشتری‌ای که ۲ تا سرویس خریده و ۱ بار تمدید کرده هنوز کارت‌به‌کارت نمی‌بینه؛ با خرید یا تمدید بعدی می‌بینه.\n"
+            . "🔴 پیش‌فرض: <b>خاموش</b>\n"
+            . "📍 1️⃣ 🏬 تنظیمات فروشگاه ← 💎 مالی ← «⚙️ تنظیمات» ردیف کارت به کارت\n"
+            . "2️⃣ 🔧 تنظیمات فنی درگاه (این زبان) ← «🛡 فقط برای مشتری‌های قدیمی» رو بزن تا ✅ بشه\n"
+            . "3️⃣ برای عوض کردن عدد: «✏️ تغییر تعداد خرید/تمدید لازم»\n"
+            . "🌐 پنل وب: «درگاه‌ها» ← کارت «کارت به کارت».</blockquote>\n\n"
+            . "<blockquote>⚡ <b>حداقل مبلغ ترونادو: ۱۵۰ هزار تومان</b>\n"
+            . "ترونادو کمتر از ۱۵۰٬۰۰۰ تومان قبول نمی‌کنه، پس ربات هم برای مبلغ‌های کمتر ترونادو رو نشون نمی‌ده (تمدید، پرداخت مستقیم، کسری موجودی) و توی شارژ دلخواه حداقل رو ۱۵۰٬۰۰۰ می‌گه.\n"
+            . "📍 اگه ترونادو عددش رو عوض کرد: 💎 مالی ← 💱 درگاه‌های ارزی ریالی ← «تنظیمات» ترونادو ← «⬇️ کمترین مبلغی که ترونادو قبول می‌کنه».</blockquote>",
+        'en' => "<blockquote>🛡 <b>Card to card only for returning customers</b>\n"
+            . "Turned on, only a customer with more than 3 paid purchases or renewals sees the card-to-card button; the others do not. The moment a customer gets there, card to card is switched on for them. The 3 can be changed.\n"
+            . "Example: a customer who bought 2 services and renewed once does not see card to card yet; after the next purchase or renewal they do.\n"
+            . "🔴 Default: <b>off</b>\n"
+            . "📍 1️⃣ 🏬 Store settings → 💎 Financial → «⚙️ Settings» on the card-to-card row\n"
+            . "2️⃣ 🔧 Gateway technical settings (this language) → tap «🛡 فقط برای مشتری‌های قدیمی» so it turns ✅\n"
+            . "3️⃣ To change the number: «✏️ تغییر تعداد خرید/تمدید لازم»\n"
+            . "🌐 Web panel: «Gateways» → the card-to-card card.</blockquote>\n\n"
+            . "<blockquote>⚡ <b>Tronado minimum: 150,000 toman</b>\n"
+            . "Tronado takes nothing under 150,000 toman, so the bot no longer offers Tronado for smaller amounts (renewals, direct payments, what a purchase lacks) and quotes 150,000 as the minimum of a typed top-up.\n"
+            . "📍 If Tronado changes it: 💎 Financial → 💱 Rial-to-crypto gateways → Tronado «Settings» → «⬇️ کمترین مبلغی که ترونادو قبول می‌کنه».</blockquote>",
+    ],
 ];

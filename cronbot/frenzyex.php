@@ -58,7 +58,7 @@ foreach ($rows as $row) {
     }
     $curl = curl_init();
     curl_setopt_array($curl, [
-        CURLOPT_URL => "https://frenzy.fastsnap.info/api/v1/payment-requests/{$requestId}",
+        CURLOPT_URL => frenzyex_api_base() . "/api/v1/payment-requests/" . rawurlencode($requestId),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 20,
         CURLOPT_HTTPHEADER => [

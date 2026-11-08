@@ -2521,7 +2521,6 @@ if (!function_exists('gw_legacy_settings_datain')) {
             'plisio' => 'plisiosetting',
             'nowpayment' => 'nowpaymentsetting',
             'iranpay1' => 'iranpay1setting',
-            'iranpay2' => 'iranpay2setting',
             'iranpay3' => 'iranpay3setting',
             'aqayepardakht' => 'aqayepardakhtsetting',
             'zarinpal' => 'zarinpalsetting',
@@ -3139,7 +3138,7 @@ if (!function_exists('topup_minmax_payload')) {
         $floor = topup_usd_floor_toman($lang, $key);
         $curTitle = currency_get($cur)['title'] ?? $cur;
         if ($floor !== null && ($min === null || (float) $min <= $floor)) {
-            $minText = strtr($t['minUsdFloorText'], ['{price}' => number_format($floor), '{currency}' => $curTitle]);
+            $minText = strtr($t[topup_floor_text_key($key, 'floorText')], ['{price}' => number_format($floor), '{currency}' => $curTitle]);
         } else {
             // same as the ceiling below: a gateway has a floor whether or not
             // this screen was ever used, so "no limit" would be a lie
@@ -3175,7 +3174,7 @@ if (!function_exists('gw_field_value_text')) {
             // itself reads (pay_value would invent a per-language layer the
             // gateway integrations do not honour)
             $raw = (string) getPaySettingValue($field['field']);
-            if ($raw === '') {
+            if (gw_field_unset_value($field, $raw)) {
                 return [false, $t['notSet']];
             }
             return [false, mb_strlen($raw) > 22 ? mb_substr($raw, 0, 10) . '…' . mb_substr($raw, -6) : $raw];
@@ -3292,6 +3291,14 @@ if (!function_exists('gateway_settings_payload')) {
             $kb['inline_keyboard'][] = [[
                 'text' => '📋 کپی آدرس وب‌هوک',
                 'copy_text' => ['text' => variza_webhook_url()],
+            ]];
+        }
+        if ($key === 'tronado') {
+            // its domain goes to Tronado's support (and, for disputes, into the
+            // miniapp's business settings) - copied, never opened here
+            $kb['inline_keyboard'][] = [[
+                'text' => $textbotlang['Admin']['gateway']['tronadoCopyCallbackBtn'],
+                'copy_text' => ['text' => tronado_callback_url()],
             ]];
         }
         $legacy = gw_legacy_settings_datain($key);
@@ -3537,6 +3544,17 @@ if (!function_exists('card_legacy_settings_payload')) {
         if ($autoMin > 0 && !$smsFwdOn) {
             $kb['inline_keyboard'][] = [['text' => '✏️ تغییر زمان تایید خودکار', 'callback_data' => "cardlegacytime:{$lang}", 'style' => 'primary']];
         }
+        // 🛡 only for customers with more than N paid purchases/renewals - one
+        // switch (state shown, flips at once) and, while on, its number
+        $trustOn = card_trust_on($lang);
+        $kb['inline_keyboard'][] = [[
+            'text' => $fields['cardtrust']['label'] . ': ' . ($trustOn ? '✅ بیش از ' . card_trust_min($lang) . ' خرید/تمدید' : '❌'),
+            'callback_data' => "cardlegacytoggle:{$lang}:cardtrust",
+            'style' => 'primary',
+        ]];
+        if ($trustOn) {
+            $kb['inline_keyboard'][] = [['text' => '✏️ تغییر تعداد خرید/تمدید لازم', 'callback_data' => "cardtrustmin:{$lang}", 'style' => 'primary']];
+        }
         $kb['inline_keyboard'][] = [['text' => '📚 آموزش کارت‌به‌کارت: ' . (pay_value('helpcart', $lang, '2') != '2' ? '✅ تنظیم شده' : '❌ تنظیم نشده'), 'callback_data' => "cardlegacyhelp:{$lang}", 'style' => 'primary']];
         if (gw_pay_override_has('helpcart', $lang)) {
             $kb['inline_keyboard'][] = [['text' => '↩️ برگشت به آموزش پیش‌فرض', 'callback_data' => "cardlegacyhelpclear:{$lang}", 'style' => 'danger']];
@@ -3565,11 +3583,15 @@ if (!function_exists('card_legacy_settings_caption')) {
             . '<blockquote><b>' . $fields['Cartstatuspv']['label'] . ':</b> ' . $state('Cartstatuspv') . "\n"
             . '<b>' . $fields['checkpaycartfirst']['label'] . ':</b> ' . $state('checkpaycartfirst') . "\n"
             . '<b>🤖 تایید خودکار رسید:</b> ' . ($autoMin > 0 ? "✅ بعد از <b>{$autoMin}</b> دقیقه" : '❌') . "\n"
+            . '<b>' . $fields['cardtrust']['label'] . ':</b> ' . (card_trust_on($lang) ? '✅ بیش از <b>' . card_trust_min($lang) . '</b> خرید/تمدید موفق' : '❌') . "\n"
             . '<b>📚 آموزش کارت‌به‌کارت:</b> ' . (pay_value('helpcart', $lang, '2') != '2' ? '✅ تنظیم شده' : '❌ تنظیم نشده') . "\n"
             . "<b>👥 کارت‌به‌کارت کاربرها:</b> ✅ <b>{$accOn}</b> · ❌ <b>{$accOff}</b>\n"
             . '<b>🚫 استثنا از تایید خودکار:</b> <b>' . count(card_exc_members($lang)) . "</b> نفر</blockquote>\n";
         if (card_sms_forward_on()) {
             $cap .= "🔒 <i>چون SMS Forward روشنه، تایید خودکار رسید قفله.</i>\n";
+        }
+        if (card_trust_on($lang)) {
+            $cap .= '<blockquote>🛡 فقط مشتری‌ای که <b>بیش از ' . card_trust_min($lang) . "</b> خرید یا تمدید پرداخت‌شده داشته، دکمه‌ی کارت‌به‌کارت رو می‌بینه؛ بقیه نمی‌بینن. به محض رسیدن به این عدد، کارت‌به‌کارت خودکار براش روشن می‌شه. اگه بعدش برای یه مشتری خاموشش کنید، خاموش می‌مونه.</blockquote>\n";
         }
         return $cap . '<i>همه‌ی این تنظیمات فقط برای کاربرهای همین زبانه.</i>';
     }
@@ -4313,6 +4335,24 @@ if (!function_exists('gateway_settings_caption')) {
         if ($key === 'variza') {
             $cap .= "\n\n" . sprintf($textbotlang['Admin']['gateway']['varizaWebhookUrl'], variza_webhook_url());
         }
+        if ($key === 'tronado') {
+            // nothing works until Tronado's support has this domain on file,
+            // and the fee split decides what the customer pays - both belong
+            // on the screen where the admin sets the gateway up
+            $cap .= "\n\n" . sprintf($textbotlang['Admin']['gateway']['tronadoCallbackUrl'], tronado_callback_url());
+            $cap .= "\n\n" . sprintf($textbotlang['Admin']['gateway']['tronadoWageNow'], tronado_wage_percent());
+        }
+        if ($key === 'hooshpay') {
+            // the callback address travels with every invoice, so there is
+            // nothing to register - shown for reference only; and who pays the
+            // fee decides what the customer sees, so it is said here
+            $hpModes = $textbotlang['Admin']['gateway']['hooshpayFeeModes'];
+            $cap .= "\n\n" . sprintf(
+                $textbotlang['Admin']['gateway']['hooshpaySetup'],
+                hooshpay_callback_url(),
+                $hpModes[hooshpay_fee_mode() ?? 'account'] ?? ''
+            );
+        }
         // every gateway, card included: the numbers that are actually in force
         $cap .= gateway_effective_report($lang, $key, $textbotlang);
         return $cap;
@@ -4352,9 +4392,15 @@ if (!function_exists('gateway_effective_report')) {
                 $lines[] = "• {$t[$f['label']]}: <b>" . topup_expire_minutes($lang, $key) . " دقیقه</b> ({$src($f['field'])})";
                 continue;
             }
+            // a percentage or a limit is a number to read, not a secret
+            if (gw_field_scope($f) === 'global' && gw_field_is_numeric($f)) {
+                $num = trim((string) getPaySettingValue($f['field']));
+                $lines[] = "• {$t[$f['label']]}: <b>" . htmlspecialchars($num === '' ? '0' : $num) . '</b>';
+                continue;
+            }
             // credentials and wallets: whether it is set, never the value itself
             if (gw_field_scope($f) === 'global') {
-                $set = trim((string) getPaySettingValue($f['field'])) !== '';
+                $set = !gw_field_unset_value($f, getPaySettingValue($f['field']));
             } else {
                 $set = trim((string) pay_value($f['field'], $lang, '')) !== '';
             }
@@ -4376,7 +4422,7 @@ if (!function_exists('gateway_effective_report')) {
             $floor = topup_usd_floor_toman($lang, $key);
             $note = '';
             if ($floor !== null && $min !== null && (int) $min === (int) $floor) {
-                $note = topup_has_usd_floor($key) ? ' — کف ۱ دلار' : ' — کف ۱ استار';
+                $note = $key === 'tronado' ? ' — کف خود ترونادو' : (topup_has_usd_floor($key) ? ' — کف ۱ دلار' : ' — کف ۱ استار');
             }
             $lines[] = "• حداقل مبلغ: <b>" . ($min === null ? '—' : number_format((float) $min)) . " {$cur}</b> ({$rangeSrc}{$note})";
             $lines[] = "• حداکثر مبلغ: <b>" . ($max === null ? '—' : number_format((float) $max)) . " {$cur}</b>";
@@ -13023,12 +13069,19 @@ elseif ($datain == "systemsms") {
         return;
     }
     $gw_keys = gateway_current_keys($gw_lang);
-    if (in_array($gw_key, $gw_keys, true)) {
+    // flip what the row SHOWS (allowed here AND switched on globally). Testing
+    // only the per-language list made the first tap on a ❌ gateway that was
+    // merely switched off globally (every new gateway on a shop that never
+    // restricted a language) take it off the list instead - still ❌, and
+    // only a second tap turned it on.
+    if (in_array($gw_key, $gw_keys, true) && gateway_globally_on($gw_key)) {
         // off for this language only - other languages may still be selling it
         $gw_keys = array_values(array_diff($gw_keys, [$gw_key]));
         gateway_set_for_lang($gw_lang, $gw_keys);
     } else {
-        $gw_keys[] = $gw_key;
+        if (!in_array($gw_key, $gw_keys, true)) {
+            $gw_keys[] = $gw_key;
+        }
         gateway_set_for_lang($gw_lang, $gw_keys);
         // turning it on here has to turn on the separate global switch too,
         // otherwise the row shows ✅ while real users still see nothing and
@@ -13343,6 +13396,31 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     deletemessage($from_id, $message_id);
     deletemessage($from_id, (int) $cl_m[3]);
     Editmessagetext($from_id, (int) $cl_m[2], card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
+} elseif (preg_match('/^cardtrustmin:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
+    // 🛡 how many paid purchases/renewals a customer needs MORE than
+    $cl_prompt = sendmessage($from_id, "🛡 <b>تعداد خرید/تمدید لازم برای کارت‌به‌کارت</b>\n\n<blockquote>مشتری باید <b>بیشتر از</b> این تعداد خرید یا تمدید پرداخت‌شده داشته باشه تا دکمه‌ی کارت‌به‌کارت رو ببینه. فقط عدد بفرست، مثلاً <code>3</code> یعنی از خرید/تمدید چهارم به بعد.</blockquote>\nالان: <b>" . card_trust_min($cl_m[1]) . "</b>", json_encode(['inline_keyboard' => [
+        [['text' => '❌ انصراف', 'callback_data' => "cardtrustmincancel:{$cl_m[1]}:{$message_id}", 'style' => 'danger']],
+    ]]), 'HTML');
+    $cl_promptId = (int) ($cl_prompt['result']['message_id'] ?? 0);
+    step("cardtrustmin:{$cl_m[1]}:{$message_id}:{$cl_promptId}", $from_id);
+} elseif (preg_match('/^cardtrustmincancel:([a-z]{2}):([0-9]+)$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
+    step('home', $from_id);
+    deletemessage($from_id, $message_id);
+    Editmessagetext($from_id, (int) $cl_m[2], card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
+} elseif (preg_match('/^cardtrustmin:([a-z]{2}):([0-9]+):([0-9]+)$/', (string) $user['step'], $cl_m) && $datain == '') {
+    $cl_n = money_normalize(trim((string) $text));
+    deletemessage($from_id, $message_id);
+    if ($cl_n === null || (int) $cl_n < 1 || (int) $cl_n > 1000 || (string) (int) $cl_n !== (string) $cl_n) {
+        // the prompt stays and says what went wrong - no second message
+        Editmessagetext($from_id, (int) $cl_m[3], "⛔️ فقط یه عدد بین ۱ تا ۱۰۰۰ بفرست، مثلاً <code>3</code>.", json_encode(['inline_keyboard' => [
+            [['text' => '❌ انصراف', 'callback_data' => "cardtrustmincancel:{$cl_m[1]}:{$cl_m[2]}", 'style' => 'danger']],
+        ]]), 'HTML');
+        return;
+    }
+    gw_pay_override_set('cardtrustmin', $cl_m[1], (string) (int) $cl_n);
+    step('home', $from_id);
+    deletemessage($from_id, (int) $cl_m[3]);
+    Editmessagetext($from_id, (int) $cl_m[2], card_legacy_settings_caption($cl_m[1]), card_legacy_settings_payload($cl_m[1], $textbotlang), 'HTML');
 } elseif (preg_match('/^cardlegacyhelp:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
     $cl_prompt = sendmessage($from_id, $textbotlang['Admin']['Help']['askTutorialMedia'], null, 'HTML');
     $cl_promptId = (int) ($cl_prompt['result']['message_id'] ?? 0);
@@ -13450,7 +13528,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
 } elseif (preg_match('/^cardlegacyreset:([a-z]{2})$/', $datain, $cl_m) && $adminrulecheck['rule'] == "administrator") {
     // this language's settings only - card numbers, the users' card access
     // and the 🚫 list stay as they are
-    foreach (['Cartstatuspv', 'checkpaycartfirst', 'autoconfirmcart', 'timeauto_not_verify', 'helpcart', 'showcard'] as $cl_f) {
+    foreach (['Cartstatuspv', 'checkpaycartfirst', 'autoconfirmcart', 'timeauto_not_verify', 'helpcart', 'showcard', 'cardtrust', 'cardtrustmin'] as $cl_f) {
         gw_pay_override_set($cl_f, $cl_m[1], '');
     }
     telegram('answerCallbackQuery', [
@@ -14454,7 +14532,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
         [['text' => $textbotlang['Admin']['TopupPkg']['closePromptBtn'], 'callback_data' => "topupminmaxcancel:{$tp_m[1]}:{$tp_m[2]}:{$message_id}", 'style' => 'danger']],
     ]]);
     $tp_floor = topup_usd_floor_toman($tp_m[1], $tp_m[2]);
-    $tp_askMin = strtr($textbotlang['Admin']['TopupPkg'][$tp_floor !== null ? 'askMinOnline' : 'askMin'], [
+    $tp_askMin = strtr($textbotlang['Admin']['TopupPkg'][$tp_floor !== null ? topup_floor_text_key($tp_m[2], 'askMin') : 'askMin'], [
         '{currency}' => currency_get(currency_for_lang($tp_m[1]))['title'] ?? currency_for_lang($tp_m[1]),
         '{minprice}' => $tp_floor !== null ? number_format($tp_floor) : '—',
     ]);
@@ -14477,7 +14555,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
             [['text' => $tp_t['closePromptBtn'], 'callback_data' => "topupminmaxcancel:{$tp_m[1]}:{$tp_m[2]}:{$tp_m[3]}", 'style' => 'danger']],
         ]]);
         // re-asked with the same wording as the first time, dollar floor included
-        Editmessagetext($from_id, (int) $tp_m[4], $tp_t['invalidAmount'] . "\n\n" . strtr($tp_t[$tp_floor !== null ? 'askMinOnline' : 'askMin'], [
+        Editmessagetext($from_id, (int) $tp_m[4], $tp_t['invalidAmount'] . "\n\n" . strtr($tp_t[$tp_floor !== null ? topup_floor_text_key($tp_m[2], 'askMin') : 'askMin'], [
             '{currency}' => currency_get(currency_for_lang($tp_m[1]))['title'] ?? currency_for_lang($tp_m[1]),
             '{minprice}' => $tp_floor !== null ? number_format($tp_floor) : '—',
         ]), $tp_minmaxCancelKb, 'HTML');
@@ -14489,7 +14567,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
         $tp_minmaxCancelKb = json_encode(['inline_keyboard' => [
             [['text' => $tp_t['closePromptBtn'], 'callback_data' => "topupminmaxcancel:{$tp_m[1]}:{$tp_m[2]}:{$tp_m[3]}", 'style' => 'danger']],
         ]]);
-        Editmessagetext($from_id, (int) $tp_m[4], strtr($tp_t['minBelowFloor'], ['{price}' => number_format($tp_floor), '{currency}' => $tp_curTitle]), $tp_minmaxCancelKb, 'HTML');
+        Editmessagetext($from_id, (int) $tp_m[4], strtr($tp_t[topup_floor_text_key($tp_m[2], 'below')], ['{price}' => number_format($tp_floor), '{currency}' => $tp_curTitle]), $tp_minmaxCancelKb, 'HTML');
         return;
     }
     // a minimum above the maximum in force would refuse every amount
@@ -18066,15 +18144,6 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     sendmessage($from_id, $textbotlang['Admin']['cronjob']['changedData'], $setting_panel, 'HTML');
     step("home", $from_id);
     update("setting", "removedayc", $text);
-} elseif ($text == $textbotlang['keyboard']['setApiAddress'] && $adminrulecheck['rule'] == "administrator") {
-    $PaySetting = select("PaySetting", "ValuePay", "NamePay", "urlpaymenttron", "select");
-    $texttronseller = sprintf($textbotlang['Admin']['api']['askAddress'], $PaySetting['ValuePay']);
-    sendmessage($from_id, $texttronseller, $backadmin, 'HTML');
-    step('urlpaymenttron', $from_id);
-} elseif ($user['step'] == "urlpaymenttron") {
-    sendmessage($from_id, $textbotlang['Admin']['SettingnowPayment']['saveApi'], $trnado, 'HTML');
-    update("PaySetting", "ValuePay", $text, "NamePay", "urlpaymenttron");
-    step('home', $from_id);
 } elseif ($text == $textbotlang['keyboard']['editEducation'] && $adminrulecheck['rule'] == "administrator") {
     sendmessage($from_id, $textbotlang['Admin']['Help']['selectName'], $json_list_helpkey, 'HTML');
     step("getnameforedite", $from_id);
@@ -18468,55 +18537,18 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
         'show_alert' => false,
         'cache_time' => 5,
     ));
-} elseif ($datain == "iranpay2setting" && $adminrulecheck['rule'] == "administrator") {
-    sendmessage($from_id, $textbotlang['users']['selectoption'], $trnado, 'HTML');
 } elseif ($datain == "iranpay3setting" && $adminrulecheck['rule'] == "administrator") {
     sendmessage($from_id, $textbotlang['users']['selectoption'], $iranpaykeyboard, 'HTML');
-} elseif ($text == $textbotlang['Admin']['gateway']['tronadoStatus'] && $adminrulecheck['rule'] == "administrator") {
-    $statusternadoosql = select("PaySetting", "ValuePay", "NamePay", "statustarnado", "select");
-    $statusternadoo = json_encode([
-        'inline_keyboard' => [
-            [
-                ['text' => $statusternadoosql['ValuePay'], 'callback_data' => $statusternadoosql['ValuePay']],
-            ],
-        ]
-    ]);
-    $textternado = $textbotlang['Admin']['gateway']['tronadoDesc'];
-    sendmessage($from_id, $textternado, $statusternadoo, 'HTML');
-} elseif ($datain == "onternado") {
-    update("PaySetting", "ValuePay", "offternado", "NamePay", "statustarnado");
-    $statusternadoosql = select("PaySetting", "ValuePay", "NamePay", "statustarnado", "select");
-    $statusternadoo = json_encode([
-        'inline_keyboard' => [
-            [
-                ['text' => $statusternadoosql['ValuePay'], 'callback_data' => $statusternadoosql['ValuePay']],
-            ],
-        ]
-    ]);
-    Editmessagetext($from_id, $message_id, $textbotlang['Admin']['gateway']['off'], $statusternadoo);
-} elseif ($datain == "offternado") {
-    update("PaySetting", "ValuePay", "onternado", "NamePay", "statustarnado");
-    $statusternadoosql = select("PaySetting", "ValuePay", "NamePay", "statustarnado", "select");
-    $statusternadoo = json_encode([
-        'inline_keyboard' => [
-            [
-                ['text' => $statusternadoosql['ValuePay'], 'callback_data' => $statusternadoosql['ValuePay']],
-            ],
-        ]
-    ]);
-    Editmessagetext($from_id, $message_id, $textbotlang['Admin']['gateway']['on'], $statusternadoo);
-} elseif ($text == "API T" && $adminrulecheck['rule'] == "administrator") {
-    $PaySetting = select("PaySetting", "ValuePay", "NamePay", "apiternado", "select");
-    $texttronseller = sprintf($textbotlang['Admin']['gateway']['askMerchant'], $PaySetting['ValuePay']);
-    sendmessage($from_id, $texttronseller, $backadmin, 'HTML');
-    step('apiternado', $from_id);
-} elseif ($user['step'] == "apiternado") {
-    sendmessage($from_id, $textbotlang['Admin']['SettingnowPayment']['saveApi'], $trnado, 'HTML');
-    update("PaySetting", "ValuePay", $text, "NamePay", "apiternado");
-    step('home', $from_id);
 } elseif ($datain == "affilnecurrencysetting") {
     sendmessage($from_id, $textbotlang['users']['selectoption'], $tronnowpayments, 'HTML');
 } elseif ($text == $textbotlang['keyboard']['inboundDeactivate'] && $adminrulecheck['rule'] == "administrator") {
+    // PasarGuard has no per-protocol inbound list (/api/inbounds is a list of
+    // tags; users get inbounds through groups) - the old screen read it as
+    // Marzban's map and failed with PHP warnings
+    if (pasarguard_panel(select("marzban_panel", "*", "name_panel", $user['Processing_value'], "select"))) {
+        sendmessage($from_id, $textbotlang['Admin']['managepanel']['Inbound']['pasarguardUnsupported'], null, 'HTML');
+        return;
+    }
     sendmessage($from_id, $textbotlang['Admin']['managepanel']['Inbound']['getProtocol'], $keyboardprotocol, 'HTML');
     step('getprotocoldisable', $from_id);
 } elseif ($user['step'] == "getprotocoldisable") {
@@ -18750,7 +18782,11 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
         return;
     }
     $nodes = json_decode($nodes['body'], true);
-    if (count($nodes) == 0) {
+    // PasarGuard answers {"nodes":[...],"total":n}, Marzban a bare list
+    if (is_array($nodes) && isset($nodes['nodes']) && is_array($nodes['nodes'])) {
+        $nodes = $nodes['nodes'];
+    }
+    if (!is_array($nodes) || count($nodes) == 0) {
         sendmessage($from_id, $textbotlang['Admin']['node']['settingsUnavailable'], null, 'HTML');
         return;
     }
@@ -18976,13 +19012,6 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
             $valuenew = "onSwapinoBot";
         }
         update("PaySetting", "ValuePay", $valuenew, "NamePay", "statusSwapWallet");
-    } elseif ($type == "arzireyali2") {
-        if ($value == "onternado") {
-            $valuenew = "offternado";
-        } else {
-            $valuenew = "onternado";
-        }
-        update("PaySetting", "ValuePay", $valuenew, "NamePay", "statustarnado");
     } elseif ($type == "aqayepardakht") {
         if ($value == "onaqayepardakht") {
             $valuenew = "offaqayepardakht";
@@ -19038,7 +19067,6 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     $cartotcart = getPaySettingValue('Cartstatus', 'offcard');
     $plisio = getPaySettingValue('nowpaymentstatus', 'offnowpayment');
     $arzireyali1 = getPaySettingValue('statusSwapWallet', 'offSwapinoBot');
-    $arzireyali2 = getPaySettingValue('statustarnado', 'offternado');
     $aqayepardakht = getPaySettingValue('statusaqayepardakht', 'offaqayepardakht');
     $affilnecurrency = getPaySettingValue('digistatus', 'offdigi');
     $arzireyali3 = getPaySettingValue('statusiranpay3', 'offiranpay3');
@@ -19057,10 +19085,6 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
         'onSwapinoBot' => $textbotlang['Admin']['Status']['statuson'],
         'offSwapinoBot' => $textbotlang['Admin']['Status']['statusoff']
     ][$arzireyali1];
-    $arzireyali2status = [
-        'onternado' => $textbotlang['Admin']['Status']['statuson'],
-        'offternado' => $textbotlang['Admin']['Status']['statusoff']
-    ][$arzireyali2];
     $aqayepardakhtstatus = [
         'onaqayepardakht' => $textbotlang['Admin']['Status']['statuson'],
         'offaqayepardakht' => $textbotlang['Admin']['Status']['statusoff']
@@ -19118,11 +19142,6 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
                 ['text' => $textbotlang['keyboard']['settings'], 'callback_data' => "iranpay1setting"],
                 ['text' => $arzireyali1status, 'callback_data' => "editpayment-arzireyali1-$arzireyali1"],
                 ['text' => $textbotlang['keyboard']['iranPay1Label'], 'callback_data' => "arzireyali1"],
-            ],
-            [
-                ['text' => $textbotlang['keyboard']['settings'], 'callback_data' => "iranpay2setting"],
-                ['text' => $arzireyali2status, 'callback_data' => "editpayment-arzireyali2-$arzireyali2"],
-                ['text' => $textbotlang['keyboard']['iranPay2Label'], 'callback_data' => "arzireyali2"],
             ],
             [
                 ['text' => $textbotlang['keyboard']['settings'], 'callback_data' => "iranpay3setting"],
@@ -19186,17 +19205,6 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     sendmessage($from_id, $textbotlang['Admin']['price']['priceSaved'], $CartManage, 'HTML');
     step("home", $from_id);
     update("PaySetting", "ValuePay", $text, "NamePay", "chashbackaqaypardokht");
-} elseif ($text == $textbotlang['keyboard']['cashbackIranPay2']) {
-    sendmessage($from_id, $textbotlang['Admin']['price']['askPaymentCashback'], $backadmin, 'HTML');
-    step("getcashiranpay2", $from_id);
-} elseif ($user['step'] == "getcashiranpay2") {
-    if (!ctype_digit($text)) {
-        sendmessage($from_id, $textbotlang['common']['invalidInput'], $backadmin, 'HTML');
-        return;
-    }
-    sendmessage($from_id, $textbotlang['Admin']['price']['priceSaved'], $trnado, 'HTML');
-    step("home", $from_id);
-    update("PaySetting", "ValuePay", $text, "NamePay", "chashbackiranpay2");
 } elseif ($text == $textbotlang['keyboard']['cashbackIranPay3']) {
     sendmessage($from_id, $textbotlang['Admin']['price']['askPaymentCashback'], $backadmin, 'HTML');
     step("getcashiranpay4", $from_id);
@@ -19706,38 +19714,6 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     sendmessage($from_id, $textbotlang['Admin']['Balance']['maxDepositSaved'], $Swapinokey, 'HTML');
     step("home", $from_id);
     update("PaySetting", "ValuePay", $text, "NamePay", "maxbalanceiranpay1");
-} elseif ($text == $textbotlang['keyboard']['minAmountIranPay2']) {
-    sendmessage($from_id, $textbotlang['Admin']['Balance']['askMinDeposit'], $backadmin, 'HTML');
-    step("getmainiranpay2", $from_id);
-} elseif ($user['step'] == "getmainiranpay2") {
-    if (!ctype_digit($text)) {
-        sendmessage($from_id, $textbotlang['common']['invalidInput'], $backadmin, 'HTML');
-        return;
-    }
-    $limitErr = limit_conflict_text(true, $text, pay_value("maxbalanceiranpay2", null, ''), 'fa', $textbotlang);
-    if ($limitErr !== null) {
-        sendmessage($from_id, $limitErr, $backadmin, 'HTML');
-        return;
-    }
-    sendmessage($from_id, $textbotlang['Admin']['Balance']['minDepositSaved'], $trnado, 'HTML');
-    step("home", $from_id);
-    update("PaySetting", "ValuePay", $text, "NamePay", "minbalanceiranpay2");
-} elseif ($text == $textbotlang['keyboard']['maxAmountIranPay2']) {
-    sendmessage($from_id, $textbotlang['Admin']['Balance']['askMaxDeposit'], $backadmin, 'HTML');
-    step("getmaaxiranpay2", $from_id);
-} elseif ($user['step'] == "getmaaxiranpay2") {
-    if (!ctype_digit($text)) {
-        sendmessage($from_id, $textbotlang['common']['invalidInput'], $backadmin, 'HTML');
-        return;
-    }
-    $limitErr = limit_conflict_text(false, $text, pay_value("minbalanceiranpay2", null, ''), 'fa', $textbotlang);
-    if ($limitErr !== null) {
-        sendmessage($from_id, $limitErr, $backadmin, 'HTML');
-        return;
-    }
-    sendmessage($from_id, $textbotlang['Admin']['Balance']['maxDepositSaved'], $Swapinokey, 'HTML');
-    step("home", $from_id);
-    update("PaySetting", "ValuePay", $text, "NamePay", "maxbalanceiranpay2");
 } elseif ($text == $textbotlang['keyboard']['minAmountAqayePardakht']) {
     sendmessage($from_id, $textbotlang['Admin']['Balance']['askMinDeposit'], $backadmin, 'HTML');
     step("getmainaqayepardakht", $from_id);
@@ -20109,40 +20085,6 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
     }
     step('home', $from_id);
     sendmessage($from_id, $textbotlang['Admin']['Help']['tutorialSaved'], $CartManage, 'HTML');
-} elseif ($text == $textbotlang['keyboard']['setEducationIranPay2'] && $adminrulecheck['rule'] == "administrator") {
-    sendmessage($from_id, $textbotlang['Admin']['Help']['askTutorialMedia'], $backadmin, 'HTML');
-    step("helpiranpay2", $from_id);
-} elseif ($user['step'] == "helpiranpay2") {
-    if ($text) {
-        if (intval($text) == 2) {
-            update("PaySetting", "ValuePay", "0", "NamePay", "helpiranpay2");
-        } else {
-            $data = json_encode(array(
-                'type' => "text",
-                'text' => topup_caption_text_from_update($text, $update)
-            ));
-            update("PaySetting", "ValuePay", $data, "NamePay", "helpiranpay2");
-        }
-    } elseif ($photo) {
-        $data = json_encode(array(
-            'type' => "photo",
-            'text' => premium_emoji_html_from_entities($update['message']['caption'] ?? $caption, $update['message']['caption_entities'] ?? []),
-            'photoid' => $photoid
-        ));
-        update("PaySetting", "ValuePay", $data, "NamePay", "helpiranpay2");
-    } elseif ($video) {
-        $data = json_encode(array(
-            'type' => "video",
-            'text' => premium_emoji_html_from_entities($update['message']['caption'] ?? $caption, $update['message']['caption_entities'] ?? []),
-            'videoid' => $videoid
-        ));
-        update("PaySetting", "ValuePay", $data, "NamePay", "helpiranpay2");
-    } else {
-        sendmessage($from_id, $textbotlang['Admin']['Help']['invalidContent'], $backadmin, 'HTML');
-        return;
-    }
-    step('home', $from_id);
-    sendmessage($from_id, $textbotlang['Admin']['Help']['tutorialSaved'], $CartManage, 'HTML');
 } elseif ($text == $textbotlang['keyboard']['setEducationIranPay3'] && $adminrulecheck['rule'] == "administrator") {
     sendmessage($from_id, $textbotlang['Admin']['Help']['askTutorialMedia'], $backadmin, 'HTML');
     step("helpiranpay3", $from_id);
@@ -20422,33 +20364,24 @@ if ($datain == "settimecornremove" && $adminrulecheck['rule'] == "administrator"
                 sendmessage($from_id, panelErrorText($DataUserOut['error']), null, 'HTML');
                 return;
             }
+            if ((int) ($DataUserOut['status'] ?? 0) === 404) {
+                sendmessage($from_id, $textbotlang['users']['status']['userNotFound'], null, 'html');
+                return;
+            }
             if (!empty($DataUserOut['status']) && $DataUserOut['status'] != 200) {
                 sendmessage($from_id, sprintf($textbotlang['Admin']['errorCode4'], $DataUserOut['status']), null, 'HTML');
                 return;
             }
             $DataUserOut = json_decode($DataUserOut['body'], true);
-            if ((isset($DataUserOut['msg']) && $DataUserOut['msg'] == "User not found") or !isset($DataUserOut['proxy_settings'])) {
+            if (!is_array($DataUserOut) || !isset($DataUserOut['proxy_settings'])) {
                 sendmessage($from_id, $textbotlang['users']['status']['userNotFound'], null, 'html');
                 return;
             }
-            foreach ($DataUserOut['proxy_settings'] as $key => &$value) {
-                if ($key == "shadowsocks") {
-                    unset($DataUserOut['proxy_settings'][$key]['password']);
-                } elseif ($key == "trojan") {
-                    unset($DataUserOut['proxy_settings'][$key]['password']);
-                }elseif ($key == "wireguard") {
-                    unset($DataUserOut['proxy_settings'][$key]['private_key']);
-                    unset($DataUserOut['proxy_settings'][$key]['public_key']);
-                    unset($DataUserOut['proxy_settings'][$key]['peer_ips']);
-                }  else {
-                    unset($DataUserOut['proxy_settings'][$key]['id']);
-                }
-                if (count($DataUserOut['proxy_settings'][$key]) == 0) {
-                    $DataUserOut['proxy_settings'][$key] = new stdClass();
-                }
-            }
-            update("marzban_panel", "inbounds", json_encode($DataUserOut['group_ids']), "name_panel", $user['Processing_value']);
-            update("marzban_panel", "proxies", json_encode($DataUserOut['proxy_settings'], true), "name_panel", $user['Processing_value']);
+            // only the choices are kept (vless flow, shadowsocks method): every
+            // password/uuid/key - also Hysteria's and Masque's - is made fresh
+            // by the panel for each new user
+            update("marzban_panel", "inbounds", json_encode($DataUserOut['group_ids'] ?? []), "name_panel", $user['Processing_value']);
+            update("marzban_panel", "proxies", json_encode(pasarguard_template_proxies($DataUserOut['proxy_settings'])), "name_panel", $user['Processing_value']);
         } else {
             $DataUserOut = getuser($text, $user['Processing_value']);
             if (!empty($DataUserOut['error'])) {
@@ -20742,16 +20675,29 @@ elseif ($text == $textbotlang['keyboard']['hidePanelForUser'] && $adminrulecheck
             sendmessage($from_id, panelErrorText($DataUserOut['error']), null, 'HTML');
             return;
         }
+        if ((int) ($DataUserOut['status'] ?? 0) === 404) {
+            sendmessage($from_id, $textbotlang['users']['status']['userNotFound'], null, 'html');
+            return;
+        }
         if (!empty($DataUserOut['status']) && $DataUserOut['status'] != 200) {
             sendmessage($from_id, sprintf($textbotlang['Admin']['errorCode6'], $DataUserOut['status']), null, 'HTML');
             return;
         }
         $DataUserOut = json_decode($DataUserOut['body'], true);
-        if ((isset($DataUserOut['msg']) && $DataUserOut['msg'] == "User not found") or !isset($DataUserOut['proxies'])) {
+        // PasarGuard names them proxy_settings / group_ids (Marzban: proxies /
+        // inbounds); a PasarGuard sample user used to be answered "not found"
+        if (pasarguard_panel($marzban_list_get) && is_array($DataUserOut) && isset($DataUserOut['proxy_settings'])) {
+            $DataUserOut['proxies'] = (array) pasarguard_template_proxies($DataUserOut['proxy_settings']);
+            $DataUserOut['inbounds'] = $DataUserOut['group_ids'] ?? [];
+        }
+        if (!is_array($DataUserOut) || (isset($DataUserOut['msg']) && $DataUserOut['msg'] == "User not found") or !isset($DataUserOut['proxies'])) {
             sendmessage($from_id, $textbotlang['users']['status']['userNotFound'], null, 'html');
             return;
         }
         foreach ($DataUserOut['proxies'] as $key => &$value) {
+            if (is_object($value)) {
+                continue; // already cleaned above
+            }
             if ($key == "shadowsocks") {
                 unset($DataUserOut['proxies'][$key]['password']);
             } elseif ($key == "trojan") {

@@ -2280,7 +2280,8 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
     // every other call site of that shared picker keeps its own unmodified
     // copy. Drop the shared close ("❌ بستن") row and add our own red
     // back-to-invoice button instead.
-    $extendPaymentKb = json_decode($step_payment, true);
+    // a gateway whose own floor is above this renewal's amount is left out
+    $extendPaymentKb = json_decode(step_payment_for_amount($step_payment, $Balance_prim, $user['lang'] ?? 'fa'), true);
     if (is_array($extendPaymentKb) && isset($extendPaymentKb['inline_keyboard'])) {
         $extendPaymentKb['inline_keyboard'] = array_values(array_filter($extendPaymentKb['inline_keyboard'], function ($row) {
             foreach ($row as $btn) {
@@ -2295,7 +2296,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
         $extendPaymentKb['inline_keyboard'][] = [genbtn_render($rnBackDef, $rnBackOv, "rn_reshow_" . $id_invoice)];
         $extendPaymentKbJson = json_encode($extendPaymentKb);
     } else {
-        $extendPaymentKbJson = $step_payment;
+        $extendPaymentKbJson = step_payment_for_amount($step_payment, $Balance_prim, $user['lang'] ?? 'fa');
     }
     if ($rn_direct) {
         Editmessagetext($from_id, $message_id, dpay_methods_view($user, $Balance_prim, 'rn_reshow_' . $id_invoice)[0], $extendPaymentKbJson, 'HTML');
@@ -2519,7 +2520,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             }
             $Balance_prim = $volume - $user['Balance'];
             update("user", "Processing_value", $Balance_prim, "id", $from_id);
-            Editmessagetext($from_id, $message_id, $noCreditText, $step_payment);
+            Editmessagetext($from_id, $message_id, $noCreditText, step_payment_for_amount($step_payment, $Balance_prim, $user['lang'] ?? 'fa'));
             step('get_step_payment', $from_id);
             update("user", "Processing_value_one", "{$nameloc['username']}%{$valuevolume}", "id", $from_id);
             update("user", "Processing_value_tow", "getextravolumeuser", "id", $from_id);
@@ -2739,7 +2740,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             if (intval($Pricechange) != 0) {
                 $Balance_prim = $Pricechange - $user['Balance'];
                 update("user", "Processing_value", $Balance_prim, "id", $from_id);
-                Editmessagetext($from_id, $message_id, $noCreditText, $step_payment);
+                Editmessagetext($from_id, $message_id, $noCreditText, step_payment_for_amount($step_payment, $Balance_prim, $user['lang'] ?? 'fa'));
                 step('get_step_payment', $from_id);
                 return;
             }
@@ -3111,7 +3112,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
             if (intval($pricelasttime) != 0) {
                 $Balance_prim = $pricelasttime - $user['Balance'];
                 update("user", "Processing_value", $Balance_prim, "id", $from_id);
-                Editmessagetext($from_id, $message_id, $noCreditText, $step_payment);
+                Editmessagetext($from_id, $message_id, $noCreditText, step_payment_for_amount($step_payment, $Balance_prim, $user['lang'] ?? 'fa'));
                 step('get_step_payment', $from_id);
                 update("user", "Processing_value_one", "{$nameloc['username']}%{$valuetime}", "id", $from_id);
                 update("user", "Processing_value_tow", "getextratimeuser", "id", $from_id);
@@ -5461,6 +5462,16 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
         sendmessage($from_id, $tp_okCap, $tp_okKb, 'HTML');
     }
     return;
+} elseif ($datain === 'iranpay2') {
+    // the original bot's own Tronado gateway was removed - a method list sent
+    // before the update can still carry its button, and a tap must say so
+    // instead of spinning and doing nothing
+    telegram('answerCallbackQuery', [
+        'callback_query_id' => $callback_query_id,
+        'text' => $textbotlang['users']['Balance']['methodRemoved'],
+        'show_alert' => true,
+        'cache_time' => 5,
+    ]);
 } elseif ($user['step'] == "topup_pick_method" && gateway_button_key(['callback_data' => $datain], $textbotlang['textbot']['cartToCart'] ?? null) !== null) {
     $tp_lang = $user['lang'] ?? 'fa';
     $tp_key = gateway_button_key(['callback_data' => $datain], $textbotlang['textbot']['cartToCart'] ?? null);
@@ -5675,7 +5686,9 @@ if (preg_match('/Confirmpay_user_(\w+)_(\w+)/', $datain, $dataget)) {
         $Balance_id = $__q10->fetch(PDO::FETCH_ASSOC);
         $Payment_report['price'] = number_format($Payment_report['price'], 0);
         $text_report = sprintf($textbotlang['Admin']['reportgroup']['newPayment'], $from_id, $Payment_report['price']);
-        $pricecashback = select("PaySetting", "ValuePay", "NamePay", "chashbackiranpay2", "select")['ValuePay'];
+        // NowPayment's own cashback (payment/nowpayment.php reads the same row) - this
+        // used to borrow the removed legacy Tronado gateway's
+        $pricecashback = select("PaySetting", "ValuePay", "NamePay", "cashbacknowpayment", "select")['ValuePay'] ?? '0';
         if ($pricecashback != "0") {
             $result = ($Payment_report['price'] * $pricecashback) / 100;
             // into the wallet the payment was made in

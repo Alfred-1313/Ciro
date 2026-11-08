@@ -832,15 +832,11 @@ try {
         ['maxbalance', '1000000'],
         ['marchent_tronseller', '0'],
         ['walletaddress', '0'],
-        ['urlpaymenttron', 'https://tronseller.storeddownloader.fun/api/GetOrderToken'],
-        ['statustarnado', 'offternado'],
-        ['apiternado', '0'],
         ['chashbackcart', '0'],
         ['chashbackstar', '0'],
         ['chashbackperfect', '0'],
         ['chashbackaqaypardokht', '0'],
         ['chashbackiranpay1', '0'],
-        ['chashbackiranpay2', '0'],
         ['chashbackplisio', '0'],
         ['chashbackzarinpal', '0'],
         ['chashbackfrenzyex', '0'],
@@ -866,6 +862,22 @@ try {
         ['variza_api_token', '0'],
         ['variza_webhook_secret', '0'],
         ['chashbackvariza', '0'],
+        // درگاه ارزی ریالی ترونادو (API v5) - off until set up
+        ['statustronado', 'offtronado'],
+        ['tronado_api_key', '0'],
+        ['tronado_wallet', '0'],
+        ['tronado_ipn_key', '0'],
+        ['tronado_wage_percent', '0'],
+        // the smallest invoice Tronado's own page accepts (0 = none)
+        ['tronado_min_amount', '150000'],
+        ['chashbacktronado', '0'],
+        ['tronado_disputes_seen', '[]'],
+        // درگاه ارزی ریالی هوش‌پی (HooshPay) - off until set up
+        ['statushooshpay', 'offhooshpay'],
+        ['hooshpay_api_key', '0'],
+        ['hooshpay_secret', '0'],
+        ['hooshpay_fee_mode', '0'],
+        ['chashbackhooshpay', '0'],
         ['minbalancecart', $main],
         ['maxbalancecart', $max],
         ['minbalancestar', $main],
@@ -876,8 +888,6 @@ try {
         ['maxbalancedigitaltron', $max],
         ['minbalanceiranpay1', $main],
         ['maxbalanceiranpay1', $max],
-        ['minbalanceiranpay2', $main],
-        ['maxbalanceiranpay2', $max],
         ['minbalanceaqayepardakht', $main],
         ['maxbalanceaqayepardakht', $max],
         ['minbalancepaynotverify', $main],
@@ -894,6 +904,12 @@ try {
         ['maxbalanceabangateway', $max],
         ['minbalancevariza', $main],
         ['maxbalancevariza', $max],
+        // Tronado itself caps one payer at 500,000 toman a day, so a larger
+        // invoice would only be refused on its own page
+        ['minbalancetronado', $main],
+        ['maxbalancetronado', 500000],
+        ['minbalancehooshpay', $main],
+        ['maxbalancehooshpay', $max],
         ['minbalanceiranpay', $main],
         ['maxbalanceiranpay', $max],
         ['minbalancenowpayment', $main],
@@ -906,7 +922,6 @@ try {
         ['helpstar', '2'],
         ['helpplisio', '2'],
         ['helpiranpay1', '2'],
-        ['helpiranpay2', '2'],
         ['helpiranpay3', '2'],
         ['helpperfectmony', '2'],
         ['helpzarinpal', '2'],
@@ -914,6 +929,8 @@ try {
         ['helpcubepay', '2'],
         ['helpabangateway', '2'],
         ['helpvariza', '2'],
+        ['helptronado', '2'],
+        ['helphooshpay', '2'],
         ['helpnowpayment', '2'],
         ['helpofflinearze', '2'],
         ['autoconfirmcart', 'offauto'],
@@ -953,6 +970,21 @@ try {
     }
 } catch (Exception $e) {
     file_put_contents('error_log', $e->getMessage());
+}
+// The original bot's own Tronado gateway («درگاه پرداخت ریالی سوم», key
+// iranpay2) was removed in favour of the v5 one - its settings go with it.
+// Idempotent; its old payments stay in Payment_report as history.
+try {
+    $pdo->exec("DELETE FROM PaySetting WHERE NamePay IN ('statustarnado', 'apiternado', 'urlpaymenttron', 'chashbackiranpay2', 'minbalanceiranpay2', 'maxbalanceiranpay2', 'helpiranpay2')");
+} catch (Exception $e) {
+    error_log('legacy tronado cleanup: ' . $e->getMessage());
+}
+// An update lays the new files over the old ones and deletes nothing, so its
+// callback file would stay behind - removed here, but only the old one (it
+// reads apiternado), never a file someone else put at that path.
+$legacyTronado = __DIR__ . '/payment/tronado.php';
+if (is_file($legacyTronado) && strpos((string) @file_get_contents($legacyTronado), 'apiternado') !== false) {
+    @unlink($legacyTronado);
 }
 //----------------------- [ Discount ] --------------------- //
 try {
@@ -1511,7 +1543,7 @@ addFieldToTable("user", "topup_custom_msg_id", "0", "VARCHAR(50)");
 addFieldToTable("setting", "topup_minmax", '{}', "TEXT");
 addFieldToTable("setting", "topup_btnstyle", '{}', "TEXT");
 addFieldToTable("setting", "lang_gwsettings", '{}', "TEXT");
-addFieldToTable("setting", "gw_currency_map", '{"card":"IRT","zarinpal":"IRT","aqayepardakht":"IRT","iranpay1":"IRT","iranpay2":"IRT","iranpay3":"IRT","paymentnotverify":"IRT","plisio":"USD","nowpayment":"USD","digitaltron":"USD"}', "TEXT");
+addFieldToTable("setting", "gw_currency_map", '{"card":"IRT","zarinpal":"IRT","aqayepardakht":"IRT","iranpay1":"IRT","iranpay3":"IRT","paymentnotverify":"IRT","plisio":"USD","nowpayment":"USD","digitaltron":"USD"}', "TEXT");
 addFieldToTable("product", "currency", "IRT", "VARCHAR(10)");
 addFieldToTable("user", "currency", "IRT", "VARCHAR(10)");
 // ---- a wallet per currency (wallet_switch_lang in function.php) ----

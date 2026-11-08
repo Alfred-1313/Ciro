@@ -231,11 +231,8 @@ class ManagePanel
                     $data_Output['subscription_url'] = $Get_Data_Panel['url_panel'] . "/" . ltrim($data_Output['subscription_url'], "/");
                 }
                 if ($Get_Data_Panel['version_panel'] == "1") {
-                    $out_put_link = outputlink($data_Output['subscription_url']);
-                    if (isBase64($out_put_link)) {
-                        $data_Output['links'] = base64_decode(string: outputlink($data_Output['subscription_url']));
-                    }
-                    $data_Output['links'] = explode("\n", $data_Output['links']);
+                    // PasarGuard has no "links" in the user any more
+                    $data_Output['links'] = pasarguard_sub_links($data_Output['subscription_url']);
                 }
                 if ($invoice != false) {
                     $data_Output['subscription_url'] = "https://$domainhosts/sub/" . $invoice['id_invoice'];
@@ -666,9 +663,10 @@ class ManagePanel
                     $UsernameData['subscription_url'] = $Get_Data_Panel['url_panel'] . "/" . ltrim($UsernameData['subscription_url'], "/");
                 }
                 if ($Get_Data_Panel['version_panel'] == "1") {
-                    $UsernameData['expire'] = strtotime($UsernameData['expire']);
-                    $UsernameData['links'] = base64_decode(outputlink($UsernameData['subscription_url']));
-                    $UsernameData['links'] = explode("\n", $UsernameData['links']);
+                    // an unlimited user has "expire": null - strtotime(null) is
+                    // a PHP deprecation notice in the log and false, not 0
+                    $UsernameData['expire'] = !empty($UsernameData['expire']) ? (int) strtotime((string) $UsernameData['expire']) : 0;
+                    $UsernameData['links'] = pasarguard_sub_links($UsernameData['subscription_url']);
                     $sublist_update = get_list_update($name_panel, $username);
                     if (!empty($sublist_update['error'])) {
                         return array(
@@ -1746,11 +1744,10 @@ class ManagePanel
         $Output = array();
         $Get_Data_Panel = select("marzban_panel", "*", "name_panel", $name_panel, "select");
         if ($Get_Data_Panel['type'] == "marzban") {
-            if ($Get_Data_Panel['version_panel'] == "1") {
-                $result = getuser($username, $name_panel);
-                $result = json_decode($result['body'], true);
-                $config['proxy_settings'] = $result['proxy_settings'];
-            }
+            // PasarGuard: a field left out is not changed, so the user's own
+            // proxy_settings are no longer read and sent back with every change
+            // (an extra request, and the panel now rejects WireGuard keys that
+            // were stored before its stricter check - the change then failed)
             $modify = Modifyuser($name_panel, $username, $config);
             if (!empty($modify['error'])) {
                 return array(

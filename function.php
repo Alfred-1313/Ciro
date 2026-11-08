@@ -130,6 +130,14 @@ function ciro_schema_selfheal($setting)
     if (is_array($setting) && ($setting['schema_mark'] ?? '') === ciro_schema_mark()) {
         return false;
     }
+    // an update started from the bot is running: it runs table.php itself in a
+    // moment, with the what's-new notes held back for its closing message. A
+    // run started from here in between (the new files are in, the database is
+    // not yet) would announce the notes on its own and mark them told - and
+    // the closing message would then have nothing under it.
+    if (function_exists('bot_update_busy') && bot_update_busy()) {
+        return false;
+    }
     $flag = __DIR__ . '/.schema_heal';
     if (@filemtime($flag) > time() - 600) {
         return false;
@@ -744,41 +752,6 @@ function channel(array $id_channel)
 function isValidDate($date)
 {
     return (strtotime($date) != false);
-}
-function trnado($order_id, $price)
-{
-    global $domainhosts;
-    $apitronseller = select("PaySetting", "*", "NamePay", "apiternado", "select")['ValuePay'];
-    $walletaddress = select("PaySetting", "*", "NamePay", "walletaddress", "select")['ValuePay'];
-    $urlpay = select("PaySetting", "*", "NamePay", "urlpaymenttron", "select")['ValuePay'];
-    $curl = curl_init();
-    $data = array(
-        "PaymentID" => $order_id,
-        "WalletAddress" => $walletaddress,
-        "TronAmount" => $price,
-        "CallbackUrl" => "https://" . $domainhosts . "/payment/tronado.php"
-    );
-    $datasend = json_encode($data);
-    curl_setopt_array($curl, array(
-        CURLOPT_URL => "$urlpay",
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => '',
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 0,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => 'POST',
-        CURLOPT_HTTPHEADER => array(
-            'x-api-key:' . $apitronseller,
-            'Content-Type: application/json',
-            'Cookie: ASP.NET_SessionId=spou2s5lo4nnxkjtavscrrlo'
-        ),
-    ));
-    curl_setopt($curl, CURLOPT_POSTFIELDS, $datasend);
-
-    $response = curl_exec($curl);
-
-    return json_decode($response, true);
 }
 function formatBytes($bytes, $precision = 2): string
 {
@@ -3426,6 +3399,21 @@ if (!function_exists('gw_field_scope')) {
     {
         return (($field['scope'] ?? 'lang') === 'global') ? 'global' : 'lang';
     }
+    // A global credential (API key, wallet, secret) the admin never filled
+    // still holds the installer's '0' - that is "not set", not a key called 0.
+    // Percentages and limits are different: there 0 is a real choice.
+    function gw_field_unset_value($field, $raw)
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return true;
+        }
+        return $raw === '0' && !gw_field_is_numeric($field);
+    }
+    function gw_field_is_numeric($field)
+    {
+        return in_array($field['label'] ?? '', ['cashbackLabel', 'feeLabel', 'dailyLimitLabel', 'tronadoWageLabel', 'tronadoMinLabel'], true);
+    }
 }
 if (!function_exists('pay_global_set')) {
     // Upsert a PaySetting row. A plain UPDATE silently no-ops when the row was
@@ -3497,11 +3485,6 @@ if (!function_exists('gw_field_registry')) {
             'iranpay1' => [
                 ['field' => 'marchent_floypay', 'type' => 'text', 'label' => 'merchantLabel', 'scope' => 'global'],
             ],
-            'iranpay2' => [
-                ['field' => 'apiternado', 'type' => 'text', 'label' => 'apiKeyLabel', 'scope' => 'global'],
-                ['field' => 'walletaddress', 'type' => 'text', 'label' => 'walletLabel'],
-                ['field' => 'urlpaymenttron', 'type' => 'text', 'label' => 'payUrlLabel', 'scope' => 'global'],
-            ],
             'iranpay3' => [
                 ['field' => 'apiiranpay', 'type' => 'text', 'label' => 'apiKeyLabel', 'scope' => 'global'],
             ],
@@ -3515,6 +3498,25 @@ if (!function_exists('gw_field_registry')) {
                 ['field' => 'frenzyex_api_key', 'type' => 'text', 'label' => 'apiKeyLabel', 'scope' => 'global'],
                 ['field' => 'frenzyex_callback_secret', 'type' => 'text', 'label' => 'callbackSecretLabel', 'scope' => 'global'],
                 ['field' => 'frenzyexInvoiceExpireMinutes', 'type' => 'number', 'label' => 'invoiceExpireLabel'],
+            ],
+            // everything here is read with getPaySettingValue() by
+            // createPayTronado()/tronado_settle(), hence global
+            'tronado' => [
+                ['field' => 'tronado_api_key', 'type' => 'text', 'label' => 'apiKeyLabel', 'scope' => 'global'],
+                ['field' => 'tronado_wallet', 'type' => 'text', 'label' => 'tronadoWalletLabel', 'scope' => 'global'],
+                ['field' => 'tronado_ipn_key', 'type' => 'text', 'label' => 'tronadoIpnKeyLabel', 'scope' => 'global'],
+                ['field' => 'tronado_wage_percent', 'type' => 'text', 'label' => 'tronadoWageLabel', 'scope' => 'global'],
+                ['field' => 'tronado_min_amount', 'type' => 'text', 'label' => 'tronadoMinLabel', 'scope' => 'global'],
+                ['field' => 'chashbacktronado', 'type' => 'text', 'label' => 'cashbackLabel', 'scope' => 'global'],
+                ['field' => 'tronadoInvoiceExpireMinutes', 'type' => 'number', 'label' => 'invoiceExpireLabel'],
+            ],
+            // read with getPaySettingValue() by createPayHooshPay()/hooshpay_settle()
+            'hooshpay' => [
+                ['field' => 'hooshpay_api_key', 'type' => 'text', 'label' => 'apiKeyLabel', 'scope' => 'global'],
+                ['field' => 'hooshpay_secret', 'type' => 'text', 'label' => 'hooshpaySecretLabel', 'scope' => 'global'],
+                ['field' => 'hooshpay_fee_mode', 'type' => 'text', 'label' => 'hooshpayFeeModeLabel', 'scope' => 'global'],
+                ['field' => 'chashbackhooshpay', 'type' => 'text', 'label' => 'cashbackLabel', 'scope' => 'global'],
+                ['field' => 'hooshpayInvoiceExpireMinutes', 'type' => 'number', 'label' => 'invoiceExpireLabel'],
             ],
             'cubepay' => [
                 ['field' => 'cubepay_api_token', 'type' => 'text', 'label' => 'apiKeyLabel', 'scope' => 'global'],
@@ -3585,6 +3587,9 @@ if (!function_exists('card_legacy_toggle_fields')) {
             'Cartstatuspv' => ['on' => 'oncardpv', 'off' => 'offcardpv', 'label' => '💳 پرداخت مستقیم در پیوی'],
             'checkpaycartfirst' => ['on' => 'onpayverify', 'off' => 'offpayverify', 'label' => '🔒 نمایش کارت پس از اولین پرداخت'],
             'autoconfirmcart' => ['on' => 'onauto', 'off' => 'offauto', 'label' => '🤖 تایید خودکار رسید'],
+            // 🛡 card-to-card only for customers with more than N paid
+            // purchases/renewals (N = «cardtrustmin», card_trust_min())
+            'cardtrust' => ['on' => 'ontrust', 'off' => 'offtrust', 'label' => '🛡 فقط برای مشتری‌های قدیمی'],
         ];
     }
 }
@@ -3597,6 +3602,85 @@ if (!function_exists('card_new_default')) {
     {
         $global = (string) (select("setting", "showcard", null, null, "select")['showcard'] ?? '1');
         return (string) pay_value('showcard', $lang, $global) === '1' ? '1' : '0';
+    }
+}
+if (!function_exists('card_trust_on')) {
+    // 🛡 کارت‌به‌کارت فقط برای مشتری‌های قدیمی, per language. On: card-to-card
+    // is offered only to a customer with MORE than N paid purchases or
+    // renewals - N is «cardtrustmin», 3 unless the admin changed it.
+    function card_trust_on($lang)
+    {
+        return pay_value('cardtrust', $lang, 'offtrust') === 'ontrust';
+    }
+    function card_trust_min($lang)
+    {
+        $n = (int) pay_value('cardtrustmin', $lang, '3');
+        return $n > 0 ? $n : 3;
+    }
+    // services bought and renewals done that were really paid for: an invoice
+    // that is not Unpaid, not a test account and not free, plus a paid renewal
+    // (service_other extend_user) - the rows 📊 آمار counts as sales. Wallet or
+    // gateway makes no difference. Counted once per request.
+    function card_trust_count($userId)
+    {
+        global $pdo;
+        static $cache = [];
+        $userId = (string) $userId;
+        if (isset($cache[$userId])) {
+            return $cache[$userId];
+        }
+        $tests = [];
+        foreach (panel_langs() as $l) {
+            $name = (string) (lang_tab_texts($l)['common']['labels']['testServiceName'] ?? '');
+            if ($name !== '') {
+                $tests[$name] = true;
+            }
+        }
+        $tests = array_keys($tests) ?: [''];
+        $in = implode(',', array_fill(0, count($tests), '?'));
+        $st = $pdo->prepare("SELECT COUNT(*) FROM invoice WHERE id_user = ? AND LOWER(Status) <> 'unpaid' AND name_product NOT IN ({$in}) AND CAST(price_product AS DECIMAL(20,2)) > 0");
+        $st->execute(array_merge([$userId], $tests));
+        $bought = (int) $st->fetchColumn();
+        $st = $pdo->prepare("SELECT COUNT(*) FROM service_other WHERE id_user = ? AND type = 'extend_user' AND LOWER(status) <> 'unpaid' AND CAST(price AS DECIMAL(20,2)) > 0");
+        $st->execute([$userId]);
+        return $cache[$userId] = $bought + (int) $st->fetchColumn();
+    }
+    function card_trust_ensure_schema()
+    {
+        static $done = false;
+        if (!$done) {
+            $done = true;
+            // when 🛡 first found this customer past N - see card_visible_for()
+            addFieldToTable('user', 'card_trust_auto', null, 'VARCHAR(20) NULL');
+        }
+    }
+    // Does this customer get the card-to-card button right now? Their own
+    // switch (user.cardpayment - 👥 کارت‌به‌کارت کاربرها, the user's page) as
+    // before; with 🛡 on, also more than N paid purchases/renewals. The first
+    // time a customer is found past N, card-to-card is switched on for them -
+    // once: card_trust_auto remembers it, so an admin who turns it off for that
+    // customer afterwards is not overruled on the next message.
+    function card_visible_for($userRow, $lang)
+    {
+        if (!is_array($userRow) || empty($userRow['id'])) {
+            return false;
+        }
+        $on = (string) ($userRow['cardpayment'] ?? '') === '1';
+        if (!card_trust_on($lang)) {
+            return $on;
+        }
+        if (card_trust_count($userRow['id']) <= card_trust_min($lang)) {
+            return false;
+        }
+        if (trim((string) ($userRow['card_trust_auto'] ?? '')) === '') {
+            card_trust_ensure_schema();
+            update("user", "card_trust_auto", (string) time(), "id", $userRow['id']);
+            if (!$on) {
+                update("user", "cardpayment", "1", "id", $userRow['id']);
+                $on = true;
+            }
+        }
+        return $on;
     }
 }
 if (!function_exists('card_access_counts')) {
@@ -3692,7 +3776,8 @@ if (!function_exists('card_legacy_has_any_override')) {
                 return true;
             }
         }
-        return gw_pay_override_has('timeauto_not_verify', $lang) || gw_pay_override_has('helpcart', $lang) || gw_pay_override_has('showcard', $lang);
+        return gw_pay_override_has('timeauto_not_verify', $lang) || gw_pay_override_has('helpcart', $lang) || gw_pay_override_has('showcard', $lang)
+            || gw_pay_override_has('cardtrustmin', $lang);
     }
 }
 if (!function_exists('gw_lang_has_any_override')) {
@@ -3747,11 +3832,12 @@ if (!function_exists('gateway_registry')) {
             'usdtbep' => $textbotlang['textbot']['usdtbepPayment'],
             'digitaltron' => $textbotlang['textbot']['nowPaymentTron'],
             'iranpay1' => $textbotlang['textbot']['iranPay2'],
-            'iranpay2' => $textbotlang['textbot']['iranPay3'],
             'iranpay3' => $textbotlang['textbot']['iranPay1'],
             'aqayepardakht' => $textbotlang['textbot']['aqayePardakht'],
             'zarinpal' => $textbotlang['textbot']['zarinPal'],
             'frenzyex' => $textbotlang['textbot']['frenzyEx'],
+            'tronado' => $textbotlang['textbot']['tronadoPay'],
+            'hooshpay' => $textbotlang['textbot']['hooshPay'],
             'cubepay' => $textbotlang['textbot']['cubePay'],
             'abangateway' => $textbotlang['textbot']['abanGateway'],
             'variza' => $textbotlang['textbot']['varizaPay'],
@@ -3780,12 +3866,16 @@ if (!function_exists('gateway_groups')) {
             // rial processors - every one of these is fa-only (see
             // gateway_fa_only_keys), so the group simply never appears on the
             // other language tabs
-            'rial' => ['iranpay1', 'iranpay2', 'iranpay3', 'aqayepardakht', 'zarinpal', 'cubepay', 'abangateway', 'variza', 'paymentnotverify'],
+            'rial' => ['iranpay1', 'iranpay3', 'aqayepardakht', 'zarinpal', 'cubepay', 'abangateway', 'variza', 'paymentnotverify'],
             // rial-priced, but settled through a forex/crypto processor rather
             // than a rial PSP - its own family, directly under the rial one,
             // so it is configured from its own button instead of being mixed
             // in with the plain rial gateways
-            'rialforex' => ['frenzyex'],
+            // Tronado belongs here for the same reason: the invoice is in toman,
+            // the shop is paid in TRX
+            // HooshPay too: a toman invoice paid card to card, settled to the
+            // shop in USDT
+            'rialforex' => ['frenzyex', 'tronado', 'hooshpay'],
         ];
     }
 }
@@ -3919,8 +4009,8 @@ if (!function_exists('gateway_all_keys')) {
     // (card-to-card is keyed by name because it can render as a url button).
     function gateway_all_keys()
     {
-        return ['card', 'plisio', 'nowpayment', 'ton', 'trx', 'usdtbep', 'digitaltron', 'iranpay1', 'iranpay2',
-            'iranpay3', 'aqayepardakht', 'zarinpal', 'frenzyex', 'cubepay', 'abangateway', 'variza', 'paymentnotverify', 'startelegrams'];
+        return ['card', 'plisio', 'nowpayment', 'ton', 'trx', 'usdtbep', 'digitaltron', 'iranpay1',
+            'iranpay3', 'aqayepardakht', 'zarinpal', 'frenzyex', 'tronado', 'hooshpay', 'cubepay', 'abangateway', 'variza', 'paymentnotverify', 'startelegrams'];
     }
 }
 if (!function_exists('gateway_lang_map')) {
@@ -5413,6 +5503,13 @@ if (!function_exists('topup_card_invoice_generate')) {
     function topup_card_invoice_generate($from_id, array $user, $message_id, $textbotlang, array $setting)
     {
         global $pdo;
+        // the button is not offered to this customer (their switch, or 🛡
+        // only for customers with more than N purchases) - a tap from an old
+        // message, or a typed amount on the way, must not get round that
+        if (!card_visible_for($user, $user['lang'] ?? 'fa')) {
+            sendmessage($from_id, $textbotlang['users']['Balance']['cardNotAvailable'], null, 'HTML');
+            return;
+        }
         $checkpay = $pdo->prepare("SELECT * FROM Payment_report WHERE id = :user_id AND payment_Status = 'Unpaid'");
         $checkpay->bindValue(':user_id', $from_id, PDO::PARAM_STR);
         $checkpay->execute();
@@ -6841,6 +6938,45 @@ if (!function_exists('topup_usd_rate')) {
     {
         return $key === 'plisio' || $key === 'nowpayment' || $key === 'usdtbep';
     }
+    // The admin texts that name a gateway's floor say «1 دلار»; Tronado's floor
+    // is a toman figure of its own, so it has its own words. $kind: floorText,
+    // askMin, below - the keys of Admin.TopupPkg to use.
+    function topup_floor_text_key($key, $kind)
+    {
+        $tronado = ['floorText' => 'tronadoFloorText', 'askMin' => 'askMinTronado', 'below' => 'minBelowTronadoFloor'];
+        $usd = ['floorText' => 'minUsdFloorText', 'askMin' => 'askMinOnline', 'below' => 'minBelowFloor'];
+        return ($key === 'tronado' ? $tronado : $usd)[$kind];
+    }
+    // A method list for an amount that is already known - a renewal, a direct
+    // payment, what a purchase lacks: a gateway with a floor of its own above
+    // that amount would only refuse it on the next tap, so it is not offered.
+    // Only Tronado's toman floor is applied here; the dollar-floored ones keep
+    // their old behaviour (the rate behind them is a network call).
+    function step_payment_for_amount($stepPaymentJson, $amount, $lang)
+    {
+        $kb = json_decode((string) $stepPaymentJson, true);
+        if (!is_array($kb['inline_keyboard'] ?? null) || !is_numeric($amount)) {
+            return $stepPaymentJson;
+        }
+        $rows = [];
+        foreach ($kb['inline_keyboard'] as $row) {
+            $keep = [];
+            foreach ((array) $row as $btn) {
+                if (($btn['callback_data'] ?? null) === 'tronado') {
+                    $floor = topup_usd_floor_toman($lang, 'tronado');
+                    if ($floor !== null && (float) $amount < $floor) {
+                        continue;
+                    }
+                }
+                $keep[] = $btn;
+            }
+            if (!empty($keep)) {
+                $rows[] = $keep;
+            }
+        }
+        $kb['inline_keyboard'] = $rows;
+        return json_encode($kb);
+    }
     // The smallest amount this gateway can actually put on an invoice, in
     // toman, or null when it has none - and null too when the rate cannot be
     // fetched, in which case nothing new is enforced and the old limits stand.
@@ -6850,6 +6986,15 @@ if (!function_exists('topup_usd_rate')) {
     // same number or the customer is refused twice with two different figures.
     function topup_usd_floor_toman($lang, $key)
     {
+        // Tronado refuses anything under its own minimum on its payment page
+        // (150,000 toman when this was written, «tronado_min_amount»). It is a
+        // floor like the dollar one: in toman, no rate needed - and with it in
+        // here every place a floor is honoured (the amount prompt, packages,
+        // direct payments, the admin's own minimum) holds to it.
+        if ($key === 'tronado') {
+            $f = function_exists('tronado_min_toman') ? tronado_min_toman() : 0;
+            return $f > 0 ? $f : null;
+        }
         $rate = topup_usd_rate();
         if ($rate <= 0) {
             return null;
@@ -6880,12 +7025,13 @@ if (!function_exists('topup_usd_rate')) {
             'digitaltron' => 'digitaltron',
             'zarinpal' => 'zarinpal',
             'frenzyex' => 'frenzyex',
+            'tronado' => 'tronado',
+            'hooshpay' => 'hooshpay',
             'cubepay' => 'cubepay',
             'abangateway' => 'abangateway',
             'variza' => 'variza',
             'aqayepardakht' => 'aqayepardakht',
             'iranpay1' => 'iranpay1',
-            'iranpay2' => 'iranpay2',
             'iranpay3' => 'iranpay',
         ][$key] ?? null;
     }
@@ -7860,7 +8006,7 @@ if (!function_exists('topup_invoice_btnstyle_items')) {
                 'paid' => $b['paidInvoiceBtn'],
             ];
         }
-        if ($key === 'frenzyex') {
+        if ($key === 'frenzyex' || $key === 'tronado' || $key === 'hooshpay') {
             // no 'reissue': an expired FrenzyEx invoice is removed rather than
             // turned into a "ساخت فاکتور جدید" button, because there is no
             // frenzyex_invoice_build() for index.php's gwreissue: handler to
@@ -7977,6 +8123,8 @@ if (!function_exists('topup_expire_minutes')) {
             'usdtbep' => 'usdtbepInvoiceExpireMinutes',
             'digitaltron' => 'digitaltronInvoiceExpireMinutes',
             'frenzyex' => 'frenzyexInvoiceExpireMinutes',
+            'tronado' => 'tronadoInvoiceExpireMinutes',
+            'hooshpay' => 'hooshpayInvoiceExpireMinutes',
         ][$key] ?? null;
     }
     // How long this gateway's invoice stays payable, set per language on the
@@ -7996,7 +8144,9 @@ if (!function_exists('topup_expire_minutes')) {
         // hour. This is the ONLY number in play: the caption quotes it and
         // cronbot/payment_expire.php enforces the very same call, so the two
         // cannot promise different things.
-        $default = ['frenzyex' => 60][$key] ?? 30;
+        // Tronado is the same story: the customer pays a card, sends the
+        // receipt and waits for Tronado to accept it before TRX moves.
+        $default = ['frenzyex' => 60, 'tronado' => 60][$key] ?? 30;
         $field = topup_expire_field($key);
         $m = $field === null ? $default : (int) pay_value($field, $lang, $default);
         return $m > 0 ? $m : $default;
@@ -8126,12 +8276,13 @@ if (!function_exists('topup_gateway_key_by_method')) {
             'arze digital offline' => 'digitaltron',
             'zarinpal' => 'zarinpal',
             'frenzyex' => 'frenzyex',
+            'tronado' => 'tronado',
+            'hooshpay' => 'hooshpay',
             'cubepay' => 'cubepay',
             'AbanGateway' => 'abangateway',
             'variza' => 'variza',
             'aqayepardakht' => 'aqayepardakht',
             'Currency Rial 1' => 'iranpay1',
-            'Currency Rial 2' => 'iranpay2',
             'Currency Rial 3' => 'iranpay3',
             'paymentnotverify' => 'paymentnotverify',
         ];
@@ -8474,7 +8625,7 @@ if (!function_exists('topup_gw_customizables')) {
         // its family, but unlike them it renders its own payment button, so it
         // gets the button-styling screen the online family has - without the
         // invoice/expired captions, which it does not build in the chat.
-        if ($key === 'frenzyex') {
+        if ($key === 'frenzyex' || $key === 'tronado' || $key === 'hooshpay') {
             return ['custom', 'linkmsg', 'range', 'notnumber', 'paidalert', 'btnstyle'];
         }
         return ['custom', 'linkmsg', 'range', 'notnumber', 'paidalert'];
@@ -9137,7 +9288,7 @@ if (!function_exists('gateway_fa_only_keys')) {
     // where it actually protects the real checkout flow.
     function gateway_fa_only_keys()
     {
-        return ['zarinpal', 'frenzyex', 'cubepay', 'abangateway', 'variza', 'aqayepardakht', 'iranpay1', 'iranpay2', 'iranpay3', 'paymentnotverify'];
+        return ['zarinpal', 'frenzyex', 'tronado', 'hooshpay', 'cubepay', 'abangateway', 'variza', 'aqayepardakht', 'iranpay1', 'iranpay3', 'paymentnotverify'];
     }
 }
 // read and written by the bot's 💳 hub and by the web panel alike
@@ -9157,8 +9308,6 @@ if (!function_exists('gateway_globally_on')) {
                 return getPaySettingValue('digistatus') === 'ondigi';
             case 'iranpay1':
                 return getPaySettingValue('statusSwapWallet') === 'onSwapinoBot';
-            case 'iranpay2':
-                return getPaySettingValue('statustarnado') === 'onternado';
             case 'iranpay3':
                 return getPaySettingValue('statusiranpay3') === 'oniranpay3';
             case 'aqayepardakht':
@@ -9167,6 +9316,10 @@ if (!function_exists('gateway_globally_on')) {
                 return getPaySettingValue('zarinpalstatus') === 'onzarinpal';
             case 'frenzyex':
                 return getPaySettingValue('frenzyexstatus') === 'onfrenzyex';
+            case 'tronado':
+                return getPaySettingValue('statustronado') === 'ontronado';
+            case 'hooshpay':
+                return getPaySettingValue('statushooshpay') === 'onhooshpay';
             case 'cubepay':
                 return getPaySettingValue('statuscubepay') === 'oncubepay';
             case 'abangateway':
@@ -9198,11 +9351,12 @@ if (!function_exists('gateway_globally_set')) {
             'nowpayment' => ['statusnowpayment', '1', '0'],
             'digitaltron' => ['digistatus', 'ondigi', 'offdigi'],
             'iranpay1' => ['statusSwapWallet', 'onSwapinoBot', 'offSwapinoBot'],
-            'iranpay2' => ['statustarnado', 'onternado', 'offternado'],
             'iranpay3' => ['statusiranpay3', 'oniranpay3', 'offiranpay3'],
             'aqayepardakht' => ['statusaqayepardakht', 'onaqayepardakht', 'offaqayepardakht'],
             'zarinpal' => ['zarinpalstatus', 'onzarinpal', 'offzarinpal'],
             'frenzyex' => ['frenzyexstatus', 'onfrenzyex', 'offfrenzyex'],
+            'tronado' => ['statustronado', 'ontronado', 'offtronado'],
+            'hooshpay' => ['statushooshpay', 'onhooshpay', 'offhooshpay'],
             'cubepay' => ['statuscubepay', 'oncubepay', 'offcubepay'],
             'abangateway' => ['statusabangateway', 'onabangateway', 'offabangateway'],
             'variza' => ['statusvariza', 'onvariza', 'offvariza'],
@@ -9849,7 +10003,6 @@ if (!function_exists('money_input_steps')) {
             'getmainplisio', 'getmaxplisio',
             'getmaindigitaltron', 'getmaxdigitaltron',
             'getmainiranpay1', 'getmaaxiranpay1',
-            'getmainiranpay2', 'getmaaxiranpay2',
             'getmainaqayepardakht', 'getmaaxaqayepardakht',
             'getmainaqzarinpal', 'getmaaxzarinpal',
             'minbalanceiranpay', 'maxbalanceiranpay',
@@ -10224,6 +10377,12 @@ function bot_cron_commands()
         // (payment/frenzyex.php) - this is only the recovery path for a
         // delayed/dropped one, so it can run at plisio's own relaxed cadence
         "*/3 * * * * flock -n /tmp/mz_frenzyex.lock curl -s --max-time 170 https://$domainhosts/cronbot/frenzyex.php > /dev/null 2>&1",
+        // Tronado: same shape - its signed IPN (payment/tronado_ipn.php) is the
+        // main path, this asks Tronado about the ones whose IPN never came
+        "*/3 * * * * flock -n /tmp/mz_tronado.lock curl -s --max-time 170 https://$domainhosts/cronbot/tronado.php > /dev/null 2>&1",
+        // HooshPay: its signed callback (payment/hooshpay.php) is the main path,
+        // this asks about the invoices whose callback never came
+        "*/3 * * * * flock -n /tmp/mz_hooshpay.lock curl -s --max-time 170 https://$domainhosts/cronbot/hooshpay.php > /dev/null 2>&1",
         "*/5 * * * * flock -n /tmp/mz_payment_expire.lock curl -s --max-time 280 https://$domainhosts/cronbot/payment_expire.php > /dev/null 2>&1",
         // --- stretched: these were the load ---
         "*/5 * * * * flock -n /tmp/mz_notifications.lock curl -s --max-time 280 https://$domainhosts/cronbot/NoticationsService.php > /dev/null 2>&1",
@@ -16275,6 +16434,9 @@ if (!function_exists('topup_disc_method_to_gateway')) {
             'AbanGateway' => 'abangateway',
             'variza' => 'variza',
             'Currency Rial 1' => 'iranpay1',
+            // the original bot's Tronado gateway, removed - kept only so a
+            // customer's old payments through it still count as top-ups
+            // (the «new users only» discount rule asks exactly that)
             'Currency Rial 2' => 'iranpay2',
             'Currency Rial 3' => 'iranpay3',
             'arze digital offline' => 'digitaltron',
@@ -16288,6 +16450,8 @@ if (!function_exists('topup_disc_method_to_gateway')) {
             // stored by topup_gateway_dispatch.php; missing here, FrenzyEx's
             // invoice promised its 🎁 discount and the wallet never got it
             'frenzyex' => 'frenzyex',
+            'tronado' => 'tronado',
+            'hooshpay' => 'hooshpay',
         ];
         return $map[(string) $method] ?? null;
     }
@@ -16387,7 +16551,7 @@ if (!function_exists('topup_disc_user_has_any_paid_topup')) {
     // gateway) - backs the "فقط کاربران جدید" (new-users-only) restriction on
     // both the auto discount and discount codes. Called from inside
     // topup_disc_award(), itself called from DirectPayment(). $exceptOrder is
-    // the row being credited: FrenzyEx, TON, TRX and USDT-BEP20 flip it to
+    // the row being credited: FrenzyEx, Tronado, HooshPay, TON, TRX and USDT-BEP20 flip it to
     // 'paid' BEFORE DirectPayment() (their double-credit guard), so without it
     // a user's very first top-up counted as an earlier one and lost a
     // new-users-only discount.
@@ -23417,13 +23581,47 @@ if (!function_exists('frenzyex_callback_url')) {
         global $domainhosts;
         return "https://{$domainhosts}/payment/frenzyex.php";
     }
+    // FrenzyEx's public address. config.php can name another one if FrenzyEx
+    // ever moves - the same way RBN_GITHUB_API names a mirror for rbnodes.php.
+    // config.php is read more than once per request (function.php requires
+    // it again), so it has to be written guarded:
+    //   defined('FRENZYEX_API_BASE') || define('FRENZYEX_API_BASE', 'https://...');
+    function frenzyex_api_base()
+    {
+        return defined('FRENZYEX_API_BASE') ? rtrim((string) FRENZYEX_API_BASE, '/') : 'https://frenzy.fastsnap.info';
+    }
+    // Since guide v4 the callback address can travel with each payment
+    // request, so the admin does not have to get it registered with FrenzyEx
+    // first. FrenzyEx refuses an address it cannot use (HTTP 400, nothing
+    // created); when that happens the request is made again without it and
+    // the account-level address is used. The refusal is remembered for a day,
+    // so every invoice does not cost two requests out of FrenzyEx's ten a
+    // minute, and the admin is told once to register the address instead.
+    function frenzyex_callback_flag_file()
+    {
+        return __DIR__ . '/storage/frenzyex_callback_refused';
+    }
+    function frenzyex_callback_refused_recently()
+    {
+        $at = (int) @file_get_contents(frenzyex_callback_flag_file());
+        return $at > 0 && time() - $at < 86400;
+    }
+    function frenzyex_callback_mark_refused()
+    {
+        $file = frenzyex_callback_flag_file();
+        if (!is_dir(dirname($file))) {
+            @mkdir(dirname($file), 0775, true);
+        }
+        @file_put_contents($file, (string) time(), LOCK_EX);
+    }
 }
-function createPayFrenzyEx($price, $order_id)
+// One POST to FrenzyEx's v1 create endpoint: the real HTTP status and the
+// decoded body. Never retried here - see createPayFrenzyEx().
+function frenzyex_create_request($apiKey, array $body)
 {
-    $apiKey = select("PaySetting", "ValuePay", "NamePay", "frenzyex_api_key", "select")['ValuePay'];
     $curl = curl_init();
     curl_setopt_array($curl, array(
-        CURLOPT_URL => 'https://frenzy.fastsnap.info/api/v1/payment-requests',
+        CURLOPT_URL => frenzyex_api_base() . '/api/v1/payment-requests',
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_ENCODING => '',
         CURLOPT_MAXREDIRS => 10,
@@ -23441,13 +23639,7 @@ function createPayFrenzyEx($price, $order_id)
             'Authorization: Bearer ' . $apiKey,
         ),
     ));
-    curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode([
-        'amount' => $price,
-        'amount_ccy' => 'TMN',
-        'payment_method' => 'auto',
-        'order_ref' => $order_id,
-        'description' => 'TopUp - ' . $order_id,
-    ]));
+    curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($body));
     $response = curl_exec($curl);
     $httpCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
     curl_close($curl);
@@ -23456,6 +23648,628 @@ function createPayFrenzyEx($price, $order_id)
         'http_code' => $httpCode,
         'body' => is_array($decoded) ? $decoded : [],
     ];
+}
+function createPayFrenzyEx($price, $order_id)
+{
+    $apiKey = select("PaySetting", "ValuePay", "NamePay", "frenzyex_api_key", "select")['ValuePay'];
+    $body = [
+        'amount' => $price,
+        'amount_ccy' => 'TMN',
+        'payment_method' => 'auto',
+        'order_ref' => $order_id,
+        'description' => 'TopUp - ' . $order_id,
+    ];
+    if (frenzyex_callback_refused_recently()) {
+        return frenzyex_create_request($apiKey, $body);
+    }
+    $pay = frenzyex_create_request($apiKey, $body + ['callback_url' => frenzyex_callback_url()]);
+    // Only a 400 is asked again: the guide says a refused callback_url
+    // returns 400 and creates nothing, so the second request cannot make a
+    // second checkout. Any other failure (a timeout above all) is returned
+    // as it is - a POST is never repeated after an uncertain result.
+    if ($pay['http_code'] !== 400) {
+        return $pay;
+    }
+    $retry = frenzyex_create_request($apiKey, $body);
+    if ($retry['http_code'] >= 200 && $retry['http_code'] < 300) {
+        // the address was the reason: remembered, logged, and the admin told
+        frenzyex_callback_mark_refused();
+        error_log('frenzyex: the per-request callback_url was refused (HTTP 400: ' . mb_substr(json_encode($pay['body']), 0, 200)
+            . ') - invoices are made without it for a day; the address registered with FrenzyEx is used');
+        $setting = select("setting", "Channel_Report", null, null, "select");
+        if (strlen((string) ($setting['Channel_Report'] ?? '')) > 0) {
+            telegram('sendmessage', [
+                'chat_id' => $setting['Channel_Report'],
+                'message_thread_id' => select("topicid", "idreport", "report", "errorreport", "select")['idreport'] ?? null,
+                'text' => sprintf(
+                    "⚠️ FrenzyEx آدرس کال‌بک ربات رو همراه فاکتور قبول نکرد، پس فاکتورها بدون اون ساخته می‌شن.\n\n"
+                    . "برای اینکه پرداخت‌ها خودکار تایید بشن، این آدرس رو توی پنل FrenzyEx (بخش وبهوک) ثبت کن یا به پشتیبانی FrenzyEx بده:\n<code>%s</code>\n\n"
+                    . "تا وقتی ثبت نشه، ربات هر ۳ دقیقه خودش وضعیت پرداخت‌ها رو از FrenzyEx می‌پرسه.",
+                    htmlspecialchars(frenzyex_callback_url())
+                ),
+                'parse_mode' => "HTML",
+            ]);
+        }
+    }
+    return $retry;
+}
+// ---- درگاه ارزی ریالی ترونادو (Tronado, API v5) ----
+// The invoice is in toman; Tronado's own page (inside Telegram) takes the
+// customer's payment and sends the shop TRX for it. The steps, from Tronado's
+// own guide (miniapp.tronado.cloud/assets/api-docs.md):
+//   1. /Tron/GetPriceToToman  - Tronado's own TRX price, not an exchange's
+//   2. /api/v5/GetOrderToken  - PaymentID is this bot's id_order
+//   3. the customer pays on t.me/tronado_robot/customerpayment?startapp=TOKEN
+//   4. Tronado POSTs a signed IPN on every status change of the order
+//      (payment/tronado_ipn.php); cronbot/tronado.php asks about the orders
+//      whose IPN never came. Both credit through tronado_settle() only.
+// It replaced the original bot's own Tronado gateway (iranpay2, an older
+// endpoint without signed callbacks), which has been removed.
+if (!function_exists('tronado_callback_url')) {
+    // where Tronado sends the IPN. Its domain has to be registered with
+    // Tronado's support first, or no IPN is sent at all - so the settings
+    // screen shows it with a copy button.
+    function tronado_callback_url()
+    {
+        global $domainhosts;
+        return "https://{$domainhosts}/payment/tronado_ipn.php";
+    }
+    // the smallest invoice Tronado itself accepts, in toman; 0 = none. An
+    // empty or unreadable value is Tronado's own 150,000.
+    function tronado_min_toman()
+    {
+        $raw = trim((string) getPaySettingValue('tronado_min_amount', ''));
+        $v = money_normalize($raw);
+        return $raw === '' || $v === null ? 150000 : max(0, (int) round((float) $v));
+    }
+    // a setting the admin never filled reads back as the row's default '0'
+    function tronado_setting($name)
+    {
+        $v = trim((string) getPaySettingValue($name, ''));
+        return $v === '0' ? '' : $v;
+    }
+    // how much of Tronado's fee the shop takes on (wageFromBusinessPercentage):
+    // 0 = the customer pays all of it on top of the invoice (Tronado's own
+    // default), 100 = the shop pays all of it. Anything unreadable is 0.
+    function tronado_wage_percent()
+    {
+        $v = money_normalize(str_replace(['%', '٪'], '', tronado_setting('tronado_wage_percent')));
+        return $v === null ? 0 : max(0, min(100, (int) round((float) $v)));
+    }
+    // One POST to Tronado. Always with a body ({} at the least): the guide
+    // warns that a body-less POST is refused with 411, which looks like a 404.
+    // TRONADO_API_BASE only exists for a test rig that stands in for Tronado.
+    function tronado_request($path, array $body = [], $withKey = true)
+    {
+        $base = defined('TRONADO_API_BASE') ? rtrim((string) TRONADO_API_BASE, '/') : 'https://bot.tronado.cloud';
+        $headers = ['Content-Type: application/json', 'Accept: application/json'];
+        if ($withKey) {
+            $headers[] = 'x-api-key: ' . tronado_setting('tronado_api_key');
+        }
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $base . $path,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            // bounded: a customer is waiting on this tap
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_POSTFIELDS => empty($body) ? '{}' : json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ]);
+        $response = curl_exec($curl);
+        $error = $response === false ? curl_error($curl) : '';
+        $httpCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        curl_close($curl);
+        $decoded = is_string($response) ? json_decode($response, true) : null;
+        return [
+            'http_code' => $httpCode,
+            'body' => is_array($decoded) ? $decoded : null,
+            'raw' => is_string($response) ? mb_substr($response, 0, 300) : '',
+            'error' => $error,
+        ];
+    }
+    // Tronado's price of one TRX in toman, or null when it cannot be read
+    function tronado_price_toman()
+    {
+        $r = tronado_request('/Tron/GetPriceToToman', [], false);
+        $price = (int) ($r['body']['TronPriceToman'] ?? 0);
+        return $price > 0 ? $price : null;
+    }
+    // What the checkout asked Tronado for, kept in Payment_report's
+    // dec_not_confirmed: "12.345678 TRX", plus ", wage 50%" when the shop took
+    // on part of the fee. It is also the «توضیحات» line of the admin's payment
+    // report, so it stays readable rather than JSON.
+    function tronado_order_note($tron, $wage)
+    {
+        return number_format((float) $tron, 6, '.', '') . ' TRX' . ((int) $wage > 0 ? ', wage ' . (int) $wage . '%' : '');
+    }
+    function tronado_order_note_parse($note)
+    {
+        if (preg_match('/^\s*([0-9]+(?:\.[0-9]+)?)\s*TRX(?:,\s*wage\s*([0-9]{1,3})%)?/', (string) $note, $m)) {
+            return ['tron' => (float) $m[1], 'wage' => isset($m[2]) ? (int) $m[2] : 0];
+        }
+        return null;
+    }
+    // Creates one Tronado order for a top-up of $price toman. Never retried:
+    // a second GetOrderToken with the same PaymentID is not something the
+    // guide promises to be safe.
+    function createPayTronado($price, $order_id)
+    {
+        if (tronado_setting('tronado_api_key') === '' || tronado_setting('tronado_wallet') === '') {
+            return ['ok' => false, 'error' => 'tronado: the API key or the TRX wallet is not set'];
+        }
+        $rate = tronado_price_toman();
+        if ($rate === null) {
+            return ['ok' => false, 'error' => 'tronado: could not read the TRX price (/Tron/GetPriceToToman)'];
+        }
+        // rounded UP to the sun (6 decimals): the TRX asked for is never worth
+        // less than the toman the wallet is going to be credited with
+        $tron = ceil(round((float) $price / $rate, 9) * 1000000) / 1000000;
+        $wage = tronado_wage_percent();
+        $r = tronado_request('/api/v5/GetOrderToken?wageFromBusinessPercentage=' . $wage, [
+            'PaymentID' => (string) $order_id,
+            'WalletAddress' => tronado_setting('tronado_wallet'),
+            'TronAmount' => $tron,
+            'CallbackUrl' => tronado_callback_url(),
+        ]);
+        $b = is_array($r['body']) ? $r['body'] : [];
+        // the documented shape is flat; an older one wrapped it in Data
+        $token = trim((string) ($b['Token'] ?? ($b['Data']['Token'] ?? '')));
+        $errMsg = trim((string) ($b['ErrorMessage'] ?? ($b['Data']['ErrorMessage'] ?? '')));
+        if ($r['http_code'] < 200 || $r['http_code'] >= 300 || $token === '' || $errMsg !== '') {
+            if ($errMsg !== '') {
+                // Tronado said why in its own words - that is the whole story
+                return ['ok' => false, 'error' => 'tronado: ' . $errMsg];
+            }
+            return ['ok' => false, 'error' => 'tronado: ' . ($r['error'] !== '' ? $r['error'] : 'HTTP ' . $r['http_code']), 'raw' => $r['raw']];
+        }
+        $estimated = money_normalize((string) ($b['EstimatedTomanAmount'] ?? ($b['Data']['EstimatedTomanAmount'] ?? '')));
+        return [
+            'ok' => true,
+            'token' => $token,
+            // the link the guide says to put on the bot's own button
+            'url' => 'https://t.me/tronado_robot/customerpayment?startapp=' . rawurlencode($token),
+            'tron' => $tron,
+            'wage' => $wage,
+            'estimated' => $estimated === null ? null : (int) round((float) $estimated),
+        ];
+    }
+    // Tronado's own word on an order, asked by this bot's PaymentID; null when
+    // it could not be asked right now
+    function tronado_order_status($paymentId)
+    {
+        $r = tronado_request('/Order/GetStatusByPaymentID', ['Id' => (string) $paymentId]);
+        if ($r['http_code'] < 200 || $r['http_code'] >= 300 || !is_array($r['body'])) {
+            return null;
+        }
+        return $r['body'];
+    }
+    // the guide's own test for a finished payment; a rejected (40) or
+    // cancelled (200) order never counts, whatever else it says
+    function tronado_is_paid(array $st)
+    {
+        $status = (int) ($st['OrderStatusID'] ?? 0);
+        if ($status === 40 || $status === 200) {
+            return false;
+        }
+        return ($st['IsPaid'] ?? false) === true || $status === 30;
+    }
+    function tronado_admin_alert($text, $topic = 'errorreport')
+    {
+        $setting = select("setting", "*", null, null, "select");
+        if (strlen((string) ($setting['Channel_Report'] ?? '')) === 0) {
+            return;
+        }
+        telegram('sendmessage', [
+            'chat_id' => $setting['Channel_Report'],
+            'message_thread_id' => select("topicid", "idreport", "report", $topic, "select")['idreport'] ?? null,
+            'text' => $text,
+            'parse_mode' => "HTML",
+        ]);
+    }
+    // The one place a Tronado payment is credited, for the IPN and the cron
+    // alike. $st is what Tronado's own API says about the order (never only
+    // the IPN body); $ipn is the IPN body when there is one, for the toman
+    // figures only it carries. Returns what happened, for the caller's log:
+    // credited | already | unpaid | short | mismatch | failed
+    function tronado_settle(array $row, array $st, array $ipn = [])
+    {
+        global $pdo;
+        $textbotlang = lang_tab_texts('fa');
+        $orderId = (string) $row['id_order'];
+        $stPid = (string) ($st['PaymentID'] ?? ($st['PaymentId'] ?? ''));
+        if ($stPid !== '' && $stPid !== $orderId) {
+            error_log("tronado: status answer is for PaymentID={$stPid}, not order={$orderId}");
+            return 'mismatch';
+        }
+        if (!tronado_is_paid($st)) {
+            return 'unpaid';
+        }
+        // paid less than asked: an order Tronado adjusted down (TronAmount under
+        // ActualTronAmount), or - when the customer carries the whole fee - less
+        // TRX than the invoice asked for. Never credited as the full invoice:
+        // the admin is told, once, and decides.
+        $asked = tronado_order_note_parse($row['dec_not_confirmed'] ?? '');
+        $got = (float) ($st['TronAmount'] ?? 0);
+        $actual = (float) ($st['ActualTronAmount'] ?? 0);
+        $short = $got <= 0
+            || ($actual > 0 && $got < $actual * 0.99)
+            || ($asked !== null && $asked['wage'] === 0 && $asked['tron'] > 0 && $got < $asked['tron'] * 0.99);
+        if ($short) {
+            $note = (string) ($row['dec_not_confirmed'] ?? '');
+            // an ASCII marker in the row, so a repeated IPN or the next cron
+            // run knows the admin has already been told (and the log, too)
+            if (strpos($note, '| SHORT') === false) {
+                error_log(sprintf('tronado: paid less than asked - order=%s asked=%s got=%s actual=%s', $orderId, $asked === null ? '?' : $asked['tron'], $got, $actual));
+                update("Payment_report", "dec_not_confirmed", trim($note . ' | SHORT'), "id_order", $orderId);
+                $user = select("user", "*", "id", $row['id_user'], "select");
+                tronado_admin_alert(sprintf(
+                    $textbotlang['hardcoded']['tronadoShortPayment'],
+                    $orderId,
+                    $row['id_user'],
+                    $user['username'] ?? '-',
+                    number_format((float) $row['price']),
+                    $asked === null ? '—' : $asked['tron'],
+                    $got,
+                    htmlspecialchars((string) ($st['Hash'] ?? '-'))
+                ));
+            }
+            return 'short';
+        }
+        // claim before crediting: only the call that flips the row goes on to
+        // DirectPayment(), so a repeated IPN, the cron and an IPN at the same
+        // moment can never credit twice. 'expire' counts too - the customer may
+        // finish on Tronado's page after the bot closed the invoice, and a paid
+        // order must not be left uncredited for it.
+        $claim = $pdo->prepare("UPDATE Payment_report SET payment_Status = 'paid' WHERE id_order = ? AND payment_Status IN ('Unpaid', 'expire')");
+        $claim->execute([$orderId]);
+        if ($claim->rowCount() !== 1) {
+            $now = (string) (select("Payment_report", "payment_Status", "id_order", $orderId, "select")['payment_Status'] ?? '');
+            if ($now !== 'paid') {
+                // rejected by an admin, or anything else that is not a repeat
+                error_log("tronado: paid on Tronado but order={$orderId} is \"{$now}\" here");
+                tronado_admin_alert(sprintf($textbotlang['hardcoded']['tronadoNotCredited'], $orderId, htmlspecialchars($now)));
+            }
+            return 'already';
+        }
+        $hash = trim((string) ($st['Hash'] ?? ($ipn['Hash'] ?? '')));
+        if ($hash !== '') {
+            // the hash is what Tronado's support asks for - it goes into the
+            // admin's payment report («توضیحات») through DirectPayment()
+            update("Payment_report", "dec_not_confirmed", trim((string) ($row['dec_not_confirmed'] ?? '')) . ' | ' . $hash, "id_order", $orderId);
+        }
+        try {
+            DirectPayment($orderId, "../images.jpg");
+        } catch (\Throwable $e) {
+            // already 'paid': a later IPN or cron run cannot credit it twice -
+            // nor finish it, so the admin is told exactly which order
+            error_log("tronado: DirectPayment failed - order={$orderId}: " . $e->getMessage());
+            tronado_admin_alert(sprintf($textbotlang['hardcoded']['tronadoCreditFailed'], $orderId, htmlspecialchars($e->getMessage())));
+            return 'failed';
+        }
+        $user = select("user", "*", "id", $row['id_user'], "select");
+        $cashback = (float) money_normalize(tronado_setting('chashbacktronado'));
+        if ($cashback > 0 && is_array($user)) {
+            $gift = ((float) $row['price'] * $cashback) / 100;
+            // into the wallet the payment was made in, worded in the payer's language
+            wallet_credit($user['id'], $gift, payment_currency($row));
+            sendmessage($user['id'], sprintf(payer_texts($user['id'])['paymentGateway']['giftReport'], $gift), null, 'HTML');
+        }
+        $paidToman = (int) ($ipn['UserPaidTomanAmount'] ?? 0);
+        tronado_admin_alert(sprintf(
+            $textbotlang['hardcoded']['tronadoPaymentLog'],
+            $row['id_user'],
+            $user['username'] ?? '-',
+            number_format((float) $row['price']),
+            $paidToman > 0 ? number_format($paidToman) : '—',
+            $got,
+            $orderId,
+            htmlspecialchars($hash !== '' ? $hash : '-')
+        ), 'paymentreport');
+        return 'credited';
+    }
+    // Tronado's optional Dispute Callback (a card holder's complaint that
+    // Tronado accepted after the order was paid). The bot never takes money
+    // back from a wallet by itself - it tells the admin what changed, once per
+    // DisputeId (Tronado delivers at least once, so repeats are expected).
+    function tronado_dispute_report(array $d)
+    {
+        $id = (string) ($d['DisputeId'] ?? '');
+        if ($id === '') {
+            return;
+        }
+        $seen = json_decode((string) getPaySettingValue('tronado_disputes_seen', '[]'), true);
+        $seen = is_array($seen) ? $seen : [];
+        if (in_array($id, $seen, true)) {
+            return;
+        }
+        $seen[] = $id;
+        pay_global_set('tronado_disputes_seen', json_encode(array_slice($seen, -300)));
+        $textbotlang = lang_tab_texts('fa');
+        $t = $textbotlang['hardcoded'];
+        $orderId = (string) ($d['PaymentId'] ?? ($d['PaymentID'] ?? ''));
+        $row = $orderId !== '' ? select("Payment_report", "*", "id_order", $orderId, "select") : null;
+        $user = is_array($row) ? select("user", "*", "id", $row['id_user'], "select") : null;
+        $outcome = (string) ($d['Outcome'] ?? '');
+        $outcomeText = $t['tronadoDisputeOutcomes'][$outcome] ?? htmlspecialchars($outcome);
+        tronado_admin_alert(sprintf(
+            $t['tronadoDispute'],
+            htmlspecialchars($orderId !== '' ? $orderId : '-'),
+            is_array($row) ? $row['id_user'] : '-',
+            htmlspecialchars((string) ($user['username'] ?? '-')),
+            htmlspecialchars((string) ($d['DisputeTypeTitle'] ?? ($d['DisputeType'] ?? '-'))),
+            $outcomeText,
+            number_format((int) ($d['OriginalUserMustPayToman'] ?? 0)),
+            (float) ($d['OriginalTronAmount'] ?? 0),
+            number_format((int) ($d['UserMustPayToman'] ?? 0)),
+            (float) ($d['TronAmount'] ?? 0),
+            is_array($row) ? htmlspecialchars((string) $row['payment_Status']) : '-'
+        ));
+    }
+}
+// ---- درگاه ارزی ریالی هوش‌پی (HooshPay, API v1) ----
+// A toman invoice the customer pays card to card on HooshPay's own page,
+// confirmed there at once by the bank's SMS; the shop is settled in USDT.
+// From HooshPay's guide (hooshpay.xyz/developers):
+//   1. POST /api/v1/invoices         - order_id is this bot's id_order, and
+//      callback_url travels with every invoice (nothing to register)
+//   2. the customer pays on data.payment_url the exact payable_amount (a few
+//      toman off the round figure, which is how HooshPay matches the SMS)
+//   3. HooshPay POSTs payment.success to the callback, signed with
+//      X-HooshPay-Signature (payment/hooshpay.php); cronbot/hooshpay.php asks
+//      about the invoices whose callback never came. Both credit only through
+//      hooshpay_settle(), and only once POST /invoices/{uid}/verify says paid.
+if (!function_exists('hooshpay_callback_url')) {
+    function hooshpay_callback_url()
+    {
+        global $domainhosts;
+        return "https://{$domainhosts}/payment/hooshpay.php";
+    }
+    // a setting the admin never filled reads back as the row's default '0'
+    function hooshpay_setting($name)
+    {
+        $v = trim((string) getPaySettingValue($name, ''));
+        return $v === '0' ? '' : $v;
+    }
+    // who carries HooshPay's fee: seller (the shop), buyer (added to what the
+    // customer pays) or split. Persian words are understood too; anything
+    // else - or nothing - leaves it to the HooshPay account's own setting.
+    function hooshpay_fee_mode()
+    {
+        $v = mb_strtolower(trim(hooshpay_setting('hooshpay_fee_mode')));
+        $map = [
+            'seller' => 'seller', 'فروشنده' => 'seller', 'فروشگاه' => 'seller',
+            'buyer' => 'buyer', 'خریدار' => 'buyer', 'مشتری' => 'buyer',
+            'split' => 'split', 'نصف' => 'split', 'نصف‌نصف' => 'split', 'نصف نصف' => 'split',
+        ];
+        return $map[$v] ?? null;
+    }
+    // One request to HooshPay. HOOSHPAY_API_BASE only exists for a test rig
+    // that stands in for HooshPay.
+    function hooshpay_request($method, $path, ?array $body = null)
+    {
+        $base = defined('HOOSHPAY_API_BASE') ? rtrim((string) HOOSHPAY_API_BASE, '/') : 'https://hooshpay.xyz';
+        $curl = curl_init();
+        $opts = [
+            CURLOPT_URL => $base . '/api/v1' . $path,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            // bounded: a customer is waiting on this tap
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Accept: application/json', 'X-API-KEY: ' . hooshpay_setting('hooshpay_api_key')],
+        ];
+        if ($method === 'POST') {
+            // {} rather than [] for an empty body
+            $opts[CURLOPT_POSTFIELDS] = empty($body) ? '{}' : json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        curl_setopt_array($curl, $opts);
+        $response = curl_exec($curl);
+        $error = $response === false ? curl_error($curl) : '';
+        $httpCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        curl_close($curl);
+        $decoded = is_string($response) ? json_decode($response, true) : null;
+        return [
+            'http_code' => $httpCode,
+            'body' => is_array($decoded) ? $decoded : null,
+            'raw' => is_string($response) ? mb_substr($response, 0, 300) : '',
+            'error' => $error,
+        ];
+    }
+    // why a call failed, in HooshPay's own words when it gave any
+    function hooshpay_error_text(array $r)
+    {
+        $b = is_array($r['body']) ? $r['body'] : [];
+        $msg = $b['detail'] ?? ($b['message'] ?? ($b['error'] ?? ''));
+        if (is_array($msg)) {
+            $msg = json_encode($msg, JSON_UNESCAPED_UNICODE);
+        }
+        $msg = trim((string) $msg);
+        if ($msg !== '') {
+            return 'HTTP ' . $r['http_code'] . ': ' . $msg;
+        }
+        return $r['error'] !== '' ? $r['error'] : 'HTTP ' . $r['http_code'] . ($r['raw'] !== '' ? ' — ' . $r['raw'] : '');
+    }
+    // Creates one HooshPay invoice for a top-up of $price toman. Never retried:
+    // a second create would be a second invoice the customer could pay.
+    function createPayHooshPay($price, $order_id)
+    {
+        if (hooshpay_setting('hooshpay_api_key') === '') {
+            return ['ok' => false, 'error' => 'hooshpay: the API key is not set'];
+        }
+        $body = [
+            'amount' => (int) round((float) $price),
+            'order_id' => (string) $order_id,
+            'description' => 'TopUp - ' . $order_id,
+            'callback_url' => hooshpay_callback_url(),
+        ];
+        $feeMode = hooshpay_fee_mode();
+        if ($feeMode !== null) {
+            $body['fee_mode'] = $feeMode;
+        }
+        $r = hooshpay_request('POST', '/invoices', $body);
+        $d = is_array($r['body']['data'] ?? null) ? $r['body']['data'] : [];
+        $uid = trim((string) ($d['uid'] ?? ''));
+        $url = trim((string) ($d['payment_url'] ?? ''));
+        if ($r['http_code'] < 200 || $r['http_code'] >= 300 || empty($r['body']['success']) || $uid === '' || strpos($url, 'https://') !== 0) {
+            return ['ok' => false, 'error' => 'hooshpay: ' . hooshpay_error_text($r)];
+        }
+        $payable = (int) ($d['payable_amount'] ?? 0);
+        return [
+            'ok' => true,
+            'uid' => $uid,
+            'url' => $url,
+            'payable' => $payable > 0 ? $payable : null,
+        ];
+    }
+    // HooshPay's own word on an invoice: GET for a look, POST .../verify for the
+    // final answer before anything is credited. null when it could not be asked.
+    function hooshpay_invoice_status($uid)
+    {
+        $r = hooshpay_request('GET', '/invoices/' . rawurlencode((string) $uid));
+        return ($r['http_code'] >= 200 && $r['http_code'] < 300 && is_array($r['body'])) ? $r['body'] : null;
+    }
+    function hooshpay_invoice_verify($uid)
+    {
+        $r = hooshpay_request('POST', '/invoices/' . rawurlencode((string) $uid) . '/verify', []);
+        return ($r['http_code'] >= 200 && $r['http_code'] < 300 && is_array($r['body'])) ? $r['body'] : null;
+    }
+    // X-HooshPay-Signature = hex(HMAC-SHA256(JSON of the body with its keys
+    // sorted, unescaped unicode and slashes, secret)) - as the guide's PHP
+    // sample builds it. The raw body and a fully sorted copy are accepted too,
+    // so a nested field or another serializer on their side cannot lock a
+    // real payment out. Compared in constant time.
+    function hooshpay_signature_ok($rawBody, $signature, $secret)
+    {
+        $signature = strtolower(trim((string) $signature));
+        if ($signature === '' || $secret === '') {
+            return false;
+        }
+        $candidates = [(string) $rawBody];
+        $payload = json_decode((string) $rawBody, true);
+        if (is_array($payload)) {
+            $top = $payload;
+            ksort($top);
+            $candidates[] = json_encode($top, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $deep = function ($v) use (&$deep) {
+                if (!is_array($v)) {
+                    return $v;
+                }
+                if (array_keys($v) !== range(0, count($v) - 1)) {
+                    ksort($v);
+                }
+                return array_map($deep, $v);
+            };
+            $candidates[] = json_encode($deep($payload), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        foreach (array_unique($candidates) as $c) {
+            if (hash_equals(hash_hmac('sha256', $c, $secret), $signature)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    function hooshpay_admin_alert($text, $topic = 'errorreport')
+    {
+        $setting = select("setting", "*", null, null, "select");
+        if (strlen((string) ($setting['Channel_Report'] ?? '')) === 0) {
+            return;
+        }
+        telegram('sendmessage', [
+            'chat_id' => $setting['Channel_Report'],
+            'message_thread_id' => select("topicid", "idreport", "report", $topic, "select")['idreport'] ?? null,
+            'text' => $text,
+            'parse_mode' => "HTML",
+        ]);
+    }
+    // The one place a HooshPay payment is credited, for the callback and the
+    // cron alike. $v is HooshPay's answer to POST /invoices/{uid}/verify -
+    // never the callback body alone. Returns what happened, for the caller's
+    // log: credited | already | unpaid | mismatch | failed
+    function hooshpay_settle(array $row, array $v)
+    {
+        global $pdo;
+        $textbotlang = lang_tab_texts('fa');
+        $orderId = (string) $row['id_order'];
+        $uid = trim(explode('|', (string) ($row['dec_not_confirmed'] ?? ''))[0]);
+        $d = is_array($v['data'] ?? null) ? $v['data'] : [];
+        if (($v['paid'] ?? false) !== true || (string) ($v['status'] ?? ($d['status'] ?? '')) !== 'paid') {
+            return 'unpaid';
+        }
+        // the answer has to be about THIS invoice, for THIS amount. A
+        // mismatch is never credited; the admin is told once (the row keeps
+        // an ASCII marker so a resent callback or the next cron run stays quiet)
+        $vUid = (string) ($d['uid'] ?? '');
+        $vOrder = (string) ($d['order_id'] ?? '');
+        $vAmount = $d['amount'] ?? null;
+        $why = null;
+        if ($vUid !== '' && $uid !== '' && $vUid !== $uid) {
+            $why = "uid {$vUid} ≠ {$uid}";
+        } elseif ($vOrder !== '' && $vOrder !== $orderId) {
+            $why = "order_id {$vOrder} ≠ {$orderId}";
+        } elseif ($vAmount !== null && (int) $vAmount !== (int) round((float) $row['price'])) {
+            $why = 'amount ' . (int) $vAmount . ' ≠ ' . (int) round((float) $row['price']);
+        }
+        if ($why !== null) {
+            $note = (string) ($row['dec_not_confirmed'] ?? '');
+            if (strpos($note, '| MISMATCH') === false) {
+                error_log("hooshpay: paid but {$why} - order={$orderId}");
+                update("Payment_report", "dec_not_confirmed", trim($note . ' | MISMATCH'), "id_order", $orderId);
+                hooshpay_admin_alert(sprintf($textbotlang['hardcoded']['hooshpayMismatch'], $orderId, htmlspecialchars($uid), htmlspecialchars($why)));
+            }
+            return 'mismatch';
+        }
+        // claim before crediting: only the call that flips the row goes on to
+        // DirectPayment(), so a resent callback, the cron and a callback at the
+        // same moment can never credit twice. 'expire' counts too - a payment
+        // HooshPay confirms after the bot closed the invoice is still credited.
+        $claim = $pdo->prepare("UPDATE Payment_report SET payment_Status = 'paid' WHERE id_order = ? AND payment_Status IN ('Unpaid', 'expire')");
+        $claim->execute([$orderId]);
+        if ($claim->rowCount() !== 1) {
+            $now = (string) (select("Payment_report", "payment_Status", "id_order", $orderId, "select")['payment_Status'] ?? '');
+            if ($now !== 'paid') {
+                error_log("hooshpay: paid on HooshPay but order={$orderId} is \"{$now}\" here");
+                hooshpay_admin_alert(sprintf($textbotlang['hardcoded']['hooshpayNotCredited'], $orderId, htmlspecialchars($now)));
+            }
+            return 'already';
+        }
+        $tracking = trim((string) ($d['tracking_code'] ?? ''));
+        if ($tracking !== '') {
+            // the tracking code is what HooshPay's support asks for - it goes
+            // into the admin's payment report («توضیحات») through DirectPayment()
+            update("Payment_report", "dec_not_confirmed", trim((string) ($row['dec_not_confirmed'] ?? '')) . ' | ' . $tracking, "id_order", $orderId);
+        }
+        try {
+            DirectPayment($orderId, "../images.jpg");
+        } catch (\Throwable $e) {
+            // already 'paid': a later callback or cron run cannot credit it
+            // twice - nor finish it, so the admin is told exactly which order
+            error_log("hooshpay: DirectPayment failed - order={$orderId}: " . $e->getMessage());
+            hooshpay_admin_alert(sprintf($textbotlang['hardcoded']['hooshpayCreditFailed'], $orderId, htmlspecialchars($e->getMessage())));
+            return 'failed';
+        }
+        $user = select("user", "*", "id", $row['id_user'], "select");
+        $cashback = (float) money_normalize(hooshpay_setting('chashbackhooshpay'));
+        if ($cashback > 0 && is_array($user)) {
+            $gift = ((float) $row['price'] * $cashback) / 100;
+            // into the wallet the payment was made in, worded in the payer's language
+            wallet_credit($user['id'], $gift, payment_currency($row));
+            sendmessage($user['id'], sprintf(payer_texts($user['id'])['paymentGateway']['giftReport'], $gift), null, 'HTML');
+        }
+        $payable = (int) ($d['payable_amount'] ?? 0);
+        hooshpay_admin_alert(sprintf(
+            $textbotlang['hardcoded']['hooshpayPaymentLog'],
+            $row['id_user'],
+            $user['username'] ?? '-',
+            number_format((float) $row['price']),
+            $payable > 0 ? number_format($payable) : '—',
+            $orderId,
+            htmlspecialchars($uid !== '' ? $uid : '-'),
+            htmlspecialchars($tracking !== '' ? $tracking : '-')
+        ), 'paymentreport');
+        return 'credited';
+    }
 }
 function createPayaqayepardakht($price, $order_id)
 {

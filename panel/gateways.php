@@ -105,6 +105,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (($_POST['cl']['autoconfirmcart'] ?? '') === '1' && (int) $mins <= 0 && !$smsOn) {
                 $writes[] = fn() => gw_pay_override_set('timeauto_not_verify', $lang, '20');
             }
+            // 🛡 how many paid purchases/renewals a customer needs MORE than
+            // (the bot's «✏️ تغییر تعداد خرید/تمدید لازم»); empty = 3
+            $trustMin = trim((string) ($_POST['cl_trustmin'] ?? ''));
+            if ($trustMin !== (string) card_trust_min($lang)) {
+                $trustN = $trustMin === '' ? '' : money_normalize($trustMin);
+                if ($trustMin !== '' && ($trustN === null || (string) (int) $trustN !== (string) $trustN || (int) $trustN < 1 || (int) $trustN > 1000)) {
+                    $err = $t['gwCardTrustMinInvalid'];
+                } else {
+                    $writes[] = fn() => gw_pay_override_set('cardtrustmin', $lang, $trustN === '' ? '' : (string) (int) $trustN);
+                }
+            }
             // 👥 🆕 what a new user of this language starts with
             $wantNew = ($_POST['cl_new'] ?? '') === '1';
             if ($wantNew !== (card_new_default($lang) === '1')) {
@@ -196,7 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $floor = topup_usd_floor_toman($lang, $key);
         if ($minChanged && $floor !== null && ($range['min'] === '' || (float) $range['min'] < $floor)) {
             // an online gateway cannot go under a dollar, so neither can its minimum
-            $err = strtr($tp['minBelowFloor'], ['{price}' => number_format($floor), '{currency}' => $curTitle]);
+            $err = strtr($tp[topup_floor_text_key($key, 'below')], ['{price}' => number_format($floor), '{currency}' => $curTitle]);
         } elseif ($minChanged || $maxChanged) {
             // what the customer would be held to with the new pair - the bot's
             // topup_effective_limits(), fed the pair about to be saved
@@ -307,6 +318,8 @@ $chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="hidden" 
         <div class="set-ctl lang-chips"><?php foreach (card_legacy_toggle_fields() as $field => $def): ?><label class="lang-chip"><input type="checkbox" name="cl[<?= $field ?>]" value="1"<?= pay_value($field, $lang, $def['off']) === $def['on'] ? ' checked' : '' ?>> <?= htmlspecialchars(ui_plain($def['label'])) ?></label><?php endforeach; ?></div></div>
       <div class="set-row"><div><div class="set-label"><?= $t['gwCardTime'] ?></div><div class="set-hint"><?= $t['gwCardTimeHint'] ?></div></div>
         <div class="set-ctl"><input type="text" class="input" name="cl_time" value="<?= intval(pay_value('timeauto_not_verify', $lang, '0')) ?>" inputmode="numeric"></div></div>
+      <div class="set-row"><div><div class="set-label">⟦i:shield-check⟧ <?= $t['gwCardTrustMin'] ?></div><div class="set-hint"><?= $t['gwCardTrustMinHint'] ?></div></div>
+        <div class="set-ctl"><input type="text" class="input" name="cl_trustmin" value="<?= card_trust_min($lang) ?>" inputmode="numeric"></div></div>
       <div class="set-row"><div><div class="set-label"><?= $t['gwCardHelp'] ?></div><div class="set-hint"><?= $t['gwCardHelpHint'] ?><?= is_array($help) && in_array($help['type'] ?? '', ['photo', 'video'], true) ? '<br>' . sprintf($t['gwCardHelpMedia'], $help['type'] === 'photo' ? '⟦i:image⟧' : '⟦i:clapperboard⟧') : '' ?></div></div>
         <div class="set-ctl"><textarea class="textarea" name="cl_help" rows="3" dir="auto"><?= htmlspecialchars((string) ($help['text'] ?? '')) ?></textarea>
           <?php if ($help !== null): ?><label class="lang-chip" style="margin-top:6px"><input type="checkbox" name="cl_help_shared" value="1"> <?= $t['gwCardHelpShared'] ?></label><?php endif; ?></div></div>
@@ -321,6 +334,11 @@ $chk = fn($name, $on, $label) => '<label class="lang-chip"><input type="hidden" 
         </div></div>
       <div class="set-row"><div><div class="set-label"><?= $t['gwCardExc'] ?></div><div class="set-hint"><?= $t['gwCardExcHint'] ?></div></div>
         <div class="set-ctl"><textarea class="textarea" name="cl_exc" rows="3" dir="ltr" placeholder="123456789"><?= htmlspecialchars(implode("\n", array_keys(card_exc_members($lang)))) ?></textarea></div></div>
+    <?php endif; ?>
+    <?php $cbUrl = ['frenzyex' => 'frenzyex_callback_url', 'variza' => 'variza_webhook_url', 'tronado' => 'tronado_callback_url', 'hooshpay' => 'hooshpay_callback_url'][$key] ?? null; ?>
+    <?php if ($cbUrl !== null && function_exists($cbUrl)): ?>
+      <div class="set-row"><div><div class="set-label">⟦i:link⟧ <?= $t['gwCallbackUrl'] ?></div><div class="set-hint"><?= $t['gwCallbackUrlHint'] ?></div></div>
+        <div class="set-ctl"><input type="text" class="input" value="<?= htmlspecialchars($cbUrl()) ?>" dir="ltr" readonly onclick="this.select()"></div></div>
     <?php endif; ?>
     <?php if ($key === 'ton'): $memo = topup_memo_config($lang, 'ton'); ?>
       <div class="set-row"><div><div class="set-label">⟦i:tag⟧ <?= $t['gwTonPrefix'] ?></div><div class="set-hint"><?= $t['gwTonPrefixHint'] ?></div></div>

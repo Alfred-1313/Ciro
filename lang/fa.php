@@ -707,6 +707,24 @@ return array (
         'group' => 'topup',
         'section' => 'topup_flow',
       ),
+      array (
+        'label' => '⚡ فاکتور ترونادو',
+        'key' => 'users.Balance.tronadoInvoiceCreated',
+        'group' => 'topup',
+        'section' => 'topup_flow',
+      ),
+      array (
+        'label' => '🧠 فاکتور هوش‌پی',
+        'key' => 'users.Balance.hooshpayInvoiceCreated',
+        'group' => 'topup',
+        'section' => 'topup_flow',
+      ),
+      array (
+        'label' => '⛔️ «کارت‌به‌کارت برای حساب شما فعال نیست»',
+        'key' => 'users.Balance.cardNotAvailable',
+        'group' => 'topup',
+        'section' => 'topup_flow',
+      ),
       // ---- 🎁 پیام‌های تخفیف ----
       // Their own submenu rather than nine more rows in 💰: none of them is
       // per-gateway (the same sentence is produced for every gateway - see
@@ -1887,6 +1905,7 @@ return array (
     کمترین مبلغ برای  پرداخت در این درگاه 1 دلار معادل {price} تومان می باشد.',
       'topupPaidAlert' => '✅ پرداخت شما با موفقیت انجام شد و کیف پول شما شارژ شد.',
       'paidInvoiceBtn' => '✅ پرداخت شد',
+      'methodRemoved' => '⛔️ این روش پرداخت دیگه وجود نداره. از «💰 افزایش موجودی» یه روش دیگه انتخاب کن.',
       'topupInvoiceExpiredCaption' => '<b>فاکتور منقضی شد</b>
 
 مهلت پرداخت این فاکتور به پایان رسیده است.
@@ -1898,6 +1917,7 @@ return array (
 «ساخت فاکتور جدید» یک لینک و شمارهٔ فاکتور تازه نشان می‌دهد.',
       'cardRetrieveError' => '❌ خطای داخلی در بازیابی کارت بانکی رخ داد. لطفاً بعداً تلاش کنید.',
       'noActiveCard' => '❌ کارت بانکی فعالی برای این روش پرداخت یافت نشد. لطفاً بعداً تلاش کنید یا با پشتیبانی تماس بگیرید.',
+      'cardNotAvailable' => '⛔️ پرداخت کارت‌به‌کارت فعلاً برای حساب شما فعال نیست. لطفاً از یکی از روش‌های پرداخت دیگه استفاده کنید.',
       'cardInvoiceExpiredCaption' => '<b>فاکتور منقضی شد</b>
 
 مهلت واریز به شمارهٔ کارت این فاکتور تمام شده است.
@@ -2019,6 +2039,34 @@ return array (
 بعد از این مدت، فاکتور باطل می‌شود و باید فاکتور تازه‌ای بسازید.
 
 📌 پس از پرداخت موفق، چند لحظه صبر کنید تا پیام تأیید برسد؛ در غیر این صورت حساب شما شارژ نمی‌شود.
+
+جهت پرداخت از دکمه زیر استفاده کنید👇🏻',
+      // Tronado's own: the customer pays more than the invoice (Tronado's fee
+      // on top, unless the shop takes it on), so the caption names both
+      // numbers. Filled by strtr, like FrenzyEx's.
+      'tronadoInvoiceCreated' => '✅ فاکتور پرداخت ایجاد شد.
+
+🔢 شماره فاکتور : <code>{invoice}</code>
+💰 مبلغ شارژ کیف پول : <b>{price}</b> تومان
+💳 مبلغ تقریبی پرداخت (با کارمزد ترونادو) : <b>{payable}</b> تومان
+
+🕐 <b>مهلت پرداخت:</b> <b>{minutes} دقیقه</b>
+
+<blockquote>پرداخت توی همین تلگرام و از صفحه‌ی پرداخت ترونادو انجام می‌شه. بعد از اینکه ترونادو پرداختت رو تایید کرد، کیف پولت خودکار شارژ می‌شه و پیامش برات میاد.</blockquote>
+
+جهت پرداخت از دکمه زیر استفاده کنید👇🏻',
+      // HooshPay's own: it tells payments apart by the last digits of the
+      // amount, so the caption gives the exact figure to transfer, copyable.
+      // Filled by strtr, like Tronado's.
+      'hooshpayInvoiceCreated' => '✅ فاکتور پرداخت ایجاد شد.
+
+🔢 شماره فاکتور : <code>{invoice}</code>
+💰 مبلغ شارژ کیف پول : <b>{price}</b> تومان
+💳 مبلغ قابل پرداخت : <code>{payable}</code> تومان
+
+🕐 <b>مهلت پرداخت:</b> <b>{minutes} دقیقه</b>
+
+<blockquote>⚠️ دقیقاً همین «مبلغ قابل پرداخت» رو کارت‌به‌کارت کن؛ رقم‌های آخرش عمدیه و تایید خودکار با همونه. شماره‌ی کارت توی صفحه‌ی پرداخت هست. بعد از تایید، کیف پولت خودکار شارژ می‌شه و پیامش برات میاد.</blockquote>
 
 جهت پرداخت از دکمه زیر استفاده کنید👇🏻',
       'queueBusy' => 'تعداد افراد در صف درخواست درگاه پرداخت بشدت زیاد است 📊
@@ -4013,6 +4061,8 @@ n2',
         'usdtbep' => 'پرداخت USDT BEP20',
         'plisio' => 'پرداخت Plisio',
         'frenzyex' => 'پرداخت FrenzyEx',
+        'tronado' => 'پرداخت ترونادو',
+        'hooshpay' => 'پرداخت هوش‌پی',
         'payment_expire' => 'انقضای فاکتورها',
         'NoticationsService' => 'هشدار حجم و زمان سرویس‌ها',
         'activeconfig' => 'فعال‌سازی گروهی سرویس‌ها',
@@ -4064,9 +4114,6 @@ n2',
     ),
     'api' => 
     array (
-      'askAddress' => '📌 آدرس api را ارسال نمایید.
-
-آدرس فعلی: %s',
       'token' => 'توکن api شما : <code>%s</code>',
       'docsLink' => '📘 مستندات کامل API:
 %s
@@ -4218,8 +4265,6 @@ trojan://xyz',
     ),
     'gateway' => 
     array (
-      'tronadoStatus' => 'وضعیت  درگاه ترونادو',
-      'tronadoDesc' => 'در این بخش می توانید درگاه ترنادو را خاموش یا روشن کنید',
       'off' => 'خاموش گردید',
       'on' => 'روشن گردید',
       'intro' => '📌 از لیست زیر میتوانید درگاه ها را مدیریت کنید.
@@ -4261,11 +4306,40 @@ nowpayments.io
 
 <code>%s</code>
 
-این آدرس رو توی پنل FrenzyEx، بخش تنظیمات وبهوک (Webhook)، ثبت کنید تا پرداخت‌های موفق خودکار تایید بشن.
+ربات این آدرس رو خودش همراه هر فاکتور به FrenzyEx می‌فرسته، پس معمولاً لازم نیست جایی ثبتش کنید.
+اگه FrenzyEx قبولش نکنه، ربات توی گروه گزارش‌ها خبر می‌ده؛ اون موقع همین آدرس رو توی پنل FrenzyEx، بخش وبهوک (Webhook)، ثبت کنید.
 برای کپی، روی خود آدرس بزنید.',
-      'askMerchant' => '💳 مرچنت کد خود را دریافت و در این قسمت وارد کنید
-        
-مرچنت کد فعلی شما : %s',
+      'tronadoCopyCallbackBtn' => '📋 کپی آدرس کال‌بک (IPN)',
+      'tronadoCallbackUrl' => '🔗 آدرس کال‌بک (IPN) شما:
+
+<code>%s</code>
+
+<blockquote>1️⃣ کلید API، کلید امضای IPN و ثبت دامنه رو از پشتیبانی ترونادو (@TronadoSupp) بگیرید. تا دامنه‌ی این آدرس پیش اونا ثبت نشه، ترونادو خبر پرداخت رو نمی‌فرسته.
+2️⃣ کلید API، آدرس ولت TRX و کلید امضای IPN رو از دکمه‌های بالا وارد کنید.
+3️⃣ اگه «Dispute Callback» رو توی مینی‌اپ ترونادو (کسب‌وکار ← تنظیمات) روشن کنید، همین آدرس رو اونجا هم بذارید؛ اعتراض‌های پذیرفته‌شده براتون گزارش می‌شه.</blockquote>
+اگه خبر پرداختی نرسه، ربات هر ۳ دقیقه خودش وضعیت سفارش‌های باز رو از ترونادو می‌پرسه.',
+      'hooshpaySetup' => '🔗 آدرس کال‌بک (خودکار همراه هر فاکتور فرستاده می‌شه، لازم نیست جایی ثبتش کنید):
+<code>%s</code>
+
+<blockquote>1️⃣ توی اپلیکیشن هوش‌پی، بخش «توسعه»، کلید API (با hp_live_ شروع می‌شه) و کلید Secret رو بردارید.
+2️⃣ هر دو رو از دکمه‌های بالا وارد کنید. کلید Secret برای اینه که ربات مطمئن بشه خبر پرداخت واقعاً از هوش‌پی اومده.</blockquote>
+اگه خبر پرداختی نرسه، ربات هر ۳ دقیقه خودش وضعیت فاکتورهای باز رو از هوش‌پی می‌پرسه.
+
+💸 <b>کارمزد الان:</b> %s
+<blockquote>buyer: کارمزد روی مبلغ مشتری اضافه می‌شه و کل مبلغ به شما می‌رسه.
+seller: مشتری دقیقاً مبلغ فاکتور رو می‌پردازه و کارمزد از سهم شما کم می‌شه.
+split: کارمزد نصف‌نصف.
+خالی یا ۰: همون تنظیم حساب هوش‌پی‌تون.
+در هر حالت، کیف پول مشتری دقیقاً به اندازه‌ی فاکتور شارژ می‌شه.</blockquote>',
+      'hooshpayFeeModes' => array (
+        'buyer' => 'با مشتری (buyer)',
+        'seller' => 'با فروشگاه (seller)',
+        'split' => 'نصف‌نصف (split)',
+        'account' => 'طبق تنظیم حساب هوش‌پی',
+      ),
+      'tronadoWageNow' => '💸 الان <b>%s درصد</b> کارمزد ترونادو رو فروشگاه می‌ده و بقیه‌اش روی مبلغی که مشتری می‌پردازه اضافه می‌شه.
+<blockquote>۰ (پیش‌فرض): کل کارمزد با مشتریه و کیف پولش دقیقاً به اندازه‌ی فاکتور شارژ می‌شه.
+۱۰۰: مشتری تقریباً همون مبلغ فاکتور رو می‌پردازه و کارمزد از ترونی که به ولت شما می‌رسه کم می‌شه.</blockquote>',
       'askTronWallet' => '💳 آدرس ولت ترون trc20 خود را ارسال کنید
         
         ولت فعلی شما : %s',
@@ -5238,6 +5312,8 @@ nowpayments.io
         'getPanelType' => '📌  نوع پنل خود را انتخاب نمایید',
         'getProtocol' => '🔱 پروتکل خود را انتخاب کنید',
         'invalidProtocol' => '⛔️ پروتکل نامعتبر است پروتکل باید از گزینه های زیر باشد',
+        'pasarguardUnsupported' => '⚠️ این بخش مخصوص پنل مرزبانه و روی پنل پاسارگارد کار نمی‌کنه.
+<blockquote>پاسارگارد اینباندها رو با «گروه» به کاربر می‌ده، نه با لیست اینباند هر پروتکل؛ سرویس تموم‌شده رو خود پنل غیرفعال می‌کنه.</blockquote>',
       ),
       'addPanelName' => 'نام پنل را ارسال کنید
        
@@ -6536,6 +6612,16 @@ f,n.n2',
 ✍️ دلیل خطا : %s
 
 آیدی کابر : %s
+نام کاربری کاربر : @%s',
+      'errorHooshpayLink' => '⭕️ خطا در ساخت لینک هوش‌پی
+✍️ دلیل خطا : %s
+
+آیدی کاربر : %s
+نام کاربری کاربر : @%s',
+      'errorTronadoLink' => '⭕️ خطا در ساخت لینک ترونادو
+✍️ دلیل خطا : %s
+
+آیدی کاربر : %s
 نام کاربری کاربر : @%s',
       'errorZarinpalLink' => '⭕️ خطا در ساخت لینک زرین پال
 ✍️ دلیل خطا : %s
@@ -9302,6 +9388,12 @@ nowpayments.io
       'trxWalletLabel' => '⚡ آدرس کیف پول TRX',
       'usdtbepWalletLabel' => '💵 آدرس کیف پول تتر (BEP20)',
       'walletLabel' => '💼 آدرس ولت',
+      'tronadoWalletLabel' => '⚡ آدرس ولت TRX مقصد',
+      'tronadoIpnKeyLabel' => '🔐 کلید امضای IPN (IpnSigningKey)',
+      'tronadoWageLabel' => '💸 سهم فروشگاه از کارمزد (۰ تا ۱۰۰ درصد)',
+      'tronadoMinLabel' => '⬇️ کمترین مبلغی که ترونادو قبول می‌کنه (تومان، ۰ یعنی بدون محدودیت)',
+      'hooshpaySecretLabel' => '🔐 کلید Secret (امضای کال‌بک)',
+      'hooshpayFeeModeLabel' => '💸 کارمزد با کی باشه (buyer / seller / split)',
       'inheritedAs' => 'پیش‌فرض (%s)',
       'notSet' => 'تنظیم نشده',
       'resetBtn' => '🗑 حذف سفارشی‌سازی‌های این زبان',
@@ -9366,7 +9458,6 @@ nowpayments.io
       'webhookSecretLabel' => '🔐 کلید امضای وب‌هوک',
       'feeLabel' => '💸 کارمزد مشتری (تا ۱۰۰ درصد، بیشتر از ۱۰۰ مبلغ ثابت تومان)',
       'dailyLimitLabel' => '📅 سقف پرداخت روزانه (تومان، ۰ یعنی بی‌سقف)',
-      'payUrlLabel' => '🔗 آدرس درگاه',
       'cashbackLabel' => '🎁 درصد بازگشت وجه',
       'globalFieldPrefix' => '🌐 ',
       'globalFieldHint' => '🌐 یعنی این مقدار بین همهٔ زبان‌ها مشترکه (یک حساب پردازشگر برای کل ربات).',
@@ -9723,6 +9814,12 @@ nowpayments.io
 حداقل مبلغ باید 1 دلار معادل با {minprice} {currency} باشد.',
       'minUsdFloorText' => '1 دلار معادل {price} {currency}',
       'minBelowFloor' => '⚠️ حداقل نمی‌تونه کمتر از ۱ دلار (معادل {price} {currency}) باشه.',
+      // Tronado's floor is its own toman minimum, not a dollar
+      'tronadoFloorText' => 'کف خود ترونادو: {price} {currency}',
+      'askMinTronado' => '⬇️ حداقل مبلغ رو به <b>{currency}</b> بفرست.
+
+ترونادو خودش کمتر از {minprice} {currency} قبول نمی‌کنه، پس حداقل نمی‌تونه از این کمتر باشه.',
+      'minBelowTronadoFloor' => '⚠️ حداقل نمی‌تونه کمتر از کف خود ترونادو ({price} {currency}) باشه.',
       'minAboveMax' => '⚠️ حداقل نمی‌تونه از حداکثرِ فعلی ({max} {currency}) بیشتر باشه - وگرنه هیچ مبلغی قبول نمی‌شه. اول حداکثر رو بیشتر کن، یا عدد کمتری بفرست.',
       'maxBelowMin' => '⚠️ حداکثر نمی‌تونه از حداقلِ فعلی ({min} {currency}) کمتر باشه - وگرنه هیچ مبلغی قبول نمی‌شه. عدد بیشتری بفرست.',
       'editNotNumberBtn' => '✏️ ویرایش خطای «فقط عدد»',
@@ -9987,6 +10084,8 @@ nowpayments.io
     'wheelLuck' => '🎲 گردونه شانس',
     'zarinPal' => 'زرین پال',
     'frenzyEx' => 'درگاه ارزی ریالی FrenzyEx',
+    'tronadoPay' => 'درگاه ارزی ریالی ترونادو',
+    'hooshPay' => 'درگاه ارزی ریالی هوش‌پی',
     'cubePay' => 'CubePay',
     'abanGateway' => 'آبان گیت‌وی',
     'varizaPay' => 'واریزا (کارت به کارت خودکار)',
@@ -10079,7 +10178,6 @@ nowpayments.io
     'cashbackAqayePardakht' => '💰 کش بک آقای پرداخت',
     'cashbackCartToCart' => '💰 کش بک کارت به کارت',
     'cashbackIranPay1' => '💰 کش بک ارزی ریالی',
-    'cashbackIranPay2' => '💰 کش بک ارزی ریالی دوم',
     'cashbackIranPay3' => '💰 کش بک ارزی ریالی سوم',
     'cashbackNowPayment' => '💰 کش بک nowpayment',
     'cashbackPlisio' => '💰 کش بک plisio',
@@ -10271,7 +10369,6 @@ nowpayments.io
     'infoRefreshed' => '♻️ اطلاعات سرویس با موفقیت بروزرسانی شد',
     'infoUpdated' => 'اطلاعات بروزرسانی گردید',
     'iranPay1Label' => '📌 ارزی ریالی اول',
-    'iranPay2Label' => '📌 ارزی ریالی دوم',
     'iranPay3Label' => '📌ارزی ریالی سوم',
     'lastHourStats' => '⏱️ یک ساعت اخیر',
     'lastMonth' => '⛅️ ماه قبل',
@@ -10291,7 +10388,6 @@ nowpayments.io
     'maxAmountCartToCart' => '⬆️ حداکثر مبلغ کارت به کارت',
     'maxAmountCryptoOffline' => '⬆️ حداکثر مبلغ رمزارز آفلاین',
     'maxAmountIranPay1' => '⬆️ حداکثر مبلغ ارزی ریالی',
-    'maxAmountIranPay2' => '⬆️ حداکثر مبلغ ارزی ریالی دوم',
     'maxAmountIranPay3' => '⬆️ حداکثر مبلغ ارزی ریالی سوم',
     'maxAmountNowPayment' => '⬆️ حداکثر مبلغ nowpayment',
     'maxAmountPlisio' => '⬆️ حداکثر مبلغ plisio',
@@ -10305,7 +10401,6 @@ nowpayments.io
     'minAmountCartToCart' => '⬇️ حداقل مبلغ کارت به کارت',
     'minAmountCryptoOffline' => '⬇️ حداقل مبلغ رمزارز آفلاین',
     'minAmountIranPay1' => '⬇️ حداقل مبلغ ارزی ریالی',
-    'minAmountIranPay2' => '⬇️ حداقل مبلغ ارزی ریالی دوم',
     'minAmountIranPay3' => '⬇️ حداقل مبلغ ارزی ریالی سوم',
     'minAmountNowPayment' => '⬇️ حداقل مبلغ nowpayment',
     'minAmountPlisio' => '⬇️ حداقل مبلغ plisio',
@@ -10396,14 +10491,12 @@ nowpayments.io
     'setAffiliateBanner' => '🏞 تنظیم بنر زیرمجموعه گیری',
     'setAffiliatePercent' => '🧮 تنظیم درصد زیرمجموعه',
     'setApi' => 'تنظیم api',
-    'setApiAddress' => 'تنظیم آدرس api',
     'setAqayePardakhtMerchant' => 'تنظیم مرچنت آقای پرداخت',
     'setCardNumber' => '💳 تنظیم شماره کارت',
     'setEducationAqayePardakht' => '📚 تنظیم آموزش درگاه اقای پرداخت',
     'setEducationCartToCart' => '📚 تنظیم آموزش کارت به کارت',
     'setEducationCryptoOffline' => '📚 تنظیم آموزش  ارزی افلاین',
     'setEducationIranPay1' => '📚 تنظیم آموزش ارزی ریالی اول',
-    'setEducationIranPay2' => '📚 تنظیم آموزش ارزی ریالی  دوم',
     'setEducationIranPay3' => '📚 تنظیم آموزش ارزی ریالی سوم',
     'setEducationNowPayment' => '📚 تنظیم آموزش nowpayment',
     'setEducationPlisio' => '📚 تنظیم آموزش plisio',
@@ -10541,6 +10634,9 @@ nowpayments.io
     'bottextChangedLabel' => 'تغییر یافته',
     'bottextCountLabel' => 'متن',
     'paymentMethodVariza' => 'واریزا',
+    'paymentMethodFrenzyEx' => 'FrenzyEx',
+    'paymentMethodTronado' => 'ترونادو',
+    'paymentMethodHooshpay' => 'هوش‌پی',
     'svcPageTitle' => 'پیام‌ها و دکمه‌های سرویس',
     'svcPageLede' => 'بعد از خرید: دکمه‌های وضعیت سرویس و پیام‌های دریافت، نحوه‌ی تحویل کانفیگ، هشدارهای اتمام حجم و زمان و استیکر دکمه‌های بستن — برای هر زبان',
     'svcStatus' => 'دکمه‌های وضعیت سرویس',
@@ -10981,6 +11077,9 @@ nowpayments.io
     'gwCardLegacyHint' => 'پرداخت در پیوی، نمایش کارت بعد از اولین پرداخت، تأیید خودکار رسید',
     'gwCardTime' => 'تأیید خودکار رسید بعد از (دقیقه)',
     'gwCardTimeHint' => 'وقتی «تایید خودکار رسید» روشن است؛ خالی یا ۰ یعنی ۲۰ دقیقه. تا SMS Forward روشن است روشن نمی‌شود.',
+    'gwCardTrustMin' => '🛡 تعداد خرید/تمدید لازم برای کارت‌به‌کارت',
+    'gwCardTrustMinHint' => 'وقتی «🛡 فقط برای مشتری‌های قدیمی» روشن است: فقط مشتری‌ای که بیشتر از این تعداد خرید یا تمدید پرداخت‌شده داشته کارت‌به‌کارت را می‌بیند. خالی یعنی ۳.',
+    'gwCardTrustMinInvalid' => 'تعداد خرید/تمدید لازم باید یک عدد بین ۱ تا ۱۰۰۰ باشد.',
     'gwCardHelp' => 'آموزش کارت‌به‌کارت',
     'gwCardHelpHint' => 'خالی = آموزش مشترک همه‌ی زبان‌ها. عکس یا ویدیو از داخل ربات گذاشته می‌شود.',
     'gwCardHelpMedia' => 'این آموزش %s دارد و می‌ماند؛ اینجا فقط متنش عوض می‌شود.',
@@ -11129,6 +11228,8 @@ nowpayments.io
     'gwCardsHint' => 'هر خط یک کارت: «شماره | اسم صاحب کارت». خالی یعنی همان کارت‌های مشترک.',
     'gwFieldGlobal' => 'یک مقدار برای همه‌ی زبان‌ها',
     'gwFieldOwn' => 'خالی یا ۰ یعنی مقدار مشترک (%s)',
+    'gwCallbackUrl' => 'آدرس کال‌بک',
+    'gwCallbackUrlHint' => 'این آدرس رو توی پنل خود درگاه (یا به پشتیبانیش) بدید تا پرداخت‌ها خودکار تایید بشن',
     'gwRange' => 'بازه‌ی مبلغ دلخواه (%s)',
     'gwRangeHint' => 'کمترین و بیشترین مبلغی که کاربر می‌تواند خودش وارد کند؛ خالی یا ۰ یعنی پیش‌فرض درگاه',
     'gwMin' => 'حداقل',
@@ -12235,7 +12336,6 @@ nowpayments.io
     'resultOrderLabel' => 'شناسه سفارش',
     'resultAmountLabel' => 'مبلغ',
     'resultBackToBot' => 'بازگشت به ربات',
-    'lowAmount' => '❌ کاربر کمتر از مبلغ تعیین شده واریز کرده است.',
     'reportZarinpal' => '💵 پرداخت جدید
         
 آیدی عددی کاربر : %s
@@ -12264,14 +12364,6 @@ nowpayments.io
 👤 نام کاربری کاربر : @%s 
 موجودی کاربر : %s تومان
 کد پیگیری پرداخت : %s',
-    'reportTronado' => '💵 پرداخت جدید
-%s
-- 👤 نام کاربری کاربر : @%s
-- 🆔آیدی عددی کاربر : %s
-- 💸 مبلغ تراکنش %s
-- 🔗 <a href = "https://tronscan.org/#/transaction/%s">لینک پرداخت </a>
-- 📥 مبلغ واریز شده ترون. : %s
-- 💳 روش پرداخت :  ترونادو',
     'reportNowpayment' => '💵 پرداخت جدید
 - 👤 نام کاربری کاربر : @%s
 - ‏🆔آیدی عددی کاربر : %s
@@ -13407,6 +13499,69 @@ nowpayments.io
 💰 مبلغ: %s تومان
 🧾 فاکتور: <code>%s</code>
 🆔 request_id: <code>%s</code>',
+    'tronadoPaymentLog' => '💵 <b>پرداخت ترونادو دریافت شد</b>
+
+👤 آیدی کاربر: <code>%s</code>
+👤 یوزرنیم: %s
+💰 مبلغ شارژ: %s تومان
+💳 پرداختی مشتری (با کارمزد): %s تومان
+⚡ ترون دریافتی: <b>%s TRX</b>
+🧾 فاکتور: <code>%s</code>
+🔗 هش: <code>%s</code>',
+    'hooshpayPaymentLog' => '💵 <b>پرداخت هوش‌پی دریافت شد</b>
+
+👤 آیدی کاربر: <code>%s</code>
+👤 یوزرنیم: %s
+💰 مبلغ شارژ: %s تومان
+💳 پرداختی مشتری: %s تومان
+🧾 فاکتور: <code>%s</code>
+🆔 فاکتور هوش‌پی: <code>%s</code>
+🔖 کد پیگیری: <code>%s</code>',
+    'hooshpayMismatch' => '⚠️ <b>هوش‌پی: پرداخت تایید شد ولی با فاکتور جور درنمیاد</b>
+
+🧾 فاکتور: <code>%s</code>
+🆔 فاکتور هوش‌پی: <code>%s</code>
+✍️ اختلاف: %s
+<blockquote>ربات این پرداخت رو خودکار شارژ نکرد. اگه درسته، از «مدیریت کاربر» کیف پول مشتری رو دستی شارژ کنید.</blockquote>',
+    'hooshpayNotCredited' => '⚠️ <b>هوش‌پی: پرداخت تایید شد ولی سفارش شارژ نشد</b>
+
+🧾 فاکتور: <code>%s</code>
+📌 وضعیت سفارش در ربات: %s',
+    'hooshpayCreditFailed' => '❌ <b>هوش‌پی: پرداخت تایید شد ولی شارژ با خطا روبه‌رو شد</b>
+
+🧾 فاکتور: <code>%s</code>
+✍️ خطا: %s',
+    'tronadoShortPayment' => '⚠️ <b>ترونادو: مبلغ پرداخت‌شده کمتر از فاکتوره</b>
+
+🧾 فاکتور: <code>%s</code>
+👤 کاربر: <code>%s</code> (@%s)
+💰 مبلغ فاکتور: %s تومان
+⚡ ترون درخواستی: %s TRX
+⚡ ترون دریافتی: %s TRX
+🔗 هش: <code>%s</code>
+<blockquote>ربات این پرداخت رو خودکار شارژ نکرد. اگه درسته، از «مدیریت کاربر» به اندازه‌ی مبلغ واقعی کیف پولش رو شارژ کنید.</blockquote>',
+    'tronadoNotCredited' => '⚠️ <b>ترونادو: پرداخت تایید شد ولی سفارش شارژ نشد</b>
+
+🧾 فاکتور: <code>%s</code>
+📌 وضعیت سفارش در ربات: %s',
+    'tronadoCreditFailed' => '❌ <b>ترونادو: پرداخت تایید شد ولی شارژ با خطا روبه‌رو شد</b>
+
+🧾 فاکتور: <code>%s</code>
+✍️ خطا: %s',
+    'tronadoDispute' => '⚠️ <b>ترونادو: یک اعتراض پذیرفته شد</b>
+
+🧾 فاکتور: <code>%s</code>
+👤 کاربر: <code>%s</code> (@%s)
+📌 نوع اعتراض: %s
+🔁 نتیجه: %s
+💰 قبل: %s تومان (%s TRX)
+💰 بعد: %s تومان (%s TRX)
+📌 وضعیت سفارش در ربات: %s
+<blockquote>ربات موجودی کیف پول مشتری رو خودکار تغییر نمی‌ده. اگه لازمه، از «مدیریت کاربر» اصلاحش کنید.</blockquote>',
+    'tronadoDisputeOutcomes' => array (
+      'Annulled' => '❌ سفارش لغو شد (پولی به دست ترونادو نرسیده یا رسید تکراری بوده)',
+      'AmountAdjusted' => '✏️ مبلغ سفارش اصلاح شد',
+    ),
     'usdtbepNewPaymentLog' => '💵 <b>پرداخت تتر (BEP20) دریافت شد</b>
 
 👤 کاربر: %s (<code>%s</code>)

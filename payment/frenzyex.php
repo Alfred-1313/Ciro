@@ -6,6 +6,10 @@
 // the same guard function.php's own sms_forward_claim_order() already uses
 // for card-to-card, so a resent notification can never double-credit.
 ini_set('error_log', 'error_log');
+// FrenzyEx stops waiting for the answer after 5 seconds and closes the
+// connection. That must never stop this script halfway: once the order is
+// claimed below, the rest (building the service) has to run to the end.
+ignore_user_abort(true);
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../botapi.php';
 require_once __DIR__ . '/../Marzban.php';
@@ -102,6 +106,36 @@ if ($priceCurrency !== 'TMN' || $priceAmount === null || (float) $priceAmount !=
 
 $invoice_id = $Payment_report['id_order'];
 
+// FrenzyEx counts a reply slower than 5 seconds as a failed delivery, and a
+// purchase paid from here builds the service on the panel first, which can
+// take longer. So once the order is claimed, FrenzyEx gets its OK at once and
+// the work goes on after the connection is closed. Content-Length and no
+// compression let FrenzyEx know the answer is complete without waiting for
+// the script to end; under PHP-FPM fastcgi_finish_request() does the same.
+$fxReplyNow = function () {
+    if (function_exists('apache_setenv')) {
+        @apache_setenv('no-gzip', '1');
+    }
+    @ini_set('zlib.output_compression', '0');
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    http_response_code(200);
+    header('Content-Type: text/plain; charset=utf-8');
+    header('Content-Length: 2');
+    header('Connection: close');
+    echo 'OK';
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+        return;
+    }
+    if (function_exists('litespeed_finish_request')) {
+        litespeed_finish_request();
+        return;
+    }
+    flush();
+};
+
 // 4) claim before crediting - only the request that actually flips the row
 // goes on to call DirectPayment(), exactly the same idempotency shape
 // sms_forward_claim_order() already uses elsewhere in this codebase
@@ -125,6 +159,9 @@ if ($claim->rowCount() !== 1) {
     exit('OK');
 }
 
+// the order is ours to settle - FrenzyEx is answered now, not after
+$fxReplyNow();
+
 try {
     DirectPayment($invoice_id, "../images.jpg");
 } catch (\Throwable $e) {
@@ -132,8 +169,7 @@ try {
     // cannot finish it either. The admin has to, knowing exactly which order.
     $fxLog(sprintf('DirectPayment failed - order=%s: %s', $invoice_id, $e->getMessage()));
     $fxAlert(sprintf("❌ FrenzyEx: پرداخت تایید شد ولی شارژ با خطا روبه‌رو شد.\nسفارش: %s\nrequest_id: %s\nخطا: %s", $invoice_id, $requestId, htmlspecialchars($e->getMessage())));
-    http_response_code(200);
-    exit('OK');
+    exit; // FrenzyEx already has its OK
 }
 
 // optional cashback (FR-015), same shape as payment/zarinpal.php's own block
@@ -165,6 +201,4 @@ if (strlen((string) ($setting['Channel_Report'] ?? '')) > 0) {
         'parse_mode' => "HTML",
     ]);
 }
-
-http_response_code(200);
-echo 'OK';
+// FrenzyEx was answered right after the claim ($fxReplyNow)
