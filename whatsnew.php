@@ -1298,4 +1298,26 @@ return [
             . "Tronado takes nothing under 150,000 toman, so the bot no longer offers Tronado for smaller amounts (renewals, direct payments, what a purchase lacks) and quotes 150,000 as the minimum of a typed top-up.\n"
             . "📍 If Tronado changes it: 💎 Financial → 💱 Rial-to-crypto gateways → Tronado «Settings» → «⬇️ کمترین مبلغی که ترونادو قبول می‌کنه».</blockquote>",
     ],
+    [
+        'n' => 86,
+        'date' => '2026-11-08',
+        'fa' => "<blockquote>📅 <b>کارت‌به‌کارت برای عضوهای قدیمی، بر اساس تاریخ عضویت</b>\n"
+            . "کنار شرط «🛡 فقط برای مشتری‌های قدیمی» حالا می‌تونی یه تاریخ میلادی هم بذاری. هر کاربری که تا آخر اون روز عضو ربات شده، کارت‌به‌کارت رو می‌بینه؛ حتی اگه هنوز به تعداد خرید/تمدید لازم نرسیده. کاربرهای بعد از اون روز مثل قبل باید به تعداد خرید/تمدید برسن.\n"
+            . "مثال: تاریخ رو <code>2026-11-02</code> بذاری؛ هر کی تا آخر ۲ نوامبر (۱۱ آبان) عضو شده کارت‌به‌کارت داره، و کاربر جدید بعد از ۳ خرید یا تمدید پرداخت‌شده.\n"
+            . "دفعه‌ی اولی که این کاربرها دکمه‌های پرداخت رو ببینن، کارت‌به‌کارت خودکار براشون روشن می‌شه. اگه بعدش برای یه نفر خاموشش کنی، خاموش می‌مونه.\n"
+            . "🔴 پیش‌فرض: <b>بدون تاریخ</b>. فقط وقتی کار می‌کنه که «🛡 فقط برای مشتری‌های قدیمی» روشن باشه.\n"
+            . "📍 1️⃣ 🏬 تنظیمات فروشگاه ← 💎 مالی ← «⚙️ تنظیمات» ردیف کارت به کارت\n"
+            . "2️⃣ 🔧 تنظیمات فنی درگاه (این زبان) ← «🛡 فقط برای مشتری‌های قدیمی» باید ✅ باشه\n"
+            . "3️⃣ «📅 عضوهای قبل از تاریخ» رو بزن و تاریخ رو بفرست؛ برای برداشتنش «🗑 حذف تاریخ»\n"
+            . "🌐 پنل وب: «درگاه‌ها» ← کارت «کارت به کارت» ← «📅 عضوهای قبل از این تاریخ».</blockquote>",
+        'en' => "<blockquote>📅 <b>Card to card for long-time members, by join date</b>\n"
+            . "Next to «🛡 Only for returning customers» you can now set a Gregorian date. Anyone who joined the bot by the end of that day sees card to card, even before reaching the purchases/renewals needed. Users who joined later still need that number, as before.\n"
+            . "Example: set <code>2026-11-02</code>; everyone who joined by the end of 2 November has card to card, and a new user gets it after 3 paid purchases or renewals.\n"
+            . "The first time one of these users sees the payment buttons, card to card is switched on for them. If you then turn it off for someone, it stays off.\n"
+            . "🔴 Default: <b>no date</b>. It only works while «🛡 Only for returning customers» is on.\n"
+            . "📍 1️⃣ 🏬 Store settings → 💎 Financial → «⚙️ Settings» on the card-to-card row\n"
+            . "2️⃣ 🔧 Gateway technical settings (this language) → «🛡 فقط برای مشتری‌های قدیمی» must be ✅\n"
+            . "3️⃣ Tap «📅 عضوهای قبل از تاریخ» and send the date; to remove it, «🗑 حذف تاریخ»\n"
+            . "🌐 Web panel: «Gateways» → the card-to-card card → «📅 Members who joined by this day».</blockquote>",
+    ],
 ];
