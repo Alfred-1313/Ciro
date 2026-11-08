@@ -632,13 +632,13 @@ return [
             . "• روی سرورهایی که از قبل نصب بودن، فایل‌های ربات خودشون اسم Ciro می‌گیرن: پوشه ربات (<code>/var/www/html/ciro</code>)، تنظیمات اسکریپت (<code>/root/ciro</code>)، نسخه‌های پشتیبان (<code>/root/ciro-backups</code>)، کرون آپدیت و دستور. وبهوک، دیتابیس و تنظیمات دست نمی‌خورن؛ اگه Apache تغییر رو قبول نکنه، همه‌چیز همون‌طور که بود می‌مونه.\n"
             . "• دستور مدیریت فقط <code>ciro</code> است؛ دستور قبلی برداشته شد.\n"
             . "• نوع پنل «نمایندگی» حالا «نمایندگی Ciro» است و پنل‌هایی که قبلاً ساخته بودی خودکار منتقل می‌شن.\n"
-            . "• آدرس گیت‌هاب پروژه: <code>github.com/DenTeeR/Ciro</code></blockquote>",
+            . "• آدرس گیت‌هاب پروژه: <code>github.com/Alfred-1313/Ciro</code></blockquote>",
         'en' => "<blockquote>🏷 <b>Ciro everywhere</b>\n"
             . "The previous name is gone from the code, the install script and the GitHub page.\n"
             . "• On servers installed earlier, the bot's own files take the Ciro name: the bot folder (<code>/var/www/html/ciro</code>), the script's settings (<code>/root/ciro</code>), the backups (<code>/root/ciro-backups</code>), the update cron and the command. The webhook, the database and the settings are not touched; if Apache does not accept the change, everything stays as it was.\n"
             . "• The management command is <code>ciro</code> only; the previous one was removed.\n"
             . "• The «agent» panel type is now «Ciro agent», and panels you already added move over by themselves.\n"
-            . "• The project's GitHub address: <code>github.com/DenTeeR/Ciro</code></blockquote>",
+            . "• The project's GitHub address: <code>github.com/Alfred-1313/Ciro</code></blockquote>",
     ],
     [
         'n' => 48,
@@ -1158,6 +1158,30 @@ return [
     ],
     [
         'n' => 78,
+        'date' => '2026-11-08',
+        'fa' => "<blockquote>🛠 <b>رفع خطای FrenzyEx: «Call to undefined function jdate()»</b>\n"
+            . "<b>مشکل چی بود؟</b> وقتی مشتری با درگاه FrenzyEx سرویس می‌خرید یا تمدید می‌کرد، پرداخت تایید می‌شد ولی ربات وسط کار با این خطا متوقف می‌شد و پیام «❌ FrenzyEx: پرداخت تایید شد ولی شارژ با خطا روبه‌رو شد» توی گروه گزارش می‌اومد. علتش این بود که فایل تاریخ شمسی برای این درگاه بارگذاری نمی‌شد و ربات موقع نوشتن تاریخ گزارش خرید از کار می‌افتاد.\n"
+            . "<b>نتیجه‌ش چی بود؟</b> سرویس ساخته می‌شد ولی گزارش خرید برای ادمین نمی‌اومد، هدیهٔ شارژ و کش‌بک داده نمی‌شد، و در تمدید، سرویس توی ربات ممکن بود هنوز «منقضی» نشون داده بشه.\n"
+            . "<b>الان:</b> تاریخ شمسی همه‌جا خودکار بارگذاری می‌شه؛ برای FrenzyEx و هر درگاه، کرون یا بخش دیگه‌ای که همین مشکل رو می‌تونست داشته باشه. خرید و تمدید با FrenzyEx تا آخر انجام می‌شه.\n"
+            . "ℹ️ نیازی به تنظیم نیست. برای سفارش‌هایی که قبلاً این خطا رو دادن، سرویس و کیف پول اون مشتری رو یک بار چک کن.</blockquote>",
+        'en' => "<blockquote>🛠 <b>FrenzyEx error fixed: «Call to undefined function jdate()»</b>\n"
+            . "<b>What was wrong?</b> When a customer bought or renewed a service through FrenzyEx, the payment was confirmed but the bot stopped half way with this error, and «❌ FrenzyEx: payment confirmed but crediting failed» arrived in the report group. The Persian-calendar file was not loaded for this gateway, so the bot failed while writing the date into the purchase report.\n"
+            . "<b>What it caused:</b> the service was made, but the admin got no purchase report, the top-up gift and cashback were not given, and after a renewal the service could still show as expired in the bot.\n"
+            . "<b>Now:</b> the Persian calendar is loaded everywhere by itself - for FrenzyEx and for any gateway, cron or other part that could have hit the same problem. Purchases and renewals through FrenzyEx finish completely.\n"
+            . "ℹ️ Nothing to set up. For orders that already hit this error, check that customer's service and wallet once.</blockquote>",
+    ],
+    [
+        'n' => 79,
+        'date' => '2026-11-08',
+        'fa' => "<blockquote>📨 <b>پیام «✅ ربات آپدیت شد» دوباره میاد</b>\n"
+            . "بعد از آپدیت قبلی، فقط پیام نوار پیشرفت (۱۰۰٪) می‌اومد و پیام جدای «✅ ربات آپدیت شد» با لیست «تازه‌ها» نمی‌اومد. علتش این بود که اسکریپت سرور فایل تاریخ شمسی رو دوباره بارگذاری می‌کرد و همین باعث خطا می‌شد. حالا اون فایل هر چند بار هم بارگذاری بشه مشکلی پیش نمیاد.\n"
+            . "ℹ️ نیازی به کاری نیست. همین آپدیت، یادداشت همهٔ آپدیت‌هایی رو که ندیده بودی یک‌جا برات می‌فرسته.</blockquote>",
+        'en' => "<blockquote>📨 <b>The «✅ Bot updated» message is back</b>\n"
+            . "After the previous update only the progress bar (100%) appeared, without the separate «✅ Bot updated» message and its «what's new» list. The server script loaded the Persian-calendar file a second time and that stopped it. The file can now be loaded any number of times.\n"
+            . "ℹ️ Nothing to do. This update sends you the notes of every update you missed, all at once.</blockquote>",
+    ],
+    [
+        'n' => 80,
         'date' => '2026-11-07',
         'fa' => "<blockquote>⚡ <b>درگاه جدید: ترونادو (ارزی ریالی)</b>\n"
             . "یه درگاه پشتیبان دیگه کنار FrenzyEx: مشتری فاکتور رو به تومان می‌سازه، توی خودِ تلگرام از صفحه‌ی ترونادو پرداخت می‌کنه و تو ترون (TRX) می‌گیری. کیف پول مشتری بعد از تایید ترونادو خودکار شارژ می‌شه.\n"
@@ -1181,7 +1205,7 @@ return [
             . "🌐 Web panel: «Gateways» → the Tronado card.</blockquote>",
     ],
     [
-        'n' => 79,
+        'n' => 81,
         'date' => '2026-11-07',
         'fa' => "<blockquote>💱 <b>درگاه FrenzyEx طبق راهنمای جدیدش (نسخه ۴)</b>\n"
             . "📍 🏬 تنظیمات فروشگاه ← 💎 مالی ← 💱 درگاه‌های ارزی ریالی ← 📂 باز کردن ← FrenzyEx ← تنظیمات\n"
@@ -1195,7 +1219,7 @@ return [
             . "ℹ️ Nothing to set up; only the FrenzyEx API key and callback secret have to be entered.</blockquote>",
     ],
     [
-        'n' => 80,
+        'n' => 82,
         'date' => '2026-11-07',
         'fa' => "<blockquote>🗑 <b>ترونادوی قدیمی حذف شد</b>\n"
             . "درگاه «درگاه پرداخت ریالی سوم» (ترونادوی قدیمی ربات توی 🏧 درگاه‌های ریالی) کامل از ربات و پنل وب برداشته شد، همراه با تنظیماتش. از این به بعد برای ترونادو فقط درگاه جدید رو داری.\n"
@@ -1207,7 +1231,7 @@ return [
             . "ℹ️ Payments made through it before stay in the reports.</blockquote>",
     ],
     [
-        'n' => 81,
+        'n' => 83,
         'date' => '2026-11-08',
         'fa' => "<blockquote>🛡 <b>پنل پاسارگارد طبق آخرین نسخه‌اش (v5.6.0)</b>\n"
             . "📍 برای همهٔ لوکیشن‌هایی که نوع پنلشون «پاسارگارد» هست؛ چیزی برای تنظیم نیست.\n"
@@ -1225,7 +1249,7 @@ return [
             . "• <b>Fixes:</b> a service delete that succeeded but showed as failed, the per-node usage report that stayed empty, services with unlimited time, and \"set product inbound\" answering \"not found\" for a PasarGuard sample user.</blockquote>",
     ],
     [
-        'n' => 82,
+        'n' => 84,
         'date' => '2026-11-08',
         'fa' => "<blockquote>🧠 <b>درگاه جدید: هوش‌پی (ارزی ریالی)</b>\n"
             . "یه درگاه پشتیبان دیگه کنار FrenzyEx و ترونادو: مشتری کارت‌به‌کارت پرداخت می‌کنه، هوش‌پی با پیامک بانک همون لحظه تاییدش می‌کنه و کیف پول مشتری خودکار شارژ می‌شه. تسویه‌ی شما با تتره.\n"
@@ -1249,7 +1273,7 @@ return [
             . "🌐 Web panel: «Gateways» → the HooshPay card.</blockquote>",
     ],
     [
-        'n' => 83,
+        'n' => 85,
         'date' => '2026-11-08',
         'fa' => "<blockquote>🛡 <b>کارت‌به‌کارت فقط برای مشتری‌های قدیمی</b>\n"
             . "اگه روشنش کنی، فقط مشتری‌ای که بیشتر از ۳ خرید یا تمدید پرداخت‌شده داشته دکمه‌ی کارت‌به‌کارت رو می‌بینه؛ بقیه نمی‌بینن. به محض اینکه مشتری به این تعداد برسه، کارت‌به‌کارت خودکار براش روشن می‌شه. عدد ۳ قابل تغییره.\n"

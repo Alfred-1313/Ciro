@@ -2,6 +2,12 @@
 require_once 'vendor/autoload.php';
 require 'config.php';
 require 'vendor/autoload.php';
+// Jalali dates (jdate) are used all through this file - in the purchase and
+// renewal reports among others. Every entry point that loads this file gets
+// them from here, not only the ones that remembered to load jdf.php: the
+// FrenzyEx callback did not, and a paid purchase crashed on the admin's report
+// with «Call to undefined function jdate()».
+require_once __DIR__ . '/jdf.php';
 ini_set('error_log', 'error_log');
 
 use Endroid\QrCode\Builder\Builder;
@@ -4691,7 +4697,7 @@ if (!function_exists('bot_update_request_path')) {
         if (time() - (int) ($c['at'] ?? 0) < 600) {
             return !empty($c['v']) ? (string) $c['v'] : null;
         }
-        $ch = curl_init('https://raw.githubusercontent.com/DenTeeR/Ciro/master/version');
+        $ch = curl_init('https://raw.githubusercontent.com/Alfred-1313/Ciro/master/version');
         curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 4, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_FOLLOWLOCATION => true]);
         $body = curl_exec($ch);
         $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);

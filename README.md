@@ -19,7 +19,7 @@
 On a clean Ubuntu 20.04+ or Debian 11+ server, as root:
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/DenTeeR/Ciro/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/Alfred-1313/Ciro/master/install.sh)
 ```
 
 Have ready: a domain already pointed at the server, a bot token from [@BotFather](https://t.me/BotFather) and your numeric id from [@userinfobot](https://t.me/userinfobot).

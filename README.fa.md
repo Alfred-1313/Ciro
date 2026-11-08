@@ -23,7 +23,7 @@
 </div>
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/DenTeeR/Ciro/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/Alfred-1313/Ciro/master/install.sh)
 ```
 
 <div dir="rtl">
