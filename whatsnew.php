@@ -1170,4 +1170,14 @@ return [
             . "<b>Now:</b> the Persian calendar is loaded everywhere by itself - for FrenzyEx and for any gateway, cron or other part that could have hit the same problem. Purchases and renewals through FrenzyEx finish completely.\n"
             . "ℹ️ Nothing to set up. For orders that already hit this error, check that customer's service and wallet once.</blockquote>",
     ],
+    [
+        'n' => 79,
+        'date' => '2026-11-08',
+        'fa' => "<blockquote>📨 <b>پیام «✅ ربات آپدیت شد» دوباره میاد</b>\n"
+            . "بعد از آپدیت قبلی، فقط پیام نوار پیشرفت (۱۰۰٪) می‌اومد و پیام جدای «✅ ربات آپدیت شد» با لیست «تازه‌ها» نمی‌اومد. علتش این بود که اسکریپت سرور فایل تاریخ شمسی رو دوباره بارگذاری می‌کرد و همین باعث خطا می‌شد. حالا اون فایل هر چند بار هم بارگذاری بشه مشکلی پیش نمیاد.\n"
+            . "ℹ️ نیازی به کاری نیست. همین آپدیت، یادداشت همهٔ آپدیت‌هایی رو که ندیده بودی یک‌جا برات می‌فرسته.</blockquote>",
+        'en' => "<blockquote>📨 <b>The «✅ Bot updated» message is back</b>\n"
+            . "After the previous update only the progress bar (100%) appeared, without the separate «✅ Bot updated» message and its «what's new» list. The server script loaded the Persian-calendar file a second time and that stopped it. The file can now be loaded any number of times.\n"
+            . "ℹ️ Nothing to do. This update sends you the notes of every update you missed, all at once.</blockquote>",
+    ],
 ];
