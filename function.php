@@ -2,6 +2,12 @@
 require_once 'vendor/autoload.php';
 require 'config.php';
 require 'vendor/autoload.php';
+// Jalali dates (jdate) are used all through this file - in the purchase and
+// renewal reports among others. Every entry point that loads this file gets
+// them from here, not only the ones that remembered to load jdf.php: the
+// FrenzyEx callback did not, and a paid purchase crashed on the admin's report
+// with «Call to undefined function jdate()».
+require_once __DIR__ . '/jdf.php';
 ini_set('error_log', 'error_log');
 
 use Endroid\QrCode\Builder\Builder;

@@ -1156,4 +1156,18 @@ return [
             . "• <b>Service details:</b> some panel versions leave out a few fields (last online, last subscription update); no more warnings, and the service page shows correctly.\n"
             . "ℹ️ Nothing to set up; it all applies by itself.</blockquote>",
     ],
+    [
+        'n' => 78,
+        'date' => '2026-11-08',
+        'fa' => "<blockquote>🛠 <b>رفع خطای FrenzyEx: «Call to undefined function jdate()»</b>\n"
+            . "<b>مشکل چی بود؟</b> وقتی مشتری با درگاه FrenzyEx سرویس می‌خرید یا تمدید می‌کرد، پرداخت تایید می‌شد ولی ربات وسط کار با این خطا متوقف می‌شد و پیام «❌ FrenzyEx: پرداخت تایید شد ولی شارژ با خطا روبه‌رو شد» توی گروه گزارش می‌اومد. علتش این بود که فایل تاریخ شمسی برای این درگاه بارگذاری نمی‌شد و ربات موقع نوشتن تاریخ گزارش خرید از کار می‌افتاد.\n"
+            . "<b>نتیجه‌ش چی بود؟</b> سرویس ساخته می‌شد ولی گزارش خرید برای ادمین نمی‌اومد، هدیهٔ شارژ و کش‌بک داده نمی‌شد، و در تمدید، سرویس توی ربات ممکن بود هنوز «منقضی» نشون داده بشه.\n"
+            . "<b>الان:</b> تاریخ شمسی همه‌جا خودکار بارگذاری می‌شه؛ برای FrenzyEx و هر درگاه، کرون یا بخش دیگه‌ای که همین مشکل رو می‌تونست داشته باشه. خرید و تمدید با FrenzyEx تا آخر انجام می‌شه.\n"
+            . "ℹ️ نیازی به تنظیم نیست. برای سفارش‌هایی که قبلاً این خطا رو دادن، سرویس و کیف پول اون مشتری رو یک بار چک کن.</blockquote>",
+        'en' => "<blockquote>🛠 <b>FrenzyEx error fixed: «Call to undefined function jdate()»</b>\n"
+            . "<b>What was wrong?</b> When a customer bought or renewed a service through FrenzyEx, the payment was confirmed but the bot stopped half way with this error, and «❌ FrenzyEx: payment confirmed but crediting failed» arrived in the report group. The Persian-calendar file was not loaded for this gateway, so the bot failed while writing the date into the purchase report.\n"
+            . "<b>What it caused:</b> the service was made, but the admin got no purchase report, the top-up gift and cashback were not given, and after a renewal the service could still show as expired in the bot.\n"
+            . "<b>Now:</b> the Persian calendar is loaded everywhere by itself - for FrenzyEx and for any gateway, cron or other part that could have hit the same problem. Purchases and renewals through FrenzyEx finish completely.\n"
+            . "ℹ️ Nothing to set up. For orders that already hit this error, check that customer's service and wallet once.</blockquote>",
+    ],
 ];
