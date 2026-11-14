@@ -1,0 +1,35 @@
+name: Release
+
+# A version tag (1.0.4, 1.1.0, ...) pushed to GitHub becomes a Release with the
+# source code attached. Its notes come from .github/release-notes/<tag>.md when
+# that file exists; otherwise GitHub writes them from the commits.
+# Installs and updates do not use Releases - they take the master branch.
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists - nothing to do"
+            exit 0
+          fi
+          notes=".github/release-notes/${TAG}.md"
+          if [ -f "$notes" ]; then
+            gh release create "$TAG" --title "Ciro $TAG" --notes-file "$notes" --verify-tag
+          else
+            gh release create "$TAG" --title "Ciro $TAG" --generate-notes --verify-tag
+          fi
