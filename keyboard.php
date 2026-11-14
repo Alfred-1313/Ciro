@@ -2470,7 +2470,12 @@ function keyboard_list_text($lang, $groupFilter = null)
         if ($buttons) {
             $suffix .= ' 🔘';
         }
-        $style = ($custom || $buttons || $sticker !== '' || $react !== '') ? 'success' : '';
+        // 📰 sent as an article
+        $rich = function_exists('bt_rich_on') && bt_rich_on($key, $lang);
+        if ($rich) {
+            $suffix .= ' 📰';
+        }
+        $style = ($custom || $buttons || $sticker !== '' || $react !== '' || $rich) ? 'success' : '';
         return [$label . $suffix, $style];
     };
     // items tagged with a 'group' live in their own submenu instead of the

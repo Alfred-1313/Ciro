@@ -6081,10 +6081,19 @@ if (!function_exists('html_telegram_check')) {
     // quote inside a quote, and no bare «<» that is not a tag. null when it is
     // fine; otherwise one plain Persian sentence saying what is wrong and how
     // to fix it. A text that would fail here fails in front of the customer.
-    function html_telegram_check($html)
+    // $rich: the text goes out as an article (📰 حالت مقاله), whose HTML also
+    // has headings, paragraphs, lists, tables, line breaks and media blocks.
+    function html_telegram_check($html, $rich = false)
     {
         $html = (string) $html;
         $allowed = ['b', 'strong', 'i', 'em', 'u', 'ins', 's', 'strike', 'del', 'span', 'tg-spoiler', 'a', 'code', 'pre', 'blockquote', 'tg-emoji', 'tg-time'];
+        // tags that stand alone and are never closed
+        $void = [];
+        if ($rich) {
+            $allowed = array_merge($allowed, ['mark', 'sub', 'sup', 'tg-reference', 'tg-math', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'footer', 'ul', 'ol', 'li', 'aside', 'figure', 'figcaption', 'table', 'tr', 'th', 'td', 'caption', 'details', 'summary', 'tg-collage', 'tg-slideshow', 'tg-math-block', 'tg-button', 'tg-button-row', 'video', 'audio', 'tg-document']);
+            $void = ['br', 'hr', 'img', 'input', 'tg-map'];
+            $allowed = array_merge($allowed, $void);
+        }
         $stack = [];
         $len = strlen($html);
         $pos = 0;
@@ -6106,11 +6115,11 @@ if (!function_exists('html_telegram_check')) {
                 if ($top !== $name) {
                     return "⛔️ تگ‌ها به‌هم ریخته‌ان: اول باید <code>&lt;/{$top}&gt;</code> بسته بشه، بعد <code>&lt;/{$name}&gt;</code>.";
                 }
-            } elseif ($m[4] !== '/') {
+            } elseif ($m[4] !== '/' && !in_array($name, $void, true)) {
                 if ($name === 'blockquote' && in_array('blockquote', $stack, true)) {
                     return "⛔️ نقل‌قول نمی‌تونه داخل یه نقل‌قول دیگه باشه.";
                 }
-                if ($name === 'a' && !preg_match('~href\s*=~i', $m[3])) {
+                if ($name === 'a' && !preg_match('~href\s*=~i', $m[3]) && !($rich && preg_match('~name\s*=~i', $m[3]))) {
                     return "⛔️ لینک بدون آدرسه: <code>&lt;a href=\"آدرس\"&gt;متن&lt;/a&gt;</code>";
                 }
                 if ($name === 'tg-emoji' && !preg_match('~emoji-id\s*=~i', $m[3])) {
@@ -6192,6 +6201,340 @@ if (!function_exists('html_format_guide')) {
             $cut = "\n<i>✂️ متن خیلی بلنده؛ فقط اولش اینجا جا شد.</i>";
         }
         return $first . $head . '<pre>' . htmlspecialchars($src, ENT_QUOTES, 'UTF-8') . '</pre>' . $cut . ($rest !== '' ? "\n\n" . $rest : '');
+    }
+}
+if (!function_exists('bt_rich_keys')) {
+    // 📰 حالت مقاله: captions an admin chose to send as a Telegram rich message
+    // (Article) instead of a plain text message. Per language and off for every
+    // caption until switched on - stored with the other per-language values
+    // (feature_lang_settings, key "bt_rich") as a list of item keys.
+    function bt_rich_keys($lang, $fresh = false)
+    {
+        $m = feature_setting_map($fresh);
+        $v = $m['bt_rich'][$lang] ?? [];
+        if (is_string($v)) {
+            $v = json_decode($v, true);
+        }
+        return is_array($v) ? array_values(array_filter($v, 'is_string')) : [];
+    }
+    function bt_rich_on($key, $lang)
+    {
+        return in_array((string) $key, bt_rich_keys($lang), true);
+    }
+    function bt_rich_set($key, $lang, $on)
+    {
+        $keys = array_values(array_diff(bt_rich_keys($lang, true), [(string) $key]));
+        if ($on) {
+            $keys[] = (string) $key;
+        }
+        feature_setting_set('bt_rich', $lang, $keys);
+    }
+    // Only a caption that leaves as a text message of its own can be an
+    // article: not an Alert popup, a button label, a line glued into another
+    // caption, or the caption of a photo or a document.
+    function bt_rich_allowed($key)
+    {
+        $key = (string) $key;
+        // a whole message drawn over the confirm screen in place - only its
+        // sticker is off, it is a message like any other
+        if ($key === 'users.Balance.shortMessage') {
+            return true;
+        }
+        foreach (['bt_alert_keys', 'bt_btnitem_keys', 'bt_inline_block_keys', 'bt_media_message_keys', 'bt_nosticker_keys'] as $fn) {
+            if (function_exists($fn) && in_array($key, $fn(), true)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    // Which article caption a text that is about to go out was made from, for
+    // the language of whoever receives it - the same recognition the stickers
+    // use (the wording around the placeholders), limited to the captions that
+    // are articles. $hint is the key a caller named for a text with too little
+    // wording of its own (bottext_extras_key_hint()).
+    function bt_rich_key_for_text($text, $lang, $hint = null)
+    {
+        $keys = bt_rich_keys($lang);
+        if (empty($keys)) {
+            return null;
+        }
+        if ($hint !== null && $hint !== '') {
+            // the caller said which text this is: an article or not, no guessing
+            return in_array($hint, $keys, true) ? $hint : null;
+        }
+        static $segs = [];
+        $probe = ltrim((string) $text);
+        foreach ($keys as $k) {
+            if (!isset($segs[$lang][$k])) {
+                $val = function_exists('bottext_resolve_key') ? (string) bottext_resolve_key($k, $lang) : '';
+                $parts = preg_split('/%[-+0-9.]*[a-zA-Z]|\{[A-Za-z0-9_]+\}/', $val);
+                $s0 = mb_substr(trim($parts[0] ?? ''), 0, 40);
+                $s1 = mb_substr(trim($parts[1] ?? ''), 0, 40);
+                // too little wording to tell it apart from another message
+                $skip = trim($val) === '' || ($s0 === '' ? mb_strlen($s1) < 6 : (mb_strlen($s0) < 3 && $s1 === ''));
+                $segs[$lang][$k] = [$s0, $s1, $skip];
+            }
+            list($s0, $s1, $skip) = $segs[$lang][$k];
+            if ($skip) {
+                continue;
+            }
+            if (($s0 === '' || mb_strpos($probe, $s0) === 0) && ($s1 === '' || mb_strpos($probe, $s1) !== false)) {
+                return $k;
+            }
+        }
+        return null;
+    }
+    // What an article takes on top of a message's tags - shown under the
+    // edit prompt of a caption whose 📰 حالت مقاله is on.
+    function rich_format_guide()
+    {
+        return "📰 <b>این پیام به\u{200C}صورت مقاله فرستاده می\u{200C}شه</b>\n"
+            . "همه\u{200C}ی تگ\u{200C}های بالا کار می\u{200C}کنن، به\u{200C}علاوه\u{200C}ی اینا:\n"
+            . "• تیتر: <code>&lt;h2&gt;X&lt;/h2&gt;</code> (از h1 بزرگ تا h6 کوچیک)\n"
+            . "• پاراگراف: <code>&lt;p&gt;X&lt;/p&gt;</code>\n"
+            . "• خط جداکننده: <code>&lt;hr&gt;</code>\n"
+            . "• لیست: <code>&lt;ul&gt;&lt;li&gt;X&lt;/li&gt;&lt;li&gt;Y&lt;/li&gt;&lt;/ul&gt;</code> (شماره\u{200C}دار: ol)\n"
+            . "• جدول: <code>&lt;table bordered&gt;&lt;tr&gt;&lt;th&gt;X&lt;/th&gt;&lt;th&gt;Y&lt;/th&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;2&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</code>\n"
+            . "• باز و بسته\u{200C}شو: <code>&lt;details&gt;&lt;summary&gt;عنوان&lt;/summary&gt;X&lt;/details&gt;</code>\n"
+            . "• کادر کناری: <code>&lt;aside&gt;X&lt;/aside&gt;</code>\n"
+            . "• پانویس: <code>&lt;footer&gt;X&lt;/footer&gt;</code>\n"
+            . "• عکس از لینک: <code>&lt;img src=\"https://...\"&gt;</code>\n"
+            . "💡 تگ\u{200C}های بالا اختیاریه: متن معمولی هم مقاله می\u{200C}شه؛ هر خط خالی یه پاراگراف تازه\u{200C}ست.";
+    }
+    // A caption in Telegram's message HTML, as rich-message HTML. Rich HTML
+    // reads like a web page - a line break in the source is just a space - so
+    // the text is laid out the way the customer saw it before: a blank line
+    // starts a new paragraph (<p>), a single line break stays one (<br>), and
+    // quotes and code blocks become blocks of their own. A caption that already
+    // uses an article's own blocks (<p>, <h1>, lists, tables, ...) was written
+    // for this and goes as typed.
+    function rich_html_from_caption($html)
+    {
+        $html = trim(str_replace("\r\n", "\n", (string) $html));
+        // the classic way of writing a spoiler, as the tag rich HTML knows
+        $html = preg_replace('~<span\s+class\s*=\s*["\']tg-spoiler["\']\s*>(.*?)</span>~is', '<tg-spoiler>$1</tg-spoiler>', $html);
+        if (preg_match('~<(?:p|h[1-6]|ul|ol|table|details|hr|br|figure|aside|footer|img|video|audio|tg-document|tg-collage|tg-slideshow|tg-map|tg-math-block|tg-button-row|tg-button)\b~i', $html)) {
+            return $html;
+        }
+        $out = '';
+        $para = '';
+        $flush = function () use (&$out, &$para) {
+            $p = preg_replace('~^(?:\s*<br>)+|(?:<br>\s*)+$~', '', trim($para));
+            if (trim(strip_tags($p, '<tg-emoji>')) !== '') {
+                $out .= '<p>' . $p . '</p>';
+            }
+            $para = '';
+        };
+        // how many inline tags are still open: a blank line inside a <b>...</b>
+        // cannot end the paragraph without breaking the tag in two
+        $open = function ($s) {
+            preg_match_all('~<(/?)([a-zA-Z][a-zA-Z0-9-]*)\b[^>]*?(/?)>~', $s, $mm, PREG_SET_ORDER);
+            $n = 0;
+            foreach ($mm as $m) {
+                if ($m[3] === '/' || in_array(strtolower($m[2]), ['br', 'hr', 'img', 'input', 'tg-map'], true)) {
+                    continue;
+                }
+                $n += $m[1] === '/' ? -1 : 1;
+            }
+            return $n;
+        };
+        $parts = preg_split('~(<blockquote\b[^>]*>.*?</blockquote>|<pre\b[^>]*>.*?</pre>)~is', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+        foreach ($parts as $i => $part) {
+            if ($i % 2 === 1) {
+                if ($open($para) > 0) {
+                    // a quote inside a bold run: leave the text as it is
+                    $para .= $part;
+                    continue;
+                }
+                $flush();
+                if (preg_match('~^(<blockquote\b[^>]*>)(.*)(</blockquote>)$~is', $part, $bm)) {
+                    $part = $bm[1] . preg_replace('~\n~', '<br>', trim($bm[2])) . $bm[3];
+                }
+                $out .= $part;
+                continue;
+            }
+            foreach (preg_split('~\n[ \t]*\n\s*~', $part) as $j => $chunk) {
+                if ($j > 0) {
+                    if ($open($para) > 0) {
+                        $para .= '<br><br>';
+                    } else {
+                        $flush();
+                    }
+                }
+                $para .= str_replace("\n", '<br>', $chunk);
+            }
+        }
+        $flush();
+        return $out;
+    }
+    // Called by telegram() (botapi.php) before every request. A text message
+    // made from an article caption goes out as a rich message instead -
+    // sendRichMessage for a new one, editMessageText with rich_message for an
+    // edit - with the same buttons. Returns Telegram's answer when it went out
+    // that way, or null to let the request go out as it was: anything that is
+    // not an article, and an article Telegram refused (an old message that
+    // cannot become an article, say), which the customer then gets as plain
+    // text instead of not at all.
+    // $datas by reference: whatever goes out as an ordinary message instead -
+    // not an article, or an article Telegram refused - has the article-only
+    // tags (<h2>, <p>, lists, ...) turned into what a message can show first,
+    // since Telegram refuses a message with a tag it does not know outright.
+    function rich_route($method, &$datas, $token = null)
+    {
+        static $busy = false;
+        if ($busy || !is_array($datas)) {
+            return null;
+        }
+        $m = strtolower((string) $method);
+        $isText = $m === 'sendmessage' || $m === 'editmessagetext';
+        // the key a caller named is spent by the sticker lookup that ran first
+        $hint = null;
+        if ($isText) {
+            $hint = $GLOBALS['bt_rich_hint'] ?? null;
+            unset($GLOBALS['bt_rich_hint']);
+        }
+        // no article anywhere: nothing to look up (the common case)
+        if (!bt_rich_any()) {
+            return null;
+        }
+        if (!$isText) {
+            rich_classic_fix($datas);
+            return null;
+        }
+        $text = $datas['text'] ?? null;
+        if (!is_string($text) || trim($text) === '' || !isset($datas['chat_id']) || !empty($datas['entities'])) {
+            return null;
+        }
+        $parse = strtolower((string) ($datas['parse_mode'] ?? ''));
+        if ($parse !== '' && $parse !== 'html') {
+            return null;
+        }
+        $lang = function_exists('bottext_receiver_lang') ? bottext_receiver_lang($datas['chat_id']) : 'fa';
+        $key = bt_rich_key_for_text($text, $lang, $hint);
+        if ($key === null) {
+            rich_classic_fix($datas);
+            return null;
+        }
+        $html = $parse === 'html' ? $text : htmlspecialchars($text, ENT_NOQUOTES, 'UTF-8');
+        $rich = ['html' => rich_html_from_caption($html)];
+        if (preg_match('/\p{Arabic}/u', strip_tags($html))) {
+            $rich['is_rtl'] = true;
+        }
+        $out = $datas;
+        unset($out['text'], $out['parse_mode'], $out['entities'], $out['link_preview_options'], $out['disable_web_page_preview']);
+        if (array_key_exists('reply_markup', $out) && ($out['reply_markup'] === null || $out['reply_markup'] === '' || $out['reply_markup'] === false)) {
+            unset($out['reply_markup']);
+        }
+        $out['rich_message'] = json_encode($rich, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $busy = true;
+        try {
+            $res = telegram($m === 'sendmessage' ? 'sendRichMessage' : 'editMessageText', $out, $token);
+        } finally {
+            $busy = false;
+        }
+        if (is_array($res) && !empty($res['ok'])) {
+            return $res;
+        }
+        $desc = is_array($res) ? (string) ($res['description'] ?? '') : '';
+        // the same article again: nothing to change, and a plain-text retry
+        // would turn it back into an ordinary message
+        if (stripos($desc, 'not modified') !== false) {
+            return $res;
+        }
+        // an ordinary message that cannot become an article in place: the
+        // article goes out as a new message and the old one is taken away -
+        // the new one first, so a refusal there still leaves the old screen
+        if ($m === 'editmessagetext' && isset($out['message_id']) && rich_refusal_is_kind($desc)) {
+            $new = $out;
+            unset($new['message_id'], $new['inline_message_id']);
+            $busy = true;
+            try {
+                $sent = telegram('sendRichMessage', $new, $token);
+                if (is_array($sent) && !empty($sent['ok'])) {
+                    telegram('deleteMessage', ['chat_id' => $out['chat_id'], 'message_id' => $out['message_id']], $token);
+                }
+            } finally {
+                $busy = false;
+            }
+            if (is_array($sent) && !empty($sent['ok'])) {
+                return $sent;
+            }
+        }
+        error_log("rich message ({$key}) refused, sent as plain text: {$desc}");
+        rich_classic_fix($datas);
+        return null;
+    }
+    // A text or caption about to go out as an ordinary HTML message that still
+    // carries an article's own tags: made into something a message can show.
+    function rich_classic_fix(array &$datas)
+    {
+        if (strtolower((string) ($datas['parse_mode'] ?? '')) !== 'html') {
+            return;
+        }
+        foreach (['text', 'caption'] as $field) {
+            if (isset($datas[$field]) && is_string($datas[$field]) && preg_match('~</?(?:p|h[1-6]|br|hr|ul|ol|li|table|tr|th|td|caption|details|summary|aside|footer|figure|figcaption|mark|sub|sup|img|video|audio|tg-document|tg-collage|tg-slideshow|tg-map|tg-math|tg-math-block|tg-button|tg-button-row|tg-reference|input)\b~i', $datas[$field])) {
+                $datas[$field] = rich_html_to_classic($datas[$field]);
+            }
+        }
+    }
+    // An article's HTML as Telegram's message HTML: a heading becomes a bold
+    // line, paragraphs blank-line separated, a list item a • line, a table
+    // row a line of cells, a side note a quote; media and article buttons,
+    // which a message has no place for, are left out.
+    function rich_html_to_classic($html)
+    {
+        $h = (string) $html;
+        $h = preg_replace('~<(video|audio|tg-document|tg-button-row|tg-button|tg-collage|tg-slideshow)\b[^>]*>.*?</\1>~is', '', $h);
+        $h = preg_replace('~<(?:img|tg-map|video|audio|tg-document)\b[^>]*>~i', '', $h);
+        $h = preg_replace('~\s*<br\s*/?>\s*~i', "\n", $h);
+        $h = preg_replace('~<hr\b[^>]*>~i', "\n➖➖➖➖➖➖\n", $h);
+        $h = preg_replace('~<h[1-6]\b[^>]*>(.*?)</h[1-6]>~is', "\n<b>$1</b>\n", $h);
+        $h = preg_replace('~<summary\b[^>]*>(.*?)</summary>~is', "<b>$1</b>\n", $h);
+        $h = preg_replace('~<aside\b[^>]*>(.*?)</aside>~is', "\n<blockquote>$1</blockquote>\n", $h);
+        $h = preg_replace('~<footer\b[^>]*>(.*?)</footer>~is', "\n<i>$1</i>\n", $h);
+        $h = preg_replace('~<input\b[^>]*\bchecked\b[^>]*>~i', '☑️ ', $h);
+        $h = preg_replace('~<input\b[^>]*>~i', '⬜️ ', $h);
+        $h = preg_replace('~<li\b[^>]*>~i', '• ', $h);
+        $h = preg_replace('~</t[hd]>\s*<t[hd]\b[^>]*>~i', ' | ', $h);
+        $h = preg_replace('~</(?:li|tr|caption|summary|figcaption)>~i', "\n", $h);
+        $h = preg_replace('~</(?:p|ul|ol|table|details|figure)>~i', "\n\n", $h);
+        // a named anchor has no link to keep
+        $h = preg_replace('~<a\b(?![^>]*\bhref\s*=)[^>]*>(.*?)</a>~is', '$1', $h);
+        $h = preg_replace('~</?(?:p|ul|ol|table|tr|th|td|caption|details|figure|figcaption|mark|sub|sup|tg-math-block|tg-math|tg-reference)\b[^>]*>~i', '', $h);
+        $h = preg_replace("~[ \t]+\n~", "\n", $h);
+        $h = preg_replace("~\n{3,}~", "\n\n", $h);
+        return trim($h);
+    }
+    // A failed edit that says nothing about the message being gone, the chat,
+    // flood control or the text itself - what is left is the kind of message:
+    // an article edited into plain text or the other way round. Only then is a
+    // delete-and-send the answer; everything else keeps failing as before.
+    function rich_refusal_is_kind($desc)
+    {
+        $desc = strtolower((string) $desc);
+        if ($desc === '') {
+            return false;
+        }
+        foreach (['not modified', 'not found', 'too many requests', "can't parse", 'parse', 'message_id_invalid', 'blocked', 'deactivated', 'rights', 'button', 'reply markup', 'reply_markup', 'too long', 'empty', 'tag', 'entity', 'entities', 'html'] as $benign) {
+            if (strpos($desc, $benign) !== false) {
+                return false;
+            }
+        }
+        return true;
+    }
+    // true when any language has an article caption - a plain edit's refusal
+    // is only treated as "that message is an article" while one exists
+    function bt_rich_any()
+    {
+        foreach ((array) (feature_setting_map()['bt_rich'] ?? []) as $v) {
+            if (is_string($v)) {
+                $v = json_decode($v, true);
+            }
+            if (is_array($v) && !empty($v)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 if (!function_exists('topup_caption_text_from_update')) {
@@ -12809,6 +13152,14 @@ if (!function_exists('config_delivery_panel_payload')) {
         }
         if ($doText) {
             update("setting", "text_edit", empty($map) ? null : json_encode($map, JSON_UNESCAPED_UNICODE), null, null);
+            // 📰 حالت مقاله is part of how a text looks: a text reset ends it too
+            if (function_exists('bt_rich_keys')) {
+                $richKeys = bt_rich_keys($lang, true);
+                $richLeft = array_values(array_diff($richKeys, array_map('strval', $keys)));
+                if (count($richLeft) !== count($richKeys)) {
+                    feature_setting_set('bt_rich', $lang, $richLeft);
+                }
+            }
         }
         if ($doButtons) {
             update("setting", "button_edit", empty($be) ? null : json_encode($be, JSON_UNESCAPED_UNICODE), null, null);
@@ -22870,6 +23221,106 @@ if (!function_exists('bt_alert_keys')) {
             'users.Balance.expired',
             'users.channel.confirmed',
             'users.channel.notconfirmed',
+        ];
+    }
+}
+// moved here from admin.php: the web panel needs the same two lists
+if (!function_exists('bt_inline_block_keys')) {
+    // Registry items that are NOT a message of their own. Two kinds, one rule:
+    // there is no Telegram message here to hang a sticker or a reaction on, so
+    // those controls are hidden and the current text is quoted on the editing
+    // screen itself instead of behind a 👁 پیش‌نمایش button that would show a
+    // fragment stripped of the caption it lives in.
+    //
+    // Anything added here must genuinely be one of the two - a line/block
+    // concatenated into another caption, or an answerCallbackQuery alert. A
+    // real message that merely looks small still belongs outside this list.
+    function bt_inline_block_keys()
+    {
+        return [
+            // blocks concatenated into the payment-method caption
+            'users.Balance.topupDiscActiveBlock',
+            'users.Balance.topupDiscAutoBlock',
+            // the quote appended to the top-up confirmation message
+            'users.Balance.chargeSuccessDiscount',
+            // the exact-amount warning appended to the card-to-card invoice:
+            // the message the customer gets starts with the invoice caption, so
+            // this text is never at the front and never matches
+            'textbot.cardRandomAmountNotice',
+            // single lines rendered inside a blockquote on the amount screens.
+            // The two "All" variants belong with the other four - they were
+            // simply missed when this list was written.
+            'hardcoded.topupDiscPercentCaption',
+            'hardcoded.topupDiscFixedCaption',
+            'hardcoded.topupDiscGroupPercentCaption',
+            'hardcoded.topupDiscGroupFixedCaption',
+            'hardcoded.topupDiscAllPercentCaption',
+            'hardcoded.topupDiscAllFixedCaption',
+            // the same kind of line, inside the payment invoice
+            'hardcoded.topupDiscPkgPercent',
+            'hardcoded.topupDiscPkgFixed',
+            // ...and their 💰 حداقل مبلغ variants
+            'hardcoded.topupDiscMinPercentCaption',
+            'hardcoded.topupDiscMinFixedCaption',
+            'hardcoded.topupDiscMinPkgPercent',
+            'hardcoded.topupDiscMinPkgFixed',
+            'hardcoded.topupDiscMinSuffix',
+            // ...and the words for a discount limited to the ready-made packages
+            'hardcoded.topupDiscScopePackages',
+            'hardcoded.topupDiscScopeOne',
+            'hardcoded.topupDiscScopePackagesNote',
+            'hardcoded.topupDiscScopeOneNote',
+            // a line inside the service-status caption
+            'users.status.svcLocationMore',
+            // 🧩 حجم دلخواه: the pieces its caption is built from, its popups,
+            // and the button under a plan list
+            'users.cvol.entryBtn',
+            ...array_map(fn($k) => 'users.cvol.' . $k, cvol_fragment_keys()),
+            // button labels: there is no message to attach a sticker to, and
+            // their own colour row takes the place of one
+            'users.sell.backToPreviousBtn',
+            'users.sell.backToPanelListBtn',
+            'users.sell.backToPanelSelectBtn',
+            'bottext.btnCloseBuy',
+            'bottext.btnCloseTopup',
+            'bottext.btnCloseAccount',
+            'bottext.btnTopupAccount',
+            'bottext.btnCloseTest',
+            'bottext.btnCloseHelp',
+            // alerts: answerCallbackQuery carries text and nothing else
+            'users.status.svcUsageUnavailable',
+            'users.status.notConnectedCannotChangeStatus',
+            'users.extend.insufficientBalanceAlert',
+            'keyboard.infoRefreshed',
+            'users.subapps.noLink',
+            'users.Balance.waiting',
+            'users.Balance.sending',
+            'users.Balance.finished',
+            'users.Balance.Failed',
+            'users.Balance.refunded',
+            'users.Balance.expired',
+            'users.channel.confirmed',
+            'users.channel.notconfirmed',
+            // the texts of the page an app of 📲's list opens through
+            // (subapp.php) - not a message of the bot's either
+            ...subapp_page_keys(),
+        ];
+    }
+    // These ARE messages of their own, but they leave as a photo or a document
+    // caption. bottext_send_extras() - the only thing that ever fires a text
+    // sticker - hangs off sendmessage() and Editmessagetext() alone, so a
+    // sticker set here could never appear. They keep their text editor and
+    // their buttons; only the 🖼 استیکر row goes.
+    function bt_media_message_keys()
+    {
+        return [
+            // the service screen and the two subscription screens carry the
+            // subscription QR (photo) or the WireGuard .conf (document)
+            'users.status.infoFull',
+            'users.status.linksubCaption',
+            'users.status.subscriptionFile',
+            // (the two config-delivery messages ride along with the config QR
+            // too, but sendMessageService() sends their sticker itself)
         ];
     }
 }

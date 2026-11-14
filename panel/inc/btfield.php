@@ -26,6 +26,9 @@ function bt_web_field($key, array $v, $lang, array $t, array $isAlert, array $sw
                 <?php if (isset($switchable[$key])): ?>
                     <label class="lang-chip"><input type="hidden" name="on[<?= $k ?>]" value="0"><input type="checkbox" name="on[<?= $k ?>]" value="1"<?= bt_item_enabled($key, $lang) ? ' checked' : '' ?>> <?= htmlspecialchars(bt_item_switch_label($key)) ?></label>
                 <?php endif; ?>
+                <?php if (bt_rich_allowed($key)): ?>
+                    <label class="lang-chip" title="<?= htmlspecialchars($t['btRichHint']) ?>"><input type="hidden" name="rich[<?= $k ?>]" value="0"><input type="checkbox" name="rich[<?= $k ?>]" value="1"<?= bt_rich_on($key, $lang) ? ' checked' : '' ?>> <?= htmlspecialchars($t['btRich']) ?></label>
+                <?php endif; ?>
                 <?php if (isset($canReact[$key])): ?>
                     <label class="lang-chip" title="<?= htmlspecialchars($t['btReactionHint']) ?>"><?= $t['btReaction'] ?> <input type="text" name="react[<?= $k ?>]" value="<?= htmlspecialchars($v['reaction']) ?>" class="input" style="width:64px;padding:4px 8px;text-align:center" placeholder="—"></label>
                 <?php endif; ?>

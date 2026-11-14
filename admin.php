@@ -1312,7 +1312,7 @@ if (!function_exists('bottext_item_menu_payload')) {
             $stickerCustom = bt_media_lookup($bt_st, $key, $bt_lang) !== '';
             $reactCustom = bt_media_lookup($bt_re, $key, $bt_lang) !== '';
             $btnCustom = is_array($bt_be) && !empty($bt_be[$bt_lang][$key]);
-            return $textCustom || $stickerCustom || $reactCustom || $btnCustom;
+            return $textCustom || $stickerCustom || $reactCustom || $btnCustom || bt_rich_on($key, $bt_lang);
         };
         // reaction needs a triggering user message — only these keys have one
         $bt_can_react = in_array($bt_key, bt_react_keys(), true);
@@ -1421,6 +1421,9 @@ if (!function_exists('bottext_item_menu_payload')) {
             $info .= "🔌 " . bt_item_switch_label($bt_key) . ": "
                 . (bt_item_enabled($bt_key, $bt_lang) ? "روشن ✅" : "خاموش ❌") . "\n";
         }
+        if (bt_rich_allowed($bt_key) && bt_rich_on($bt_key, $bt_lang)) {
+            $info .= "📰 حالت مقاله: روشن ✅ (این پیام به\u{200C}صورت مقاله فرستاده می\u{200C}شه)\n";
+        }
         if (in_array($bt_key, notice_section_keys(), true)) {
             // the shipped text next to the tab's own, so a change can be read
             // against what it replaced
@@ -1476,6 +1479,15 @@ if (!function_exists('bottext_item_menu_payload')) {
             ['text' => '📋 کپشن پیش‌فرض', 'callback_data' => "btact|rsttext|{$bt_lang}|{$bt_key}"],
             ['text' => '✏️ ویرایش کپشن', 'callback_data' => "btact|text|{$bt_lang}|{$bt_key}", 'style' => $bt_custom ? 'success' : 'primary'],
         ];
+        // 📰 حالت مقاله: this caption as a Telegram article (rich message)
+        if (bt_rich_allowed($bt_key)) {
+            $bt_rich = bt_rich_on($bt_key, $bt_lang);
+            $kb['inline_keyboard'][] = [[
+                'text' => $bt_rich ? '📰 حالت مقاله: روشن ✅' : '📰 حالت مقاله: خاموش',
+                'callback_data' => "btrich|tog|{$bt_lang}|{$bt_key}",
+                'style' => $bt_rich ? 'success' : 'primary',
+            ]];
+        }
         if (!$bt_nosticker) {
             $bt_row = [['text' => '🖼 استیکر', 'callback_data' => "btact|sticker|{$bt_lang}|{$bt_key}", 'style' => 'primary']];
             if ($bt_can_react) {
@@ -1672,105 +1684,6 @@ if (!function_exists('bt_current_text_quote')) {
             $txt = mb_substr($txt, 0, $limit) . '…';
         }
         return topup_packages_caption_preview_quote($txt);
-    }
-}
-if (!function_exists('bt_inline_block_keys')) {
-    // Registry items that are NOT a message of their own. Two kinds, one rule:
-    // there is no Telegram message here to hang a sticker or a reaction on, so
-    // those controls are hidden and the current text is quoted on the editing
-    // screen itself instead of behind a 👁 پیش‌نمایش button that would show a
-    // fragment stripped of the caption it lives in.
-    //
-    // Anything added here must genuinely be one of the two - a line/block
-    // concatenated into another caption, or an answerCallbackQuery alert. A
-    // real message that merely looks small still belongs outside this list.
-    function bt_inline_block_keys()
-    {
-        return [
-            // blocks concatenated into the payment-method caption
-            'users.Balance.topupDiscActiveBlock',
-            'users.Balance.topupDiscAutoBlock',
-            // the quote appended to the top-up confirmation message
-            'users.Balance.chargeSuccessDiscount',
-            // the exact-amount warning appended to the card-to-card invoice:
-            // the message the customer gets starts with the invoice caption, so
-            // this text is never at the front and never matches
-            'textbot.cardRandomAmountNotice',
-            // single lines rendered inside a blockquote on the amount screens.
-            // The two "All" variants belong with the other four - they were
-            // simply missed when this list was written.
-            'hardcoded.topupDiscPercentCaption',
-            'hardcoded.topupDiscFixedCaption',
-            'hardcoded.topupDiscGroupPercentCaption',
-            'hardcoded.topupDiscGroupFixedCaption',
-            'hardcoded.topupDiscAllPercentCaption',
-            'hardcoded.topupDiscAllFixedCaption',
-            // the same kind of line, inside the payment invoice
-            'hardcoded.topupDiscPkgPercent',
-            'hardcoded.topupDiscPkgFixed',
-            // ...and their 💰 حداقل مبلغ variants
-            'hardcoded.topupDiscMinPercentCaption',
-            'hardcoded.topupDiscMinFixedCaption',
-            'hardcoded.topupDiscMinPkgPercent',
-            'hardcoded.topupDiscMinPkgFixed',
-            'hardcoded.topupDiscMinSuffix',
-            // ...and the words for a discount limited to the ready-made packages
-            'hardcoded.topupDiscScopePackages',
-            'hardcoded.topupDiscScopeOne',
-            'hardcoded.topupDiscScopePackagesNote',
-            'hardcoded.topupDiscScopeOneNote',
-            // a line inside the service-status caption
-            'users.status.svcLocationMore',
-            // 🧩 حجم دلخواه: the pieces its caption is built from, its popups,
-            // and the button under a plan list
-            'users.cvol.entryBtn',
-            ...array_map(fn($k) => 'users.cvol.' . $k, cvol_fragment_keys()),
-            // button labels: there is no message to attach a sticker to, and
-            // their own colour row takes the place of one
-            'users.sell.backToPreviousBtn',
-            'users.sell.backToPanelListBtn',
-            'users.sell.backToPanelSelectBtn',
-            'bottext.btnCloseBuy',
-            'bottext.btnCloseTopup',
-            'bottext.btnCloseAccount',
-            'bottext.btnTopupAccount',
-            'bottext.btnCloseTest',
-            'bottext.btnCloseHelp',
-            // alerts: answerCallbackQuery carries text and nothing else
-            'users.status.svcUsageUnavailable',
-            'users.status.notConnectedCannotChangeStatus',
-            'users.extend.insufficientBalanceAlert',
-            'keyboard.infoRefreshed',
-            'users.subapps.noLink',
-            'users.Balance.waiting',
-            'users.Balance.sending',
-            'users.Balance.finished',
-            'users.Balance.Failed',
-            'users.Balance.refunded',
-            'users.Balance.expired',
-            'users.channel.confirmed',
-            'users.channel.notconfirmed',
-            // the texts of the page an app of 📲's list opens through
-            // (subapp.php) - not a message of the bot's either
-            ...subapp_page_keys(),
-        ];
-    }
-    // These ARE messages of their own, but they leave as a photo or a document
-    // caption. bottext_send_extras() - the only thing that ever fires a text
-    // sticker - hangs off sendmessage() and Editmessagetext() alone, so a
-    // sticker set here could never appear. They keep their text editor and
-    // their buttons; only the 🖼 استیکر row goes.
-    function bt_media_message_keys()
-    {
-        return [
-            // the service screen and the two subscription screens carry the
-            // subscription QR (photo) or the WireGuard .conf (document)
-            'users.status.infoFull',
-            'users.status.linksubCaption',
-            'users.status.subscriptionFile',
-            // (the two config-delivery messages ride along with the config QR
-            // too, but sendMessageService() sends their sticker itself)
-        ];
     }
 }
 if (!function_exists('emoji_sticker_editor_payload')) {
@@ -9666,6 +9579,10 @@ if (preg_match('/^btact\|text\|([a-z]{2})\|(.+)$/', $datain, $btm) && $adminrule
     }
     // 📄 the text as it is saved now - tags and all - right under the first
     // line, in a copyable block: tap it, paste it back, change what you want
+    // 📰 an article takes more tags than a message: they are listed too
+    if (bt_rich_on($btm[2], $btm[1])) {
+        $bt_prompt .= "\n\n" . rich_format_guide();
+    }
     $bt_prompt = bt_edit_prompt_with_current($bt_prompt, $btm[2], $btm[1]);
     Editmessagetext($from_id, $message_id, $bt_prompt, $bt_kb, 'HTML');
     return;
@@ -24422,6 +24339,32 @@ if ($datain == "linkappsetting") {
         list($btm_text, $btm_kb) = bottext_item_menu_payload($bt_key, $bt_lang, $textbotlang);
         Editmessagetext($from_id, $message_id, $btm_text, $btm_kb, 'HTML');
     }
+} elseif (preg_match('/^btrich\|tog\|([a-z]{2})\|(.+)$/', $datain, $dataget) && $adminrulecheck['rule'] == "administrator") {
+    // 📰 حالت مقاله on/off for one caption in one language
+    $bt_lang = in_array($dataget[1], panel_langs(), true) ? $dataget[1] : 'fa';
+    $bt_key = $dataget[2];
+    if (bt_rich_allowed($bt_key)) {
+        $bt_rich_now = !bt_rich_on($bt_key, $bt_lang);
+        // the saved caption has to pass the check for its new kind: an
+        // article's own tags cannot go back to a plain message
+        $bt_rich_src = bottext_resolve_key($bt_key, $bt_lang);
+        $bt_rich_err = (!$bt_rich_now && strpos($bt_rich_src, '<') !== false) ? html_telegram_check($bt_rich_src, false) : null;
+        if ($bt_rich_err !== null) {
+            telegram('answerCallbackQuery', [
+                'callback_query_id' => $callback_query_id,
+                'text' => "⛔️ این کپشن تگ‌های مخصوص مقاله داره (مثل تیتر یا لیست). اول متنش رو ساده کن یا «📋 کپشن پیش‌فرض» رو بزن، بعد مقاله رو خاموش کن.",
+                'show_alert' => true,
+            ]);
+        } else {
+            bt_rich_set($bt_key, $bt_lang, $bt_rich_now);
+            telegram('answerCallbackQuery', [
+                'callback_query_id' => $callback_query_id,
+                'text' => $bt_rich_now ? "📰 از این به بعد این پیام به‌صورت مقاله فرستاده می‌شه." : "این پیام دوباره پیام معمولی شد.",
+            ]);
+        }
+        list($btm_text, $btm_kb) = bottext_item_menu_payload($bt_key, $bt_lang, $textbotlang);
+        Editmessagetext($from_id, $message_id, $btm_text, $btm_kb, 'HTML');
+    }
 } elseif (preg_match('/^bt_edit\|([^|]+)\|(.+)$/', $datain, $dataget)) {
     $bt_lang = $dataget[1];
     $bt_key = subapps_legacy_key($dataget[2]);
@@ -24536,7 +24479,7 @@ if ($datain == "linkappsetting") {
     }
     // 🛡 a broken HTML would fail in front of the customer: refused here, the
     // prompt stays open for the corrected text (popups are plain text)
-    $bt_html_err = (strpos($bt_new, '<') !== false && !in_array($bt_key, bt_alert_keys(), true)) ? html_telegram_check($bt_new) : null;
+    $bt_html_err = (strpos($bt_new, '<') !== false && !in_array($bt_key, bt_alert_keys(), true)) ? html_telegram_check($bt_new, bt_rich_on($bt_key, $bt_lang)) : null;
     if ($bt_html_err !== null) {
         sendmessage($from_id, $bt_html_err . "\n\n<i>متن ذخیره نشد؛ درستش کن و دوباره بفرست.</i>", $btpromptcancel, 'HTML');
         return;

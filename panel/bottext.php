@@ -79,7 +79,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $map[$lang] = [];
         }
         // 🛡 the same HTML check as the bot: a broken one is not saved
-        if ($value !== '' && $value !== $default && !isset($isAlert[$key]) && strpos($value, '<') !== false && ($htmlErr = html_telegram_check($value)) !== null) {
+        // 📰 an article takes its own tags too - as ticked in this same form
+        $asRich = isset($_POST['rich'][$key]) ? $_POST['rich'][$key] === '1' : bt_rich_on($key, $lang);
+        if ($value !== '' && $value !== $default && !isset($isAlert[$key]) && strpos($value, '<') !== false && ($htmlErr = html_telegram_check($value, $asRich)) !== null) {
             $err = trim(strip_tags(html_entity_decode($htmlErr, ENT_QUOTES, 'UTF-8'))) . ' (' . (is_array($labels[$key] ?? null) ? ($labels[$key]['label'] ?? $key) : $key) . ')';
             continue;
         }
@@ -156,6 +158,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+    // 📰 حالت مقاله, per message of this tab
+    foreach ((array) ($_POST['rich'] ?? []) as $key => $value) {
+        $key = (string) $key;
+        if (!isset($labels[$key]) || !bt_rich_allowed($key)) {
+            continue;
+        }
+        $on = $value === '1';
+        if ($on === bt_rich_on($key, $lang)) {
+            continue;
+        }
+        // an article's own tags cannot go out in a plain message
+        $src = $dig($map[$lang] ?? [], $key) ?? $dig($defaults, $key) ?? '';
+        if (!$on && strpos($src, '<') !== false && html_telegram_check($src, false) !== null) {
+            $err = sprintf($t['btRichTagsOff'], ui_plain($labels[$key]['label'] ?? $key));
+            continue;
+        }
+        bt_rich_set($key, $lang, $on);
+    }
     db_query($pdo, "UPDATE setting SET text_edit = ?", [empty($map) ? null : json_encode($map, JSON_UNESCAPED_UNICODE)]);
     flash($err === null ? 'success' : 'error', $err ?? $t['bottextSaved']);
     // saved from ./subapps.php: back to it
@@ -193,7 +213,7 @@ foreach ($labels as $key => $meta) {
     $current = $own ?? $default;
     $ownSticker = bt_media_lookup_own($stickers, $key, $lang);
     $ownReaction = bt_media_lookup_own($reactions, $key, $lang);
-    $changed = $own !== null || $ownSticker !== '' || $ownReaction !== '' || (isset($switchable[$key]) && bt_item_enabled($key, $lang) !== (bool) $switchable[$key]);
+    $changed = $own !== null || $ownSticker !== '' || $ownReaction !== '' || (isset($switchable[$key]) && bt_item_enabled($key, $lang) !== (bool) $switchable[$key]) || bt_rich_on($key, $lang);
     if ($onlyChanged && !$changed) {
         continue;
     }

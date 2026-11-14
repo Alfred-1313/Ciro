@@ -1386,4 +1386,38 @@ return [
             . "• An emoji set for «Custom amount» replaces its default one.\n"
             . "• On 🎨's first screen the purchase, my-services and top-up rows turn green when anything inside changed, buttons included.</blockquote>",
     ],
+    [
+        'n' => 89,
+        'date' => '2026-11-14',
+        'fa' => "<blockquote>📰 <b>حالت مقاله برای کپشن‌ها</b>\n"
+            . "هر پیام ربات رو می‌تونی به‌صورت «مقاله» بفرستی (همون پیام Rich یا Article تلگرام). مقاله مثل یه صفحه‌ی کوچیک خوندنی نشون داده می‌شه: تیتر، پاراگراف، لیست، جدول، خط جداکننده، کادر کناری و حتی عکس از لینک.\n"
+            . "پیش‌فرض برای همه خاموشه و برای هر زبان جداست.</blockquote>\n\n"
+            . "<blockquote>🛠 <b>چطوری روشنش کنم؟</b>\n"
+            . "۱. برو 🎨 شخصی‌سازی و پیامی که می‌خوای رو باز کن (مثلاً «👤 کپشن حساب کاربری»).\n"
+            . "۲. دکمه‌ی «📰 حالت مقاله: خاموش» رو بزن تا روشن بشه.\n"
+            . "۳. همین! متن فعلی خودش پاراگراف‌بندی می‌شه: هر خط خالی یه پاراگراف تازه‌ست.\n"
+            . "۴. اگه تیتر یا لیست می‌خوای، «✏️ ویرایش کپشن» رو بزن؛ زیر راهنما، تگ‌های مخصوص مقاله هم نوشته شده. مثلاً: <code>&lt;h2&gt;حساب من&lt;/h2&gt;</code>\n"
+            . "پیام‌هایی که مقاله‌ان توی لیست 🎨 با 📰 و رنگ سبز معلوم می‌شن.\n"
+            . "🌐 پنل وب: «متن‌های ربات» ← زیر هر پیام تیک «حالت مقاله».</blockquote>\n\n"
+            . "<blockquote>💡 <b>خوبه بدونی</b>\n"
+            . "• پاپ‌آپ‌ها، اسم دکمه‌ها، تکه‌هایی که وسط یه پیام دیگه می‌شینن و کپشن عکس‌ها مقاله نمی‌شن؛ برای همین این دکمه روشون نیست.\n"
+            . "• اگه تلگرام یه نفر مقاله رو قبول نکنه، همون پیام معمولی براش می‌ره (تیترها پررنگ می‌شن و لیست‌ها با •)، پس هیچ‌وقت پیامی گم نمی‌شه.\n"
+            . "• تا وقتی متن تگ‌های مخصوص مقاله داره، خاموش کردنش قبول نمی‌شه؛ اول متن رو ساده کن یا «📋 کپشن پیش‌فرض» رو بزن.\n"
+            . "• «🔁 ریست همه‌ی تنظیمات این پیام» حالت مقاله رو هم خاموش می‌کنه.</blockquote>",
+        'en' => "<blockquote>📰 <b>Article mode for captions</b>\n"
+            . "Any bot message can now go out as an article (a Telegram rich message): it reads like a small page, with headings, paragraphs, lists, tables, a divider, a side note and even a picture from a link.\n"
+            . "It is off for every message by default, and set per language.</blockquote>\n\n"
+            . "<blockquote>🛠 <b>How to turn it on</b>\n"
+            . "1. Open 🎨 شخصی‌سازی and the message you want (for example «👤 کپشن حساب کاربری»).\n"
+            . "2. Tap «📰 حالت مقاله: خاموش» to switch it on.\n"
+            . "3. That's it: the current text is laid out in paragraphs by itself (each blank line starts a new one).\n"
+            . "4. For headings or lists, tap «✏️ ویرایش کپشن»; the article tags are listed under the guide, e.g. <code>&lt;h2&gt;My account&lt;/h2&gt;</code>\n"
+            . "Article messages show 📰 and green in the 🎨 lists.\n"
+            . "🌐 Web panel: «Bot texts» → the «Article mode» tick under each message.</blockquote>\n\n"
+            . "<blockquote>💡 <b>Good to know</b>\n"
+            . "• Popups, button names, pieces placed inside another message and photo captions cannot be articles, so they have no such button.\n"
+            . "• If someone's Telegram does not take the article, they get the ordinary message instead (headings in bold, lists with •), so nothing is lost.\n"
+            . "• While the text uses article-only tags it cannot be switched off; make the text plain first or tap «📋 کپشن پیش‌فرض».\n"
+            . "• «🔁 ریست همه‌ی تنظیمات این پیام» turns article mode off too.</blockquote>",
+    ],
 ];

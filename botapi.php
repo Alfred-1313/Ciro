@@ -103,6 +103,13 @@ function telegram($method, $datas = [], $token = null)
     if ($token === null && function_exists('report_lang_tag')) {
         $datas = report_lang_tag($method, $datas);
     }
+    // 📰 حالت مقاله: a caption switched to an article leaves as a rich message
+    if (function_exists('rich_route')) {
+        $rich_res = rich_route($method, $datas, $token);
+        if ($rich_res !== null) {
+            return $rich_res;
+        }
+    }
     $token = $token === null ? $APIKEY : $token;
     $url = "https://api.telegram.org/bot" . $token . "/" . $method;
 
@@ -274,6 +281,8 @@ if (!function_exists('bottext_extras_for_text')) {
         }
         $bts_hit = null;
         $bts_hint = function_exists('bottext_extras_key_hint') ? bottext_extras_key_hint() : null;
+        // read once, here - 📰 rich_route() needs the same key right after
+        $GLOBALS['bt_rich_hint'] = $bts_hint;
         if ($bts_hint !== null && isset($bts_cache[$bts_hint])) {
             $bts_hit = $bts_cache[$bts_hint];
         } else {
@@ -441,6 +450,18 @@ function Editmessagetext($chat_id, $message_id, $text, $keyboard,$parse_mode = '
     if (strpos((string) ($emt_res['description'] ?? ''), 'no text in the message') !== false) {
         deletemessage($chat_id, $message_id);
         return sendmessage($chat_id, $text, $keyboard, $parse_mode);
+    }
+    // 📰 an article (rich message) on screen that this plain text should
+    // replace: Telegram may refuse to turn one kind into the other in place.
+    // Only while some caption is an article, and only for a refusal that is
+    // about the kind of message (rich_refusal_is_kind()) - so a bot without
+    // articles keeps the narrow behaviour above exactly.
+    if (function_exists('bt_rich_any') && bt_rich_any() && rich_refusal_is_kind($emt_res['description'] ?? '')) {
+        $emt_new = sendmessage($chat_id, $text, $keyboard, $parse_mode);
+        if (!empty($emt_new['ok'])) {
+            deletemessage($chat_id, $message_id);
+            return $emt_new;
+        }
     }
     return $emt_res;
 }
