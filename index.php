@@ -731,7 +731,7 @@ if ($text == "/start" || $datain == "start" || $text == "start") {
 // Persian like the rest of the panel. This branch is the only thing that reads
 // it back, so it has to accept either - matching only the reader's copy left
 // the panel's button dead for anyone who had not picked Persian.
-} elseif ($text == $textbotlang['users']['backbtn'] || $text == panel_texts()['users']['backbtn'] || $datain == "backuser") {
+} elseif ($text == $textbotlang['users']['backbtn'] || $text == panel_texts()['users']['backbtn'] || $datain == "backuser" || receipt_back_text_matches($text, $user['lang'] ?? 'fa')) {
     if ($datain == "backuser")
         deletemessage($from_id, $message_id);
     $message_id = sendmessage($from_id, $textbotlang['users']['back'], $keyboard, 'html');
@@ -4846,6 +4846,8 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     if ($parts[0] == "customvolume") {
         cvol_mark_invoice($randomString);
     }
+    // 🏷 the plan's price as it is now, before discounts (purchase_price_changed())
+    purchase_price_remember($randomString, (float) $info_product['price_product']);
     // 💳 paid directly: the whole price from a gateway, the wallet untouched (directpay.php)
     if ($dp_direct && intval($priceproduct) != 0) {
         if (!dpay_start_buy($user, $randomString, $priceproduct, $message_id, $username_ac)) {
@@ -5505,6 +5507,10 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     if (topup_custom_back_swapped($tp_lang, $tp_key)) {
         $tp_customBackRow = array_reverse($tp_customBackRow);
     }
+    // 🚫 a back button the admin hid stays off the screen
+    if (!topup_slot_visible($tp_lang, $tp_key, 'back')) {
+        $tp_customBackRow = array_values(array_filter($tp_customBackRow, fn($b) => ($b['callback_data'] ?? '') !== 'topup_back_methods'));
+    }
     $tp_kb['inline_keyboard'][] = $tp_customBackRow;
     step("topup_pkg:{$tp_key}", $from_id);
     Editmessagetext($from_id, $message_id, topup_caption_for($tp_lang, $tp_key, $textbotlang['users']['Balance']['pkgPromptTitle']) . topup_disc_caption_block($from_id, $tp_lang, $tp_key, $textbotlang) . sf_range_note_for($from_id, $tp_key), json_encode($tp_kb), 'HTML');
@@ -5568,6 +5574,10 @@ if ($user['step'] == "createusertest" || preg_match('/locationtest_(.*)/', $data
     ];
     if (topup_custom_back_swapped($tp_lang, $tp_key)) {
         $tp_customBackRow = array_reverse($tp_customBackRow);
+    }
+    // 🚫 a back button the admin hid stays off the screen
+    if (!topup_slot_visible($tp_lang, $tp_key, 'back')) {
+        $tp_customBackRow = array_values(array_filter($tp_customBackRow, fn($b) => ($b['callback_data'] ?? '') !== 'topup_back_methods'));
     }
     $tp_kb['inline_keyboard'][] = $tp_customBackRow;
     step("topup_pkg:{$tp_key}", $from_id);
@@ -5770,7 +5780,8 @@ if (preg_match('/^sendresidcart-(.*)/', $datain, $dataget)) {
         return;
     }
     deletemessage($from_id, $message_id);
-    sendmessage($from_id, $textbotlang['users']['Balance']['askReceiptImage'], $backuser, 'HTML');
+    // 🔙 as 🎨 has it (genbtn 'rr' on «رسید خود را بفرستید»)
+    sendmessage($from_id, $textbotlang['users']['Balance']['askReceiptImage'], receipt_back_keyboard($user['lang'] ?? 'fa', $setting), 'HTML');
     step('cart_to_cart_user', $from_id);
     update("user", "Processing_value", $dataget[1], "id", $from_id);
 } elseif (preg_match('/^cardreissue:(.+)$/', $datain, $crm)) {
@@ -5782,6 +5793,11 @@ if (preg_match('/^sendresidcart-(.*)/', $datain, $dataget)) {
     // this same message in place rather than sending a new one.
     $oldRow = select("Payment_report", "*", "id_order", $crm[1], "select");
     if (!is_array($oldRow) || (string) $oldRow['id_user'] !== (string) $from_id || $oldRow['payment_Status'] !== 'expire') {
+        return;
+    }
+    // 🏷 a purchase whose plan price the admin has changed since: not at the old price
+    if (purchase_price_gate($oldRow, $user)[1]) {
+        Editmessagetext($from_id, $message_id, sf_text('priceChanged', $user['lang'] ?? 'fa'), null, 'HTML');
         return;
     }
     // $oldRow['price'] is already the FINAL amount from the original invoice
@@ -6001,6 +6017,11 @@ if (preg_match('/^sendresidcart-(.*)/', $datain, $dataget)) {
     }
     $oldRow = select("Payment_report", "*", "id_order", $grm[2], "select");
     if (!is_array($oldRow) || (string) $oldRow['id_user'] !== (string) $from_id || $oldRow['payment_Status'] !== 'expire') {
+        return;
+    }
+    // 🏷 a purchase whose plan price the admin has changed since: not at the old price
+    if (purchase_price_gate($oldRow, $user)[1]) {
+        Editmessagetext($from_id, $message_id, sf_text('priceChanged', $user['lang'] ?? 'fa'), null, 'HTML');
         return;
     }
     Editmessagetext($from_id, $message_id, topup_linkmsg_for($user['lang'] ?? 'fa', $gr_key, $textbotlang['users']['Balance']['linkpayments']), null, 'HTML');

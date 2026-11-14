@@ -934,6 +934,72 @@ function afterpay_schema()
         }
     }
 }
+// 🏷 A purchase remembers the plan's own price when it was made
+// (invoice.base_price, before the customer's discounts). Paying for it later -
+// a new invoice for an expired one («ساخت فاکتور جدید»), or «💰 افزایش موجودی» /
+// «💳 پرداخت مستقیم» on an old «موجودی کافی نیست» message - is refused once the
+// admin has changed that price since, so an old price cannot be kept forever.
+// A purchase made before this existed has no snapshot and is not checked.
+function purchase_price_schema()
+{
+    static $done = false;
+    if (!$done) {
+        $done = true;
+        try {
+            addFieldToTable('invoice', 'base_price', null, 'VARCHAR(40) NULL');
+        } catch (\Throwable $e) {
+            error_log('purchase_price_schema: ' . $e->getMessage());
+        }
+    }
+}
+function purchase_price_remember($idInvoice, $basePrice)
+{
+    global $pdo;
+    purchase_price_schema();
+    $pdo->prepare("UPDATE invoice SET base_price = ? WHERE id_invoice = ?")->execute([(string) (0 + $basePrice), (string) $idInvoice]);
+    clearSelectCache('invoice');
+}
+// the plan's price for this customer now, before discounts; null = no longer sold
+function purchase_price_now(array $inv, array $userRow)
+{
+    global $pdo;
+    $panel = select("marzban_panel", "*", "name_panel", (string) ($inv['Service_location'] ?? ''), "select");
+    if (!is_array($panel)) {
+        return null;
+    }
+    if ((string) ($inv['cvol'] ?? '') === '1' && function_exists('cvol_quote_for')) {
+        $q = cvol_quote_for($panel, $userRow, (float) $inv['Volume'], (int) $inv['Service_time']);
+        return is_array($q) ? (float) $q['price'] : null;
+    }
+    $st = $pdo->prepare("SELECT price_product FROM product WHERE name_product = ? AND (Location = ? OR Location = '/all') AND (FIND_IN_SET(?, lang) OR lang = 'all' OR lang IS NULL OR lang = '') LIMIT 1");
+    $st->execute([(string) $inv['name_product'], (string) $inv['Service_location'], (string) ($userRow['lang'] ?? 'fa')]);
+    $p = $st->fetchColumn();
+    return $p === false ? null : (float) $p;
+}
+// true: this unpaid purchase may not be paid for at its old price any more
+function purchase_price_changed(array $inv, array $userRow)
+{
+    $snap = trim((string) ($inv['base_price'] ?? ''));
+    if ($snap === '' || !is_numeric($snap)) {
+        return false;
+    }
+    $now = purchase_price_now($inv, $userRow);
+    return $now === null || abs($now - (float) $snap) >= 1;
+}
+// For a payment row of a purchase («getconfigafterpay|username»): the purchase,
+// or null when the row is not one. [invoice row|null, refused: bool]
+function purchase_price_gate(array $paymentRow, array $userRow)
+{
+    $idInv = (string) ($paymentRow['id_invoice'] ?? '');
+    if (strpos($idInv, 'getconfigafterpay|') !== 0) {
+        return [null, false];
+    }
+    $inv = afterpay_invoice_for(substr($idInv, strlen('getconfigafterpay|')), $userRow['id']);
+    if (!is_array($inv) || strtolower((string) $inv['Status']) !== 'unpaid') {
+        return [$inv, false];
+    }
+    return [$inv, purchase_price_changed($inv, $userRow)];
+}
 // The invoice a payment of «getconfigafterpay|username» is for: this customer's,
 // the unpaid one first and the newest of them - not merely the first row that
 // carries the name.
@@ -3151,6 +3217,144 @@ if (!function_exists('card_invoice_copy_perrow')) {
         return ($n >= 1 && $n <= 3) ? $n : 1;
     }
 }
+if (!function_exists('bt_buyflow_extra_custom')) {
+    // 🎨's first screen: is anything of 🛒 changed that is not one of its listed
+    // items? The normal purchase's confirm row ('cf') and the panel / category /
+    // product button looks (رنگ، نام، ایموجی، چیدمان، مخفی)
+    function bt_buyflow_extra_custom($lang, array $be)
+    {
+        if (!empty($be[$lang]['users.sell.confirmButtons'])) {
+            return true;
+        }
+        if (function_exists('help_layout_section')) {
+            foreach (['panel', 'category', 'product'] as $kind) {
+                $sec = help_layout_section($lang, $kind);
+                if ($sec['order'] || $sec['width'] || $sec['emoji'] || $sec['emojiIcon'] || $sec['emojiSimple'] || $sec['color'] || $sec['rename'] || $sec['hidden']) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    // ...and of 💰: the gateways' captions and buttons, the invoice buttons
+    function bt_topup_extra_custom($lang)
+    {
+        foreach (['topup_btnstyle_map', 'card_invoice_btnstyle_map', 'topup_captions_map', 'topup_custom_captions_map'] as $fn) {
+            if (function_exists($fn)) {
+                $m = $fn();
+                if (is_array($m) && !empty($m[$lang])) {
+                    return true;
+                }
+            }
+        }
+        // the per-language caption stores of the gateways (setting columns)
+        $setting = select("setting", "*", null, null, "select");
+        foreach (['card_invoice_caption', 'card_invoice_expired_caption', 'plisio_invoice_caption', 'plisio_invoice_expired_caption', 'topup_range_captions', 'topup_notnumber_captions', 'topup_notseen_captions', 'topup_linkmsgs'] as $col) {
+            $m = json_decode((string) ($setting[$col] ?? ''), true);
+            if (is_array($m) && !empty($m[$lang])) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+if (!function_exists('receipt_back_keyboard')) {
+    // 🔙 under «رسید خود را بفرستید»: its own name, emoji, colour and whether
+    // it is there at all (genbtn 'rr'); a glass button when the shop uses them,
+    // otherwise a reply-keyboard one - whose renamed text the back handler also
+    // recognises (receipt_back_text_matches())
+    function receipt_back_button($lang)
+    {
+        $def = genbtn_defs('rr', lang_tab_texts($lang))[0];
+        $ov = genbtn_override($lang, 'users.Balance.askReceiptImage', 0);
+        return genbtn_is_hidden($def, $ov) ? null : genbtn_render($def, $ov, 'backuser');
+    }
+    function receipt_back_keyboard($lang, $setting = null)
+    {
+        $b = receipt_back_button($lang);
+        if ($b === null) {
+            return json_encode(['remove_keyboard' => true]);
+        }
+        if (function_exists('glass_on') && glass_on($lang, $setting)) {
+            return json_encode(['inline_keyboard' => [[$b]]]);
+        }
+        unset($b['callback_data']);
+        return json_encode(['keyboard' => [[$b]], 'resize_keyboard' => true]);
+    }
+    function receipt_back_text_matches($text, $lang)
+    {
+        $b = receipt_back_button($lang);
+        return $b !== null && trim((string) $text) !== '' && trim((string) $text) === trim((string) $b['text']);
+    }
+}
+if (!function_exists('card_invoice_unit_layout')) {
+    // 📐 the whole invoice keyboard: «کپی مبلغ» ('amt'), each «کپی شماره کارت»
+    // ('c0', 'c1', ... in the cards' display order) and «پرداخت کردم» ('paid'),
+    // in the admin's order, each full width or half (two halves share a row).
+    // Kept in the same reserved '_layout' slot ('units', 'uw'). Until the admin
+    // arranges it, the invoice keeps its old shape (copy rows per perRow).
+    function card_invoice_units($total)
+    {
+        $u = ['amt'];
+        for ($i = 0; $i < $total; $i++) {
+            $u[] = 'c' . $i;
+        }
+        $u[] = 'paid';
+        return $u;
+    }
+    function card_invoice_unit_layout($lang, $total)
+    {
+        $lay = card_invoice_btnstyle_for($lang, '_layout');
+        $units = card_invoice_units($total);
+        $stored = array_map('strval', is_array($lay['units'] ?? null) ? $lay['units'] : []);
+        $order = help_layout_apply_order($units, $stored);
+        $perRow = card_invoice_copy_perrow($lang);
+        $width = [];
+        foreach ($units as $u) {
+            $w = $lay['uw'][$u] ?? null;
+            $width[$u] = in_array($w, ['half', 'full'], true) ? $w : (($u[0] === 'c' && $perRow >= 2) ? 'half' : 'full');
+        }
+        return ['order' => $order, 'width' => $width, 'custom' => !empty($stored) || !empty($lay['uw'])];
+    }
+    // the rows the invoice is sent with: the admin's layout, or the old shape
+    function card_invoice_keyboard_rows($lang, array $amountBtn, array $copyBtns, array $receiptBtn)
+    {
+        $lay = card_invoice_unit_layout($lang, count($copyBtns));
+        if (!$lay['custom']) {
+            return array_merge([[$amountBtn]], card_invoice_copy_rows($lang, $copyBtns), [[$receiptBtn]]);
+        }
+        $byUnit = ['amt' => $amountBtn, 'paid' => $receiptBtn];
+        foreach (array_values($copyBtns) as $i => $b) {
+            $byUnit['c' . $i] = $b;
+        }
+        return help_layout_chunk_rows($lay['order'], $byUnit, $lay['width']);
+    }
+    function card_invoice_unit_swap($lang, $a, $b)
+    {
+        $total = count(card_invoice_ordered_cards($lang));
+        $order = card_invoice_unit_layout($lang, $total)['order'];
+        $ia = array_search((string) $a, $order, true);
+        $ib = array_search((string) $b, $order, true);
+        if ($ia === false || $ib === false || $ia === $ib) {
+            return;
+        }
+        [$order[$ia], $order[$ib]] = [$order[$ib], $order[$ia]];
+        $lay = card_invoice_btnstyle_for($lang, '_layout');
+        $lay['units'] = array_values($order);
+        card_invoice_btnstyle_set($lang, '_layout', $lay);
+    }
+    function card_invoice_unit_width_toggle($lang, $unit)
+    {
+        $total = count(card_invoice_ordered_cards($lang));
+        $cur = card_invoice_unit_layout($lang, $total)['width'][$unit] ?? 'full';
+        $lay = card_invoice_btnstyle_for($lang, '_layout');
+        $lay['uw'][$unit] = $cur === 'half' ? 'full' : 'half';
+        if (empty($lay['units'])) {
+            $lay['units'] = card_invoice_unit_layout($lang, $total)['order'];
+        }
+        card_invoice_btnstyle_set($lang, '_layout', $lay);
+    }
+}
 if (!function_exists('card_invoice_copy_rows')) {
     // Chunks the copy buttons into keyboard rows per the admin's 📐 چیدمان
     function card_invoice_copy_rows($lang, array $btns)
@@ -3288,6 +3492,17 @@ if (!function_exists('card_invoice_btnstyle_set')) {
         }
         if (isset($style['order']) && is_array($style['order'])) {
             $clean['order'] = array_values(array_map('intval', $style['order']));
+        }
+        // 📐 the whole keyboard's order and widths (card_invoice_unit_layout())
+        if (isset($style['units']) && is_array($style['units'])) {
+            $clean['units'] = array_values(array_filter(array_map('strval', $style['units']), fn($u) => preg_match('/^(amt|paid|c\d+)$/', $u)));
+        }
+        if (isset($style['uw']) && is_array($style['uw'])) {
+            foreach ($style['uw'] as $u => $w) {
+                if (preg_match('/^(amt|paid|c\d+)$/', (string) $u) && in_array($w, ['half', 'full'], true)) {
+                    $clean['uw'][(string) $u] = $w;
+                }
+            }
         }
         if (!isset($m[$lang]) || !is_array($m[$lang])) {
             $m[$lang] = [];
@@ -4374,6 +4589,10 @@ if (!function_exists('topup_styled_button')) {
                 $emoji = $fallback[0];
                 $baseText = $fallback[1];
             }
+        } else {
+            // an emoji of its own (plain or premium) takes the place of the one
+            // the name starts with - it was added next to it («😀 ✏️ مبلغ دلخواه»)
+            $baseText = topup_extract_leading_emoji($baseText)[1];
         }
         $pos = ($style['pos'] ?? 'right') === 'left' ? 'left' : 'right';
         $text = $baseText;
@@ -4494,6 +4713,10 @@ if (!function_exists('topup_btnstyle_set')) {
         $color = (string) ($style['color'] ?? '');
         if (in_array($color, ['success', 'danger', 'primary'], true)) {
             $clean['color'] = $color;
+        }
+        // 🚫 a back button the admin took off the screen (topup_slot_visible())
+        if (!empty($style['hidden'])) {
+            $clean['hidden'] = true;
         }
         $m[$lang][$gatewayKey][$which] = $clean;
         topup_btnstyle_save($m);
@@ -5437,14 +5660,14 @@ if (!function_exists('topup_card_invoice_generate')) {
                 $copyBtn['copy_text'] = ['text' => (string) ($c['number'] ?? '')];
                 $copyBtns[] = $copyBtn;
             }
-            $copyRows = card_invoice_copy_rows($lang, $copyBtns);
             $receiptStyle = card_invoice_btnstyle_for($lang, 'paidReceipt');
             $receiptBtn = topup_styled_button($textbotlang['keyboard']['paidSendReceipt'], $receiptStyle, "sendresidcart-" . $randomString, card_invoice_btnstyle_default_color('paidReceipt'));
-            $sendresidcart = json_encode(['inline_keyboard' => array_merge([[$amountBtn]], $copyRows, [[$receiptBtn]])]);
+            // 📐 as the admin laid the whole keyboard out (card_invoice_unit_layout())
+            $sendresidcart = json_encode(['inline_keyboard' => card_invoice_keyboard_rows($lang, $amountBtn, $copyBtns, $receiptBtn)]);
         } else {
             $receiptStyle = card_invoice_btnstyle_for($lang, 'paidReceipt');
             $receiptBtn = topup_styled_button($textbotlang['keyboard']['paidSendReceipt'], $receiptStyle, "sendresidcart-" . $randomString, card_invoice_btnstyle_default_color('paidReceipt'));
-            $sendresidcart = json_encode(['inline_keyboard' => [[$amountBtn], [$receiptBtn]]]);
+            $sendresidcart = json_encode(['inline_keyboard' => card_invoice_keyboard_rows($lang, $amountBtn, [], $receiptBtn)]);
         }
         return [
             'text' => $textcart,
@@ -5852,6 +6075,125 @@ if (!function_exists('premium_emoji_html_from_entities')) {
         return trim(mb_convert_encoding($utf16, 'UTF-8', 'UTF-16LE'));
     }
 }
+if (!function_exists('html_telegram_check')) {
+    // 🛡 A caption checked the way Telegram will parse it, before it is saved:
+    // only the tags Telegram's HTML has, each closed in the right order, no
+    // quote inside a quote, and no bare «<» that is not a tag. null when it is
+    // fine; otherwise one plain Persian sentence saying what is wrong and how
+    // to fix it. A text that would fail here fails in front of the customer.
+    function html_telegram_check($html)
+    {
+        $html = (string) $html;
+        $allowed = ['b', 'strong', 'i', 'em', 'u', 'ins', 's', 'strike', 'del', 'span', 'tg-spoiler', 'a', 'code', 'pre', 'blockquote', 'tg-emoji', 'tg-time'];
+        $stack = [];
+        $len = strlen($html);
+        $pos = 0;
+        while (($lt = strpos($html, '<', $pos)) !== false) {
+            if (!preg_match('~\G<(/?)([a-zA-Z][a-zA-Z0-9-]*)((?:\s+[a-zA-Z-]+(?:\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+))?)*)\s*(/?)>~', $html, $m, 0, $lt)) {
+                $near = mb_substr(substr($html, $lt), 0, 12);
+                return "⛔️ یه «<» توی متن هست که تگ نیست (نزدیک «" . htmlspecialchars($near, ENT_QUOTES, 'UTF-8') . "»). اگه خود علامت رو می‌خوای، به‌جاش <code>&amp;lt;</code> بنویس، یا تگ رو درست کن.";
+            }
+            $closing = $m[1] === '/';
+            $name = strtolower($m[2]);
+            if (!in_array($name, $allowed, true)) {
+                return "⛔️ تگ <code>&lt;" . htmlspecialchars($m[2], ENT_QUOTES, 'UTF-8') . "&gt;</code> رو تلگرام نمی‌شناسه. تگ‌های مجاز توی راهنما هست.";
+            }
+            if ($closing) {
+                if (empty($stack)) {
+                    return "⛔️ تگ <code>&lt;/{$name}&gt;</code> بسته شده ولی قبلش باز نشده بود.";
+                }
+                $top = array_pop($stack);
+                if ($top !== $name) {
+                    return "⛔️ تگ‌ها به‌هم ریخته‌ان: اول باید <code>&lt;/{$top}&gt;</code> بسته بشه، بعد <code>&lt;/{$name}&gt;</code>.";
+                }
+            } elseif ($m[4] !== '/') {
+                if ($name === 'blockquote' && in_array('blockquote', $stack, true)) {
+                    return "⛔️ نقل‌قول نمی‌تونه داخل یه نقل‌قول دیگه باشه.";
+                }
+                if ($name === 'a' && !preg_match('~href\s*=~i', $m[3])) {
+                    return "⛔️ لینک بدون آدرسه: <code>&lt;a href=\"آدرس\"&gt;متن&lt;/a&gt;</code>";
+                }
+                if ($name === 'tg-emoji' && !preg_match('~emoji-id\s*=~i', $m[3])) {
+                    return "⛔️ ایموجی پریمیوم بدون <code>emoji-id</code> هست.";
+                }
+                $stack[] = $name;
+            }
+            $pos = $lt + strlen($m[0]);
+            if ($pos >= $len) {
+                break;
+            }
+        }
+        if (!empty($stack)) {
+            $open = end($stack);
+            return "⛔️ تگ <code>&lt;{$open}&gt;</code> باز شده ولی بسته نشده؛ آخرش <code>&lt;/{$open}&gt;</code> بذار.";
+        }
+        return null;
+    }
+}
+if (!function_exists('html_format_guide')) {
+    // The formatting guide every caption prompt shows: the tags Telegram's HTML
+    // takes, the collapsed quote, and where premium emoji can go.
+    function html_format_guide()
+    {
+        return "📌 راهنمای فرمت\u{200C}بندی\n"
+            . "به\u{200C}جای X متن دلخواه خودتان را بگذارید:\n\n"
+            . "🔹 استایل متن\n"
+            . "• پررنگ: <code>&lt;b&gt;X&lt;/b&gt;</code>\n"
+            . "• کج: <code>&lt;i&gt;X&lt;/i&gt;</code>\n"
+            . "• زیرخط\u{200C}دار: <code>&lt;u&gt;X&lt;/u&gt;</code>\n"
+            . "• خط\u{200C}خورده: <code>&lt;s&gt;X&lt;/s&gt;</code>\n"
+            . "• مخفی (اسپویلر): <code>&lt;tg-spoiler&gt;X&lt;/tg-spoiler&gt;</code>\n"
+            . "🔹 بلوک\u{200C}های خاص\n"
+            . "• مونو (با یه لمس کپی می\u{200C}شه): <code>&lt;code&gt;X&lt;/code&gt;</code>\n"
+            . "• قابل\u{200C}کپی: <code>&lt;pre&gt;X&lt;/pre&gt;</code>\n"
+            . "• نقل\u{200C}قول: <code>&lt;blockquote&gt;X&lt;/blockquote&gt;</code>\n"
+            . "• نقل\u{200C}قول جمع\u{200C}شده (با «بیشتر» باز می\u{200C}شه): <code>&lt;blockquote expandable&gt;X&lt;/blockquote&gt;</code>\n"
+            . "🔹 لینک\n"
+            . "• لینک: <code>&lt;a href=\"آدرس\"&gt;X&lt;/a&gt;</code>\n\n"
+            . "🔹 ایموجی پریمیوم\n"
+            . "• هر جای متن می\u{200C}تونی بذاری: اول، وسط یا آخر.\n\n"
+            . "💡 به\u{200C}جای تگ، می\u{200C}تونی متن رو با ابزار خود تلگرام هم پررنگ، مونو یا نقل\u{200C}قول کنی.";
+    }
+    // A prompt with the text as it is saved now - HTML source, tags and all - in
+    // a copyable block right under its first line. Telegram caps a message at
+    // 4096 characters: when the source and the guide do not fit together the
+    // guide is cut to the lines after it (the placeholders), and a source too
+    // long even alone is cut, saying so, rather than letting the edit fail.
+    function html_prompt_with_source($prompt, $src)
+    {
+        $src = (string) $src;
+        if (trim($src) === '') {
+            return $prompt;
+        }
+        $visible = function ($html) {
+            return mb_strlen(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        };
+        $head = "\n\n📄 <b>متن فعلی</b> (روش بزن تا کپی بشه، بعد عوضش کن و بفرست):\n";
+        // Telegram counts emoji as two - keep well under 4096
+        $max = 3800;
+        $parts = explode("\n\n", $prompt, 2);
+        $first = $parts[0];
+        $rest = $parts[1] ?? '';
+        if ($visible($first . $head . $rest) + mb_strlen($src) > $max) {
+            $vars = '';
+            foreach (['🔹 اطلاعات کاربر', '🔹 اطلاعات سرویس', '🔹 متغیرها', '{'] as $mark) {
+                $at = mb_strpos($rest, $mark);
+                if ($at !== false && $mark !== '{') {
+                    $vars = mb_substr($rest, $at);
+                    break;
+                }
+            }
+            $rest = $vars;
+        }
+        $room = $max - $visible($first . $head . $rest) - 40;
+        $cut = '';
+        if (mb_strlen($src) > $room) {
+            $src = mb_substr($src, 0, max(0, $room));
+            $cut = "\n<i>✂️ متن خیلی بلنده؛ فقط اولش اینجا جا شد.</i>";
+        }
+        return $first . $head . '<pre>' . htmlspecialchars($src, ENT_QUOTES, 'UTF-8') . '</pre>' . $cut . ($rest !== '' ? "\n\n" . $rest : '');
+    }
+}
 if (!function_exists('topup_caption_text_from_update')) {
     // The text an admin just sent to a caption/message prompt, with every premium
     // emoji kept wherever it sits (it used to keep only one at offset 0). Entity
@@ -5859,6 +6201,23 @@ if (!function_exists('topup_caption_text_from_update')) {
     function topup_caption_text_from_update($text, $update)
     {
         $msg = $update['message'] ?? [];
+        // formatting made with Telegram's own tools (bold, mono, a quote, a
+        // link) arrives as entities, not tags - it was dropped here. A text
+        // with no tags typed of its own takes it all as HTML, premium emoji
+        // included; one with typed tags keeps them, as the generic editor does.
+        $raw = (string) ($msg['text'] ?? $msg['caption'] ?? $text);
+        $ents = is_array($msg['entities'] ?? null) ? $msg['entities'] : (is_array($msg['caption_entities'] ?? null) ? $msg['caption_entities'] : []);
+        if (strpos($raw, '<') === false && function_exists('entities_to_html')) {
+            foreach ($ents as $ent) {
+                if (in_array($ent['type'] ?? '', ['bold', 'italic', 'underline', 'strikethrough', 'spoiler', 'code', 'pre', 'text_link', 'text_mention', 'blockquote', 'expandable_blockquote'], true)) {
+                    [$html, $unknown] = entities_to_html($raw, $ents);
+                    if (empty($unknown)) {
+                        return trim($html);
+                    }
+                    break;
+                }
+            }
+        }
         if (!empty($msg['entities'])) {
             return premium_emoji_html_from_entities($msg['text'] ?? $text, $msg['entities']);
         }
@@ -6103,11 +6462,11 @@ if (!function_exists('topup_range_notice')) {
         if ($back !== '') {
             step($back, $chat_id);
         }
-        $kb = json_encode(['inline_keyboard' => [[[
-            'text' => $textbotlang['bottext']['btn_close'] ?? '❌ بستن',
-            'callback_data' => 'topup_range_close',
-            'style' => 'danger',
-        ]]]]);
+        // ❌ as 🎨 has it (genbtn 'rq', on the range-error message's screen)
+        $nlang = (string) (select("user", "*", "id", $chat_id, "select")['lang'] ?? 'fa');
+        $ndef = genbtn_defs('rq', lang_tab_texts($nlang))[0];
+        $nov = genbtn_override($nlang, 'users.Balance.amountRangeError', 0);
+        $kb = genbtn_is_hidden($ndef, $nov) ? null : json_encode(['inline_keyboard' => [[genbtn_render($ndef, $nov, 'topup_range_close')]]]);
         $res = sendmessage($chat_id, $text, $kb, 'HTML');
         update("user", "topup_range_msg_id", (string) (int) ($res['result']['message_id'] ?? 0), "id", $chat_id);
     }
@@ -8477,15 +8836,16 @@ if (!function_exists('topup_custom_screen_show')) {
         // this screen's own back button has its own style slot ('backcustom'):
         // it used to share 'back' with the amount screen's button, so restyling
         // one silently restyled the other
-        $row = [
-            topup_styled_button(
+        $row = [];
+        if (topup_slot_visible($lang, $key, 'backcustom')) {
+            $row[] = topup_styled_button(
                 topup_slot_label($lang, $key, 'backcustom', $textbotlang),
                 topup_btnstyle_for($lang, $key, 'backcustom', true),
                 'topup_back_methods',
                 'danger'
-            ),
-        ];
-        if ($withBackToPkg) {
+            );
+        }
+        if ($withBackToPkg && topup_slot_visible($lang, $key, 'backpkg')) {
             $row[] = topup_styled_button(
                 topup_slot_label($lang, $key, 'backpkg', $textbotlang),
                 topup_btnstyle_for($lang, $key, 'backpkg', true),
@@ -8494,7 +8854,7 @@ if (!function_exists('topup_custom_screen_show')) {
             );
             // the admin's left/right choice only means something with both
             // buttons present
-            if (topup_custom_screen_swapped($lang, $key)) {
+            if (count($row) === 2 && topup_custom_screen_swapped($lang, $key)) {
                 $row = array_reverse($row);
             }
         }
@@ -8510,7 +8870,7 @@ if (!function_exists('topup_custom_screen_show')) {
             '{min}' => $pmin !== null ? number_format((float) $pmin) : '—',
             '{max}' => $pmax !== null ? number_format((float) $pmax) : '—',
         ]) . topup_disc_custom_block($from_id, $lang, $key, $textbotlang) . (function_exists('sf_range_note_for') ? sf_range_note_for($from_id, $key) : ''), json_encode([
-            'inline_keyboard' => [$row],
+            'inline_keyboard' => $row ? [$row] : [],
         ]), 'HTML');
         // remembered so it can be taken away once an invoice is actually made -
         // see topup_amount_prompt_clear()
@@ -8531,6 +8891,19 @@ if (!function_exists('topup_slot_defs')) {
             'backcustom' => ['label' => $b['backToMethodBtn'], 'color' => 'danger', 'screen' => 'custom', 'pair' => 'backpkg'],
             'backpkg' => ['label' => $b['backToPrevMenuBtn'], 'color' => 'danger', 'screen' => 'custom', 'pair' => 'backcustom'],
         ];
+    }
+}
+if (!function_exists('topup_slot_visible')) {
+    // only the back buttons can be hidden: a screen without «مبلغ دلخواه» is a
+    // choice of the gateway's packages, one without a way back is still left
+    // by the main menu - hiding is the admin's call there, not here
+    function topup_slot_hideable($slot)
+    {
+        return in_array($slot, ['back', 'backcustom', 'backpkg'], true);
+    }
+    function topup_slot_visible($lang, $key, $slot)
+    {
+        return !topup_slot_hideable($slot) || empty(topup_btnstyle_for($lang, $key, $slot)['hidden']);
     }
 }
 if (!function_exists('topup_slot_label')) {
@@ -14305,6 +14678,11 @@ if (!function_exists('genbtn_alias_map')) {
             // message's own, the shared top-up button's look until changed
             // here) and 💳 پرداخت مستقیم (its look from 'cf' - only placed here)
             'sf' => 'users.Balance.shortMessage',
+            // ❌ under «خطای مبلغ خارج از حداقل/حداکثر» (topup_amount_notice()):
+            // own-key, edited on that message's screen
+            'rq' => 'users.Balance.amountRangeError',
+            // 🔙 under «رسید خود را بفرستید» (receipt_back_keyboard()), own-key
+            'rr' => 'users.Balance.askReceiptImage',
             // unlike 'cf', this key is not shared - it is the SAME key as the
             // caption item itself, so resetting/green-state checking the
             // caption already covers its one button for free
@@ -14449,7 +14827,7 @@ if (!function_exists('genbtn_alias_to_key')) {
         if (preg_match('/^k[btrh]$/', (string) $alias)) {
             return isset(subapp_apps()[(int) $idx]) || (int) $idx === subapp_back_idx();
         }
-        $extras = ['ab' => [0], 'ut' => [0], 'rw' => [0], 'bc' => [0], 'ns' => [0], 'te' => [0], 'tl' => [0], 'sc' => [0, 2], 'hb' => [0], 'hv' => [0], 'td' => [0, 1], 'su' => [1], 'uu' => [1], 'pu' => [1], 'cv' => [1, 2, 3, 4], 'sf' => [1]];
+        $extras = ['ab' => [0], 'ut' => [0], 'rw' => [0], 'bc' => [0], 'ns' => [0], 'te' => [0], 'tl' => [0], 'sc' => [0, 2], 'hb' => [0], 'hv' => [0], 'td' => [0, 1], 'su' => [1], 'uu' => [1], 'pu' => [1], 'cv' => [1, 2, 3, 4], 'sf' => [1], 'rq' => [0], 'rr' => [0]];
         return in_array((int) $idx, $extras[$alias] ?? [], true);
     }
 }
@@ -14482,6 +14860,12 @@ if (!function_exists('genbtn_defs')) {
                 0 => ['name' => '🔴 دکمه انصراف', 'text' => $textbotlang['keyboard']['cancelUsernameBtn'], 'style' => 'danger', 'callback_data' => 'buytype_payg'],
                 1 => ['name' => '🟢 دکمه استفاده از پیش‌فرض', 'text' => $textbotlang['keyboard']['useDefaultUsernameBtn'], 'style' => 'success', 'callback_data' => 'none'],
             ];
+        }
+        if ($alias === 'rr') {
+            return [0 => ['name' => '🔙 دکمه بازگشت به منوی اصلی', 'text' => $textbotlang['users']['backbtn'] ?? '🏠 بازگشت به منوی اصلی', 'style' => 'danger', 'callback_data' => 'backuser']];
+        }
+        if ($alias === 'rq') {
+            return [0 => ['name' => '❌ دکمه بستن', 'text' => $textbotlang['bottext']['btn_close'] ?? '❌ بستن', 'style' => 'danger', 'callback_data' => 'topup_range_close']];
         }
         if ($alias === 'sf') {
             $bb = balancebtn_defs($textbotlang)[0];
@@ -15655,7 +16039,7 @@ if (!function_exists('genbtn_hub_payload')) {
 
     function genbtn_group_title($alias, $textbotlang)
     {
-        $titles = ['su' => '🔘 دکمه‌های نام‌گذاری سرویس', 'uu' => '🔘 دکمه‌های اکانت تست', 'pu' => '🔘 دکمه‌های نام‌گذاری اکانت ساعتی', 'cf' => '🔘 دکمه‌های تأیید خرید', 'cb' => '🔘 دکمه‌های تأیید خرید عمده', 'sf' => '🔘 دکمه‌های پیام «موجودی کافی نیست»', 'ns' => '🔘 دکمه‌ی نداشتن سرویس فعال', 'te' => '🔘 دکمه‌ی پیام اتمام اکانت تست', 'sc' => '🔘 دکمه‌های لیست سرویس‌ها (سرویس‌های من)', 'bc' => '🔘 دکمه‌ی تهیه اشتراک (شارژ کیف پول)', 'rn' => '🔘 دکمه‌های فاکتور تمدید سرویس', 'cl' => '🔘 دکمه‌های تغییر لینک اتصال', 'td' => '🔘 دکمه‌های کد تخفیف شارژ', 'hb' => '🔘 دکمه‌ی بازگشت به دسته‌بندی آموزش', 'hv' => '🔘 دکمه‌ی بازگشت (زیر محتوای آموزش)', 'ab' => '📚 دکمه‌ی مشاهده آموزش (پیام بعد از خرید)', 'ut' => '📚 دکمه‌ی مشاهده آموزش (اکانت تست)', 'rw' => '📚 دکمه‌ی مشاهده آموزش (کانفیگ هدیه‌ی دعوت)', 'lc' => '📌 دکمه‌ی عضویت مجدد (پیام خروج از کانال)', 'ma' => '↩️ دکمه‌ی پاسخ به پیام ادمین', 'cv' => '🔘 دکمه‌های صفحه‌ی حجم دلخواه'];
+        $titles = ['su' => '🔘 دکمه‌های نام‌گذاری سرویس', 'uu' => '🔘 دکمه‌های اکانت تست', 'pu' => '🔘 دکمه‌های نام‌گذاری اکانت ساعتی', 'cf' => '🔘 دکمه‌های تأیید خرید', 'cb' => '🔘 دکمه‌های تأیید خرید عمده', 'sf' => '🔘 دکمه‌های پیام «موجودی کافی نیست»', 'rq' => '❌ دکمه‌ی بستن (خطای مبلغ)', 'rr' => '🔙 دکمه‌ی بازگشت (پیام ارسال رسید)', 'ns' => '🔘 دکمه‌ی نداشتن سرویس فعال', 'te' => '🔘 دکمه‌ی پیام اتمام اکانت تست', 'sc' => '🔘 دکمه‌های لیست سرویس‌ها (سرویس‌های من)', 'bc' => '🔘 دکمه‌ی تهیه اشتراک (شارژ کیف پول)', 'rn' => '🔘 دکمه‌های فاکتور تمدید سرویس', 'cl' => '🔘 دکمه‌های تغییر لینک اتصال', 'td' => '🔘 دکمه‌های کد تخفیف شارژ', 'hb' => '🔘 دکمه‌ی بازگشت به دسته‌بندی آموزش', 'hv' => '🔘 دکمه‌ی بازگشت (زیر محتوای آموزش)', 'ab' => '📚 دکمه‌ی مشاهده آموزش (پیام بعد از خرید)', 'ut' => '📚 دکمه‌ی مشاهده آموزش (اکانت تست)', 'rw' => '📚 دکمه‌ی مشاهده آموزش (کانفیگ هدیه‌ی دعوت)', 'lc' => '📌 دکمه‌ی عضویت مجدد (پیام خروج از کانال)', 'ma' => '↩️ دکمه‌ی پاسخ به پیام ادمین', 'cv' => '🔘 دکمه‌های صفحه‌ی حجم دلخواه'];
         if (isset($titles[$alias])) {
             return $titles[$alias];
         }
@@ -15672,6 +16056,8 @@ if (!function_exists('genbtn_hub_payload')) {
             'su' => 'این ۲ دکمه، زیر پیام انتخاب نام سرویس (مرحله‌ی خرید) به کاربر نشون داده می‌شن.',
             'uu' => 'این ۲ دکمه، زیر پیام درخواست نام کاربری اکانت تست میان: 🔴 انصراف، 🟢 ساختن با اسم پیش‌فرض. جدا از دکمه‌های نام‌گذاری خرید معمولی‌ان؛ هر زبان تنظیم خودش رو داره.',
             'pu' => 'این ۲ دکمه، زیر سؤال نام کاربری اکانت ساعتی میان (وقتی «💡 روش ساخت نام کاربری» دلخواه باشه): 🔴 برمی‌گرده به صفحه‌ی تعرفه، 🟢 با اسم پیش‌فرض اکانت ساعتی می‌سازه. جدا از دکمه‌های نام‌گذاری خرید معمولی‌ان.',
+            'rq' => 'این دکمه زیر پیام «مبلغ خارج از حداقل/حداکثر» میاد و پیام رو می‌بنده.',
+            'rr' => 'این دکمه وقتی مشتری «پرداخت کردم | ارسال رسید» رو می‌زنه، زیر پیام «رسید خود را بفرستید» میاد و مشتری رو به منوی اصلی برمی‌گردونه. وقتی دکمه‌های شیشه‌ای خاموشه، به‌شکل دکمه‌ی پایین صفحه (کیبورد) میاد.',
             'sf' => 'دکمه‌ی «💰 افزایش موجودی» زیر این پیام همین کمبود رو شارژ می‌کنه و بعد از پرداخت خرید خودکار انجام می‌شه. تا اینجا عوضش نکنی، شکل دکمه‌ی مشترک «💰 افزایش موجودی» رو داره. دکمه‌ی «💳 پرداخت مستقیم» فقط وقتی میاد که پرداخت مستقیم برای این خرید روشن باشه؛ اسم، رنگ و ایموجیش از «🔘 دکمه‌های تأیید خرید» میاد و اینجا فقط جاش رو توی 📐 چیدمان عوض می‌کنی یا مخفیش می‌کنی.',
             'cb' => 'این دکمه‌ها فقط زیر صفحه‌ی تأیید خرید عمده (چند سرویس با هم) نشون داده می‌شن. دکمه‌های خرید عادی جدا تنظیم می‌شن و این‌ها روی اون‌ها اثری ندارن.',
             'cf' => 'این دکمه‌ها زیر صفحه‌ی تأیید نهایی خرید عادی نشون داده می‌شن - هر سه حالت (عادی/تخفیف‌دار/حجم دلخواه) از این یکی استفاده می‌کنن، پس ویرایششون روی هر سه اثر می‌ذاره. خرید عمده دکمه‌های خودش رو داره. دکمه‌ی ۳ (💳 پرداخت مستقیم) فقط وقتی میاد که توی «🏬 تنظیمات فروشگاه ← 🛒 وضعیت قابلیت‌های فروشگاه» روشنش کرده باشی؛ اون موقع دکمه‌ی تأیید هم «تایید و پرداخت از کیف پول» می‌شه (اسمش از همین‌جا قابل تغییره) و بازگشت می‌ره زیرشون - مگه اینکه توی 📐 چیدمان جور دیگه‌ای چیده باشی.',
@@ -15724,7 +16110,7 @@ if (!function_exists('genbtn_hub_payload')) {
             return bt_origin_get($from_id, "bt_edit|{$lang}|{$key}") ?? bt_btnitem_back_cb($key, $lang);
         }
         // 'cf' points at textbot.preInvoice (the normal-purchase تأیید خرید)
-        $backKeyMap = ['su' => 'users.sell.selectUsernamePrompt', 'uu' => 'users.usertest.selectUsernamePrompt', 'pu' => 'users.payg.askUsername', 'cf' => 'textbot.preInvoice', 'cb' => 'users.sell.preInvoice2', 'sf' => 'users.Balance.shortMessage', 'ns' => 'users.sell.service_not_available', 'te' => 'textbot.testExpired', 'tl' => 'users.usertest.limitwarning', 'sc' => 'users.sell.service_sell', 'bc' => 'users.Balance.chargeSuccess', 'rn' => 'users.extend.invoiceCreated', 'cl' => 'users.changeLink.warnchange', 'td' => 'users.Balance.topupDiscPrompt', 'hb' => 'users.help.listCaption', 'hv' => 'users.help.categoryCaption', 'ab' => 'textbot.afterPay', 'ut' => 'textbot.afterText', 'rw' => 'users.affiliates.rewardAfterPay', 'lc' => 'users.channel.left_channel', 'ma' => 'users.support.messageFromAdminAlt', 'cv' => 'users.cvol.caption'];
+        $backKeyMap = ['su' => 'users.sell.selectUsernamePrompt', 'uu' => 'users.usertest.selectUsernamePrompt', 'pu' => 'users.payg.askUsername', 'cf' => 'textbot.preInvoice', 'cb' => 'users.sell.preInvoice2', 'sf' => 'users.Balance.shortMessage', 'rq' => 'users.Balance.amountRangeError', 'rr' => 'users.Balance.askReceiptImage', 'ns' => 'users.sell.service_not_available', 'te' => 'textbot.testExpired', 'tl' => 'users.usertest.limitwarning', 'sc' => 'users.sell.service_sell', 'bc' => 'users.Balance.chargeSuccess', 'rn' => 'users.extend.invoiceCreated', 'cl' => 'users.changeLink.warnchange', 'td' => 'users.Balance.topupDiscPrompt', 'hb' => 'users.help.listCaption', 'hv' => 'users.help.categoryCaption', 'ab' => 'textbot.afterPay', 'ut' => 'textbot.afterText', 'rw' => 'users.affiliates.rewardAfterPay', 'lc' => 'users.channel.left_channel', 'ma' => 'users.support.messageFromAdminAlt', 'cv' => 'users.cvol.caption'];
         $backKey = ($origin === 'u') ? 'users.usertest.selectUsernamePrompt' : ($backKeyMap[$alias] ?? 'users.sell.selectUsernamePrompt');
         return "bt_edit|{$lang}|{$backKey}";
     }

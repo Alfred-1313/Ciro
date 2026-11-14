@@ -1338,7 +1338,7 @@ if (!function_exists('bottext_item_menu_payload')) {
         // separate configDisplayBuy/configColOrderBuy pair, so it gets its own
         // forward link straight from the myservices list (keyboard.php) instead
         // of the generic $bt_btn_label/$bt_btn_custom status line below.
-        $bt_has_buttons = in_array($bt_key, ['users.usertest.selectUsernamePrompt', 'users.Balance.insufficientBalanceSimple', 'users.Balance.shortMessage', 'users.sell.selectUsernamePrompt', 'users.sell.preInvoice', 'users.sell.preInvoice2', 'textbot.preInvoice', 'users.sell.service_not_available', 'textbot.testExpired', 'users.usertest.limitwarning', 'users.sell.service_sell', 'users.status.infoFull', 'users.Balance.chargeSuccess', 'textbot.channel', 'users.channel.left_channel', 'users.extend.invoiceCreated', 'users.changeLink.warnchange', 'textbot.afterPay', 'textbot.afterText', 'users.affiliates.rewardAfterPay', 'users.subapps.listBuy', 'users.cvol.caption'], true);
+        $bt_has_buttons = in_array($bt_key, ['users.usertest.selectUsernamePrompt', 'users.Balance.insufficientBalanceSimple', 'users.Balance.shortMessage', 'users.Balance.amountRangeError', 'users.Balance.askReceiptImage', 'users.sell.selectUsernamePrompt', 'users.sell.preInvoice', 'users.sell.preInvoice2', 'textbot.preInvoice', 'users.sell.service_not_available', 'textbot.testExpired', 'users.usertest.limitwarning', 'users.sell.service_sell', 'users.status.infoFull', 'users.Balance.chargeSuccess', 'textbot.channel', 'users.channel.left_channel', 'users.extend.invoiceCreated', 'users.changeLink.warnchange', 'textbot.afterPay', 'textbot.afterText', 'users.affiliates.rewardAfterPay', 'users.subapps.listBuy', 'users.cvol.caption'], true);
         $info = "📝 <b>{$bt_label}</b>\n➖➖➖➖➖➖➖➖➖➖\n{$bt_extra_note}";
         $info .= "✏️ متن: " . ($bt_custom ? "سفارشی ✅" : "پیش‌فرض") . "\n";
         if (!$bt_nosticker) {
@@ -1357,6 +1357,10 @@ if (!function_exists('bottext_item_menu_payload')) {
                 $bt_btn_label = '🔘 دکمه افزایش موجودی';
             } elseif ($bt_key === 'users.Balance.shortMessage') {
                 $bt_btn_label = '🔘 دکمه‌های این پیام';
+            } elseif ($bt_key === 'users.Balance.amountRangeError') {
+                $bt_btn_label = '❌ دکمه بستن';
+            } elseif ($bt_key === 'users.Balance.askReceiptImage') {
+                $bt_btn_label = '🔙 دکمه بازگشت به منوی اصلی';
             } elseif (in_array($bt_key, ['users.sell.preInvoice', 'users.sell.preInvoice2', 'textbot.preInvoice'], true)) {
                 $bt_btn_label = '🔘 دکمه‌های تأیید خرید';
             } elseif ($bt_key === 'users.sell.service_not_available') {
@@ -1509,6 +1513,10 @@ if (!function_exists('bottext_item_menu_payload')) {
             // 🎨 home list (📲 افزودن سرویس به برنامه) - not repeated here
         } elseif ($bt_key === 'users.Balance.insufficientBalanceSimple') {
             $kb['inline_keyboard'][] = [$bt_live_row($bt_balance_live(), '🔘 ویرایش دکمه افزایش موجودی', "btact|bbtn|{$bt_lang}", $bt_btn_custom)];
+        } elseif ($bt_key === 'users.Balance.amountRangeError') {
+            $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '❌ ویرایش دکمه بستن', "gbs|hub|{$bt_lang}|rq", $bt_btn_custom)];
+        } elseif ($bt_key === 'users.Balance.askReceiptImage') {
+            $kb['inline_keyboard'][] = [$bt_live_row(genbtn_row_label($bt_key, $bt_lang), '🔙 ویرایش دکمه بازگشت به منوی اصلی', "gbs|hub|{$bt_lang}|rr", $bt_btn_custom)];
         } elseif ($bt_key === 'users.Balance.shortMessage') {
             // 💰 / 💳 under it (genbtn 'sf'), then the message the customer reaches next
             $kb['inline_keyboard'][] = [['text' => '🔘 ویرایش دکمه‌های این پیام', 'callback_data' => "gbs|hub|{$bt_lang}|sf", 'style' => $bt_btn_custom ? 'success' : 'primary']];
@@ -1638,38 +1646,7 @@ if (!function_exists('bt_edit_prompt_with_current')) {
     // cut (said so) rather than letting the edit fail.
     function bt_edit_prompt_with_current($prompt, $key, $lang)
     {
-        $src = (string) bottext_resolve_key($key, $lang);
-        if (trim($src) === '') {
-            return $prompt;
-        }
-        $visible = function ($html) {
-            return mb_strlen(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-        };
-        $head = "\n\n📄 <b>متن فعلی</b> (روش بزن تا کپی بشه، بعد عوضش کن و بفرست):\n";
-        // Telegram counts emoji as two - keep well under 4096
-        $max = 3800;
-        $parts = explode("\n\n", $prompt, 2);
-        $first = $parts[0];
-        $rest = $parts[1] ?? '';
-        if ($visible($first . $head . $rest) + mb_strlen($src) > $max) {
-            // the formatting guide goes first; the variables of this message stay
-            $vars = '';
-            foreach (['🔹 اطلاعات کاربر', '🔹 اطلاعات سرویس'] as $mark) {
-                $at = mb_strpos($rest, $mark);
-                if ($at !== false) {
-                    $vars = mb_substr($rest, $at);
-                    break;
-                }
-            }
-            $rest = "🗑 برای برگشت به کپشن پیش‌فرض، دکمه ریست رو بزن" . ($vars !== '' ? "\n\n" . $vars : '');
-        }
-        $room = $max - $visible($first . $head . $rest) - 40;
-        $cut = '';
-        if (mb_strlen($src) > $room) {
-            $src = mb_substr($src, 0, max(0, $room));
-            $cut = "\n<i>✂️ متن خیلی بلنده؛ فقط اولش اینجا جا شد.</i>";
-        }
-        return $first . $head . '<pre>' . htmlspecialchars($src, ENT_QUOTES, 'UTF-8') . '</pre>' . $cut . ($rest !== '' ? "\n\n" . $rest : '');
+        return html_prompt_with_source($prompt, bottext_resolve_key($key, $lang));
     }
 }
 if (!function_exists('bt_current_text_quote')) {
@@ -3748,11 +3725,8 @@ if (!function_exists('card_invoice_btnstyle_hub_payload')) {
             // same way every other gateway's do
             [['text' => $textbotlang['Admin']['Help']['emojiBtn'], 'callback_data' => "gwinvbtnemo:{$lang}:card"]],
         ]];
-        // چیدمان only means something once there are two copy buttons to
-        // arrange - with one card there is nothing to lay out
-        if (count(gw_cards_for_lang($lang)) > 1) {
-            $kb['inline_keyboard'][] = [['text' => $textbotlang['Admin']['Help']['layoutBtn'], 'callback_data' => "cardbtnlay:{$lang}"]];
-        }
+        // 📐 the whole invoice keyboard - amount, card(s) and «پرداخت کردم»
+        $kb['inline_keyboard'][] = [['text' => $textbotlang['Admin']['Help']['layoutBtn'], 'callback_data' => "cardbtnlay:{$lang}"]];
         // reached from card's own gateway screen (🎨) or from 🏦 بسته‌های شارژ -
         // back returns to whichever opened it, never one level past it
         $kb['inline_keyboard'][] = [['text' => $textbotlang['Admin']['GatewayLang']['backBtn'], 'callback_data' => topup_owner_screen_cb($lang, 'card'), 'style' => 'danger']];
@@ -3815,7 +3789,8 @@ if (!function_exists('topup_slot_payload')) {
         $color = topup_slot_color($lang, $key, $slot, $textbotlang);
         $style = topup_btnstyle_for($lang, $key, $slot);
         $custom = (trim((string) ($style['label'] ?? '')) !== '' || trim((string) ($style['color'] ?? '')) !== ''
-            || !empty($style['emoji']) || !empty($style['emojiIcon']) || !empty($style['noEmoji']));
+            || !empty($style['emoji']) || !empty($style['emojiIcon']) || !empty($style['noEmoji'])
+            || !empty($style['hidden']) || isset($style['pos']));
         $t = $textbotlang['Admin']['TopupPkg'];
 
         $screenName = $def['screen'] === 'custom' ? $t['slotScreenCustom'] : $t['slotScreenAmount'];
@@ -3829,6 +3804,9 @@ if (!function_exists('topup_slot_payload')) {
         // with its emoji too - the way topup_styled_button() gives it to the customer
         $mk = function ($s) use ($lang, $key, $textbotlang) {
             $b = topup_styled_button(topup_slot_label($lang, $key, $s, lang_tab_texts($lang)), topup_btnstyle_for($lang, $key, $s), 'none');
+            if (!topup_slot_visible($lang, $key, $s)) {
+                $b['text'] = '🚫 ' . $b['text'];
+            }
             unset($b['style']);
             $c = topup_slot_color($lang, $key, $s, $textbotlang);
             if ($c !== '') {
@@ -3845,6 +3823,15 @@ if (!function_exists('topup_slot_payload')) {
         $kb['inline_keyboard'][] = [['text' => $t['slotPreviewNote'], 'callback_data' => "tpslnote:{$lang}:{$key}:{$slot}"]];
         $kb['inline_keyboard'][] = [['text' => $textbotlang['Admin']['BtnStyle']['renameBtn'], 'callback_data' => "tpsln:{$lang}:{$key}:{$slot}", 'style' => 'primary']];
         $kb['inline_keyboard'][] = [['text' => '🎭 ایموجی (معمولی یا پریمیوم)', 'callback_data' => "tpsle:{$lang}:{$key}:{$slot}", 'style' => 'primary']];
+        // the emoji's side, no emoji at all, and - for a way back - off the screen
+        $kb['inline_keyboard'][] = [
+            ['text' => '↔️ جای ایموجی: ' . (($style['pos'] ?? 'right') === 'left' ? 'چپ ⬅️' : 'راست ➡️'), 'callback_data' => "tpslpos:{$lang}:{$key}:{$slot}", 'style' => 'primary'],
+            ['text' => '🔲 بدون ایموجی: ' . (!empty($style['noEmoji']) ? '✅' : '❌'), 'callback_data' => "tpslnoe:{$lang}:{$key}:{$slot}", 'style' => !empty($style['noEmoji']) ? 'success' : 'primary'],
+        ];
+        if (topup_slot_hideable($slot)) {
+            $sl_hidden = !topup_slot_visible($lang, $key, $slot);
+            $kb['inline_keyboard'][] = [['text' => $sl_hidden ? '🚫 مخفیه - بزن تا نشون داده بشه' : '👁 نشون داده می‌شه - بزن تا مخفی بشه', 'callback_data' => "tpslhide:{$lang}:{$key}:{$slot}", 'style' => $sl_hidden ? 'danger' : 'success']];
+        }
         $kb['inline_keyboard'][] = [
             ['text' => ($color === 'primary' ? '✅ ' : '') . '🔵 آبی', 'callback_data' => "tpslc:{$lang}:{$key}:{$slot}:primary", 'style' => 'primary'],
             ['text' => ($color === 'success' ? '✅ ' : '') . '🟢 سبز', 'callback_data' => "tpslc:{$lang}:{$key}:{$slot}:success", 'style' => 'success'],
@@ -4289,6 +4276,53 @@ if (!function_exists('card_invoice_btnrename_payload')) {
         $rows[] = [['text' => $textbotlang['Admin']['BtnStyle']['resetRenameBtn'], 'callback_data' => "cardbtnrenreset:{$lang}"]];
         $rows[] = [['text' => $textbotlang['Admin']['GatewayLang']['backBtn'], 'callback_data' => "cardbtn:{$lang}"]];
         return json_encode(['inline_keyboard' => $rows]);
+    }
+}
+if (!function_exists('card_invoice_unitlayout_payload')) {
+    // 📐 the invoice's buttons in their real rows, names and colours: tap one,
+    // then where it should go; with one picked, its width (full / half - two
+    // halves side by side) can be switched too
+    function card_invoice_unitlayout_payload($lang, $textbotlang, $sel = null)
+    {
+        $tx = lang_tab_texts($lang);
+        $cards = card_invoice_ordered_cards($lang);
+        $total = count($cards);
+        $lay = card_invoice_unit_layout($lang, $total);
+        if ($sel !== null && !in_array($sel, $lay['order'], true)) {
+            $sel = null;
+        }
+        $labels = ['amt' => topup_styled_button($tx['keyboard']['copyAmount'], card_invoice_btnstyle_for($lang, 'copyamt'), '', card_invoice_btnstyle_default_color('copyamt'))];
+        foreach (array_values($cards) as $i => $c) {
+            $which = card_invoice_copy_key($i + 1);
+            $labels['c' . $i] = topup_styled_button(card_invoice_copy_label($i + 1, $total, $tx), card_invoice_btnstyle_for($lang, $which), '', card_invoice_btnstyle_default_color($which));
+        }
+        $labels['paid'] = topup_styled_button($tx['keyboard']['paidSendReceipt'], card_invoice_btnstyle_for($lang, 'paidReceipt'), '', card_invoice_btnstyle_default_color('paidReceipt'));
+        $byUnit = [];
+        foreach ($labels as $u => $b) {
+            if ($sel === $u) {
+                $b['text'] = '🔵 ' . $b['text'];
+                $b['callback_data'] = "cardly:x:{$lang}";
+            } elseif ($sel !== null) {
+                $b['callback_data'] = "cardly:s:{$lang}:{$sel}:{$u}";
+            } else {
+                $b['callback_data'] = "cardly:p:{$lang}:{$u}";
+            }
+            $byUnit[$u] = $b;
+        }
+        $rows = help_layout_chunk_rows($lay['order'], $byUnit, $lay['width']);
+        if ($sel !== null) {
+            $half = ($lay['width'][$sel] ?? 'full') === 'half';
+            $rows[] = [['text' => '↔️ عرض دکمه‌ی انتخاب‌شده: ' . ($half ? 'نصف (کنار یه دکمه‌ی دیگه)' : 'تمام عرض'), 'callback_data' => "cardly:w:{$lang}:{$sel}", 'style' => $half ? 'success' : 'primary']];
+        }
+        $rows[] = [['text' => $textbotlang['Admin']['Help']['resetLayoutBtn'], 'callback_data' => "cardbtnlayreset:{$lang}"]];
+        $rows[] = [['text' => $textbotlang['Admin']['GatewayLang']['backBtn'], 'callback_data' => "cardbtn:{$lang}", 'style' => 'danger']];
+        return json_encode(['inline_keyboard' => $rows]);
+    }
+    function card_invoice_unitlayout_caption($textbotlang)
+    {
+        return "📐 <b>چیدمان دکمه‌های فاکتور</b>\n\n"
+            . "<blockquote>روی یه دکمه بزن (🔵 می‌شه)، بعد روی جایی که می‌خوای بره بزن تا جاشون عوض بشه.\n"
+            . "با یه دکمه‌ی انتخاب‌شده، «↔️ عرض» رو بزن: دو دکمه‌ی «نصف» که پشت هم باشن، کنار هم میان.</blockquote>";
     }
 }
 if (!function_exists('card_invoice_btnlayout_payload')) {
@@ -7427,7 +7461,7 @@ if (preg_match('/^statusbtn\|emoji\|([a-z]{2})\|([^|]+)$/', $sb_data, $sb_m) && 
         [['text' => '❌ انصراف', 'callback_data' => "{$sb_pfx}|cat|{$sb_m[1]}|emoji"]],
     ]]);
     $sb_prompt = "💎 یه ایموجی (ساده یا پریمیوم) بفرست، کنار متن دکمه نشون داده می‌شه 👇\n\n";
-    $sb_prompt .= "📌 ایموجی پریمیوم به‌خاطر محدودیت تلگرام همیشه سمت راست (ابتدای متن) قرار می‌گیره.\n";
+    $sb_prompt .= "📌 تلگرام ایموجی پریمیوم دکمه رو همیشه قبل از اسم دکمه نشون می‌ده و هر دکمه فقط یکی می‌تونه داشته باشه؛ «جای ایموجی» فقط روی ایموجی معمولی اثر داره.\n";
     $sb_prompt .= "برای ایموجی ساده، جای قرارگیریش (چپ/راست) از دکمه‌های صفحه‌ی قبل قابل تغییره.";
     Editmessagetext($from_id, $message_id, $sb_prompt, $sb_kb, 'HTML');
     return;
@@ -9471,10 +9505,11 @@ if (preg_match('/^btact\|text\|([a-z]{2})\|(.+)$/', $datain, $btm) && $adminrule
     $bt_prompt .= "• مونو: <code>&lt;code&gt;X&lt;/code&gt;</code>\n";
     $bt_prompt .= "• قابل\u{200C}کپی: <code>&lt;pre&gt;X&lt;/pre&gt;</code>\n";
     $bt_prompt .= "• نقل\u{200C}قول: <code>&lt;blockquote&gt;X&lt;/blockquote&gt;</code>\n";
+    $bt_prompt .= "• نقل\u{200C}قول جمع\u{200C}شده (با «بیشتر» باز می\u{200C}شه): <code>&lt;blockquote expandable&gt;X&lt;/blockquote&gt;</code>\n";
     $bt_prompt .= "🔹 لینک\n";
     $bt_prompt .= "• لینک: <code>&lt;a href=\"آدرس\"&gt;X&lt;/a&gt;</code>";
     $bt_prompt .= "\n\n🔹 ایموجی پریمیوم\n";
-    $bt_prompt .= "• به خاطر محدودیت تلگرام، ایموجی پریمیوم رو فقط ابتدای متن (سمت راست برای فارسی) بفرست";
+    $bt_prompt .= "• ایموجی پریمیوم رو هر جای متن می‌تونی بذاری: اول، وسط یا آخر.";
     if (in_array($btm[2], ['users.text_start', 'textbot.testExpired', 'textbot.preInvoice'], true)) {
         $bt_prompt .= "\n\n🔹 اطلاعات کاربر\n";
         $bt_prompt .= "• نام کاربری تلگرام: <code>{tg_username}</code>\n";
@@ -9764,7 +9799,7 @@ if (preg_match('/^btact\|bbtntext\|([a-z]{2})$/', $datain, $btm) && $adminrulech
     $bb_prompt .= "🔹 لینک\n";
     $bb_prompt .= "• لینک: <code>&lt;a href=\"آدرس\"&gt;X&lt;/a&gt;</code>";
     $bb_prompt .= "\n\n🔹 ایموجی پریمیوم\n";
-    $bb_prompt .= "• به خاطر محدودیت تلگرام، ایموجی پریمیوم رو فقط ابتدای متن (سمت راست برای فارسی) بفرست";
+    $bb_prompt .= "• اگه اول اسم یه ایموجی پریمیوم بذاری، آیکون دکمه می‌شه. تلگرام آیکون دکمه رو همیشه قبل از اسم نشون می‌ده و هر دکمه فقط یکی می‌تونه داشته باشه.";
     Editmessagetext($from_id, $message_id, $bb_prompt, $bb_cancel_kb, 'HTML');
     return;
 }
@@ -9789,7 +9824,7 @@ if (preg_match('/^btact\|bbtnemoji\|([a-z]{2})$/', $datain, $btm) && $adminrulec
         [['text' => '❌ انصراف', 'callback_data' => "btact|bbtn|{$btm[1]}"]],
     ]]);
     $bb_emoji_prompt = "💎 یه ایموجی (ساده یا پریمیوم) بفرست، کنار متن دکمه نشون داده می‌شه 👇\n\n";
-    $bb_emoji_prompt .= "📌 ایموجی پریمیوم به‌خاطر محدودیت تلگرام همیشه سمت راست (ابتدای متن) قرار می‌گیره.\n";
+    $bb_emoji_prompt .= "📌 تلگرام ایموجی پریمیوم دکمه رو همیشه قبل از اسم دکمه نشون می‌ده و هر دکمه فقط یکی می‌تونه داشته باشه؛ «جای ایموجی» فقط روی ایموجی معمولی اثر داره.\n";
     $bb_emoji_prompt .= "برای ایموجی ساده، جای قرارگیریش (چپ/راست) از دکمه‌های صفحه‌ی قبل قابل تغییره.";
     Editmessagetext($from_id, $message_id, $bb_emoji_prompt, $bb_cancel_kb, 'HTML');
     return;
@@ -10310,7 +10345,7 @@ if (preg_match('/^volpct\|emoji\|([a-z]{2})\|(\d+)$/', $datain, $vp_m) && $admin
         [['text' => '❌ انصراف', 'callback_data' => "volpct|open|{$vp_m[1]}|{$vp_m[2]}"]],
     ]]);
     $vp_emoji_prompt = "💎 یه ایموجی (ساده یا پریمیوم) بفرست، کنار متن دکمه نشون داده می‌شه 👇\n\n";
-    $vp_emoji_prompt .= "📌 ایموجی پریمیوم به‌خاطر محدودیت تلگرام همیشه سمت راست (ابتدای متن) قرار می‌گیره.\n";
+    $vp_emoji_prompt .= "📌 تلگرام ایموجی پریمیوم دکمه رو همیشه قبل از اسم دکمه نشون می‌ده و هر دکمه فقط یکی می‌تونه داشته باشه؛ «جای ایموجی» فقط روی ایموجی معمولی اثر داره.\n";
     $vp_emoji_prompt .= "برای ایموجی ساده، جای قرارگیریش (چپ/راست) از دکمه‌های صفحه‌ی قبل قابل تغییره.";
     Editmessagetext($from_id, $message_id, $vp_emoji_prompt, $vp_kb, 'HTML');
     return;
@@ -13774,7 +13809,19 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     card_invoice_btnstyle_set($cb_m[1], $cb_m[2], $cb_style);
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['colorCaption'], card_invoice_btncolor_payload($cb_m[1], $textbotlang), 'HTML');
 } elseif (preg_match('/^cardbtnlay:([a-z]{2})$/', $datain, $cb_m) && $adminrulecheck['rule'] == "administrator") {
-    Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], card_invoice_btnlayout_payload($cb_m[1], $textbotlang), 'HTML');
+    Editmessagetext($from_id, $message_id, card_invoice_unitlayout_caption($textbotlang), card_invoice_unitlayout_payload($cb_m[1], $textbotlang), 'HTML');
+} elseif (preg_match('/^cardly:(p|s|x|w):([a-z]{2})(?::(amt|paid|c\d+))?(?::(amt|paid|c\d+))?$/', $datain, $cl_y) && $adminrulecheck['rule'] == "administrator") {
+    // 📐 the whole invoice keyboard: pick, swap, cancel, width
+    $cl_sel = null;
+    if ($cl_y[1] === 'p' && !empty($cl_y[3])) {
+        $cl_sel = $cl_y[3];
+    } elseif ($cl_y[1] === 's' && !empty($cl_y[3]) && !empty($cl_y[4])) {
+        card_invoice_unit_swap($cl_y[2], $cl_y[3], $cl_y[4]);
+    } elseif ($cl_y[1] === 'w' && !empty($cl_y[3])) {
+        card_invoice_unit_width_toggle($cl_y[2], $cl_y[3]);
+        $cl_sel = $cl_y[3];
+    }
+    Editmessagetext($from_id, $message_id, card_invoice_unitlayout_caption($textbotlang), card_invoice_unitlayout_payload($cl_y[2], $textbotlang, $cl_sel), 'HTML');
 } elseif (preg_match('/^cardbtnlaypick:([a-z]{2}):(\d+)$/', $datain, $cb_m) && $adminrulecheck['rule'] == "administrator") {
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], card_invoice_btnlayout_payload($cb_m[1], $textbotlang, (int) $cb_m[2]), 'HTML');
 } elseif (preg_match('/^cardbtnlaycancel:([a-z]{2})$/', $datain, $cb_m) && $adminrulecheck['rule'] == "administrator") {
@@ -13789,7 +13836,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], card_invoice_btnlayout_payload($cb_m[1], $textbotlang), 'HTML');
 } elseif (preg_match('/^cardbtnlayreset:([a-z]{2})$/', $datain, $cb_m) && $adminrulecheck['rule'] == "administrator") {
     card_invoice_btnstyle_set($cb_m[1], '_layout', []);
-    Editmessagetext($from_id, $message_id, $textbotlang['Admin']['Help']['layoutCaption'], card_invoice_btnlayout_payload($cb_m[1], $textbotlang), 'HTML');
+    Editmessagetext($from_id, $message_id, card_invoice_unitlayout_caption($textbotlang), card_invoice_unitlayout_payload($cb_m[1], $textbotlang), 'HTML');
 } elseif (preg_match('/^cardbtnren:([a-z]{2})$/', $datain, $cb_m) && $adminrulecheck['rule'] == "administrator") {
     Editmessagetext($from_id, $message_id, $textbotlang['Admin']['BtnStyle']['renameCaption'], card_invoice_btnrename_payload($cb_m[1], $textbotlang), 'HTML');
 } elseif (preg_match('/^cardbtnrenpick:([a-z]{2}):(copyamt|copyCard\d*|paidReceipt|reissue|paid)$/', $datain, $cb_m) && $adminrulecheck['rule'] == "administrator") {
@@ -13843,7 +13890,13 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     $gc_cancelKb = json_encode(['inline_keyboard' => [
         [['text' => $textbotlang['Admin']['TopupPkg']['closeCaptionPromptBtn'], 'callback_data' => "gwcapcancel:{$gc_m[1]}:{$gc_m[2]}:{$gc_m[3]}:{$message_id}", 'style' => 'danger']],
     ]]);
-    $gc_prompt = sendmessage($from_id, topup_gwcap_prompt($gc_m[1], $textbotlang, $gc_m[3]), $gc_cancelKb, 'HTML');
+    // the guide (not for popups: plain text there) and the text as it is now
+    $gc_prompt_text = topup_gwcap_prompt($gc_m[1], $textbotlang, $gc_m[3]);
+    if (!in_array($gc_m[1], ['paidalert', 'notseen'], true)) {
+        $gc_prompt_text .= "\n\n" . html_format_guide();
+    }
+    $gc_prompt_text = html_prompt_with_source($gc_prompt_text, topup_gwcap_for($gc_m[1], $gc_m[2], $gc_m[3], $textbotlang));
+    $gc_prompt = sendmessage($from_id, $gc_prompt_text, $gc_cancelKb, 'HTML');
     step("gwcapedit:{$gc_m[1]}:{$gc_m[2]}:{$gc_m[3]}:{$message_id}:" . (int) ($gc_prompt['result']['message_id'] ?? 0), $from_id);
 } elseif (preg_match('/^gwcapcancel:(range|notnumber|inv|exp|paidalert|notseen|noaddress|askhash|hashbad):([a-z]{2}):([a-z0-9]+):([0-9]+)$/', $datain, $gc_m) && $adminrulecheck['rule'] == "administrator") {
     step('home', $from_id);
@@ -13853,6 +13906,12 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
 } elseif (preg_match('/^gwcapedit:(range|notnumber|inv|exp|paidalert|notseen|noaddress|askhash|hashbad):([a-z]{2}):([a-z0-9]+):([0-9]+):([0-9]+)$/', (string) $user['step'], $gc_m) && $datain == '') {
     // popups are plain text: a <tg-emoji> saved into one showed up as code
     $gc_text = in_array($gc_m[1], ['paidalert', 'notseen'], true) ? trim((string) $text) : topup_caption_text_from_update($text, $update);
+    // 🛡 a broken HTML is refused; the prompt stays for the corrected text
+    $gc_err = in_array($gc_m[1], ['paidalert', 'notseen'], true) ? null : html_telegram_check($gc_text);
+    if ($gc_err !== null) {
+        sendmessage($from_id, $gc_err . "\n\n<i>متن ذخیره نشد؛ درستش کن و دوباره بفرست.</i>", null, 'HTML');
+        return;
+    }
     topup_gwcap_set($gc_m[1], $gc_m[2], $gc_m[3], $gc_text);
     step('home', $from_id);
     deletemessage($from_id, $message_id);
@@ -14303,7 +14362,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     $tp_cancelKb = json_encode(['inline_keyboard' => [
         [['text' => $textbotlang['Admin']['TopupPkg']['closeCaptionPromptBtn'], 'callback_data' => "topupcapcancel:{$tp_m[1]}:{$tp_m[2]}:{$message_id}", 'style' => 'danger']],
     ]]);
-    $tp_prompt = sendmessage($from_id, $textbotlang['Admin']['TopupPkg']['askCaption'], $tp_cancelKb, 'HTML');
+    $tp_prompt = sendmessage($from_id, html_prompt_with_source($textbotlang['Admin']['TopupPkg']['askCaption'] . "\n\n" . html_format_guide(), topup_caption_for($tp_m[1], $tp_m[2], lang_tab_texts($tp_m[1])['users']['Balance']['pkgPromptTitle'])), $tp_cancelKb, 'HTML');
     $tp_promptId = (int) ($tp_prompt['result']['message_id'] ?? 0);
     step("topupcapedit:{$tp_m[1]}:{$tp_m[2]}:{$message_id}:{$tp_promptId}", $from_id);
 } elseif (preg_match('/^topupcapcancel:([a-z]{2}):([a-z0-9]+):([0-9]+)$/', $datain, $tp_m) && $adminrulecheck['rule'] == "administrator") {
@@ -14314,6 +14373,10 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
 } elseif (preg_match('/^topupcapedit:([a-z]{2}):([a-z0-9]+):([0-9]+):([0-9]+)$/', (string) $user['step'], $tp_m) && $datain == '') {
     // every premium emoji is kept, wherever it sits in the caption
     $tp_text = topup_caption_text_from_update($text, $update);
+    if (($tp_err = html_telegram_check($tp_text)) !== null) {
+        sendmessage($from_id, $tp_err . "\n\n<i>متن ذخیره نشد؛ درستش کن و دوباره بفرست.</i>", null, 'HTML');
+        return;
+    }
     topup_caption_set($tp_m[1], $tp_m[2], $tp_text);
     step("home", $from_id);
     deletemessage($from_id, $message_id);
@@ -14340,6 +14403,22 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     $sl_st['color'] = ((string) ($sl_st['color'] ?? '') === $sl_m[4]) ? '' : $sl_m[4];
     topup_btnstyle_set($sl_m[1], $sl_m[2], $sl_m[3], $sl_st);
     $sl_p = topup_slot_payload($sl_m[1], $sl_m[2], $sl_m[3], $textbotlang);
+    Editmessagetext($from_id, $message_id, $sl_p[0], $sl_p[1], 'HTML');
+} elseif (preg_match('/^tpsl(pos|noe|hide):([a-z]{2}):([a-z0-9]+):([a-z]+)$/', $datain, $sl_t) && $adminrulecheck['rule'] == "administrator") {
+    // one tap, at once: the emoji's side, no emoji, shown/hidden
+    if (!isset(topup_slot_defs($textbotlang)[$sl_t[4]]) || ($sl_t[1] === 'hide' && !topup_slot_hideable($sl_t[4]))) {
+        return;
+    }
+    $sl_st = topup_btnstyle_for($sl_t[2], $sl_t[3], $sl_t[4]);
+    if ($sl_t[1] === 'pos') {
+        $sl_st['pos'] = (($sl_st['pos'] ?? 'right') === 'left') ? 'right' : 'left';
+    } elseif ($sl_t[1] === 'noe') {
+        $sl_st['noEmoji'] = empty($sl_st['noEmoji']);
+    } else {
+        $sl_st['hidden'] = empty($sl_st['hidden']);
+    }
+    topup_btnstyle_set($sl_t[2], $sl_t[3], $sl_t[4], $sl_st);
+    $sl_p = topup_slot_payload($sl_t[2], $sl_t[3], $sl_t[4], $textbotlang);
     Editmessagetext($from_id, $message_id, $sl_p[0], $sl_p[1], 'HTML');
 } elseif (preg_match('/^tpslr:([a-z]{2}):([a-z0-9]+):([a-z]+)$/', $datain, $sl_m) && $adminrulecheck['rule'] == "administrator") {
     if (!isset(topup_slot_defs($textbotlang)[$sl_m[3]])) {
@@ -14452,7 +14531,7 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
     $tp_cancelKb = json_encode(['inline_keyboard' => [
         [['text' => $textbotlang['Admin']['TopupPkg']['closeCaptionPromptBtn'], 'callback_data' => "topupcustomcapcancel:{$tp_m[1]}:{$tp_m[2]}:{$message_id}", 'style' => 'danger']],
     ]]);
-    $tp_prompt = sendmessage($from_id, $textbotlang['Admin']['TopupPkg']['askCustomCaption'], $tp_cancelKb, 'HTML');
+    $tp_prompt = sendmessage($from_id, html_prompt_with_source($textbotlang['Admin']['TopupPkg']['askCustomCaption'] . "\n\n" . html_format_guide(), topup_custom_caption_for($tp_m[1], $tp_m[2], topup_custom_caption_default($tp_m[2], lang_tab_texts($tp_m[1])))), $tp_cancelKb, 'HTML');
     $tp_promptId = (int) ($tp_prompt['result']['message_id'] ?? 0);
     step("topupcustomcapedit:{$tp_m[1]}:{$tp_m[2]}:{$message_id}:{$tp_promptId}", $from_id);
 } elseif (preg_match('/^topupcustomcapcancel:([a-z]{2}):([a-z0-9]+):([0-9]+)$/', $datain, $tp_m) && $adminrulecheck['rule'] == "administrator") {
@@ -14463,6 +14542,10 @@ SMS Forward پرداخت رو با پیامک واقعی بانک تایید م�
 } elseif (preg_match('/^topupcustomcapedit:([a-z]{2}):([a-z0-9]+):([0-9]+):([0-9]+)$/', (string) $user['step'], $tp_m) && $datain == '') {
     // same as topupcapedit: - every premium emoji is kept
     $tp_text = topup_caption_text_from_update($text, $update);
+    if (($tp_err = html_telegram_check($tp_text)) !== null) {
+        sendmessage($from_id, $tp_err . "\n\n<i>متن ذخیره نشد؛ درستش کن و دوباره بفرست.</i>", null, 'HTML');
+        return;
+    }
     topup_custom_caption_set($tp_m[1], $tp_m[2], $tp_text);
     step("home", $from_id);
     deletemessage($from_id, $message_id);
@@ -24449,6 +24532,13 @@ if ($datain == "linkappsetting") {
     $bt_new = trim($bt_new);
     if ($bt_new === '') {
         sendmessage($from_id, $textbotlang['bottext']['msg_empty'], $btpromptcancel, 'HTML');
+        return;
+    }
+    // 🛡 a broken HTML would fail in front of the customer: refused here, the
+    // prompt stays open for the corrected text (popups are plain text)
+    $bt_html_err = (strpos($bt_new, '<') !== false && !in_array($bt_key, bt_alert_keys(), true)) ? html_telegram_check($bt_new) : null;
+    if ($bt_html_err !== null) {
+        sendmessage($from_id, $bt_html_err . "\n\n<i>متن ذخیره نشد؛ درستش کن و دوباره بفرست.</i>", $btpromptcancel, 'HTML');
         return;
     }
     $bt_map = (isset($setting['text_edit']) && $setting['text_edit']) ? json_decode($setting['text_edit'], true) : [];

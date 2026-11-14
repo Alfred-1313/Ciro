@@ -78,6 +78,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!isset($map[$lang]) || !is_array($map[$lang])) {
             $map[$lang] = [];
         }
+        // 🛡 the same HTML check as the bot: a broken one is not saved
+        if ($value !== '' && $value !== $default && !isset($isAlert[$key]) && strpos($value, '<') !== false && ($htmlErr = html_telegram_check($value)) !== null) {
+            $err = trim(strip_tags(html_entity_decode($htmlErr, ENT_QUOTES, 'UTF-8'))) . ' (' . (is_array($labels[$key] ?? null) ? ($labels[$key]['label'] ?? $key) : $key) . ')';
+            continue;
+        }
         // empty or the default again: back to the default, as «0» does in the bot
         if ($value === '' || $value === $default) {
             bottext_dotted_unset($map[$lang], $key);

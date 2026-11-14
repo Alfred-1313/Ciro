@@ -1349,4 +1349,41 @@ return [
             . "<blockquote>🎨 <b>Colours shown right</b>\n"
             . "Colour screens show a button you have not changed in its real default colour (for example «🧩 حجم دلخواه» blue), and every tap changes it. «🔘 دکمه‌های تأیید خرید» also lists each button's current name as the customer sees it.</blockquote>",
     ],
+    [
+        'n' => 88,
+        'date' => '2026-11-14',
+        'fa' => "<blockquote>🏷 <b>کسی با قیمت قدیمی سرویس نمی‌گیره</b>\n"
+            . "اگه مشتری فاکتور خرید رو پرداخت نکنه و بعد تو قیمت سرویس رو عوض کنی، دیگه نمی‌تونه با «ساخت فاکتور جدید» یا دکمه‌های پیام «موجودی کافی نیست» همون قیمت قدیمی رو بپردازه. ربات بهش می‌گه قیمت عوض شده و باید دوباره از بخش خرید انتخاب کنه. فاکتوری که هنوز وقتش تموم نشده، با همون قیمت قابل پرداخته.</blockquote>\n\n"
+            . "<blockquote>🛡 <b>محافظ HTML</b>\n"
+            . "اگه توی ویرایش یه کپشن، HTML اشتباه بفرستی (مثلاً تگی که بسته نشده)، ربات ذخیره‌ش نمی‌کنه و دقیق می‌گه کجاش اشتباهه. این‌طوری هیچ پیامی جلوی مشتری خراب نمی‌شه. توی پنل وب هم همین‌طوره.</blockquote>\n\n"
+            . "<blockquote>💳 <b>کپشن و دکمه‌های درگاه‌ها</b>\n"
+            . "• ویرایش کپشن‌های این بخش حالا راهنمای HTML و متن فعلی رو نشون می‌ده و قالب‌بندی با ابزار خود تلگرام (پررنگ، مونو، نقل‌قول) هم ذخیره می‌شه.\n"
+            . "• شماره کارت توی فاکتور پیش‌فرض مونو شده؛ با یه لمس کپی می‌شه.\n"
+            . "• دکمه‌های «بازگشت به روش پرداخت» و «بازگشت به منوی قبلی»: مخفی کردن، جای ایموجی (چپ/راست) و بدون ایموجی.\n"
+            . "• «🎨 ظاهر دکمه‌های فاکتور» حالا 📐 چیدمان داره: کپی مبلغ، کپی کارت و «پرداخت کردم» رو جابه‌جا کن یا کنار هم بذار.\n"
+            . "• دکمه‌ی بستن زیر پیام «مبلغ خارج از حداقل/حداکثر» و دکمه‌ی «بازگشت به منوی اصلی» زیر «رسید خود را بفرستید» قابل شخصی‌سازی شدن (اسم، ایموجی، رنگ، مخفی).\n"
+            . "• پیام «⬇️ یکی از روش‌های پرداخت را انتخاب کنید» به 💰 پیام‌ها و ظاهر افزایش موجودی اضافه شد.\n"
+            . "📍 🎨 شخصی‌سازی ← 💰 پیام‌ها و ظاهر افزایش موجودی ← 💳 کپشن و دکمه‌های درگاه‌ها ← کارت به کارت</blockquote>\n\n"
+            . "<blockquote>✨ <b>ایموجی پریمیوم و چند رفع اشکال دیگه</b>\n"
+            . "• ایموجی پریمیوم توی کپشن‌ها هر جای متن می‌تونه باشه: اول، وسط یا آخر. روی دکمه‌ها، تلگرام فقط یه ایموجی پریمیوم قبل از اسم دکمه قبول می‌کنه.\n"
+            . "• راهنمای HTML «نقل‌قول جمع‌شده» رو هم داره: <code>&lt;blockquote expandable&gt;</code> (با «بیشتر» باز می‌شه).\n"
+            . "• ایموجی‌ای که برای «مبلغ دلخواه» می‌ذاری، جای ایموجی پیش‌فرضش می‌شینه (قبلاً کنارش اضافه می‌شد).\n"
+            . "• توی صفحه‌ی اول 🎨، ردیف‌های «🛒 مراحل خرید»، «🛍 سرویس‌های من» و «💰 افزایش موجودی» وقتی چیزی داخلشون عوض شده سبز می‌شن (دکمه‌ها هم حساب می‌شن).</blockquote>",
+        'en' => "<blockquote>🏷 <b>No service at an old price</b>\n"
+            . "If a customer leaves a purchase invoice unpaid and you then change the plan's price, a new invoice for an expired one or the buttons of an old «not enough balance» message no longer pay the old price: the customer is told the price changed and to choose the plan again. An invoice still within its time can be paid as issued.</blockquote>\n\n"
+            . "<blockquote>🛡 <b>HTML guard</b>\n"
+            . "A caption with broken HTML (say, a tag left open) is not saved; the bot says exactly what is wrong, so no message breaks in front of a customer. The web panel checks it too.</blockquote>\n\n"
+            . "<blockquote>💳 <b>Gateway captions and buttons</b>\n"
+            . "• Editing these captions shows the HTML guide and the current text, and Telegram's own formatting (bold, mono, quote) is kept.\n"
+            . "• The default card invoice shows the card number in mono, copied with one tap.\n"
+            . "• «Back to payment method» / «Back to previous menu»: hide, emoji side and no emoji.\n"
+            . "• Invoice buttons got a 📐 layout: move the copy-amount, copy-card and «paid» buttons or put them side by side.\n"
+            . "• The close button under the out-of-range amount message and the «back to main menu» button under the receipt request can be customized.\n"
+            . "• «⬇️ Choose a payment method» is now editable in 💰.</blockquote>\n\n"
+            . "<blockquote>✨ <b>Premium emoji and other fixes</b>\n"
+            . "• Premium emoji can sit anywhere in a caption; on buttons Telegram takes one, before the name.\n"
+            . "• The HTML guide lists the collapsed quote <code>&lt;blockquote expandable&gt;</code>.\n"
+            . "• An emoji set for «Custom amount» replaces its default one.\n"
+            . "• On 🎨's first screen the purchase, my-services and top-up rows turn green when anything inside changed, buttons included.</blockquote>",
+    ],
 ];

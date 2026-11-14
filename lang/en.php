@@ -446,6 +446,8 @@ Please use the menu buttons below, or send /start.',
 💸 To top up your balance, enter the amount in Dollar:
 ✅ Minimum amount %s Dollar, maximum amount %s Dollar',
                         'insufficientBalanceSimple' => '❌ Insufficient balance.',
+                        'priceChanged' => '💡 The price of this service has changed, so this invoice is no longer valid.
+To buy it at the new price, choose it again from the buy menu.',
                         'shortMessage' => '❌ Insufficient balance.
 
 💡 You are <b>{need}</b> short for this purchase.

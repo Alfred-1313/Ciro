@@ -151,6 +151,9 @@ if (!function_exists('sf_ctx_get')) {
         if (topup_custom_back_swapped($lang, $key)) {
             $customBackRow = array_reverse($customBackRow);
         }
+        if (!topup_slot_visible($lang, $key, 'back')) {
+            $customBackRow = array_values(array_filter($customBackRow, fn($b) => ($b['callback_data'] ?? '') !== 'topup_back_methods'));
+        }
         $kb['inline_keyboard'][] = $customBackRow;
         step("topup_pkg:{$key}", $chatId);
         Editmessagetext($chatId, $messageId, topup_caption_for($lang, $key, $textbotlang['users']['Balance']['pkgPromptTitle']) . topup_disc_caption_block($chatId, $lang, $key, $textbotlang) . sf_range_note_for($chatId, $key), json_encode($kb), 'HTML');
@@ -246,6 +249,11 @@ if (!function_exists('sf_ctx_get')) {
         }
         $price = (float) $inv['price_product'];
         $need = $price - (float) ($user['Balance'] ?? 0);
+        // 🏷 the plan's price changed since this message: no paying the old one
+        if ($m[1] !== 'b' && purchase_price_changed($inv, $user)) {
+            Editmessagetext($from_id, $message_id, sf_text('priceChanged', $lang), null, 'HTML');
+            return true;
+        }
         if ($m[1] === 'b') {
             // 🔙 from the payment methods: the message again - and an ordinary
             // invoice again, if it was the direct payment's methods

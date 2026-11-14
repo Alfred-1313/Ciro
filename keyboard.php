@@ -2853,7 +2853,10 @@ function keyboard_list_text($lang, $groupFilter = null)
                         break;
                     }
                 }
-                $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupBuyflowLabel'], 'callback_data' => "bt_group|$lang|buyflow", 'style' => 'primary']];
+                // ...and the purchase's own button sets and the panel/category/
+                // product button looks, which are not items of the list
+                $bt_group_custom = $bt_group_custom || bt_buyflow_extra_custom($lang, is_array($bt_list_be) ? $bt_list_be : []);
+                $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupBuyflowLabel'], 'callback_data' => "bt_group|$lang|buyflow", 'style' => $bt_group_custom ? 'success' : 'primary']];
             }
             if (!empty($bt_grouped['myservices'])) {
                 $bt_svc_custom = false;
@@ -2864,7 +2867,7 @@ function keyboard_list_text($lang, $groupFilter = null)
                         break;
                     }
                 }
-                $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupServicesLabel'], 'callback_data' => "bt_group|$lang|myservices", 'style' => 'primary']];
+                $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupServicesLabel'], 'callback_data' => "bt_group|$lang|myservices", 'style' => $bt_svc_custom ? 'success' : 'primary']];
             }
             // 💰 افزایش موجودی gets its own divider + entry directly under the
             // services row: its messages used to sit inside 🛒 مراحل خرید even
@@ -2872,7 +2875,17 @@ function keyboard_list_text($lang, $groupFilter = null)
             // service, which made that group a mixed bag.
             if (!empty($bt_grouped['topup'])) {
                 $keyboard_text['inline_keyboard'][] = [['text' => bt_section_meta('home_topup')['label'], 'callback_data' => 'bt_sep|home_topup']];
-                $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupTopupLabel'], 'callback_data' => "bt_group|$lang|topup", 'style' => 'primary']];
+                // its messages, its discount messages, and the gateways' own
+                // captions and buttons (stores of their own)
+                $bt_tp_custom = bt_topup_extra_custom($lang);
+                foreach (array_merge($bt_grouped['topup'], $bt_grouped['topupdisc'] ?? []) as $bt_g) {
+                    if ($bt_tp_custom) {
+                        break;
+                    }
+                    list(, $bt_g_style) = $bt_decorate($bt_g['key'], $bt_g['label']);
+                    $bt_tp_custom = $bt_g_style !== '';
+                }
+                $keyboard_text['inline_keyboard'][] = [['text' => $textbotlang['bottext']['groupTopupLabel'], 'callback_data' => "bt_group|$lang|topup", 'style' => $bt_tp_custom ? 'success' : 'primary']];
             }
         }
         if ($bt_sec_key === 'home_payg') {
